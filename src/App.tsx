@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { Toaster } from "@/components/ui/sonner";
 import { SetupPage } from "@/pages/SetupPage";
@@ -32,9 +33,41 @@ function App() {
   return (
     <>
       <Toaster />
-      {page === "setup" && <SetupPage onComplete={handleSetupComplete} />}
-      {page === "main" && <MainPage onNavigate={setPage} />}
-      {page === "settings" && <SettingsPage onBack={() => setPage("main")} />}
+      <AnimatePresence mode="wait">
+        {page === "setup" && (
+          <motion.div
+            key="setup"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
+          >
+            <SetupPage onComplete={handleSetupComplete} />
+          </motion.div>
+        )}
+        {page === "main" && (
+          <motion.div
+            key="main"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
+          >
+            <MainPage onNavigate={setPage} />
+          </motion.div>
+        )}
+        {page === "settings" && (
+          <motion.div
+            key="settings"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
+          >
+            <SettingsPage onBack={() => setPage("main")} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
