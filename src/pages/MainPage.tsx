@@ -112,7 +112,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
   const hasResults = results !== null;
 
   return (
-    <main className="relative flex min-h-screen flex-col bg-[radial-gradient(ellipse_at_center,_#1e2a45_0%,_#0d1117_70%)]">
+    <main className="relative flex min-h-screen flex-col bg-black bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
       <div className="absolute top-4 right-4 z-10">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -137,7 +137,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
         )}
 
         <form onSubmit={handleSubmit} className="w-full max-w-2xl px-6">
-          <div className="relative flex items-center gap-3 rounded-full bg-zinc-800/80 px-6 py-4 ring-1 ring-white/10 focus-within:ring-white/25 transition-all">
+          <div className="relative flex items-center gap-3 rounded-full bg-zinc-800/80 px-6 py-4 shadow-[0_8px_40px_rgba(0,0,0,0.7)] transition-all">
             {loading
               ? <Loader2 className="h-5 w-5 shrink-0 text-zinc-400 animate-spin" />
               : <Search className="h-5 w-5 shrink-0 text-zinc-400" />
