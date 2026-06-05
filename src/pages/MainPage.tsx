@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  Search, Menu, KeyRound, Loader2, ArrowUp,
+  Search, Menu, KeyRound, Loader2, ArrowUp, X,
   Clapperboard, Tv, Music, Headphones, Book, BookMarked,
   Gamepad2, Package, FileText, Sparkles, HelpCircle,
   type LucideIcon,
@@ -16,6 +16,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
+
+const listVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.03 } },
+  exit: { opacity: 0, transition: { duration: 0.1 } },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 6 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.15 } },
+};
 
 interface SearchResult {
   title: string;
@@ -80,6 +91,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchKey, setSearchKey] = useState(0);
   const apiKeyRef = useRef<string>("");
 
   useEffect(() => {
@@ -94,7 +106,6 @@ export function MainPage({ onNavigate }: MainPageProps) {
 
     setLoading(true);
     setError(null);
-    setResults(null);
 
     try {
       const url = `https://c411.org/api?t=search&q=${encodeURIComponent(query.trim())}&apikey=${apiKeyRef.current}`;
@@ -102,6 +113,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
       const xml = await res.text();
       console.log("[C411 raw response]", xml);
+      setSearchKey((k) => k + 1);
       setResults(parseXml(xml));
     } catch (err) {
       setError(String(err));
@@ -111,16 +123,6 @@ export function MainPage({ onNavigate }: MainPageProps) {
   }
 
   const hasResults = results !== null;
-
-  const listVariants = {
-    hidden: {},
-    visible: { transition: { staggerChildren: 0.045 } },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
-  };
 
   return (
     <main className="relative flex min-h-screen flex-col bg-black bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
@@ -169,10 +171,35 @@ export function MainPage({ onNavigate }: MainPageProps) {
               autoFocus
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setQuery(val);
+                if (!val) {
+                  setResults(null);
+                  setError(null);
+                }
+              }}
               placeholder="Rechercher un film, une serie..."
               className="flex-1 bg-transparent text-white placeholder:text-zinc-500 outline-none text-lg pr-10"
             />
+            <AnimatePresence>
+              {(query.trim() || results !== null) && (
+                <motion.button
+                  key="clear-btn"
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.7 }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ duration: 0.15 }}
+                  type="button"
+                  onClick={() => { setQuery(""); setResults(null); setError(null); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-700/80 hover:bg-zinc-600/80 transition-colors"
+                >
+                  <X className="h-4 w-4 text-zinc-300" />
+                </motion.button>
+              )}
+            </AnimatePresence>
             <AnimatePresence>
               {query.trim() && (
                 <motion.button
@@ -184,7 +211,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
                   whileTap={{ scale: 0.9 }}
                   transition={{ duration: 0.15 }}
                   type="submit"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors"
+                  className="absolute right-12 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors"
                 >
                   <ArrowUp className="h-4 w-4 text-white" />
                 </motion.button>
@@ -221,37 +248,42 @@ export function MainPage({ onNavigate }: MainPageProps) {
           )}
         </AnimatePresence>
 
-        {results && results.length > 0 && (
-          <motion.div
-            className="w-full max-w-2xl px-6 space-y-2"
-            variants={listVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {results.map((r, i) => {
-              const { icon: Icon, color } = getCategoryIcon(r.category);
-              return (
-                <motion.div
-                  key={i}
-                  variants={itemVariants}
-                  whileHover={{ scale: 1.015, backgroundColor: "rgba(63,63,70,0.6)" }}
-                  whileTap={{ scale: 0.985 }}
-                  className="flex items-center gap-4 rounded-lg bg-zinc-800/60 ring-1 ring-white/8 px-4 py-3 cursor-pointer"
-                >
-                  <Icon className={`h-5 w-5 shrink-0 ${color}`} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm text-white font-medium leading-snug line-clamp-2">{r.title}</p>
-                    <div className="mt-1 flex items-center gap-4 text-xs text-zinc-500">
-                      <span>{formatSize(r.size)}</span>
-                      <span className="text-green-500">{r.seeders} Seeders</span>
-                      <span className="text-red-500">{r.leechers} Leechers</span>
+        <AnimatePresence mode="popLayout">
+          {results && results.length > 0 && (
+            <motion.div
+              key={searchKey}
+              className="w-full max-w-2xl px-6 space-y-2"
+              variants={listVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+            >
+              {results.map((r, i) => {
+                const { icon: Icon, color } = getCategoryIcon(r.category);
+                return (
+                  <motion.div
+                    key={i}
+                    variants={itemVariants}
+                    whileHover={{ scale: 1.015, backgroundColor: "rgba(63,63,70,0.6)" }}
+                    whileTap={{ scale: 0.985 }}
+                    className="flex items-center gap-4 rounded-lg bg-zinc-800/60 ring-1 ring-white/8 px-4 py-3 cursor-pointer"
+                  >
+                    <Icon className={`h-5 w-5 shrink-0 ${color}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-white font-medium leading-snug line-clamp-2">{r.title}</p>
+                      <div className="mt-1 flex items-center gap-4 text-xs text-zinc-500">
+                        <span>{formatSize(r.size)}</span>
+                        <span className="text-green-500">{r.seeders} Seeders</span>
+                        <span className="text-red-500">{r.leechers} Leechers</span>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        )}
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </div>
     </main>
   );
