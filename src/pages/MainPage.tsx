@@ -64,61 +64,28 @@ function getCategoryIcon(id: number): { icon: LucideIcon; color: string } {
   return                                  { icon: HelpCircle,  color: "text-zinc-500"   };
 }
 
-interface TorrentApiItem {
-  name: string;
-  size: number;
-  seeders: number;
-  leechers: number;
-  magnet: string;
-  added: string;
-  category_id: number;
-}
+function parseXml(xml: string): SearchResult[] {
+  const doc = new DOMParser().parseFromString(xml, "text/xml");
+  const items = doc.querySelectorAll("item");
 
-interface TorrentApiResponse {
-  data: TorrentApiItem[];
-  total: number;
-  page: number;
-  perPage: number;
-}
+  return Array.from(items).map((item) => {
+    const text = (tag: string) => item.querySelector(tag)?.textContent?.trim() ?? "";
+    const attr = (name: string) =>
+      item.querySelector(`[name="${name}"]`)?.getAttribute("value") ?? "";
 
-function mapApiItem(item: TorrentApiItem): SearchResult {
-  return {
-    title: item.name,
-    size: item.size,
-    seeders: item.seeders,
-    leechers: item.leechers,
-    magnetUrl: item.magnet,
-    pubDate: item.added,
-    category: item.category_id,
-  };
-}
+    const sizeText = text("size") || item.querySelector("enclosure")?.getAttribute("length") || "0";
+    const categoryRaw = attr("category");
 
-async function fetchAllPages(query: string): Promise<SearchResult[]> {
-  const perPage = 25;
-  const firstRes = await fetch(
-    `https://c411.org/api/torrents?page=1&perPage=${perPage}&sortBy=relevance&sortOrder=desc&name=${encodeURIComponent(query)}`
-  );
-  if (!firstRes.ok) throw new Error(`Erreur ${firstRes.status}`);
-  const firstJson: TorrentApiResponse = await firstRes.json();
-
-  const results = firstJson.data.map(mapApiItem);
-  const totalPages = Math.ceil(firstJson.total / perPage);
-
-  if (totalPages <= 1) return results;
-
-  const pageNumbers = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
-  const rest = await Promise.all(
-    pageNumbers.map(async (page) => {
-      const res = await fetch(
-        `https://c411.org/api/torrents?page=${page}&perPage=${perPage}&sortBy=relevance&sortOrder=desc&name=${encodeURIComponent(query)}`
-      );
-      if (!res.ok) return [];
-      const json: TorrentApiResponse = await res.json();
-      return json.data.map(mapApiItem);
-    })
-  );
-
-  return results.concat(rest.flat());
+    return {
+      title: text("title"),
+      size: parseInt(sizeText, 10),
+      seeders: parseInt(attr("seeders") || "0", 10),
+      leechers: Math.max(0, parseInt(attr("peers") || "0", 10) - parseInt(attr("seeders") || "0", 10)),
+      magnetUrl: attr("magneturl"),
+      pubDate: text("pubDate"),
+      category: parseInt(categoryRaw || "0", 10),
+    };
+  });
 }
 
 function formatSize(bytes: number): string {
@@ -156,9 +123,13 @@ export function MainPage({ onNavigate }: MainPageProps) {
     setError(null);
 
     try {
+      const url = `https://c411.org/api?t=search&q=${encodeURIComponent(query.trim())}&apikey=${apiKeyRef.current}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Erreur ${res.status}`);
+      const xml = await res.text();
+      console.log("[C411 raw response]", xml);
       setSearchKey((k) => k + 1);
-      const all = await fetchAllPages(query.trim());
-      setResults(all);
+      setResults(parseXml(xml));
     } catch (err) {
       setError(String(err));
     } finally {
