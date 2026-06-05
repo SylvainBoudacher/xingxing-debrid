@@ -8,7 +8,14 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "http:default",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://c411.org/**" },
+        { "url": "https://alldebrid.fr/**" },
+        { "url": "https://alldebrid.com/**" }
+      ]
+    },
     "store:default"
   ]
 }
