@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   Search, Menu, KeyRound, Loader2, ArrowUp,
   Clapperboard, Tv, Music, Headphones, Book, BookMarked,
@@ -111,14 +112,28 @@ export function MainPage({ onNavigate }: MainPageProps) {
 
   const hasResults = results !== null;
 
+  const listVariants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.045 } },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.2 } },
+  };
+
   return (
     <main className="relative flex min-h-screen flex-col bg-black bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
       <div className="absolute top-4 right-4 z-10">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-colors">
+            <motion.button
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.93 }}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-colors"
+            >
               <Menu className="h-5 w-5" />
-            </button>
+            </motion.button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
             <DropdownMenuItem onClick={() => onNavigate("settings")}>
@@ -130,11 +145,19 @@ export function MainPage({ onNavigate }: MainPageProps) {
       </div>
 
       <div className={`flex flex-col items-center gap-10 transition-all duration-500 ${hasResults ? "pt-16 pb-6" : "flex-1 justify-center pb-0"}`}>
-        {!hasResults && (
-          <h1 className="text-4xl font-light tracking-tight text-white">
-            Que voulez-vous regarder ?
-          </h1>
-        )}
+        <AnimatePresence>
+          {!hasResults && (
+            <motion.h1
+              initial={{ opacity: 0, y: -12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.25 }}
+              className="text-4xl font-light tracking-tight text-white"
+            >
+              Que voulez-vous regarder ?
+            </motion.h1>
+          )}
+        </AnimatePresence>
 
         <form onSubmit={handleSubmit} className="w-full max-w-2xl px-6">
           <div className="relative flex items-center gap-3 rounded-full bg-zinc-800/80 px-6 py-4 shadow-[0_8px_40px_rgba(0,0,0,0.7)] transition-all">
@@ -150,33 +173,70 @@ export function MainPage({ onNavigate }: MainPageProps) {
               placeholder="Rechercher un film, une serie..."
               className="flex-1 bg-transparent text-white placeholder:text-zinc-500 outline-none text-lg pr-10"
             />
-            {query.trim() && (
-              <button
-                type="submit"
-                className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors"
-              >
-                <ArrowUp className="h-4 w-4 text-white" />
-              </button>
-            )}
+            <AnimatePresence>
+              {query.trim() && (
+                <motion.button
+                  key="submit-btn"
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.7 }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  transition={{ duration: 0.15 }}
+                  type="submit"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors"
+                >
+                  <ArrowUp className="h-4 w-4 text-white" />
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
         </form>
 
-        {error && (
-          <p className="text-red-400 text-sm px-6">{error}</p>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.p
+              key="error"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-red-400 text-sm px-6"
+            >
+              {error}
+            </motion.p>
+          )}
+        </AnimatePresence>
 
-        {results !== null && results.length === 0 && (
-          <p className="text-zinc-500 text-sm">Aucun resultat pour "{query}".</p>
-        )}
+        <AnimatePresence>
+          {results !== null && results.length === 0 && (
+            <motion.p
+              key="empty"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-zinc-500 text-sm"
+            >
+              Aucun resultat pour "{query}".
+            </motion.p>
+          )}
+        </AnimatePresence>
 
         {results && results.length > 0 && (
-          <div className="w-full max-w-2xl px-6 space-y-2">
+          <motion.div
+            className="w-full max-w-2xl px-6 space-y-2"
+            variants={listVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {results.map((r, i) => {
               const { icon: Icon, color } = getCategoryIcon(r.category);
               return (
-                <div
+                <motion.div
                   key={i}
-                  className="flex items-center gap-4 rounded-lg bg-zinc-800/60 ring-1 ring-white/8 px-4 py-3 hover:bg-zinc-700/60 transition-colors cursor-pointer"
+                  variants={itemVariants}
+                  whileHover={{ scale: 1.015, backgroundColor: "rgba(63,63,70,0.6)" }}
+                  whileTap={{ scale: 0.985 }}
+                  className="flex items-center gap-4 rounded-lg bg-zinc-800/60 ring-1 ring-white/8 px-4 py-3 cursor-pointer"
                 >
                   <Icon className={`h-5 w-5 shrink-0 ${color}`} />
                   <div className="min-w-0 flex-1">
@@ -187,10 +247,10 @@ export function MainPage({ onNavigate }: MainPageProps) {
                       <span className="text-red-500">{r.leechers} Leechers</span>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         )}
       </div>
     </main>
