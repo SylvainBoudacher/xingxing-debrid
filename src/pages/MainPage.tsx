@@ -26,18 +26,18 @@ const titleContainerVariants = {
 
 const titleWordVariants = {
   hidden: { y: "110%", opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
 };
 
 const listVariants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.03 } },
+  visible: { transition: { staggerChildren: 0.04, delayChildren: 0.1 } },
   exit: { opacity: 0, transition: { duration: 0.1 } },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 6 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.15 } },
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
 };
 
 interface SearchResult {
@@ -64,28 +64,61 @@ function getCategoryIcon(id: number): { icon: LucideIcon; color: string } {
   return                                  { icon: HelpCircle,  color: "text-zinc-500"   };
 }
 
-function parseXml(xml: string): SearchResult[] {
-  const doc = new DOMParser().parseFromString(xml, "text/xml");
-  const items = doc.querySelectorAll("item");
+interface TorrentApiItem {
+  name: string;
+  size: number;
+  seeders: number;
+  leechers: number;
+  magnet: string;
+  added: string;
+  category_id: number;
+}
 
-  return Array.from(items).map((item) => {
-    const text = (tag: string) => item.querySelector(tag)?.textContent?.trim() ?? "";
-    const attr = (name: string) =>
-      item.querySelector(`[name="${name}"]`)?.getAttribute("value") ?? "";
+interface TorrentApiResponse {
+  data: TorrentApiItem[];
+  total: number;
+  page: number;
+  perPage: number;
+}
 
-    const sizeText = text("size") || item.querySelector("enclosure")?.getAttribute("length") || "0";
-    const categoryRaw = attr("category");
+function mapApiItem(item: TorrentApiItem): SearchResult {
+  return {
+    title: item.name,
+    size: item.size,
+    seeders: item.seeders,
+    leechers: item.leechers,
+    magnetUrl: item.magnet,
+    pubDate: item.added,
+    category: item.category_id,
+  };
+}
 
-    return {
-      title: text("title"),
-      size: parseInt(sizeText, 10),
-      seeders: parseInt(attr("seeders") || "0", 10),
-      leechers: Math.max(0, parseInt(attr("peers") || "0", 10) - parseInt(attr("seeders") || "0", 10)),
-      magnetUrl: attr("magneturl"),
-      pubDate: text("pubDate"),
-      category: parseInt(categoryRaw || "0", 10),
-    };
-  });
+async function fetchAllPages(query: string): Promise<SearchResult[]> {
+  const perPage = 25;
+  const firstRes = await fetch(
+    `https://c411.org/api/torrents?page=1&perPage=${perPage}&sortBy=relevance&sortOrder=desc&name=${encodeURIComponent(query)}`
+  );
+  if (!firstRes.ok) throw new Error(`Erreur ${firstRes.status}`);
+  const firstJson: TorrentApiResponse = await firstRes.json();
+
+  const results = firstJson.data.map(mapApiItem);
+  const totalPages = Math.ceil(firstJson.total / perPage);
+
+  if (totalPages <= 1) return results;
+
+  const pageNumbers = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
+  const rest = await Promise.all(
+    pageNumbers.map(async (page) => {
+      const res = await fetch(
+        `https://c411.org/api/torrents?page=${page}&perPage=${perPage}&sortBy=relevance&sortOrder=desc&name=${encodeURIComponent(query)}`
+      );
+      if (!res.ok) return [];
+      const json: TorrentApiResponse = await res.json();
+      return json.data.map(mapApiItem);
+    })
+  );
+
+  return results.concat(rest.flat());
 }
 
 function formatSize(bytes: number): string {
@@ -104,6 +137,8 @@ export function MainPage({ onNavigate }: MainPageProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchKey, setSearchKey] = useState(0);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [titleGone, setTitleGone] = useState(false);
   const apiKeyRef = useRef<string>("");
 
   useEffect(() => {
@@ -116,25 +151,20 @@ export function MainPage({ onNavigate }: MainPageProps) {
     e.preventDefault();
     if (!query.trim()) return;
 
+    setHasSearched(true);
     setLoading(true);
     setError(null);
 
     try {
-      const url = `https://c411.org/api?t=search&q=${encodeURIComponent(query.trim())}&apikey=${apiKeyRef.current}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Erreur ${res.status}`);
-      const xml = await res.text();
-      console.log("[C411 raw response]", xml);
       setSearchKey((k) => k + 1);
-      setResults(parseXml(xml));
+      const all = await fetchAllPages(query.trim());
+      setResults(all);
     } catch (err) {
       setError(String(err));
     } finally {
       setLoading(false);
     }
   }
-
-  const hasResults = results !== null;
 
   return (
     <main className="relative flex min-h-screen flex-col bg-black bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
@@ -158,18 +188,22 @@ export function MainPage({ onNavigate }: MainPageProps) {
         </DropdownMenu>
       </div>
 
-      <div className={`flex flex-col items-center gap-10 transition-all duration-500 ${hasResults ? "pt-16 pb-6" : "flex-1 justify-center pb-0"}`}>
-        <AnimatePresence>
-          {!hasResults && (
+      <motion.div
+        layout
+        transition={{ type: "spring", stiffness: 260, damping: 26, mass: 0.9 }}
+        className={`flex flex-col items-center gap-10 ${titleGone ? "pt-16 pb-6" : "flex-1 justify-center pb-0"}`}
+      >
+        <AnimatePresence onExitComplete={() => setTitleGone(true)}>
+          {!hasSearched && (
             <motion.h1
               variants={titleContainerVariants}
               initial="hidden"
               animate="visible"
-              exit={{ opacity: 0, y: -16, transition: { duration: 0.2 } }}
+              exit={{ opacity: 0, y: 20, transition: { duration: 0.18, ease: "easeIn" } }}
               className="flex flex-wrap justify-center gap-x-[0.3em] text-4xl font-light tracking-tight text-white overflow-hidden"
             >
               {titleWords.map((word, i) => (
-                <span key={i} className="overflow-hidden">
+                <span key={i} className="overflow-hidden inline-block">
                   <motion.span variants={titleWordVariants} className="inline-block">
                     {word}
                   </motion.span>
@@ -195,6 +229,8 @@ export function MainPage({ onNavigate }: MainPageProps) {
                 if (!val) {
                   setResults(null);
                   setError(null);
+                  setHasSearched(false);
+                  setTitleGone(false);
                 }
               }}
               placeholder="Rechercher un film, une serie..."
@@ -211,7 +247,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
                   whileTap={{ scale: 0.9 }}
                   transition={{ duration: 0.15 }}
                   type="button"
-                  onClick={() => { setQuery(""); setResults(null); setError(null); }}
+                  onClick={() => { setQuery(""); setResults(null); setError(null); setHasSearched(false); setTitleGone(false); }}
                   className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-700/80 hover:bg-zinc-600/80 transition-colors"
                 >
                   <X className="h-4 w-4 text-zinc-300" />
@@ -253,7 +289,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
         </AnimatePresence>
 
         <AnimatePresence>
-          {results !== null && results.length === 0 && (
+          {titleGone && results !== null && results.length === 0 && (
             <motion.p
               key="empty"
               initial={{ opacity: 0, y: 6 }}
@@ -267,7 +303,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
         </AnimatePresence>
 
         <AnimatePresence mode="popLayout">
-          {results && results.length > 0 && (
+          {titleGone && results && results.length > 0 && (
             <motion.div
               key={searchKey}
               className="w-full max-w-2xl px-6 space-y-2"
@@ -302,7 +338,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
           )}
         </AnimatePresence>
 
-      </div>
+      </motion.div>
     </main>
   );
 }
