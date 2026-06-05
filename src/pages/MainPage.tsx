@@ -17,6 +17,18 @@ import {
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
+const titleWords = "Que voulez-vous regarder ?".split(" ");
+
+const titleContainerVariants = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.3 } },
+};
+
+const titleWordVariants = {
+  hidden: { y: "110%", opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } },
+};
+
 const listVariants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.03 } },
@@ -150,13 +162,19 @@ export function MainPage({ onNavigate }: MainPageProps) {
         <AnimatePresence>
           {!hasResults && (
             <motion.h1
-              initial={{ opacity: 0, y: -12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.25 }}
-              className="text-4xl font-light tracking-tight text-white"
+              variants={titleContainerVariants}
+              initial="hidden"
+              animate="visible"
+              exit={{ opacity: 0, y: -16, transition: { duration: 0.2 } }}
+              className="flex flex-wrap justify-center gap-x-[0.3em] text-4xl font-light tracking-tight text-white overflow-hidden"
             >
-              Que voulez-vous regarder ?
+              {titleWords.map((word, i) => (
+                <span key={i} className="overflow-hidden">
+                  <motion.span variants={titleWordVariants} className="inline-block">
+                    {word}
+                  </motion.span>
+                </span>
+              ))}
             </motion.h1>
           )}
         </AnimatePresence>
