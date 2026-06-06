@@ -1,7 +1,113 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+use reqwest::multipart;
+use serde_json::Value;
+
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+async fn upload_torrent_to_debrid(
+    torrent_url: String,
+    alldebrid_key: String,
+) -> Result<Value, String> {
+    let client = reqwest::Client::new();
+
+    let torrent_res = client
+        .get(&torrent_url)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let torrent_status = torrent_res.status();
+    let torrent_bytes = torrent_res.bytes().await.map_err(|e| e.to_string())?;
+
+    if !torrent_status.is_success() {
+        return Err(format!(
+            "Telechargement torrent HTTP {} : {}",
+            torrent_status,
+            String::from_utf8_lossy(&torrent_bytes[..torrent_bytes.len().min(300)])
+        ));
+    }
+    if torrent_bytes.first() != Some(&b'd') {
+        return Err(format!(
+            "Fichier recu invalide : {}",
+            String::from_utf8_lossy(&torrent_bytes[..torrent_bytes.len().min(300)])
+        ));
+    }
+
+    let part = multipart::Part::bytes(torrent_bytes.to_vec())
+        .file_name("torrent.torrent")
+        .mime_str("application/x-bittorrent")
+        .map_err(|e| e.to_string())?;
+
+    let form = multipart::Form::new().part("files[]", part);
+
+    let upload_res = client
+        .post("https://api.alldebrid.com/v4/magnet/upload/file")
+        .bearer_auth(&alldebrid_key)
+        .multipart(form)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = upload_res.status();
+    let body = upload_res.text().await.map_err(|e| e.to_string())?;
+
+    if !status.is_success() {
+        return Err(format!("AllDebrid HTTP {} : {}", status, body));
+    }
+
+    let res: Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+    Ok(res)
+}
+
+#[tauri::command]
+async fn get_magnet_files(id: u64, alldebrid_key: String) -> Result<Value, String> {
+    let client = reqwest::Client::new();
+
+    let res = client
+        .get("https://api.alldebrid.com/v4/magnet/files")
+        .bearer_auth(&alldebrid_key)
+        .query(&[("id[]", id.to_string())])
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = res.status();
+    let body = res.text().await.map_err(|e| e.to_string())?;
+
+    if !status.is_success() {
+        return Err(format!("AllDebrid HTTP {} : {}", status, body));
+    }
+
+    let json: Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+    Ok(json)
+}
+
+#[tauri::command]
+async fn unlock_link(link: String, alldebrid_key: String) -> Result<String, String> {
+    let client = reqwest::Client::new();
+
+    let res = client
+        .get("https://api.alldebrid.com/v4/link/unlock")
+        .bearer_auth(&alldebrid_key)
+        .query(&[("link", &link)])
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = res.status();
+    let body = res.text().await.map_err(|e| e.to_string())?;
+
+    if !status.is_success() {
+        return Err(format!("AllDebrid HTTP {} : {}", status, body));
+    }
+
+    let json: Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+
+    let download_url = json
+        .pointer("/data/link")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| format!("Lien de telechargement introuvable : {}", body))?
+        .to_string();
+
+    Ok(download_url)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -10,7 +116,11 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            upload_torrent_to_debrid,
+            get_magnet_files,
+            unlock_link,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
