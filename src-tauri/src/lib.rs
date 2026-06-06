@@ -110,6 +110,37 @@ async fn unlock_link(link: String, alldebrid_key: String) -> Result<String, Stri
     Ok(download_url)
 }
 
+#[tauri::command]
+fn open_with_vlc(url: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open")
+        .args(["-a", "VLC", &url])
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "windows")]
+    {
+        let vlc_paths = [
+            r"C:\Program Files\VideoLAN\VLC\vlc.exe",
+            r"C:\Program Files (x86)\VideoLAN\VLC\vlc.exe",
+        ];
+        let vlc = vlc_paths.iter().find(|p| std::path::Path::new(p).exists())
+            .ok_or("VLC introuvable")?;
+        std::process::Command::new(vlc)
+            .arg(&url)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    std::process::Command::new("vlc")
+        .arg(&url)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -120,6 +151,7 @@ pub fn run() {
             upload_torrent_to_debrid,
             get_magnet_files,
             unlock_link,
+            open_with_vlc,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -4,6 +4,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import vlcLogo from "@/assets/vlc.png";
 import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -186,6 +187,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
   const [downloadingLink, setDownloadingLink] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
+  const [vlcLink, setVlcLink] = useState<string | null>(null);
   const apiKeyRef = useRef<string>("");
   const allDebridKeyRef = useRef<string>("");
 
@@ -279,6 +281,22 @@ export function MainPage({ onNavigate }: MainPageProps) {
       toast.error(String(err));
     } finally {
       setTimeout(() => setCopiedLink(null), 2000);
+    }
+  }
+
+  async function handleOpenVlc(link: string) {
+    setVlcLink(link);
+    try {
+      const url = await invoke<string>("unlock_link", {
+        link,
+        alldebridKey: allDebridKeyRef.current,
+      });
+      await invoke("open_with_vlc", { url });
+      toast.success("Ouvert dans VLC");
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setVlcLink(null);
     }
   }
 
@@ -608,9 +626,24 @@ export function MainPage({ onNavigate }: MainPageProps) {
                       <div className="flex items-center gap-2">
                         <motion.button
                           whileTap={{ scale: 0.97 }}
+                          onClick={() => handleOpenVlc(file.link)}
+                          disabled={
+                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
+                          }
+                          className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {vlcLink === file.link ? (
+                            <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+                          ) : (
+                            <img src={vlcLogo} className="h-4 w-4" />
+                          )}
+                          <span className="text-xs font-medium text-white">Lire avec VLC</span>
+                        </motion.button>
+                        <motion.button
+                          whileTap={{ scale: 0.97 }}
                           onClick={() => handleCopyLink(file.link)}
                           disabled={
-                            downloadingLink !== null || copiedLink !== null
+                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
                           }
                           className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
@@ -634,7 +667,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
                           whileTap={{ scale: 0.97 }}
                           onClick={() => handleDownloadFile(file.link)}
                           disabled={
-                            downloadingLink !== null || copiedLink !== null
+                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
                           }
                           className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
