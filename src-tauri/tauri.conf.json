@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "c411-debrid-app",
+  "productName": "XingXing Debrid",
   "version": "0.1.0",
   "identifier": "com.sulyk.c411-debrid-app",
   "build": {
@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "c411-debrid-app",
-        "width": 800,
-        "height": 600
+        "title": "XingXing Debrid",
+        "width": 1000,
+        "height": 800
       }
     ],
     "security": {
