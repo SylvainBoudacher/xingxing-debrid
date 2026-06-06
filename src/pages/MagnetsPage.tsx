@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, Copy, Check,
 } from "lucide-react";
 import { toast } from "sonner";
+import vlcLogo from "@/assets/vlc.png";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
@@ -126,6 +127,7 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [copying, setCopying] = useState<string | null>(null);
+  const [vlcing, setVlcing] = useState<string | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -148,6 +150,19 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
       }
     })();
   }, [magnetId, apiKey, onClose]);
+
+  async function handleOpenVlc(link: string) {
+    setVlcing(link);
+    try {
+      const url = await invoke<string>("unlock_link", { link, alldebridKey: apiKey });
+      await invoke("open_with_vlc", { url });
+      toast.success("Ouvert dans VLC");
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setVlcing(null);
+    }
+  }
 
   async function handleDownload(link: string) {
     setDownloading(link);
@@ -225,8 +240,20 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
                 <div className="flex items-center gap-2">
                   <motion.button
                     whileTap={{ scale: 0.97 }}
+                    onClick={() => handleOpenVlc(file.link)}
+                    disabled={downloading !== null || copying !== null || vlcing !== null}
+                    className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {vlcing === file.link
+                      ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+                      : <img src={vlcLogo} className="h-4 w-4" />
+                    }
+                    <span className="text-xs font-medium text-white">Lire avec VLC</span>
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => handleCopy(file.link)}
-                    disabled={downloading !== null || copying !== null}
+                    disabled={downloading !== null || copying !== null || vlcing !== null}
                     className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {copying === file.link
@@ -237,7 +264,7 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={() => handleDownload(file.link)}
-                    disabled={downloading !== null || copying !== null}
+                    disabled={downloading !== null || copying !== null || vlcing !== null}
                     className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {downloading === file.link
