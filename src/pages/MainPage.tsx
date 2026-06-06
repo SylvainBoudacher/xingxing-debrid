@@ -1,26 +1,45 @@
-import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import {
-  Search, Menu, KeyRound, Loader2, ArrowUp, X,
-  Clapperboard, Tv, Music, Headphones, Book, BookMarked,
-  Gamepad2, Package, FileText, Sparkles, HelpCircle, CircleFadingArrowUp, Download, Magnet, Copy, Check,
-  type LucideIcon,
-} from "lucide-react";
-import { LazyStore } from "@tauri-apps/plugin-store";
-import { fetch } from "@tauri-apps/plugin-http";
-import { invoke } from "@tauri-apps/api/core";
-import { openUrl } from "@tauri-apps/plugin-opener";
-import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { invoke } from "@tauri-apps/api/core";
+import { fetch } from "@tauri-apps/plugin-http";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { LazyStore } from "@tauri-apps/plugin-store";
+import {
+  ArrowUp,
+  Book,
+  BookMarked,
+  Check,
+  CircleFadingArrowUp,
+  Clapperboard,
+  Copy,
+  Download,
+  FileText,
+  Gamepad2,
+  Headphones,
+  HelpCircle,
+  KeyRound,
+  Loader2,
+  Magnet,
+  Menu,
+  Music,
+  Package,
+  Search,
+  Sparkles,
+  Tv,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
-const titleWords = "Que voulez-vous regarder ?".split(" ");
+const titleWords = "Que voulez-vous télécharger ?".split(" ");
 
 const titleContainerVariants = {
   hidden: {},
@@ -29,7 +48,14 @@ const titleContainerVariants = {
 
 const titleWordVariants = {
   hidden: { y: "110%", opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      duration: 0.55,
+      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+    },
+  },
 };
 
 const listVariants = {
@@ -40,7 +66,14 @@ const listVariants = {
 
 const itemVariants = {
   hidden: { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.3,
+      ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+    },
+  },
 };
 
 interface SearchResult {
@@ -81,17 +114,19 @@ function flattenFiles(entries: unknown[], prefix = ""): DebridFile[] {
 }
 
 function getCategoryIcon(id: number): { icon: LucideIcon; color: string } {
-  if (id === 2060 || id === 5070) return { icon: Sparkles,     color: "text-pink-400"   };
-  if (id === 2070)                 return { icon: FileText,     color: "text-yellow-400" };
-  if (id >= 2000 && id < 3000)    return { icon: Clapperboard, color: "text-blue-400"   };
-  if (id === 3030)                 return { icon: Headphones,   color: "text-orange-400" };
-  if (id >= 3000 && id < 4000)    return { icon: Music,        color: "text-purple-400" };
-  if (id === 4050)                 return { icon: Gamepad2,     color: "text-green-400"  };
-  if (id >= 4000 && id < 5000)    return { icon: Package,      color: "text-zinc-400"   };
-  if (id >= 5000 && id < 6000)    return { icon: Tv,           color: "text-cyan-400"   };
-  if (id === 7030)                 return { icon: BookMarked,   color: "text-rose-400"   };
-  if (id >= 7000)                  return { icon: Book,         color: "text-amber-400"  };
-  return                                  { icon: HelpCircle,  color: "text-zinc-500"   };
+  if (id === 2060 || id === 5070)
+    return { icon: Sparkles, color: "text-pink-400" };
+  if (id === 2070) return { icon: FileText, color: "text-yellow-400" };
+  if (id >= 2000 && id < 3000)
+    return { icon: Clapperboard, color: "text-blue-400" };
+  if (id === 3030) return { icon: Headphones, color: "text-orange-400" };
+  if (id >= 3000 && id < 4000) return { icon: Music, color: "text-purple-400" };
+  if (id === 4050) return { icon: Gamepad2, color: "text-green-400" };
+  if (id >= 4000 && id < 5000) return { icon: Package, color: "text-zinc-400" };
+  if (id >= 5000 && id < 6000) return { icon: Tv, color: "text-cyan-400" };
+  if (id === 7030) return { icon: BookMarked, color: "text-rose-400" };
+  if (id >= 7000) return { icon: Book, color: "text-amber-400" };
+  return { icon: HelpCircle, color: "text-zinc-500" };
 }
 
 function parseXml(xml: string): SearchResult[] {
@@ -99,18 +134,26 @@ function parseXml(xml: string): SearchResult[] {
   const items = doc.querySelectorAll("item");
 
   return Array.from(items).map((item) => {
-    const text = (tag: string) => item.querySelector(tag)?.textContent?.trim() ?? "";
+    const text = (tag: string) =>
+      item.querySelector(tag)?.textContent?.trim() ?? "";
     const attr = (name: string) =>
       item.querySelector(`[name="${name}"]`)?.getAttribute("value") ?? "";
 
-    const sizeText = text("size") || item.querySelector("enclosure")?.getAttribute("length") || "0";
+    const sizeText =
+      text("size") ||
+      item.querySelector("enclosure")?.getAttribute("length") ||
+      "0";
     const categoryRaw = attr("category");
 
     return {
       title: text("title"),
       size: parseInt(sizeText, 10),
       seeders: parseInt(attr("seeders") || "0", 10),
-      leechers: Math.max(0, parseInt(attr("peers") || "0", 10) - parseInt(attr("seeders") || "0", 10)),
+      leechers: Math.max(
+        0,
+        parseInt(attr("peers") || "0", 10) -
+          parseInt(attr("seeders") || "0", 10),
+      ),
       magnetUrl: attr("magneturl"),
       guid: text("guid"),
       downloadUrl: text("link"),
@@ -136,7 +179,9 @@ export function MainPage({ onNavigate }: MainPageProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchKey, setSearchKey] = useState(0);
-  const [phase, setPhase] = useState<"idle" | "title-exiting" | "active" | "bar-returning">("idle");
+  const [phase, setPhase] = useState<
+    "idle" | "title-exiting" | "active" | "bar-returning"
+  >("idle");
   const [sendingIndex, setSendingIndex] = useState<number | null>(null);
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
   const [downloadingLink, setDownloadingLink] = useState<string | null>(null);
@@ -145,13 +190,19 @@ export function MainPage({ onNavigate }: MainPageProps) {
   const allDebridKeyRef = useRef<string>("");
 
   useEffect(() => {
-    store.get<string>("c411_api_key").then((v) => { if (v) apiKeyRef.current = v; });
-    store.get<string>("alldebrid_api_key").then((v) => { if (v) allDebridKeyRef.current = v; });
+    store.get<string>("c411_api_key").then((v) => {
+      if (v) apiKeyRef.current = v;
+    });
+    store.get<string>("alldebrid_api_key").then((v) => {
+      if (v) allDebridKeyRef.current = v;
+    });
   }, []);
 
   useEffect(() => {
     if (!debridModal) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setDebridModal(null); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDebridModal(null);
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [debridModal]);
@@ -159,7 +210,9 @@ export function MainPage({ onNavigate }: MainPageProps) {
   async function handleSendToDebrid(result: SearchResult, index: number) {
     if (sendingIndex !== null) return;
     if (!allDebridKeyRef.current) {
-      toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
+      toast.error(
+        "Cle AllDebrid manquante. Configurez-la dans les parametres.",
+      );
       return;
     }
 
@@ -173,26 +226,38 @@ export function MainPage({ onNavigate }: MainPageProps) {
 
     setSendingIndex(index);
     try {
-      const json = await invoke<{ status: string; data?: { files?: Array<{ id: number; name: string }> }; error?: { message: string } }>(
-        "upload_torrent_to_debrid",
-        { torrentUrl, alldebridKey: allDebridKeyRef.current }
-      );
+      const json = await invoke<{
+        status: string;
+        data?: { files?: Array<{ id: number; name: string }> };
+        error?: { message: string };
+      }>("upload_torrent_to_debrid", {
+        torrentUrl,
+        alldebridKey: allDebridKeyRef.current,
+      });
 
-      if (json.status !== "success") throw new Error(json.error?.message ?? "Erreur AllDebrid inconnue");
+      if (json.status !== "success")
+        throw new Error(json.error?.message ?? "Erreur AllDebrid inconnue");
 
-      const uploaded = json.data?.files?.[0] as { id: number; name: string; ready: boolean } | undefined;
+      const uploaded = json.data?.files?.[0] as
+        | { id: number; name: string; ready: boolean }
+        | undefined;
       if (!uploaded) throw new Error("Reponse AllDebrid inattendue");
 
       if (uploaded.ready) {
-        const filesJson = await invoke<{ status: string; data?: { magnets?: Array<{ files?: unknown[] }> } }>(
-          "get_magnet_files",
-          { id: uploaded.id, alldebridKey: allDebridKeyRef.current }
-        );
+        const filesJson = await invoke<{
+          status: string;
+          data?: { magnets?: Array<{ files?: unknown[] }> };
+        }>("get_magnet_files", {
+          id: uploaded.id,
+          alldebridKey: allDebridKeyRef.current,
+        });
         const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
         const files = flattenFiles(rawFiles);
         setDebridModal({ torrentName: uploaded.name ?? result.title, files });
       } else {
-        toast.success(`Envoye vers AllDebrid : ${uploaded.name ?? result.title} (en cours de debridage)`);
+        toast.success(
+          `Envoye vers AllDebrid : ${uploaded.name ?? result.title} (en cours de debridage)`,
+        );
       }
     } catch (err) {
       toast.error(String(err));
@@ -204,7 +269,10 @@ export function MainPage({ onNavigate }: MainPageProps) {
   async function handleCopyLink(link: string) {
     setCopiedLink(link);
     try {
-      const url = await invoke<string>("unlock_link", { link, alldebridKey: allDebridKeyRef.current });
+      const url = await invoke<string>("unlock_link", {
+        link,
+        alldebridKey: allDebridKeyRef.current,
+      });
       await navigator.clipboard.writeText(url);
       toast.success("Lien copié");
     } catch (err) {
@@ -217,7 +285,10 @@ export function MainPage({ onNavigate }: MainPageProps) {
   async function handleDownloadFile(link: string) {
     setDownloadingLink(link);
     try {
-      const url = await invoke<string>("unlock_link", { link, alldebridKey: allDebridKeyRef.current });
+      const url = await invoke<string>("unlock_link", {
+        link,
+        alldebridKey: allDebridKeyRef.current,
+      });
       await openUrl(url);
     } catch (err) {
       toast.error(String(err));
@@ -230,7 +301,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
     e.preventDefault();
     if (!query.trim()) return;
 
-    setPhase((prev) => prev === "idle" ? "title-exiting" : "active");
+    setPhase((prev) => (prev === "idle" ? "title-exiting" : "active"));
     setLoading(true);
     setError(null);
 
@@ -278,26 +349,40 @@ export function MainPage({ onNavigate }: MainPageProps) {
       <div className="flex-1 flex flex-col items-center overflow-y-auto">
         <motion.div
           layout
-          transition={{ type: "spring", stiffness: 160, damping: 30, mass: 1.1 }}
+          transition={{
+            type: "spring",
+            stiffness: 160,
+            damping: 30,
+            mass: 1.1,
+          }}
           onLayoutAnimationComplete={() => {
             if (phase === "bar-returning") setPhase("idle");
           }}
           className={`relative flex flex-col items-center w-full ${phase === "active" ? "mt-16 mb-6" : "my-auto"}`}
         >
-          <AnimatePresence onExitComplete={() => {
-            if (phase === "title-exiting") setPhase("active");
-          }}>
+          <AnimatePresence
+            onExitComplete={() => {
+              if (phase === "title-exiting") setPhase("active");
+            }}
+          >
             {phase === "idle" && (
               <motion.h1
                 variants={titleContainerVariants}
                 initial="hidden"
                 animate="visible"
-                exit={{ opacity: 0, y: 20, transition: { duration: 0.18, ease: "easeIn" } }}
+                exit={{
+                  opacity: 0,
+                  y: 20,
+                  transition: { duration: 0.18, ease: "easeIn" },
+                }}
                 className="absolute bottom-full mb-10 flex flex-wrap justify-center gap-x-[0.3em] text-4xl font-light tracking-tight text-white overflow-hidden w-full"
               >
                 {titleWords.map((word, i) => (
                   <span key={i} className="overflow-hidden inline-block">
-                    <motion.span variants={titleWordVariants} className="inline-block">
+                    <motion.span
+                      variants={titleWordVariants}
+                      className="inline-block"
+                    >
                       {word}
                     </motion.span>
                   </span>
@@ -308,10 +393,11 @@ export function MainPage({ onNavigate }: MainPageProps) {
 
           <form onSubmit={handleSubmit} className="w-full max-w-2xl px-6">
             <div className="relative flex items-center gap-3 rounded-full bg-zinc-800/80 px-6 py-4 shadow-[0_8px_40px_rgba(0,0,0,0.7)] transition-all">
-              {loading
-                ? <Loader2 className="h-5 w-5 shrink-0 text-zinc-400 animate-spin" />
-                : <Search className="h-5 w-5 shrink-0 text-zinc-400" />
-              }
+              {loading ? (
+                <Loader2 className="h-5 w-5 shrink-0 text-zinc-400 animate-spin" />
+              ) : (
+                <Search className="h-5 w-5 shrink-0 text-zinc-400" />
+              )}
               <input
                 autoFocus
                 type="text"
@@ -322,7 +408,9 @@ export function MainPage({ onNavigate }: MainPageProps) {
                   if (!val) {
                     setResults(null);
                     setError(null);
-                    setPhase((prev) => prev === "active" ? "bar-returning" : "idle");
+                    setPhase((prev) =>
+                      prev === "active" ? "bar-returning" : "idle",
+                    );
                   }
                 }}
                 placeholder="Rechercher un film, une serie..."
@@ -339,7 +427,14 @@ export function MainPage({ onNavigate }: MainPageProps) {
                     whileTap={{ scale: 0.9 }}
                     transition={{ duration: 0.15 }}
                     type="button"
-                    onClick={() => { setQuery(""); setResults(null); setError(null); setPhase((prev) => prev === "active" ? "bar-returning" : "idle"); }}
+                    onClick={() => {
+                      setQuery("");
+                      setResults(null);
+                      setError(null);
+                      setPhase((prev) =>
+                        prev === "active" ? "bar-returning" : "idle",
+                      );
+                    }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-700/80 hover:bg-zinc-600/80 transition-colors"
                   >
                     <X className="h-4 w-4 text-zinc-300" />
@@ -411,16 +506,25 @@ export function MainPage({ onNavigate }: MainPageProps) {
                   <motion.div
                     key={i}
                     variants={itemVariants}
-                    whileHover={{ scale: 1.015, backgroundColor: "rgba(63,63,70,0.6)" }}
+                    whileHover={{
+                      scale: 1.015,
+                      backgroundColor: "rgba(63,63,70,0.6)",
+                    }}
                     className="flex items-center gap-4 rounded-lg bg-zinc-800/60 ring-1 ring-white/8 px-4 py-3"
                   >
                     <Icon className={`h-5 w-5 shrink-0 ${color}`} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm text-white font-medium leading-snug line-clamp-2">{r.title}</p>
+                      <p className="text-sm text-white font-medium leading-snug line-clamp-2">
+                        {r.title}
+                      </p>
                       <div className="mt-1 flex items-center gap-4 text-xs text-zinc-500">
                         <span>{formatSize(r.size)}</span>
-                        <span className="text-green-500">{r.seeders} Seeders</span>
-                        <span className="text-red-500">{r.leechers} Leechers</span>
+                        <span className="text-green-500">
+                          {r.seeders} Seeders
+                        </span>
+                        <span className="text-red-500">
+                          {r.leechers} Leechers
+                        </span>
                       </div>
                     </div>
                     <motion.button
@@ -430,10 +534,11 @@ export function MainPage({ onNavigate }: MainPageProps) {
                       disabled={sendingIndex !== null}
                       className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
-                      {sendingIndex === i
-                        ? <Loader2 className="h-4 w-4 text-white animate-spin" />
-                        : <CircleFadingArrowUp className="h-4 w-4 text-white" />
-                      }
+                      {sendingIndex === i ? (
+                        <Loader2 className="h-4 w-4 text-white animate-spin" />
+                      ) : (
+                        <CircleFadingArrowUp className="h-4 w-4 text-white" />
+                      )}
                     </motion.button>
                   </motion.div>
                 );
@@ -464,8 +569,12 @@ export function MainPage({ onNavigate }: MainPageProps) {
               <div className="px-5 pt-5 pb-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">Fichiers disponibles</p>
-                    <p className="text-sm font-semibold text-white leading-snug line-clamp-2">{debridModal.torrentName}</p>
+                    <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">
+                      Fichiers disponibles
+                    </p>
+                    <p className="text-sm font-semibold text-white leading-snug line-clamp-2">
+                      {debridModal.torrentName}
+                    </p>
                   </div>
                   <button
                     onClick={() => setDebridModal(null)}
@@ -482,33 +591,68 @@ export function MainPage({ onNavigate }: MainPageProps) {
                   const fileName = file.name.split("/").pop() ?? file.name;
                   const showName = fileName !== debridModal.torrentName;
                   return (
-                    <div key={i} className="rounded-xl bg-zinc-800/60 px-4 py-3">
+                    <div
+                      key={i}
+                      className="rounded-xl bg-zinc-800/60 px-4 py-3"
+                    >
                       <div className="mb-3">
-                        {showName && <p className="text-sm font-medium text-white leading-snug line-clamp-2 mb-0.5">{fileName}</p>}
-                        <p className="text-xs text-zinc-500">{formatSize(file.size)}</p>
+                        {showName && (
+                          <p className="text-sm font-medium text-white leading-snug line-clamp-2 mb-0.5">
+                            {fileName}
+                          </p>
+                        )}
+                        <p className="text-xs text-zinc-500">
+                          {formatSize(file.size)}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <motion.button
                           whileTap={{ scale: 0.97 }}
                           onClick={() => handleCopyLink(file.link)}
-                          disabled={downloadingLink !== null || copiedLink !== null}
+                          disabled={
+                            downloadingLink !== null || copiedLink !== null
+                          }
                           className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
-                          {copiedLink === file.link
-                            ? <><Check className="h-3.5 w-3.5 text-green-400" /><span className="text-xs font-medium text-green-400">Copie !</span></>
-                            : <><Copy className="h-3.5 w-3.5 text-zinc-300" /><span className="text-xs font-medium text-zinc-300">Copier le lien</span></>
-                          }
+                          {copiedLink === file.link ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-green-400" />
+                              <span className="text-xs font-medium text-green-400">
+                                Copie !
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5 text-zinc-300" />
+                              <span className="text-xs font-medium text-zinc-300">
+                                Copier le lien
+                              </span>
+                            </>
+                          )}
                         </motion.button>
                         <motion.button
                           whileTap={{ scale: 0.97 }}
                           onClick={() => handleDownloadFile(file.link)}
-                          disabled={downloadingLink !== null || copiedLink !== null}
+                          disabled={
+                            downloadingLink !== null || copiedLink !== null
+                          }
                           className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
-                          {downloadingLink === file.link
-                            ? <><Loader2 className="h-3.5 w-3.5 text-white animate-spin" /><span className="text-xs font-medium text-white">Ouverture...</span></>
-                            : <><Download className="h-3.5 w-3.5 text-white" /><span className="text-xs font-medium text-white">Telecharger</span></>
-                          }
+                          {downloadingLink === file.link ? (
+                            <>
+                              <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+                              <span className="text-xs font-medium text-white">
+                                Ouverture...
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-3.5 w-3.5 text-white" />
+                              <span className="text-xs font-medium text-white">
+                                Telecharger
+                              </span>
+                            </>
+                          )}
                         </motion.button>
                       </div>
                     </div>
