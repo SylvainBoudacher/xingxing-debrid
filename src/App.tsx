@@ -5,10 +5,11 @@ import { Toaster } from "@/components/ui/sonner";
 import { SetupPage } from "@/pages/SetupPage";
 import { MainPage } from "@/pages/MainPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { MagnetsPage } from "@/pages/MagnetsPage";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
-type Page = "setup" | "main" | "settings";
+type Page = "setup" | "main" | "settings" | "magnets";
 
 function App() {
   const [page, setPage] = useState<Page | null>(null);
@@ -65,6 +66,17 @@ function App() {
             transition={{ duration: 0.22, ease: "easeInOut" }}
           >
             <SettingsPage onBack={() => setPage("main")} />
+          </motion.div>
+        )}
+        {page === "magnets" && (
+          <motion.div
+            key="magnets"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
+          >
+            <MagnetsPage onBack={() => setPage("main")} />
           </motion.div>
         )}
       </AnimatePresence>
