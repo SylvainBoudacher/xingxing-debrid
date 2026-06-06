@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   Search, Menu, KeyRound, Loader2, ArrowUp, X,
   Clapperboard, Tv, Music, Headphones, Book, BookMarked,
-  Gamepad2, Package, FileText, Sparkles, HelpCircle, Send, Download, Magnet,
+  Gamepad2, Package, FileText, Sparkles, HelpCircle, CircleFadingArrowUp, Download, Magnet, Copy, Check,
   type LucideIcon,
 } from "lucide-react";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -140,6 +140,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
   const [sendingIndex, setSendingIndex] = useState<number | null>(null);
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
   const [downloadingLink, setDownloadingLink] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const apiKeyRef = useRef<string>("");
   const allDebridKeyRef = useRef<string>("");
 
@@ -190,6 +191,19 @@ export function MainPage({ onNavigate }: MainPageProps) {
       toast.error(String(err));
     } finally {
       setSendingIndex(null);
+    }
+  }
+
+  async function handleCopyLink(link: string) {
+    setCopiedLink(link);
+    try {
+      const url = await invoke<string>("unlock_link", { link, alldebridKey: allDebridKeyRef.current });
+      await navigator.clipboard.writeText(url);
+      toast.success("Lien copié");
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setTimeout(() => setCopiedLink(null), 2000);
     }
   }
 
@@ -411,7 +425,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
                     >
                       {sendingIndex === i
                         ? <Loader2 className="h-4 w-4 text-white animate-spin" />
-                        : <Send className="h-4 w-4 text-white" />
+                        : <CircleFadingArrowUp className="h-4 w-4 text-white" />
                       }
                     </motion.button>
                   </motion.div>
@@ -446,26 +460,44 @@ export function MainPage({ onNavigate }: MainPageProps) {
                 </button>
               </div>
               <div className="max-h-96 overflow-y-auto divide-y divide-white/5">
-                {debridModal.files.map((file, i) => (
-                  <div key={i} className="flex items-center gap-3 px-5 py-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-white truncate">{file.name.split("/").pop()}</p>
-                      <p className="text-xs text-zinc-500 mt-0.5">{formatSize(file.size)}</p>
+                {debridModal.files.map((file, i) => {
+                  const fileName = file.name.split("/").pop() ?? file.name;
+                  const showName = fileName !== debridModal.torrentName;
+                  return (
+                    <div key={i} className="flex items-center gap-3 px-5 py-3">
+                      <div className="min-w-0 flex-1">
+                        {showName && <p className="text-sm text-white truncate">{fileName}</p>}
+                        <p className={`text-xs text-zinc-500 ${showName ? "mt-0.5" : ""}`}>{formatSize(file.size)}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleCopyLink(file.link)}
+                          disabled={downloadingLink !== null || copiedLink !== null}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-700/80 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {copiedLink === file.link
+                            ? <Check className="h-4 w-4 text-green-400" />
+                            : <Copy className="h-4 w-4 text-white" />
+                          }
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleDownloadFile(file.link)}
+                          disabled={downloadingLink !== null || copiedLink !== null}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {downloadingLink === file.link
+                            ? <Loader2 className="h-4 w-4 text-white animate-spin" />
+                            : <Download className="h-4 w-4 text-white" />
+                          }
+                        </motion.button>
+                      </div>
                     </div>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => handleDownloadFile(file.link)}
-                      disabled={downloadingLink !== null}
-                      className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {downloadingLink === file.link
-                        ? <Loader2 className="h-4 w-4 text-white animate-spin" />
-                        : <Download className="h-4 w-4 text-white" />
-                      }
-                    </motion.button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </motion.div>
           </motion.div>
