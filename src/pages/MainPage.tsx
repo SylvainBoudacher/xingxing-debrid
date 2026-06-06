@@ -3,11 +3,14 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   Search, Menu, KeyRound, Loader2, ArrowUp, X,
   Clapperboard, Tv, Music, Headphones, Book, BookMarked,
-  Gamepad2, Package, FileText, Sparkles, HelpCircle,
+  Gamepad2, Package, FileText, Sparkles, HelpCircle, Send, Download,
   type LucideIcon,
 } from "lucide-react";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { fetch } from "@tauri-apps/plugin-http";
+import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,8 +49,35 @@ interface SearchResult {
   seeders: number;
   leechers: number;
   magnetUrl: string;
+  guid: string;
+  downloadUrl: string;
   pubDate: string;
   category: number;
+}
+
+interface DebridFile {
+  name: string;
+  size: number;
+  link: string;
+}
+
+interface DebridModal {
+  torrentName: string;
+  files: DebridFile[];
+}
+
+function flattenFiles(entries: unknown[], prefix = ""): DebridFile[] {
+  const result: DebridFile[] = [];
+  for (const entry of entries) {
+    const e = entry as Record<string, unknown>;
+    const name = prefix ? `${prefix}/${e.n}` : String(e.n);
+    if (Array.isArray(e.e)) {
+      result.push(...flattenFiles(e.e, name));
+    } else if (e.l) {
+      result.push({ name, size: Number(e.s) || 0, link: String(e.l) });
+    }
+  }
+  return result;
 }
 
 function getCategoryIcon(id: number): { icon: LucideIcon; color: string } {
@@ -82,6 +112,8 @@ function parseXml(xml: string): SearchResult[] {
       seeders: parseInt(attr("seeders") || "0", 10),
       leechers: Math.max(0, parseInt(attr("peers") || "0", 10) - parseInt(attr("seeders") || "0", 10)),
       magnetUrl: attr("magneturl"),
+      guid: text("guid"),
+      downloadUrl: text("link"),
       pubDate: text("pubDate"),
       category: parseInt(categoryRaw || "0", 10),
     };
@@ -105,13 +137,73 @@ export function MainPage({ onNavigate }: MainPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [searchKey, setSearchKey] = useState(0);
   const [phase, setPhase] = useState<"idle" | "title-exiting" | "active" | "bar-returning">("idle");
+  const [sendingIndex, setSendingIndex] = useState<number | null>(null);
+  const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
+  const [downloadingLink, setDownloadingLink] = useState<string | null>(null);
   const apiKeyRef = useRef<string>("");
+  const allDebridKeyRef = useRef<string>("");
 
   useEffect(() => {
-    store.get<string>("c411_api_key").then((v) => {
-      if (v) apiKeyRef.current = v;
-    });
+    store.get<string>("c411_api_key").then((v) => { if (v) apiKeyRef.current = v; });
+    store.get<string>("alldebrid_api_key").then((v) => { if (v) allDebridKeyRef.current = v; });
   }, []);
+
+  async function handleSendToDebrid(result: SearchResult, index: number) {
+    if (sendingIndex !== null) return;
+    if (!allDebridKeyRef.current) {
+      toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
+      return;
+    }
+
+    // Torznab standard download: ?t=get&id={guid}&apikey={key}
+    const guid = result.guid;
+    if (!guid) {
+      toast.error("GUID du torrent introuvable.");
+      return;
+    }
+    const torrentUrl = `https://c411.org/api?t=get&id=${encodeURIComponent(guid)}&apikey=${apiKeyRef.current}`;
+
+    setSendingIndex(index);
+    try {
+      const json = await invoke<{ status: string; data?: { files?: Array<{ id: number; name: string }> }; error?: { message: string } }>(
+        "upload_torrent_to_debrid",
+        { torrentUrl, alldebridKey: allDebridKeyRef.current }
+      );
+
+      if (json.status !== "success") throw new Error(json.error?.message ?? "Erreur AllDebrid inconnue");
+
+      const uploaded = json.data?.files?.[0] as { id: number; name: string; ready: boolean } | undefined;
+      if (!uploaded) throw new Error("Reponse AllDebrid inattendue");
+
+      if (uploaded.ready) {
+        const filesJson = await invoke<{ status: string; data?: { magnets?: Array<{ files?: unknown[] }> } }>(
+          "get_magnet_files",
+          { id: uploaded.id, alldebridKey: allDebridKeyRef.current }
+        );
+        const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
+        const files = flattenFiles(rawFiles);
+        setDebridModal({ torrentName: uploaded.name ?? result.title, files });
+      } else {
+        toast.success(`Envoye vers AllDebrid : ${uploaded.name ?? result.title} (en cours de debridage)`);
+      }
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setSendingIndex(null);
+    }
+  }
+
+  async function handleDownloadFile(link: string) {
+    setDownloadingLink(link);
+    try {
+      const url = await invoke<string>("unlock_link", { link, alldebridKey: allDebridKeyRef.current });
+      await openUrl(url);
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setDownloadingLink(null);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -295,8 +387,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
                     key={i}
                     variants={itemVariants}
                     whileHover={{ scale: 1.015, backgroundColor: "rgba(63,63,70,0.6)" }}
-                    whileTap={{ scale: 0.985 }}
-                    className="flex items-center gap-4 rounded-lg bg-zinc-800/60 ring-1 ring-white/8 px-4 py-3 cursor-pointer"
+                    className="flex items-center gap-4 rounded-lg bg-zinc-800/60 ring-1 ring-white/8 px-4 py-3"
                   >
                     <Icon className={`h-5 w-5 shrink-0 ${color}`} />
                     <div className="min-w-0 flex-1">
@@ -307,6 +398,18 @@ export function MainPage({ onNavigate }: MainPageProps) {
                         <span className="text-red-500">{r.leechers} Leechers</span>
                       </div>
                     </div>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => handleSendToDebrid(r, i)}
+                      disabled={sendingIndex !== null}
+                      className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {sendingIndex === i
+                        ? <Loader2 className="h-4 w-4 text-white animate-spin" />
+                        : <Send className="h-4 w-4 text-white" />
+                      }
+                    </motion.button>
                   </motion.div>
                 );
               })}
@@ -314,6 +417,56 @@ export function MainPage({ onNavigate }: MainPageProps) {
           )}
         </AnimatePresence>
       </div>
+
+      <AnimatePresence>
+        {debridModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+            onClick={() => setDebridModal(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-lg rounded-xl bg-zinc-900 ring-1 ring-white/10 overflow-hidden"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+                <p className="text-sm font-medium text-white truncate pr-4">{debridModal.torrentName}</p>
+                <button onClick={() => setDebridModal(null)} className="shrink-0 text-zinc-500 hover:text-white transition-colors">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="max-h-96 overflow-y-auto divide-y divide-white/5">
+                {debridModal.files.map((file, i) => (
+                  <div key={i} className="flex items-center gap-3 px-5 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-white truncate">{file.name.split("/").pop()}</p>
+                      <p className="text-xs text-zinc-500 mt-0.5">{formatSize(file.size)}</p>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => handleDownloadFile(file.link)}
+                      disabled={downloadingLink !== null}
+                      className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {downloadingLink === file.link
+                        ? <Loader2 className="h-4 w-4 text-white animate-spin" />
+                        : <Download className="h-4 w-4 text-white" />
+                      }
+                    </motion.button>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
