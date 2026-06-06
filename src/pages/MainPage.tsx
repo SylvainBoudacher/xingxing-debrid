@@ -149,6 +149,13 @@ export function MainPage({ onNavigate }: MainPageProps) {
     store.get<string>("alldebrid_api_key").then((v) => { if (v) allDebridKeyRef.current = v; });
   }, []);
 
+  useEffect(() => {
+    if (!debridModal) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setDebridModal(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [debridModal]);
+
   async function handleSendToDebrid(result: SearchResult, index: number) {
     if (sendingIndex !== null) return;
     if (!allDebridKeyRef.current) {
@@ -442,56 +449,65 @@ export function MainPage({ onNavigate }: MainPageProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
             onClick={() => setDebridModal(null)}
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-xl bg-zinc-900 ring-1 ring-white/10 overflow-hidden"
+              className="w-full max-w-lg rounded-2xl bg-zinc-900/95 backdrop-blur-xl ring-1 ring-white/10 overflow-hidden shadow-2xl"
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
-                <p className="text-sm font-medium text-white truncate pr-4">{debridModal.torrentName}</p>
-                <button onClick={() => setDebridModal(null)} className="shrink-0 text-zinc-500 hover:text-white transition-colors">
-                  <X className="h-4 w-4" />
-                </button>
+              {/* Header */}
+              <div className="px-5 pt-5 pb-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">Fichiers disponibles</p>
+                    <p className="text-sm font-semibold text-white leading-snug line-clamp-2">{debridModal.torrentName}</p>
+                  </div>
+                  <button
+                    onClick={() => setDebridModal(null)}
+                    className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5 text-zinc-400" />
+                  </button>
+                </div>
               </div>
-              <div className="max-h-96 overflow-y-auto divide-y divide-white/5">
+
+              {/* File list */}
+              <div className="max-h-80 overflow-y-auto px-3 pb-3 space-y-1.5">
                 {debridModal.files.map((file, i) => {
                   const fileName = file.name.split("/").pop() ?? file.name;
                   const showName = fileName !== debridModal.torrentName;
                   return (
-                    <div key={i} className="flex items-center gap-3 px-5 py-3">
-                      <div className="min-w-0 flex-1">
-                        {showName && <p className="text-sm text-white truncate">{fileName}</p>}
-                        <p className={`text-xs text-zinc-500 ${showName ? "mt-0.5" : ""}`}>{formatSize(file.size)}</p>
+                    <div key={i} className="rounded-xl bg-zinc-800/60 px-4 py-3">
+                      <div className="mb-3">
+                        {showName && <p className="text-sm font-medium text-white leading-snug line-clamp-2 mb-0.5">{fileName}</p>}
+                        <p className="text-xs text-zinc-500">{formatSize(file.size)}</p>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2">
                         <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
+                          whileTap={{ scale: 0.97 }}
                           onClick={() => handleCopyLink(file.link)}
                           disabled={downloadingLink !== null || copiedLink !== null}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-700/80 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
                           {copiedLink === file.link
-                            ? <Check className="h-4 w-4 text-green-400" />
-                            : <Copy className="h-4 w-4 text-white" />
+                            ? <><Check className="h-3.5 w-3.5 text-green-400" /><span className="text-xs font-medium text-green-400">Copie !</span></>
+                            : <><Copy className="h-3.5 w-3.5 text-zinc-300" /><span className="text-xs font-medium text-zinc-300">Copier le lien</span></>
                           }
                         </motion.button>
                         <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
+                          whileTap={{ scale: 0.97 }}
                           onClick={() => handleDownloadFile(file.link)}
                           disabled={downloadingLink !== null || copiedLink !== null}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
                           {downloadingLink === file.link
-                            ? <Loader2 className="h-4 w-4 text-white animate-spin" />
-                            : <Download className="h-4 w-4 text-white" />
+                            ? <><Loader2 className="h-3.5 w-3.5 text-white animate-spin" /><span className="text-xs font-medium text-white">Ouverture...</span></>
+                            : <><Download className="h-3.5 w-3.5 text-white" /><span className="text-xs font-medium text-white">Telecharger</span></>
                           }
                         </motion.button>
                       </div>

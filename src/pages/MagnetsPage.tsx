@@ -5,7 +5,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   ArrowLeft, RefreshCw, Trash2, Loader2,
   CheckCircle2, Clock, AlertCircle, Download, Zap, Search, X,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, Copy, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { invoke } from "@tauri-apps/api/core";
@@ -73,27 +73,27 @@ function getStatusFilter(code: number): Exclude<StatusFilter, "all"> {
 function StatusBadge({ code, label }: { code: number; label: string }) {
   if (code === 4) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-medium text-emerald-400 ring-1 ring-emerald-500/30">
+      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/12 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
         <CheckCircle2 className="h-3 w-3" /> Termine
       </span>
     );
   }
   if (code >= 0 && code <= 3) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/15 px-2.5 py-0.5 text-xs font-medium text-indigo-400 ring-1 ring-indigo-500/30">
+      <span className="inline-flex items-center gap-1 rounded-md bg-indigo-500/12 px-2 py-0.5 text-[11px] font-medium text-indigo-400">
         <Zap className="h-3 w-3" /> En cours
       </span>
     );
   }
   if (code >= 10) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-medium text-red-400 ring-1 ring-red-500/30">
+      <span className="inline-flex items-center gap-1 rounded-md bg-red-500/12 px-2 py-0.5 text-[11px] font-medium text-red-400">
         <AlertCircle className="h-3 w-3" /> Erreur
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-zinc-700/60 px-2.5 py-0.5 text-xs font-medium text-zinc-400 ring-1 ring-white/10">
+    <span className="inline-flex items-center gap-1 rounded-md bg-zinc-700/50 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
       <Clock className="h-3 w-3" /> {label}
     </span>
   );
@@ -103,7 +103,7 @@ function ProgressBar({ downloaded, size }: { downloaded: number; size: number })
   if (!size || !downloaded) return null;
   const pct = Math.min(100, (downloaded / size) * 100);
   return (
-    <div className="mt-2 h-1 w-full rounded-full bg-white/5 overflow-hidden">
+    <div className="mt-1.5 h-[3px] w-full rounded-full bg-white/6 overflow-hidden">
       <motion.div
         className="h-full rounded-full bg-indigo-500"
         initial={{ width: 0 }}
@@ -125,6 +125,13 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
   const [files, setFiles] = useState<DebridFile[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [copying, setCopying] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   useEffect(() => {
     (async () => {
@@ -154,52 +161,94 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
     }
   }
 
+  async function handleCopy(link: string) {
+    setCopying(link);
+    try {
+      const url = await invoke<string>("unlock_link", { link, alldebridKey: apiKey });
+      await navigator.clipboard.writeText(url);
+      toast.success("Lien copie");
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setTimeout(() => setCopying(null), 2000);
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 10 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.95, opacity: 0, y: 10 }}
-        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        initial={{ opacity: 0, scale: 0.95, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 8 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg rounded-xl bg-zinc-900 ring-1 ring-white/10 overflow-hidden"
+        className="w-full max-w-lg rounded-2xl bg-zinc-900/95 backdrop-blur-xl ring-1 ring-white/10 overflow-hidden shadow-2xl"
       >
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
-          <p className="text-sm font-medium text-white truncate pr-4">{magnetName}</p>
-          <button onClick={onClose} className="shrink-0 text-zinc-500 hover:text-white transition-colors text-xl leading-none">&times;</button>
+        {/* Header */}
+        <div className="px-5 pt-5 pb-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">Fichiers disponibles</p>
+              <p className="text-sm font-semibold text-white leading-snug line-clamp-2">{magnetName}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
+            >
+              <X className="h-3.5 w-3.5 text-zinc-400" />
+            </button>
+          </div>
         </div>
-        <div className="max-h-96 overflow-y-auto divide-y divide-white/5">
+
+        {/* File list */}
+        <div className="max-h-80 overflow-y-auto px-3 pb-3 space-y-1.5">
           {loading && (
             <div className="flex justify-center py-8">
               <Loader2 className="h-5 w-5 text-zinc-400 animate-spin" />
             </div>
           )}
-          {!loading && files?.map((file, i) => (
-            <div key={i} className="flex items-center gap-3 px-5 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm text-white truncate">{file.name.split("/").pop()}</p>
-                <p className="text-xs text-zinc-500 mt-0.5">{formatSize(file.size)}</p>
+          {!loading && files?.map((file, i) => {
+            const fileName = file.name.split("/").pop() ?? file.name;
+            const showName = fileName !== magnetName;
+            return (
+              <div key={i} className="rounded-xl bg-zinc-800/60 px-4 py-3">
+                <div className="mb-3">
+                  {showName && <p className="text-sm font-medium text-white leading-snug line-clamp-2 mb-0.5">{fileName}</p>}
+                  <p className="text-xs text-zinc-500">{formatSize(file.size)}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => handleCopy(file.link)}
+                    disabled={downloading !== null || copying !== null}
+                    className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {copying === file.link
+                      ? <><Check className="h-3.5 w-3.5 text-green-400" /><span className="text-xs font-medium text-green-400">Copie !</span></>
+                      : <><Copy className="h-3.5 w-3.5 text-zinc-300" /><span className="text-xs font-medium text-zinc-300">Copier le lien</span></>
+                    }
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => handleDownload(file.link)}
+                    disabled={downloading !== null || copying !== null}
+                    className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {downloading === file.link
+                      ? <><Loader2 className="h-3.5 w-3.5 text-white animate-spin" /><span className="text-xs font-medium text-white">Ouverture...</span></>
+                      : <><Download className="h-3.5 w-3.5 text-white" /><span className="text-xs font-medium text-white">Telecharger</span></>
+                    }
+                  </motion.button>
+                </div>
               </div>
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => handleDownload(file.link)}
-                disabled={downloading !== null}
-                className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-              >
-                {downloading === file.link
-                  ? <Loader2 className="h-4 w-4 text-white animate-spin" />
-                  : <Download className="h-4 w-4 text-white" />
-                }
-              </motion.button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </motion.div>
     </motion.div>
@@ -310,7 +359,6 @@ export function MagnetsPage({ onBack }: MagnetsPageProps) {
     }
   }
 
-  // Reset page when filters change
   useEffect(() => { setPage(1); }, [search, statusFilter]);
 
   const counts = {
@@ -345,35 +393,33 @@ export function MagnetsPage({ onBack }: MagnetsPageProps) {
     <main className="relative flex min-h-screen flex-col bg-black bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
 
       {/* Header */}
-      <div className="flex items-center justify-between px-6 pt-6 pb-4">
-        <div className="flex items-center gap-3">
-          <motion.button
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.93 }}
-            onClick={onBack}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-zinc-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </motion.button>
-          <h1 className="text-lg font-semibold text-white tracking-tight">Magnets</h1>
-        </div>
+      <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/5">
         <motion.button
-          whileHover={{ scale: 1.08, rotate: 15 }}
           whileTap={{ scale: 0.93 }}
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="text-sm font-medium">Retour</span>
+        </motion.button>
+
+        <h1 className="text-sm font-semibold text-white tracking-tight absolute left-1/2 -translate-x-1/2">Magnets</h1>
+
+        <motion.button
+          whileTap={{ scale: 0.93 }}
+          animate={loading ? { rotate: 360 } : { rotate: 0 }}
+          transition={loading ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
           onClick={loadMagnets}
           disabled={loading}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-zinc-400 hover:text-white disabled:opacity-40 transition-colors"
+          className="text-indigo-400 hover:text-indigo-300 disabled:opacity-40 transition-colors"
         >
-          {loading
-            ? <Loader2 className="h-4 w-4 animate-spin" />
-            : <RefreshCw className="h-4 w-4" />
-          }
+          <RefreshCw className="h-4 w-4" />
         </motion.button>
       </div>
 
       {/* Tabs */}
-      <div className="px-6 pb-3">
-        <div className="flex gap-1 rounded-xl bg-zinc-900/60 p-1 ring-1 ring-white/8">
+      <div className="px-5 pt-4 pb-3">
+        <div className="flex gap-1 rounded-xl bg-zinc-900/70 p-1 ring-1 ring-white/6">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -391,15 +437,15 @@ export function MagnetsPage({ onBack }: MagnetsPageProps) {
       </div>
 
       {/* Search */}
-      <div className="px-6 pb-4">
+      <div className="px-5 pb-3">
         <div className="relative flex items-center">
-          <Search className="absolute left-3 h-4 w-4 text-zinc-500 pointer-events-none" />
+          <Search className="absolute left-3 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher un fichier..."
-            className="w-full rounded-xl bg-zinc-900/70 ring-1 ring-white/8 pl-9 pr-9 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:ring-indigo-500/50 transition-all"
+            placeholder="Rechercher..."
+            className="w-full rounded-xl bg-zinc-900/70 ring-1 ring-white/6 pl-9 pr-9 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:ring-indigo-500/40 transition-all"
           />
           <AnimatePresence>
             {search && (
@@ -420,8 +466,8 @@ export function MagnetsPage({ onBack }: MagnetsPageProps) {
 
       {/* Count */}
       {!loading && (
-        <div className="px-6 pb-2">
-          <p className="text-xs text-zinc-600">
+        <div className="px-5 pb-2">
+          <p className="text-[11px] text-zinc-600 uppercase tracking-wider font-medium">
             {filtered.length === 0
               ? "Aucun resultat"
               : `${filtered.length} magnet${filtered.length > 1 ? "s" : ""}${search ? ` pour "${search}"` : ""}`
@@ -431,7 +477,7 @@ export function MagnetsPage({ onBack }: MagnetsPageProps) {
       )}
 
       {/* List */}
-      <div className="flex-1 px-6 pb-4 overflow-y-auto">
+      <div className="flex-1 px-5 pb-6 overflow-y-auto">
         {!loading && filtered.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -449,7 +495,7 @@ export function MagnetsPage({ onBack }: MagnetsPageProps) {
             initial="hidden"
             animate="visible"
             variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.035 } } }}
-            className="space-y-2.5"
+            className="space-y-2"
           >
             {paginated.map((m) => {
               const isReady = m.statusCode === 4;
@@ -461,65 +507,59 @@ export function MagnetsPage({ onBack }: MagnetsPageProps) {
                   key={m.id}
                   variants={itemVariants}
                   layout
-                  className="rounded-xl bg-zinc-900/70 ring-1 ring-white/8 overflow-hidden"
+                  className="rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 overflow-hidden"
                 >
-                  <div className="px-5 py-4">
-                    <div className="flex items-start gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-white leading-snug line-clamp-2">{m.filename}</p>
-                        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <StatusBadge code={m.statusCode} label={m.status} />
-                          <span className="text-xs text-zinc-500">{formatSize(m.size)}</span>
-                          {isActive && m.downloadSpeed > 0 && (
-                            <span className="text-xs text-indigo-400">{formatSpeed(m.downloadSpeed)}</span>
-                          )}
-                          {isActive && m.seeders > 0 && (
-                            <span className="text-xs text-zinc-500">{m.seeders} seeders</span>
-                          )}
-                          {isReady && (
-                            <span className="text-xs text-zinc-500">{formatDate(m.completionDate)}</span>
-                          )}
-                          {!isReady && !isActive && (
-                            <span className="text-xs text-zinc-500">{formatDate(m.uploadDate)}</span>
-                          )}
-                        </div>
-                      </div>
+                  <div className="px-4 py-3">
+                    <p className="text-sm font-semibold text-white leading-snug line-clamp-2 mb-2">{m.filename}</p>
 
-                      <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                    <div className="flex items-center gap-3">
+                      <StatusBadge code={m.statusCode} label={m.status} />
+                      <span className="text-[11px] text-zinc-500">{formatSize(m.size)}</span>
+                      {isActive && m.downloadSpeed > 0 && (
+                        <span className="text-[11px] text-indigo-400 font-medium">{formatSpeed(m.downloadSpeed)}</span>
+                      )}
+                      {isActive && m.seeders > 0 && (
+                        <span className="text-[11px] text-zinc-500">{m.seeders} seeders</span>
+                      )}
+                      {isReady && (
+                        <span className="text-[11px] text-zinc-500">{formatDate(m.completionDate)}</span>
+                      )}
+                      {!isReady && !isActive && (
+                        <span className="text-[11px] text-zinc-500">{formatDate(m.uploadDate)}</span>
+                      )}
+
+                      <div className="flex items-center gap-1.5 ml-auto shrink-0">
                         {isReady && (
                           <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
+                            whileTap={{ scale: 0.97 }}
                             onClick={() => setFilesModal({ id: m.id, name: m.filename })}
-                            className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 transition-colors"
-                            title="Voir les fichiers"
+                            className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition-colors"
                           >
-                            <Download className="h-4 w-4 text-white" />
+                            <Download className="h-3 w-3 text-white" />
+                            <span className="text-[11px] font-medium text-white">Voir les fichiers</span>
                           </motion.button>
                         )}
                         <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
+                          whileTap={{ scale: 0.97 }}
                           onClick={() => handleDelete(m.id)}
                           disabled={deletingId !== null}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 hover:bg-red-500/30 hover:text-red-400 text-zinc-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                          title="Supprimer"
+                          className="flex items-center justify-center h-7 w-7 rounded-lg bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
                           {deletingId === m.id
-                            ? <Loader2 className="h-4 w-4 animate-spin" />
-                            : <Trash2 className="h-4 w-4" />
+                            ? <Loader2 className="h-3 w-3 animate-spin" />
+                            : <Trash2 className="h-3 w-3" />
                           }
                         </motion.button>
                       </div>
                     </div>
 
                     {isActive && (
-                      <div className="mt-3">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-xs text-zinc-500">{formatSize(m.downloaded)} / {formatSize(m.size)}</span>
-                          <span className="text-xs text-zinc-500">{pct}%</span>
-                        </div>
+                      <div className="mt-2">
                         <ProgressBar downloaded={m.downloaded} size={m.size} />
+                        <div className="flex justify-between items-center mt-1">
+                          <span className="text-[10px] text-zinc-600">{formatSize(m.downloaded)} / {formatSize(m.size)}</span>
+                          <span className="text-[10px] text-zinc-600">{pct}%</span>
+                        </div>
                       </div>
                     )}
                   </div>
