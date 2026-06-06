@@ -117,7 +117,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
     e.preventDefault();
     if (!query.trim()) return;
 
-    setPhase("title-exiting");
+    setPhase((prev) => prev === "idle" ? "title-exiting" : "active");
     setLoading(true);
     setError(null);
 
