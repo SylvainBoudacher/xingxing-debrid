@@ -21,7 +21,7 @@ const titleWords = "Que voulez-vous regarder ?".split(" ");
 
 const titleContainerVariants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.3 } },
+  visible: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
 };
 
 const titleWordVariants = {
@@ -104,8 +104,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchKey, setSearchKey] = useState(0);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [titleGone, setTitleGone] = useState(false);
+  const [phase, setPhase] = useState<"idle" | "title-exiting" | "active" | "bar-returning">("idle");
   const apiKeyRef = useRef<string>("");
 
   useEffect(() => {
@@ -118,7 +117,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
     e.preventDefault();
     if (!query.trim()) return;
 
-    setHasSearched(true);
+    setPhase("title-exiting");
     setLoading(true);
     setError(null);
 
@@ -159,91 +158,97 @@ export function MainPage({ onNavigate }: MainPageProps) {
         </DropdownMenu>
       </div>
 
-      <motion.div
-        layout
-        transition={{ type: "spring", stiffness: 260, damping: 26, mass: 0.9 }}
-        className={`flex flex-col items-center gap-10 ${titleGone ? "pt-16 pb-6" : "flex-1 justify-center pb-0"}`}
-      >
-        <AnimatePresence onExitComplete={() => setTitleGone(true)}>
-          {!hasSearched && (
-            <motion.h1
-              variants={titleContainerVariants}
-              initial="hidden"
-              animate="visible"
-              exit={{ opacity: 0, y: 20, transition: { duration: 0.18, ease: "easeIn" } }}
-              className="flex flex-wrap justify-center gap-x-[0.3em] text-4xl font-light tracking-tight text-white overflow-hidden"
-            >
-              {titleWords.map((word, i) => (
-                <span key={i} className="overflow-hidden inline-block">
-                  <motion.span variants={titleWordVariants} className="inline-block">
-                    {word}
-                  </motion.span>
-                </span>
-              ))}
-            </motion.h1>
-          )}
-        </AnimatePresence>
+      <div className="flex-1 flex flex-col items-center overflow-y-auto">
+        <motion.div
+          layout
+          transition={{ type: "spring", stiffness: 160, damping: 30, mass: 1.1 }}
+          onLayoutAnimationComplete={() => {
+            if (phase === "bar-returning") setPhase("idle");
+          }}
+          className={`relative flex flex-col items-center w-full ${phase === "active" ? "mt-16 mb-6" : "my-auto"}`}
+        >
+          <AnimatePresence onExitComplete={() => {
+            if (phase === "title-exiting") setPhase("active");
+          }}>
+            {phase === "idle" && (
+              <motion.h1
+                variants={titleContainerVariants}
+                initial="hidden"
+                animate="visible"
+                exit={{ opacity: 0, y: 20, transition: { duration: 0.18, ease: "easeIn" } }}
+                className="absolute bottom-full mb-10 flex flex-wrap justify-center gap-x-[0.3em] text-4xl font-light tracking-tight text-white overflow-hidden w-full"
+              >
+                {titleWords.map((word, i) => (
+                  <span key={i} className="overflow-hidden inline-block">
+                    <motion.span variants={titleWordVariants} className="inline-block">
+                      {word}
+                    </motion.span>
+                  </span>
+                ))}
+              </motion.h1>
+            )}
+          </AnimatePresence>
 
-        <form onSubmit={handleSubmit} className="w-full max-w-2xl px-6">
-          <div className="relative flex items-center gap-3 rounded-full bg-zinc-800/80 px-6 py-4 shadow-[0_8px_40px_rgba(0,0,0,0.7)] transition-all">
-            {loading
-              ? <Loader2 className="h-5 w-5 shrink-0 text-zinc-400 animate-spin" />
-              : <Search className="h-5 w-5 shrink-0 text-zinc-400" />
-            }
-            <input
-              autoFocus
-              type="text"
-              value={query}
-              onChange={(e) => {
-                const val = e.target.value;
-                setQuery(val);
-                if (!val) {
-                  setResults(null);
-                  setError(null);
-                  setHasSearched(false);
-                  setTitleGone(false);
-                }
-              }}
-              placeholder="Rechercher un film, une serie..."
-              className="flex-1 bg-transparent text-white placeholder:text-zinc-500 outline-none text-lg pr-10"
-            />
-            <AnimatePresence>
-              {(query.trim() || results !== null) && (
-                <motion.button
-                  key="clear-btn"
-                  initial={{ opacity: 0, scale: 0.7 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.7 }}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  transition={{ duration: 0.15 }}
-                  type="button"
-                  onClick={() => { setQuery(""); setResults(null); setError(null); setHasSearched(false); setTitleGone(false); }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-700/80 hover:bg-zinc-600/80 transition-colors"
-                >
-                  <X className="h-4 w-4 text-zinc-300" />
-                </motion.button>
-              )}
-            </AnimatePresence>
-            <AnimatePresence>
-              {query.trim() && (
-                <motion.button
-                  key="submit-btn"
-                  initial={{ opacity: 0, scale: 0.7 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.7 }}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  transition={{ duration: 0.15 }}
-                  type="submit"
-                  className="absolute right-12 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors"
-                >
-                  <ArrowUp className="h-4 w-4 text-white" />
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
-        </form>
+          <form onSubmit={handleSubmit} className="w-full max-w-2xl px-6">
+            <div className="relative flex items-center gap-3 rounded-full bg-zinc-800/80 px-6 py-4 shadow-[0_8px_40px_rgba(0,0,0,0.7)] transition-all">
+              {loading
+                ? <Loader2 className="h-5 w-5 shrink-0 text-zinc-400 animate-spin" />
+                : <Search className="h-5 w-5 shrink-0 text-zinc-400" />
+              }
+              <input
+                autoFocus
+                type="text"
+                value={query}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setQuery(val);
+                  if (!val) {
+                    setResults(null);
+                    setError(null);
+                    setPhase((prev) => prev === "active" ? "bar-returning" : "idle");
+                  }
+                }}
+                placeholder="Rechercher un film, une serie..."
+                className="flex-1 bg-transparent text-white placeholder:text-zinc-500 outline-none text-lg pr-10"
+              />
+              <AnimatePresence>
+                {(query.trim() || results !== null) && (
+                  <motion.button
+                    key="clear-btn"
+                    initial={{ opacity: 0, scale: 0.7 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.7 }}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    transition={{ duration: 0.15 }}
+                    type="button"
+                    onClick={() => { setQuery(""); setResults(null); setError(null); setPhase((prev) => prev === "active" ? "bar-returning" : "idle"); }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-700/80 hover:bg-zinc-600/80 transition-colors"
+                  >
+                    <X className="h-4 w-4 text-zinc-300" />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {query.trim() && (
+                  <motion.button
+                    key="submit-btn"
+                    initial={{ opacity: 0, scale: 0.7 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.7 }}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    transition={{ duration: 0.15 }}
+                    type="submit"
+                    className="absolute right-12 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors"
+                  >
+                    <ArrowUp className="h-4 w-4 text-white" />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
+          </form>
+        </motion.div>
 
         <AnimatePresence>
           {error && (
@@ -260,7 +265,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
         </AnimatePresence>
 
         <AnimatePresence>
-          {titleGone && results !== null && results.length === 0 && (
+          {phase === "active" && results !== null && results.length === 0 && (
             <motion.p
               key="empty"
               initial={{ opacity: 0, y: 6 }}
@@ -274,10 +279,10 @@ export function MainPage({ onNavigate }: MainPageProps) {
         </AnimatePresence>
 
         <AnimatePresence mode="popLayout">
-          {titleGone && results && results.length > 0 && (
+          {phase === "active" && results && results.length > 0 && (
             <motion.div
               key={searchKey}
-              className="w-full max-w-2xl px-6 space-y-2"
+              className="w-full max-w-2xl px-6 space-y-2 pb-6"
               variants={listVariants}
               initial="hidden"
               animate="visible"
@@ -308,8 +313,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
             </motion.div>
           )}
         </AnimatePresence>
-
-      </motion.div>
+      </div>
     </main>
   );
 }
