@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import {
   Search, Menu, KeyRound, Loader2, ArrowUp, X,
   Clapperboard, Tv, Music, Headphones, Book, BookMarked,
-  Gamepad2, Package, FileText, Sparkles, HelpCircle, Send, Download,
+  Gamepad2, Package, FileText, Sparkles, HelpCircle, Send, Download, Magnet,
   type LucideIcon,
 } from "lucide-react";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -127,7 +127,7 @@ function formatSize(bytes: number): string {
 }
 
 interface MainPageProps {
-  onNavigate: (page: "settings") => void;
+  onNavigate: (page: "settings" | "magnets") => void;
 }
 
 export function MainPage({ onNavigate }: MainPageProps) {
@@ -242,6 +242,10 @@ export function MainPage({ onNavigate }: MainPageProps) {
             </motion.button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem onClick={() => onNavigate("magnets")}>
+              <Magnet className="mr-2 h-4 w-4" />
+              Magnets
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onNavigate("settings")}>
               <KeyRound className="mr-2 h-4 w-4" />
               Cles API
