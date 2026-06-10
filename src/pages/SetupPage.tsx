@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  ArrowLeft, ArrowRight, Download, ExternalLink, KeyRound, Loader2, Magnet, Search, Zap,
+  ArrowLeft, ArrowRight, Download, ExternalLink, KeyRound, Loader2, Search, Zap,
 } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
@@ -163,9 +164,11 @@ export function SetupPage({ onComplete }: SetupPageProps) {
             className="relative mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-6 py-12 sm:px-8"
           >
             <motion.div variants={item} className="flex flex-col items-center text-center mb-10">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-[0_0_50px_rgba(79,70,229,0.5)] mb-6">
-                <Magnet className="h-8 w-8 text-white" />
-              </div>
+              <img
+                src={logo}
+                alt="XingXing Debrid"
+                className="h-16 w-16 rounded-2xl ring-1 ring-white/10 shadow-[0_0_50px_rgba(79,70,229,0.5)] mb-6"
+              />
               <h1 className="text-3xl font-bold tracking-tight text-white mb-3">XingXing Debrid</h1>
               <p className="text-sm text-zinc-400 max-w-sm leading-relaxed">
                 De la recherche au visionnage, tout votre contenu en un seul endroit.
