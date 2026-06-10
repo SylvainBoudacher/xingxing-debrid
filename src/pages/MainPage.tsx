@@ -1,7 +1,10 @@
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import vlcLogo from "@/assets/vlc.png";
@@ -17,8 +20,10 @@ import {
   CircleFadingArrowUp,
   Clapperboard,
   Copy,
+  Bell,
   Download,
   FileText,
+  FlaskConical,
   Gamepad2,
   Headphones,
   HelpCircle,
@@ -27,9 +32,11 @@ import {
   Menu,
   Music,
   Package,
+  RotateCcw,
   Search,
   SlidersHorizontal,
   Sparkles,
+  Trash2,
   Tv,
   X,
   type LucideIcon,
@@ -171,10 +178,12 @@ function formatSize(bytes: number): string {
 }
 
 interface MainPageProps {
-  onNavigate: (page: "magnets" | "preferences") => void;
+  onNavigate: (page: "magnets" | "preferences" | "setup") => void;
+  devMode: boolean;
+  onToggleDevMode: () => void;
 }
 
-export function MainPage({ onNavigate }: MainPageProps) {
+export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -351,7 +360,7 @@ export function MainPage({ onNavigate }: MainPageProps) {
               <Menu className="h-5 w-5" />
             </motion.button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuContent align="end" className={import.meta.env.DEV ? "w-56" : "w-44"}>
             <DropdownMenuItem onClick={() => onNavigate("magnets")}>
               <Magnet className="mr-2 h-4 w-4" />
               Magnets
@@ -360,6 +369,53 @@ export function MainPage({ onNavigate }: MainPageProps) {
               <SlidersHorizontal className="mr-2 h-4 w-4" />
               Paramètres
             </DropdownMenuItem>
+            {import.meta.env.DEV && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs text-muted-foreground">Développeur</DropdownMenuLabel>
+                <DropdownMenuCheckboxItem checked={devMode} onCheckedChange={onToggleDevMode}>
+                  <FlaskConical className="mr-2 h-4 w-4" />
+                  Mode développeur
+                </DropdownMenuCheckboxItem>
+                {devMode && (
+                  <>
+                    <DropdownMenuItem onClick={() => onNavigate("setup")}>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Voir la welcome page
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await store.set("setup_complete", false);
+                        await store.save();
+                        toast.success("Premier lancement réinitialisé");
+                      }}
+                    >
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Réinitialiser 1er lancement
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        toast.success("Toast de succès");
+                        toast.error("Toast d'erreur");
+                      }}
+                    >
+                      <Bell className="mr-2 h-4 w-4" />
+                      Tester les toasts
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        await store.clear();
+                        await store.save();
+                        location.reload();
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Vider le store
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

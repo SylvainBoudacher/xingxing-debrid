@@ -13,6 +13,7 @@ type Page = "setup" | "main" | "magnets" | "preferences";
 
 function App() {
   const [page, setPage] = useState<Page | null>(null);
+  const [devMode, setDevMode] = useState(false);
 
   useEffect(() => {
     store.get<boolean>("setup_complete")
@@ -34,6 +35,11 @@ function App() {
   return (
     <>
       <Toaster />
+      {devMode && (
+        <div className="fixed bottom-3 left-3 z-50 rounded-md bg-amber-500/15 ring-1 ring-amber-500/30 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-400">
+          MODE DEV
+        </div>
+      )}
       <AnimatePresence mode="wait">
         {page === "setup" && (
           <motion.div
@@ -54,7 +60,11 @@ function App() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.22, ease: "easeInOut" }}
           >
-            <MainPage onNavigate={setPage} />
+            <MainPage
+              onNavigate={setPage}
+              devMode={devMode}
+              onToggleDevMode={() => setDevMode((v) => !v)}
+            />
           </motion.div>
         )}
         {page === "magnets" && (
