@@ -47,6 +47,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LATEST_VERSION } from "@/lib/patchnotes";
+import { parseRelease } from "@/lib/parseRelease";
+import type { ViewMode } from "./PreferencesPage";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
@@ -154,6 +156,8 @@ function getCategoryGroup(id: number): number {
   return CATEGORY_FILTERS.some((c) => c.key === g) ? g : 0;
 }
 
+const QUALITY_ORDER = ["4K", "2160p", "1080p", "720p", "480p"];
+
 const SORT_LABELS = {
   pertinence: "Pertinence",
   seeders: "Seeders",
@@ -221,6 +225,8 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [total, setTotal] = useState<number | null>(null);
   const [activeCats, setActiveCats] = useState<number[]>([]);
+  const [activeQualities, setActiveQualities] = useState<string[]>([]);
+  const [activeCodecs, setActiveCodecs] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortKey>("pertinence");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
   const [hasMore, setHasMore] = useState(false);
@@ -237,6 +243,7 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [vlcLink, setVlcLink] = useState<string | null>(null);
   const [showPatchNotif, setShowPatchNotif] = useState(false);
+  const [simpleSearchView, setSimpleSearchView] = useState(true);
   const apiKeyRef = useRef<string>("");
   const allDebridKeyRef = useRef<string>("");
   const searchedQueryRef = useRef<string>("");
@@ -250,6 +257,9 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
     });
     store.get<string>("patchnotes_seen").then((v) => {
       if (v !== LATEST_VERSION) setShowPatchNotif(true);
+    });
+    store.get<ViewMode>("search_view_mode").then((v) => {
+      setSimpleSearchView((v ?? "simple") === "simple");
     });
   }, []);
 
@@ -392,6 +402,8 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
       setResults(items);
       setTotal(total);
       setActiveCats([]);
+      setActiveQualities([]);
+      setActiveCodecs([]);
       setSortBy("pertinence");
       setSortDir("desc");
       setHasMore(
@@ -426,9 +438,15 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
   }
 
   const groupCounts = new Map<number, number>();
+  const qualityCounts = new Map<string, number>();
+  const codecCounts = new Map<string, number>();
   for (const r of results ?? []) {
     const g = getCategoryGroup(r.category);
     groupCounts.set(g, (groupCounts.get(g) ?? 0) + 1);
+    const p = parseRelease(r.title);
+    if (p.quality)
+      qualityCounts.set(p.quality, (qualityCounts.get(p.quality) ?? 0) + 1);
+    if (p.codec) codecCounts.set(p.codec, (codecCounts.get(p.codec) ?? 0) + 1);
   }
 
   let displayed = results ?? [];
@@ -436,6 +454,16 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
     displayed = displayed.filter((r) =>
       activeCats.includes(getCategoryGroup(r.category)),
     );
+  if (activeQualities.length > 0 || activeCodecs.length > 0)
+    displayed = displayed.filter((r) => {
+      const p = parseRelease(r.title);
+      return (
+        (activeQualities.length === 0 ||
+          (p.quality !== null && activeQualities.includes(p.quality))) &&
+        (activeCodecs.length === 0 ||
+          (p.codec !== null && activeCodecs.includes(p.codec)))
+      );
+    });
   const dir = sortDir === "desc" ? 1 : -1;
   if (sortBy === "seeders")
     displayed = [...displayed].sort((a, b) => (b.seeders - a.seeders) * dir);
@@ -791,24 +819,111 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              {displayed.length === 0 && (
-                <p className="text-center text-sm text-zinc-500 py-4">
-                  Aucun résultat avec ces filtres.
-                </p>
+              {(qualityCounts.size > 0 || codecCounts.size > 0) && (
+                <div className="flex flex-wrap items-center gap-2 pb-1">
+                  {QUALITY_ORDER.filter((q) => qualityCounts.has(q)).map(
+                    (q) => {
+                      const active = activeQualities.includes(q);
+                      return (
+                        <button
+                          key={q}
+                          onClick={() =>
+                            setActiveQualities((prev) =>
+                              prev.includes(q)
+                                ? prev.filter((x) => x !== q)
+                                : [...prev, q],
+                            )
+                          }
+                          className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-semibold uppercase tracking-wide ring-1 transition-colors ${
+                            active
+                              ? "bg-indigo-600 text-white ring-indigo-500"
+                              : "bg-zinc-800/80 text-zinc-400 ring-white/10 hover:bg-zinc-700/80 hover:text-white"
+                          }`}
+                        >
+                          {q}
+                          <span className={active ? "text-indigo-200" : "text-zinc-600"}>
+                            {qualityCounts.get(q)}
+                          </span>
+                        </button>
+                      );
+                    },
+                  )}
+                  {qualityCounts.size > 0 && codecCounts.size > 0 && (
+                    <div className="h-4 w-px bg-white/10" />
+                  )}
+                  {[...codecCounts.entries()]
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([codec, count]) => {
+                      const active = activeCodecs.includes(codec);
+                      return (
+                        <button
+                          key={codec}
+                          onClick={() =>
+                            setActiveCodecs((prev) =>
+                              prev.includes(codec)
+                                ? prev.filter((x) => x !== codec)
+                                : [...prev, codec],
+                            )
+                          }
+                          className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-semibold uppercase tracking-wide ring-1 transition-colors ${
+                            active
+                              ? "bg-indigo-600 text-white ring-indigo-500"
+                              : "bg-zinc-800/80 text-zinc-400 ring-white/10 hover:bg-zinc-700/80 hover:text-white"
+                          }`}
+                        >
+                          {codec}
+                          <span className={active ? "text-indigo-200" : "text-zinc-600"}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                </div>
               )}
+              {displayed.length === 0 && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center text-sm text-zinc-500 py-4"
+                >
+                  Aucun résultat avec ces filtres.
+                </motion.p>
+              )}
+              <AnimatePresence mode="popLayout">
               {displayed.map((r, i) => {
                 const { icon: Icon, color } = getCategoryIcon(r.category);
+                const parsed = simpleSearchView ? parseRelease(r.title) : null;
                 return (
                   <motion.div
-                    key={i}
+                    key={r.guid || `${r.title}-${r.size}`}
+                    layout
                     custom={i}
                     variants={itemVariants}
+                    exit={{
+                      opacity: 0,
+                      scale: 0.96,
+                      transition: { duration: 0.15, ease: "easeIn" },
+                    }}
                     className="flex items-center gap-4 rounded-lg bg-zinc-800/60 ring-1 ring-white/8 px-4 py-3 transition-colors duration-150 hover:bg-zinc-700/60 hover:ring-white/15"
                   >
                     <Icon className={`h-5 w-5 shrink-0 ${color}`} />
                     <div className="min-w-0 flex-1">
+                      {parsed && (parsed.quality || parsed.codec) && (
+                        <div className="flex items-center gap-1.5 mb-1">
+                          {parsed.quality && (
+                            <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
+                              {parsed.quality}
+                            </span>
+                          )}
+                          {parsed.codec && (
+                            <span className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                              {parsed.codec}
+                            </span>
+                          )}
+                        </div>
+                      )}
                       <p className="text-sm text-white font-medium leading-snug line-clamp-2">
-                        {r.title}
+                        {parsed ? parsed.title : r.title}
                       </p>
                       <div className="mt-1 flex items-center gap-4 text-xs text-zinc-500">
                         <span>{formatSize(r.size)}</span>
@@ -836,8 +951,9 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                   </motion.div>
                 );
               })}
+              </AnimatePresence>
               {hasMore && (
-                <div className="flex justify-center pt-3">
+                <motion.div layout className="flex justify-center pt-3">
                   <motion.button
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.96 }}
@@ -855,7 +971,7 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                       </span>
                     )}
                   </motion.button>
-                </div>
+                </motion.div>
               )}
             </motion.div>
           )}

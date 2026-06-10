@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, Eye, Home, Menu, KeyRound, Magnet } from "lucide-react";
+import { ArrowLeft, Eye, Home, Menu, KeyRound, Magnet, Search } from "lucide-react";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   DropdownMenu,
@@ -16,6 +16,7 @@ const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 export type ViewMode = "simple" | "detailed";
 
 const EXAMPLE = "Apple.Cider.Vinegar.S01E01.MULTi.1080p.WEB.H265-CHiLL.mkv";
+const SEARCH_EXAMPLE = "Dune.Part.Two.2024.MULTi.2160p.WEB.H265-Slay3R";
 
 interface PreferencesPageProps {
   onBack: () => void;
@@ -24,9 +25,11 @@ interface PreferencesPageProps {
 
 export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("simple");
+  const [searchViewMode, setSearchViewMode] = useState<ViewMode>("simple");
 
   useEffect(() => {
     store.get<ViewMode>("view_mode").then((v) => { if (v) setViewMode(v); });
+    store.get<ViewMode>("search_view_mode").then((v) => { if (v) setSearchViewMode(v); });
   }, []);
 
   async function handleChange(mode: ViewMode) {
@@ -35,7 +38,14 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
     await store.save();
   }
 
+  async function handleSearchChange(mode: ViewMode) {
+    setSearchViewMode(mode);
+    await store.set("search_view_mode", mode);
+    await store.save();
+  }
+
   const parsed = parseRelease(EXAMPLE);
+  const searchParsed = parseRelease(SEARCH_EXAMPLE);
 
   return (
     <main className="relative flex min-h-screen flex-col bg-[#05060c]">
@@ -95,7 +105,13 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
           La vue simplifiée reformate les noms de fichiers et affiche la qualité et le codec en labels.
         </p>
 
-        <div className="flex gap-1 rounded-xl bg-zinc-900/80 p-1 ring-1 ring-white/8 mb-6">
+        <div className="relative flex rounded-xl bg-zinc-900/80 p-1 ring-1 ring-white/8 mb-6">
+          <motion.div
+            initial={false}
+            animate={{ x: viewMode === "simple" ? "0%" : "100%" }}
+            transition={{ type: "spring", stiffness: 420, damping: 32 }}
+            className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-lg bg-indigo-600 shadow"
+          />
           {([
             { key: "simple", label: "Simplifiée" },
             { key: "detailed", label: "Détaillée" },
@@ -103,9 +119,9 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
             <button
               key={opt.key}
               onClick={() => handleChange(opt.key)}
-              className={`flex-1 rounded-lg px-2 py-2 text-xs font-medium transition-all ${
+              className={`relative z-10 flex-1 rounded-lg px-2 py-2 text-xs font-medium transition-colors ${
                 viewMode === opt.key
-                  ? "bg-indigo-600 text-white shadow"
+                  ? "text-white"
                   : "text-zinc-500 hover:text-zinc-300"
               }`}
             >
@@ -131,6 +147,65 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
           ) : (
             <p className="text-sm font-semibold text-white leading-snug break-all">{EXAMPLE}</p>
           )}
+        </div>
+
+        <div className="my-8 h-px bg-white/8" />
+
+        <div className="flex items-center gap-2 mb-1">
+          <Search className="h-4 w-4 text-indigo-400" />
+          <h2 className="text-sm font-semibold text-white">Affichage de la recherche</h2>
+        </div>
+        <p className="text-xs text-zinc-500 mb-5">
+          La vue simplifiée reformate les titres des résultats de recherche et affiche la qualité et le codec en labels.
+        </p>
+
+        <div className="relative flex rounded-xl bg-zinc-900/80 p-1 ring-1 ring-white/8 mb-6">
+          <motion.div
+            initial={false}
+            animate={{ x: searchViewMode === "simple" ? "0%" : "100%" }}
+            transition={{ type: "spring", stiffness: 420, damping: 32 }}
+            className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-lg bg-indigo-600 shadow"
+          />
+          {([
+            { key: "simple", label: "Simplifiée" },
+            { key: "detailed", label: "Détaillée" },
+          ] as { key: ViewMode; label: string }[]).map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => handleSearchChange(opt.key)}
+              className={`relative z-10 flex-1 rounded-lg px-2 py-2 text-xs font-medium transition-colors ${
+                searchViewMode === opt.key
+                  ? "text-white"
+                  : "text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        <p className="text-[11px] text-zinc-600 uppercase tracking-wider font-medium mb-2">Aperçu</p>
+        <div className="rounded-xl bg-zinc-900/80 ring-1 ring-white/8 px-4 py-3">
+          {searchViewMode === "simple" ? (
+            <>
+              <div className="flex items-center gap-1.5 mb-1">
+                {searchParsed.quality && (
+                  <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">{searchParsed.quality}</span>
+                )}
+                {searchParsed.codec && (
+                  <span className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">{searchParsed.codec}</span>
+                )}
+              </div>
+              <p className="text-sm font-semibold text-white leading-snug">{searchParsed.title}</p>
+            </>
+          ) : (
+            <p className="text-sm font-semibold text-white leading-snug break-all">{SEARCH_EXAMPLE}</p>
+          )}
+          <div className="mt-1 flex items-center gap-4 text-xs text-zinc-500">
+            <span>8.2 Go</span>
+            <span className="text-green-500">124 Seeders</span>
+            <span className="text-red-500">7 Leechers</span>
+          </div>
         </div>
 
         <div className="my-8 h-px bg-white/8" />
