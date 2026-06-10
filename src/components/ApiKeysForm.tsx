@@ -9,11 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
-interface ApiKeysFormProps {
-  showContinue?: boolean;
-  onContinue?: () => void;
-}
-
 const C411_STEPS = [
   "Connectez-vous a votre compte C411.",
   "Cliquez sur votre profil en haut a droite.",
@@ -89,10 +84,9 @@ function TutorialBlock({
   );
 }
 
-export function ApiKeysForm({ showContinue, onContinue }: ApiKeysFormProps) {
+export function ApiKeysForm() {
   const [c411Key, setC411Key] = useState("");
   const [allDebridKey, setAllDebridKey] = useState("");
-  const [keysSaved, setKeysSaved] = useState(false);
 
   useEffect(() => {
     store.get<string>("c411_api_key").then((v) => { if (v) setC411Key(v); });
@@ -108,7 +102,6 @@ export function ApiKeysForm({ showContinue, onContinue }: ApiKeysFormProps) {
       await store.set("alldebrid_api_key", allDebridKey.trim());
       await store.save();
       toast.success("Cles sauvegardees avec succes.");
-      setKeysSaved(true);
     } catch (err) {
       toast.error(String(err));
     }
@@ -124,7 +117,7 @@ export function ApiKeysForm({ showContinue, onContinue }: ApiKeysFormProps) {
         inputId="c411-key"
         value={c411Key}
         placeholder="Collez votre cle C411"
-        onChange={(v) => { setC411Key(v); setKeysSaved(false); }}
+        onChange={setC411Key}
       />
       <TutorialBlock
         number={2}
@@ -134,27 +127,11 @@ export function ApiKeysForm({ showContinue, onContinue }: ApiKeysFormProps) {
         inputId="alldebrid-key"
         value={allDebridKey}
         placeholder="Collez votre cle AllDebrid"
-        onChange={(v) => { setAllDebridKey(v); setKeysSaved(false); }}
+        onChange={setAllDebridKey}
       />
       <Button type="submit" className="w-full" disabled={!bothFilled}>
         Sauvegarder
       </Button>
-      {showContinue && (
-        keysSaved ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={onContinue}
-          >
-            Continuer
-          </Button>
-        ) : (
-          <Button type="button" className="w-full" disabled>
-            Continuer
-          </Button>
-        )
-      )}
     </form>
   );
 }
