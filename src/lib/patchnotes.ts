@@ -6,6 +6,33 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "0.3",
+    date: "11 juin 2026",
+    sections: [
+      {
+        title: "Recherche complète",
+        items: [
+          "La recherche ne s'arrête plus à la première page : un bouton \"Charger plus\" récupère la suite des résultats, avec un compteur indiquant la progression (ex. 50 / 230).",
+        ],
+      },
+      {
+        title: "Filtres et tri",
+        items: [
+          "Filtres par catégorie (Films, Séries, Musique, Logiciels & Jeux, Livres) avec le nombre de résultats par catégorie.",
+          "Filtres par qualité (4K, 2160p, 1080p, 720p...) et par encodage (H265, X264...), détectés automatiquement dans les résultats.",
+          "Tri par pertinence, seeders, taille ou date, en ordre croissant ou décroissant.",
+          "Les filtres se combinent et s'appliquent instantanément, avec des animations fluides lors du filtrage et du tri.",
+        ],
+      },
+      {
+        title: "Affichage de la recherche",
+        items: [
+          "Nouveau paramètre \"Affichage de la recherche\" : vue simplifiée des résultats (titre reformaté, qualité et codec en labels) ou vue détaillée (nom brut), comme pour les titres des Magnets.",
+        ],
+      },
+    ],
+  },
+  {
     version: "0.2",
     date: "11 juin 2026",
     sections: [
