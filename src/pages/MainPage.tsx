@@ -33,6 +33,7 @@ import {
   Music,
   Package,
   RotateCcw,
+  ScrollText,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -44,6 +45,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { LATEST_VERSION } from "@/lib/patchnotes";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
@@ -173,7 +175,7 @@ function formatSize(bytes: number): string {
 }
 
 interface MainPageProps {
-  onNavigate: (page: "magnets" | "preferences" | "setup") => void;
+  onNavigate: (page: "magnets" | "preferences" | "patchnotes" | "setup") => void;
   devMode: boolean;
   onToggleDevMode: () => void;
 }
@@ -192,6 +194,7 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
   const [downloadingLink, setDownloadingLink] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [vlcLink, setVlcLink] = useState<string | null>(null);
+  const [showPatchNotif, setShowPatchNotif] = useState(false);
   const apiKeyRef = useRef<string>("");
   const allDebridKeyRef = useRef<string>("");
 
@@ -202,7 +205,16 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
     store.get<string>("alldebrid_api_key").then((v) => {
       if (v) allDebridKeyRef.current = v;
     });
+    store.get<string>("patchnotes_seen").then((v) => {
+      if (v !== LATEST_VERSION) setShowPatchNotif(true);
+    });
   }, []);
+
+  async function dismissPatchNotif() {
+    setShowPatchNotif(false);
+    await store.set("patchnotes_seen", LATEST_VERSION);
+    await store.save();
+  }
 
   useEffect(() => {
     if (!debridModal) return;
@@ -343,6 +355,40 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
 
   return (
     <main className="relative flex min-h-screen flex-col bg-black bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
+      <AnimatePresence>
+        {showPatchNotif && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
+            className="absolute top-4 left-4 z-10 flex items-start gap-3 rounded-2xl bg-zinc-900/90 backdrop-blur-xl ring-1 ring-white/10 pl-3 pr-1.5 py-2 shadow-xl"
+          >
+            <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 ring-1 ring-indigo-500/25">
+              <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+            </span>
+            <div>
+              <p className="text-xs font-semibold text-white">Nouvelle version V{LATEST_VERSION}</p>
+              <button
+                onClick={() => {
+                  dismissPatchNotif();
+                  onNavigate("patchnotes");
+                }}
+                className="text-[11px] font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+              >
+                Lire le patch note
+              </button>
+            </div>
+            <button
+              onClick={dismissPatchNotif}
+              className="flex h-5 w-5 items-center justify-center rounded-md text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="absolute top-4 right-4 z-10">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -362,6 +408,10 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
             <DropdownMenuItem onClick={() => onNavigate("preferences")}>
               <SlidersHorizontal className="mr-2 h-4 w-4" />
               Paramètres
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onNavigate("patchnotes")}>
+              <ScrollText className="mr-2 h-4 w-4" />
+              Patch notes
             </DropdownMenuItem>
             {import.meta.env.DEV && (
               <>
