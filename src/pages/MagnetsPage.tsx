@@ -5,7 +5,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   ArrowLeft, RefreshCw, Trash2, Loader2,
   CheckCircle2, Clock, AlertCircle, Download, Zap, Search, X,
-  ChevronLeft, ChevronRight, Copy, Check, Menu, KeyRound, SlidersHorizontal,
+  ChevronLeft, ChevronRight, Copy, Check, Menu, SlidersHorizontal,
 } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
 import type { ViewMode } from "@/pages/PreferencesPage";
@@ -403,7 +403,7 @@ function Pagination({
 
 interface MagnetsPageProps {
   onBack: () => void;
-  onNavigate: (page: "settings" | "preferences") => void;
+  onNavigate: (page: "preferences") => void;
 }
 
 export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
@@ -560,13 +560,9 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                 </motion.button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem onClick={() => onNavigate("settings")}>
-                  <KeyRound className="mr-2 h-4 w-4" />
-                  Cles API
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onNavigate("preferences")}>
                   <SlidersHorizontal className="mr-2 h-4 w-4" />
-                  Parametres
+                  Paramètres
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

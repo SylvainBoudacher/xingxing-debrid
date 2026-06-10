@@ -4,13 +4,12 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import { Toaster } from "@/components/ui/sonner";
 import { SetupPage } from "@/pages/SetupPage";
 import { MainPage } from "@/pages/MainPage";
-import { SettingsPage } from "@/pages/SettingsPage";
 import { MagnetsPage } from "@/pages/MagnetsPage";
 import { PreferencesPage } from "@/pages/PreferencesPage";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
-type Page = "setup" | "main" | "settings" | "magnets" | "preferences";
+type Page = "setup" | "main" | "magnets" | "preferences";
 
 function App() {
   const [page, setPage] = useState<Page | null>(null);
@@ -56,17 +55,6 @@ function App() {
             transition={{ duration: 0.22, ease: "easeInOut" }}
           >
             <MainPage onNavigate={setPage} />
-          </motion.div>
-        )}
-        {page === "settings" && (
-          <motion.div
-            key="settings"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            transition={{ duration: 0.22, ease: "easeInOut" }}
-          >
-            <SettingsPage onBack={() => setPage("main")} />
           </motion.div>
         )}
         {page === "magnets" && (
