@@ -5,8 +5,10 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   ArrowLeft, RefreshCw, Trash2, Loader2,
   CheckCircle2, Clock, AlertCircle, Download, Zap, Search, X,
-  ChevronLeft, ChevronRight, Copy, Check, Menu, KeyRound,
+  ChevronLeft, ChevronRight, Copy, Check, Menu, KeyRound, SlidersHorizontal,
 } from "lucide-react";
+import { parseRelease } from "@/lib/parseRelease";
+import type { ViewMode } from "@/pages/PreferencesPage";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -135,10 +137,11 @@ interface FilesModalProps {
   magnetId: number;
   magnetName: string;
   apiKey: string;
+  simpleView: boolean;
   onClose: () => void;
 }
 
-function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) {
+function FilesModal({ magnetId, magnetName, apiKey, simpleView, onClose }: FilesModalProps) {
   const [files, setFiles] = useState<DebridFile[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -246,7 +249,9 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">Fichiers disponibles</p>
-              <p className="text-sm font-semibold text-white leading-snug line-clamp-2">{magnetName}</p>
+              <p className="text-sm font-semibold text-white leading-snug line-clamp-2">
+                {simpleView ? parseRelease(magnetName).title : magnetName}
+              </p>
             </div>
             <button
               onClick={onClose}
@@ -281,11 +286,20 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
           {!loading && files?.map((file, i) => {
             const fileName = file.name.split("/").pop() ?? file.name;
             const showName = fileName !== magnetName;
+            const parsed = simpleView ? parseRelease(fileName) : null;
             return (
               <div key={i} className="rounded-xl bg-zinc-800/60 px-4 py-3">
                 <div className="mb-3">
-                  {showName && <p className="text-sm font-medium text-white leading-snug line-clamp-2 mb-0.5">{fileName}</p>}
-                  <p className="text-xs text-zinc-500">{formatSize(file.size)}</p>
+                  {showName && (
+                    <p className="text-sm font-medium text-white leading-snug line-clamp-2 mb-0.5">
+                      {parsed ? parsed.title : fileName}
+                    </p>
+                  )}
+                  <p className="text-xs text-zinc-500">
+                    {formatSize(file.size)}
+                    {parsed?.quality ? ` · ${parsed.quality}` : ""}
+                    {parsed?.codec ? ` · ${parsed.codec}` : ""}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   {isVideoFile(file.name) && (
@@ -389,7 +403,7 @@ function Pagination({
 
 interface MagnetsPageProps {
   onBack: () => void;
-  onNavigate: (page: "settings") => void;
+  onNavigate: (page: "settings" | "preferences") => void;
 }
 
 export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
@@ -399,6 +413,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
   const [deleting, setDeleting] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkDownloading, setBulkDownloading] = useState<{ done: number; total: number } | null>(null);
+  const [simpleView, setSimpleView] = useState(true);
   const [filesModal, setFilesModal] = useState<{ id: number; name: string } | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -425,6 +440,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
       if (v) apiKeyRef.current = v;
       loadMagnets();
     });
+    store.get<ViewMode>("view_mode").then((v) => setSimpleView((v ?? "simple") === "simple"));
   }, [loadMagnets]);
 
   async function handleDelete(ids: number[]) {
@@ -548,6 +564,10 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                   <KeyRound className="mr-2 h-4 w-4" />
                   Cles API
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onNavigate("preferences")}>
+                  <SlidersHorizontal className="mr-2 h-4 w-4" />
+                  Parametres
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -650,6 +670,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
               const isReady = m.statusCode === 4;
               const isActive = m.statusCode >= 0 && m.statusCode <= 3;
               const pct = m.size && m.downloaded ? Math.min(100, Math.round((m.downloaded / m.size) * 100)) : 0;
+              const parsed = simpleView ? parseRelease(m.filename) : null;
 
               return (
                 <div
@@ -671,7 +692,17 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                     )}
 
                     <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-white leading-snug line-clamp-2 mb-2.5">{m.filename}</p>
+                    {parsed && (parsed.quality || parsed.codec) && (
+                      <div className="flex items-center gap-1.5 mb-1">
+                        {parsed.quality && (
+                          <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">{parsed.quality}</span>
+                        )}
+                        {parsed.codec && (
+                          <span className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">{parsed.codec}</span>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-sm font-semibold text-white leading-snug line-clamp-2 mb-2.5">{parsed ? parsed.title : m.filename}</p>
 
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <StatusBadge code={m.statusCode} label={m.status} />
@@ -769,6 +800,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
             magnetId={filesModal.id}
             magnetName={filesModal.name}
             apiKey={apiKeyRef.current}
+            simpleView={simpleView}
             onClose={() => setFilesModal(null)}
           />
         )}
