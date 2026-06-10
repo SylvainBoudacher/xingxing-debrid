@@ -144,6 +144,9 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
   const [downloading, setDownloading] = useState<string | null>(null);
   const [copying, setCopying] = useState<string | null>(null);
   const [vlcing, setVlcing] = useState<string | null>(null);
+  const [downloadingAll, setDownloadingAll] = useState<{ done: number; total: number } | null>(null);
+
+  const busy = downloading !== null || copying !== null || vlcing !== null || downloadingAll !== null;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -177,6 +180,23 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
       toast.error(String(err));
     } finally {
       setVlcing(null);
+    }
+  }
+
+  async function handleDownloadAll() {
+    if (!files) return;
+    setDownloadingAll({ done: 0, total: files.length });
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const url = await invoke<string>("unlock_link", { link: files[i].link, alldebridKey: apiKey });
+        await openUrl(url);
+        setDownloadingAll({ done: i + 1, total: files.length });
+      }
+      toast.success(`${files.length} telechargements lances`);
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setDownloadingAll(null);
     }
   }
 
@@ -235,6 +255,20 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
               <X className="h-3.5 w-3.5 text-zinc-400" />
             </button>
           </div>
+
+          {!loading && files && files.length > 1 && (
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={handleDownloadAll}
+              disabled={busy}
+              className="mt-3 flex w-full items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {downloadingAll
+                ? <><Loader2 className="h-3.5 w-3.5 text-white animate-spin" /><span className="text-xs font-medium text-white">{downloadingAll.done}/{downloadingAll.total}...</span></>
+                : <><Download className="h-3.5 w-3.5 text-white" /><span className="text-xs font-medium text-white">Tout telecharger ({files.length})</span></>
+              }
+            </motion.button>
+          )}
         </div>
 
         {/* File list */}
@@ -258,7 +292,7 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
                     <motion.button
                       whileTap={{ scale: 0.97 }}
                       onClick={() => handleOpenVlc(file.link)}
-                      disabled={downloading !== null || copying !== null || vlcing !== null}
+                      disabled={busy}
                       className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       {vlcing === file.link
@@ -271,7 +305,7 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={() => handleCopy(file.link)}
-                    disabled={downloading !== null || copying !== null || vlcing !== null}
+                    disabled={busy}
                     className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {copying === file.link
@@ -282,7 +316,7 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={() => handleDownload(file.link)}
-                    disabled={downloading !== null || copying !== null || vlcing !== null}
+                    disabled={busy}
                     className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {downloading === file.link
@@ -363,6 +397,8 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
   const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<{ ids: number[]; label: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkDownloading, setBulkDownloading] = useState<{ done: number; total: number } | null>(null);
   const [filesModal, setFilesModal] = useState<{ id: number; name: string } | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -406,6 +442,40 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
       toast.error(String(err));
     } finally {
       setDeleting(false);
+    }
+  }
+
+  function toggleSelect(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function handleBulkDownload() {
+    const ids = [...selected];
+    setBulkDownloading({ done: 0, total: 0 });
+    try {
+      const idParams = ids.map((id) => `id[]=${id}`).join("&");
+      const res = await fetch(`${AD_BASE}/magnet/files?agent=c411&apikey=${apiKeyRef.current}&${idParams}`);
+      const json = await res.json() as { status: string; data?: { magnets?: Array<{ files?: unknown[] }> } };
+      if (json.status !== "success") throw new Error("Erreur AllDebrid");
+      const files = (json.data?.magnets ?? []).flatMap((m) => flattenFiles(m.files ?? []));
+      if (files.length === 0) throw new Error("Aucun fichier trouve");
+      setBulkDownloading({ done: 0, total: files.length });
+      for (let i = 0; i < files.length; i++) {
+        const url = await invoke<string>("unlock_link", { link: files[i].link, alldebridKey: apiKeyRef.current });
+        await openUrl(url);
+        setBulkDownloading({ done: i + 1, total: files.length });
+      }
+      toast.success(`${files.length} telechargement${files.length > 1 ? "s lances" : " lance"}`);
+      setSelected(new Set());
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setBulkDownloading(null);
     }
   }
 
@@ -586,7 +656,21 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                   key={m.id}
                   className="rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 overflow-hidden transition-all duration-200 hover:bg-zinc-900 hover:ring-white/12 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
                 >
-                  <div className="px-5 py-4">
+                  <div className="flex gap-3 px-5 py-4">
+                    {isReady && (
+                      <button
+                        onClick={() => toggleSelect(m.id)}
+                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md ring-1 transition-colors ${
+                          selected.has(m.id)
+                            ? "bg-indigo-600 ring-indigo-500"
+                            : "bg-zinc-800 ring-white/10 hover:ring-white/25"
+                        }`}
+                      >
+                        {selected.has(m.id) && <Check className="h-3 w-3 text-white" />}
+                      </button>
+                    )}
+
+                    <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-white leading-snug line-clamp-2 mb-2.5">{m.filename}</p>
 
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -635,6 +719,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                         </div>
                       </div>
                     )}
+                    </div>
                   </div>
                 </div>
               );
@@ -643,6 +728,40 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
 
         <Pagination page={page} totalPages={totalPages} onChange={setPage} />
       </div>
+
+      <AnimatePresence>
+        {selected.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed bottom-5 left-0 right-0 z-40 mx-auto flex w-fit items-center gap-3 rounded-2xl bg-zinc-900/95 backdrop-blur-xl ring-1 ring-white/10 pl-4 pr-2 py-2 shadow-2xl"
+          >
+            <span className="text-xs font-medium text-zinc-300">
+              {selected.size} selectionne{selected.size > 1 ? "s" : ""}
+            </span>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={handleBulkDownload}
+              disabled={bulkDownloading !== null}
+              className="flex items-center gap-2 h-8 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {bulkDownloading
+                ? <><Loader2 className="h-3.5 w-3.5 text-white animate-spin" /><span className="text-xs font-medium text-white">{bulkDownloading.done}/{bulkDownloading.total || "..."}</span></>
+                : <><Download className="h-3.5 w-3.5 text-white" /><span className="text-xs font-medium text-white">Tout telecharger</span></>
+              }
+            </motion.button>
+            <button
+              onClick={() => setSelected(new Set())}
+              disabled={bulkDownloading !== null}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 disabled:opacity-40 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {filesModal && (
