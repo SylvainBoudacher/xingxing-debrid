@@ -6,10 +6,11 @@ import { SetupPage } from "@/pages/SetupPage";
 import { MainPage } from "@/pages/MainPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { MagnetsPage } from "@/pages/MagnetsPage";
+import { PreferencesPage } from "@/pages/PreferencesPage";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
-type Page = "setup" | "main" | "settings" | "magnets";
+type Page = "setup" | "main" | "settings" | "magnets" | "preferences";
 
 function App() {
   const [page, setPage] = useState<Page | null>(null);
@@ -77,6 +78,17 @@ function App() {
             transition={{ duration: 0.22, ease: "easeInOut" }}
           >
             <MagnetsPage onBack={() => setPage("main")} onNavigate={setPage} />
+          </motion.div>
+        )}
+        {page === "preferences" && (
+          <motion.div
+            key="preferences"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.22, ease: "easeInOut" }}
+          >
+            <PreferencesPage onBack={() => setPage("main")} onNavigate={setPage} />
           </motion.div>
         )}
       </AnimatePresence>

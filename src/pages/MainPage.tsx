@@ -29,6 +29,7 @@ import {
   Music,
   Package,
   Search,
+  SlidersHorizontal,
   Sparkles,
   Tv,
   X,
@@ -171,7 +172,7 @@ function formatSize(bytes: number): string {
 }
 
 interface MainPageProps {
-  onNavigate: (page: "settings" | "magnets") => void;
+  onNavigate: (page: "settings" | "magnets" | "preferences") => void;
 }
 
 export function MainPage({ onNavigate }: MainPageProps) {
@@ -359,6 +360,10 @@ export function MainPage({ onNavigate }: MainPageProps) {
             <DropdownMenuItem onClick={() => onNavigate("settings")}>
               <KeyRound className="mr-2 h-4 w-4" />
               Cles API
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onNavigate("preferences")}>
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              Parametres
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
