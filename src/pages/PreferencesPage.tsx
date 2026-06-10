@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, Eye, Menu, KeyRound, Magnet } from "lucide-react";
+import { ArrowLeft, Eye, Home, Menu, KeyRound, Magnet } from "lucide-react";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   DropdownMenu,
@@ -67,6 +67,10 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
               </motion.button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={onBack}>
+                <Home className="mr-2 h-4 w-4" />
+                Accueil
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onNavigate("magnets")}>
                 <Magnet className="mr-2 h-4 w-4" />
                 Magnets

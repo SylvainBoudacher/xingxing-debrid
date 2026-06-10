@@ -5,7 +5,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   ArrowLeft, RefreshCw, Trash2, Loader2,
   CheckCircle2, Clock, AlertCircle, Download, Zap, Search, X,
-  ChevronLeft, ChevronRight, Copy, Check, Menu, SlidersHorizontal,
+  ChevronLeft, ChevronRight, Copy, Check, Home, ListChecks, Menu, SlidersHorizontal,
 } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
 import type { ViewMode } from "@/pages/PreferencesPage";
@@ -411,6 +411,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
   const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<{ ids: number[]; label: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkDownloading, setBulkDownloading] = useState<{ done: number; total: number } | null>(null);
   const [simpleView, setSimpleView] = useState(true);
@@ -560,6 +561,10 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                 </motion.button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={onBack}>
+                  <Home className="mr-2 h-4 w-4" />
+                  Accueil
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onNavigate("preferences")}>
                   <SlidersHorizontal className="mr-2 h-4 w-4" />
                   Paramètres
@@ -623,19 +628,35 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                 : `${filtered.length} magnet${filtered.length > 1 ? "s" : ""}${search ? ` pour "${search}"` : ""}`
               }
             </p>
-            {statusFilter === "error" && counts.error > 0 && (
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setConfirmDelete({
-                  ids: magnets.filter((m) => getStatusFilter(m.statusCode) === "error").map((m) => m.id),
-                  label: `${counts.error} magnet${counts.error > 1 ? "s" : ""} en erreur`,
-                })}
-                className="flex shrink-0 items-center gap-1.5 h-7 px-3 rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"
-              >
-                <Trash2 className="h-3 w-3" />
-                <span className="text-[11px] font-medium">Tout supprimer ({counts.error})</span>
-              </motion.button>
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+              {statusFilter === "error" && counts.error > 0 && (
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setConfirmDelete({
+                    ids: magnets.filter((m) => getStatusFilter(m.statusCode) === "error").map((m) => m.id),
+                    label: `${counts.error} magnet${counts.error > 1 ? "s" : ""} en erreur`,
+                  })}
+                  className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"
+                >
+                  <Trash2 className="h-3 w-3" />
+                  <span className="text-[11px] font-medium">Tout supprimer ({counts.error})</span>
+                </motion.button>
+              )}
+              {filtered.length > 0 && (
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => { setSelectMode((v) => !v); setSelected(new Set()); }}
+                  className={`flex items-center gap-1.5 h-7 px-3 rounded-lg ring-1 transition-colors ${
+                    selectMode
+                      ? "bg-indigo-600 ring-indigo-500 text-white"
+                      : "bg-white/5 ring-white/10 text-zinc-400 hover:text-white hover:bg-white/10"
+                  }`}
+                >
+                  <ListChecks className="h-3 w-3" />
+                  <span className="text-[11px] font-medium">Sélection multiple</span>
+                </motion.button>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -674,7 +695,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                   className="rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 overflow-hidden transition-all duration-200 hover:bg-zinc-900 hover:ring-white/12 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
                 >
                   <div className="flex gap-3 px-5 py-4">
-                    {isReady && (
+                    {selectMode && isReady && (
                       <button
                         onClick={() => toggleSelect(m.id)}
                         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md ring-1 transition-colors ${
@@ -780,7 +801,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
               }
             </motion.button>
             <button
-              onClick={() => setSelected(new Set())}
+              onClick={() => { setSelected(new Set()); setSelectMode(false); }}
               disabled={bulkDownloading !== null}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 disabled:opacity-40 transition-colors"
             >
