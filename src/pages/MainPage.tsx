@@ -134,11 +134,17 @@ function getCategoryIcon(id: number): { icon: LucideIcon; color: string } {
   return { icon: HelpCircle, color: "text-zinc-500" };
 }
 
-function parseXml(xml: string): SearchResult[] {
+function parseXml(xml: string): { items: SearchResult[]; total: number | null } {
   const doc = new DOMParser().parseFromString(xml, "text/xml");
   const items = doc.querySelectorAll("item");
 
-  return Array.from(items).map((item) => {
+  // Torznab pagination: <newznab:response offset="N" total="M"/>
+  const totalAttr = doc
+    .getElementsByTagNameNS("*", "response")[0]
+    ?.getAttribute("total");
+  const total = totalAttr ? parseInt(totalAttr, 10) : null;
+
+  const parsed = Array.from(items).map((item) => {
     const text = (tag: string) =>
       item.querySelector(tag)?.textContent?.trim() ?? "";
     const attr = (name: string) =>
@@ -166,6 +172,8 @@ function parseXml(xml: string): SearchResult[] {
       category: parseInt(categoryRaw || "0", 10),
     };
   });
+
+  return { items: parsed, total };
 }
 
 function formatSize(bytes: number): string {
@@ -183,6 +191,9 @@ interface MainPageProps {
 export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
+  const [total, setTotal] = useState<number | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchKey, setSearchKey] = useState(0);
@@ -197,6 +208,7 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
   const [showPatchNotif, setShowPatchNotif] = useState(false);
   const apiKeyRef = useRef<string>("");
   const allDebridKeyRef = useRef<string>("");
+  const searchedQueryRef = useRef<string>("");
 
   useEffect(() => {
     store.get<string>("c411_api_key").then((v) => {
@@ -340,16 +352,42 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
     setError(null);
 
     try {
-      const url = `https://c411.org/api?t=search&q=${encodeURIComponent(query.trim())}&apikey=${apiKeyRef.current}`;
+      searchedQueryRef.current = query.trim();
+      const url = `https://c411.org/api?t=search&q=${encodeURIComponent(searchedQueryRef.current)}&offset=0&apikey=${apiKeyRef.current}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
-      const xml = await res.text();
+      const { items, total } = parseXml(await res.text());
       setSearchKey((k) => k + 1);
-      setResults(parseXml(xml));
+      setResults(items);
+      setTotal(total);
+      setHasMore(
+        items.length > 0 && (total === null || items.length < total),
+      );
     } catch (err) {
       setError(String(err));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleLoadMore() {
+    if (loadingMore || !results) return;
+    setLoadingMore(true);
+    try {
+      const url = `https://c411.org/api?t=search&q=${encodeURIComponent(searchedQueryRef.current)}&offset=${results.length}&apikey=${apiKeyRef.current}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Erreur ${res.status}`);
+      const { items, total } = parseXml(await res.text());
+      const merged = [...results, ...items];
+      setResults(merged);
+      setTotal(total);
+      setHasMore(
+        items.length > 0 && (total === null || merged.length < total),
+      );
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setLoadingMore(false);
     }
   }
 
@@ -653,6 +691,27 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                   </motion.div>
                 );
               })}
+              {hasMore && (
+                <div className="flex justify-center pt-3">
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="flex items-center gap-2 h-9 px-5 rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-sm text-zinc-300 hover:bg-zinc-700/80 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {loadingMore && (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    )}
+                    Charger plus
+                    {total !== null && (
+                      <span className="text-zinc-500">
+                        {results.length} / {total}
+                      </span>
+                    )}
+                  </motion.button>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
