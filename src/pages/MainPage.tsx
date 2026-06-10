@@ -13,6 +13,7 @@ import { fetch } from "@tauri-apps/plugin-http";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import {
+  ArrowDown,
   ArrowUp,
   Book,
   BookMarked,
@@ -134,6 +135,33 @@ function getCategoryIcon(id: number): { icon: LucideIcon; color: string } {
   return { icon: HelpCircle, color: "text-zinc-500" };
 }
 
+const CATEGORY_FILTERS: Array<{
+  key: number;
+  label: string;
+  icon: LucideIcon;
+  color: string;
+}> = [
+  { key: 2000, label: "Films", icon: Clapperboard, color: "text-blue-400" },
+  { key: 5000, label: "Séries", icon: Tv, color: "text-cyan-400" },
+  { key: 3000, label: "Musique", icon: Music, color: "text-purple-400" },
+  { key: 4000, label: "Logiciels & Jeux", icon: Gamepad2, color: "text-green-400" },
+  { key: 7000, label: "Livres", icon: Book, color: "text-amber-400" },
+  { key: 0, label: "Autres", icon: HelpCircle, color: "text-zinc-500" },
+];
+
+function getCategoryGroup(id: number): number {
+  const g = Math.floor(id / 1000) * 1000;
+  return CATEGORY_FILTERS.some((c) => c.key === g) ? g : 0;
+}
+
+const SORT_LABELS = {
+  pertinence: "Pertinence",
+  seeders: "Seeders",
+  size: "Taille",
+  date: "Date",
+} as const;
+type SortKey = keyof typeof SORT_LABELS;
+
 function parseXml(xml: string): { items: SearchResult[]; total: number | null } {
   const doc = new DOMParser().parseFromString(xml, "text/xml");
   const items = doc.querySelectorAll("item");
@@ -192,6 +220,9 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [total, setTotal] = useState<number | null>(null);
+  const [activeCats, setActiveCats] = useState<number[]>([]);
+  const [sortBy, setSortBy] = useState<SortKey>("pertinence");
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -360,6 +391,9 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
       setSearchKey((k) => k + 1);
       setResults(items);
       setTotal(total);
+      setActiveCats([]);
+      setSortBy("pertinence");
+      setSortDir("desc");
       setHasMore(
         items.length > 0 && (total === null || items.length < total),
       );
@@ -390,6 +424,27 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
       setLoadingMore(false);
     }
   }
+
+  const groupCounts = new Map<number, number>();
+  for (const r of results ?? []) {
+    const g = getCategoryGroup(r.category);
+    groupCounts.set(g, (groupCounts.get(g) ?? 0) + 1);
+  }
+
+  let displayed = results ?? [];
+  if (activeCats.length > 0)
+    displayed = displayed.filter((r) =>
+      activeCats.includes(getCategoryGroup(r.category)),
+    );
+  const dir = sortDir === "desc" ? 1 : -1;
+  if (sortBy === "seeders")
+    displayed = [...displayed].sort((a, b) => (b.seeders - a.seeders) * dir);
+  else if (sortBy === "size")
+    displayed = [...displayed].sort((a, b) => (b.size - a.size) * dir);
+  else if (sortBy === "date")
+    displayed = [...displayed].sort(
+      (a, b) => (Date.parse(b.pubDate) - Date.parse(a.pubDate)) * dir,
+    );
 
   return (
     <main className="relative flex min-h-screen flex-col bg-black bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
@@ -651,7 +706,97 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
               animate="visible"
               exit={{ opacity: 0, y: 14, transition: { duration: 0.2, ease: "easeIn" } }}
             >
-              {results.map((r, i) => {
+              <div className="flex flex-wrap items-center gap-2 pb-1">
+                {CATEGORY_FILTERS.map(({ key, label, icon: Icon, color }) => {
+                  const count = groupCounts.get(key);
+                  if (!count) return null;
+                  const active = activeCats.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      onClick={() =>
+                        setActiveCats((prev) =>
+                          prev.includes(key)
+                            ? prev.filter((k) => k !== key)
+                            : [...prev, key],
+                        )
+                      }
+                      className={`flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium ring-1 transition-colors ${
+                        active
+                          ? "bg-indigo-600 text-white ring-indigo-500"
+                          : "bg-zinc-800/80 text-zinc-400 ring-white/10 hover:bg-zinc-700/80 hover:text-white"
+                      }`}
+                    >
+                      <Icon
+                        className={`h-3.5 w-3.5 ${active ? "text-white" : color}`}
+                      />
+                      {label}
+                      <span className={active ? "text-indigo-200" : "text-zinc-600"}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="ml-auto flex items-center gap-1.5 h-8 px-3 rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-xs font-medium text-zinc-400 hover:bg-zinc-700/80 hover:text-white transition-colors">
+                      <SlidersHorizontal className="h-3.5 w-3.5" />
+                      {SORT_LABELS[sortBy]}
+                      {sortBy !== "pertinence" &&
+                        (sortDir === "desc" ? (
+                          <ArrowDown className="h-3 w-3" />
+                        ) : (
+                          <ArrowUp className="h-3 w-3" />
+                        ))}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">
+                      Trier par
+                    </DropdownMenuLabel>
+                    {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
+                      <DropdownMenuCheckboxItem
+                        key={key}
+                        checked={sortBy === key}
+                        onSelect={(e) => e.preventDefault()}
+                        onCheckedChange={() => setSortBy(key)}
+                      >
+                        {SORT_LABELS[key]}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                    {sortBy !== "pertinence" && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">
+                          Ordre
+                        </DropdownMenuLabel>
+                        <DropdownMenuCheckboxItem
+                          checked={sortDir === "desc"}
+                          onSelect={(e) => e.preventDefault()}
+                          onCheckedChange={() => setSortDir("desc")}
+                        >
+                          <ArrowDown className="mr-2 h-3.5 w-3.5" />
+                          Décroissant
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                          checked={sortDir === "asc"}
+                          onSelect={(e) => e.preventDefault()}
+                          onCheckedChange={() => setSortDir("asc")}
+                        >
+                          <ArrowUp className="mr-2 h-3.5 w-3.5" />
+                          Croissant
+                        </DropdownMenuCheckboxItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              {displayed.length === 0 && (
+                <p className="text-center text-sm text-zinc-500 py-4">
+                  Aucun résultat avec ces filtres.
+                </p>
+              )}
+              {displayed.map((r, i) => {
                 const { icon: Icon, color } = getCategoryIcon(r.category);
                 return (
                   <motion.div
