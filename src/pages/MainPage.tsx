@@ -185,7 +185,7 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
   const [error, setError] = useState<string | null>(null);
   const [searchKey, setSearchKey] = useState(0);
   const [phase, setPhase] = useState<
-    "idle" | "title-exiting" | "active" | "bar-returning"
+    "idle" | "title-exiting" | "active" | "results-exiting" | "bar-returning"
   >("idle");
   const [sendingIndex, setSendingIndex] = useState<number | null>(null);
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
@@ -426,7 +426,7 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
           onLayoutAnimationComplete={() => {
             if (phase === "bar-returning") setPhase("idle");
           }}
-          className={`relative flex flex-col items-center w-full ${phase === "active" ? "mt-16 mb-6" : "my-auto"}`}
+          className={`relative flex flex-col items-center w-full ${phase === "active" || phase === "results-exiting" ? "mt-16 mb-6" : "my-auto"}`}
         >
           <AnimatePresence
             onExitComplete={() => {
@@ -487,11 +487,13 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                     type="button"
                     onClick={() => {
                       setQuery("");
-                      setResults(null);
                       setError(null);
-                      setPhase((prev) =>
-                        prev === "active" ? "bar-returning" : "idle",
-                      );
+                      const hasResults = results !== null && results.length > 0;
+                      setResults(null);
+                      setPhase((prev) => {
+                        if (prev !== "active") return "idle";
+                        return hasResults ? "results-exiting" : "bar-returning";
+                      });
                     }}
                     className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-700/80 hover:bg-zinc-600/80 transition-colors"
                   >
@@ -548,14 +550,18 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
           )}
         </AnimatePresence>
 
-        <AnimatePresence>
+        <AnimatePresence
+          onExitComplete={() => {
+            if (phase === "results-exiting") setPhase("bar-returning");
+          }}
+        >
           {phase === "active" && results && results.length > 0 && (
             <motion.div
               key={searchKey}
               className="w-full max-w-2xl px-6 space-y-2 pb-6"
               initial="hidden"
               animate="visible"
-              exit={{ opacity: 0, transition: { duration: 0.12 } }}
+              exit={{ opacity: 0, y: 14, transition: { duration: 0.2, ease: "easeIn" } }}
             >
               {results.map((r, i) => {
                 const { icon: Icon, color } = getCategoryIcon(r.category);
