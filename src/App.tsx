@@ -76,7 +76,7 @@ function App() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.22, ease: "easeInOut" }}
           >
-            <MagnetsPage onBack={() => setPage("main")} />
+            <MagnetsPage onBack={() => setPage("main")} onNavigate={setPage} />
           </motion.div>
         )}
       </AnimatePresence>

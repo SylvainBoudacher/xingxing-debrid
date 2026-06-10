@@ -5,8 +5,14 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   ArrowLeft, RefreshCw, Trash2, Loader2,
   CheckCircle2, Clock, AlertCircle, Download, Zap, Search, X,
-  ChevronLeft, ChevronRight, Copy, Check,
+  ChevronLeft, ChevronRight, Copy, Check, Menu, KeyRound,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import vlcLogo from "@/assets/vlc.png";
 import { invoke } from "@tauri-apps/api/core";
@@ -44,6 +50,16 @@ function flattenFiles(entries: unknown[], prefix = ""): DebridFile[] {
     else if (e.l) result.push({ name, size: Number(e.s) || 0, link: String(e.l) });
   }
   return result;
+}
+
+const VIDEO_EXTENSIONS = new Set([
+  "mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v",
+  "mpg", "mpeg", "ts", "m2ts", "3gp", "ogv", "vob",
+]);
+
+function isVideoFile(name: string): boolean {
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  return VIDEO_EXTENSIONS.has(ext);
 }
 
 function formatSize(bytes: number): string {
@@ -238,18 +254,20 @@ function FilesModal({ magnetId, magnetName, apiKey, onClose }: FilesModalProps) 
                   <p className="text-xs text-zinc-500">{formatSize(file.size)}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => handleOpenVlc(file.link)}
-                    disabled={downloading !== null || copying !== null || vlcing !== null}
-                    className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {vlcing === file.link
-                      ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
-                      : <img src={vlcLogo} className="h-4 w-4" />
-                    }
-                    <span className="text-xs font-medium text-white">Lire avec VLC</span>
-                  </motion.button>
+                  {isVideoFile(file.name) && (
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => handleOpenVlc(file.link)}
+                      disabled={downloading !== null || copying !== null || vlcing !== null}
+                      className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {vlcing === file.link
+                        ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+                        : <img src={vlcLogo} className="h-4 w-4" />
+                      }
+                      <span className="text-xs font-medium text-white">Lire avec VLC</span>
+                    </motion.button>
+                  )}
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={() => handleCopy(file.link)}
@@ -337,9 +355,10 @@ function Pagination({
 
 interface MagnetsPageProps {
   onBack: () => void;
+  onNavigate: (page: "settings") => void;
 }
 
-export function MagnetsPage({ onBack }: MagnetsPageProps) {
+export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
   const [magnets, setMagnets] = useState<MagnetEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -411,135 +430,147 @@ export function MagnetsPage({ onBack }: MagnetsPageProps) {
     { key: "error",  label: `Erreur (${counts.error})` },
   ];
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 8 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] } },
-  };
-
   return (
     <main className="relative flex min-h-screen flex-col bg-black bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
 
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/5">
-        <motion.button
-          whileTap={{ scale: 0.93 }}
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="text-sm font-medium">Retour</span>
-        </motion.button>
+      <div className="sticky top-0 z-10 border-b border-white/5 bg-black/30 backdrop-blur-xl">
+        <div className="relative mx-auto flex w-full max-w-3xl items-center justify-between px-6 py-4 sm:px-8">
+          <motion.button
+            whileTap={{ scale: 0.93 }}
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="text-sm font-medium">Retour</span>
+          </motion.button>
 
-        <h1 className="text-sm font-semibold text-white tracking-tight absolute left-1/2 -translate-x-1/2">Magnets</h1>
+          <h1 className="text-sm font-semibold text-white tracking-tight absolute left-1/2 -translate-x-1/2">Magnets</h1>
 
-        <motion.button
-          whileTap={{ scale: 0.93 }}
-          animate={loading ? { rotate: 360 } : { rotate: 0 }}
-          transition={loading ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
-          onClick={loadMagnets}
-          disabled={loading}
-          className="text-indigo-400 hover:text-indigo-300 disabled:opacity-40 transition-colors"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </motion.button>
-      </div>
-
-      {/* Tabs */}
-      <div className="px-5 pt-4 pb-3">
-        <div className="flex gap-1 rounded-xl bg-zinc-900/70 p-1 ring-1 ring-white/6">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setStatusFilter(tab.key)}
-              className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-all ${
-                statusFilter === tab.key
-                  ? "bg-indigo-600 text-white shadow"
-                  : "text-zinc-500 hover:text-zinc-300"
-              }`}
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileTap={{ scale: 0.93 }}
+              animate={loading ? { rotate: 360 } : { rotate: 0 }}
+              transition={loading ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
+              onClick={loadMagnets}
+              disabled={loading}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-indigo-400 hover:text-indigo-300 hover:bg-white/5 disabled:opacity-40 transition-colors"
             >
-              {tab.label}
-            </button>
-          ))}
+              <RefreshCw className="h-4 w-4" />
+            </motion.button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <motion.button
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.93 }}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-colors"
+                >
+                  <Menu className="h-4 w-4" />
+                </motion.button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={() => onNavigate("settings")}>
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  Cles API
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="px-5 pb-3">
-        <div className="relative flex items-center">
-          <Search className="absolute left-3 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher..."
-            className="w-full rounded-xl bg-zinc-900/70 ring-1 ring-white/6 pl-9 pr-9 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:ring-indigo-500/40 transition-all"
-          />
-          <AnimatePresence>
-            {search && (
-              <motion.button
-                initial={{ opacity: 0, scale: 0.7 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.7 }}
-                transition={{ duration: 0.12 }}
-                onClick={() => setSearch("")}
-                className="absolute right-3 text-zinc-500 hover:text-white transition-colors"
+      {/* Toolbar */}
+      <div className="mx-auto w-full max-w-3xl px-6 pt-6 pb-4 sm:px-8 space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-1 gap-1 rounded-xl bg-zinc-900/70 p-1 ring-1 ring-white/6">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setStatusFilter(tab.key)}
+                className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${
+                  statusFilter === tab.key
+                    ? "bg-indigo-600 text-white shadow"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
               >
-                <X className="h-3.5 w-3.5" />
-              </motion.button>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-      {/* Count */}
-      {!loading && (
-        <div className="px-5 pb-2">
+          <div className="relative flex items-center sm:w-64">
+            <Search className="absolute left-3 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher..."
+              className="w-full rounded-xl bg-zinc-900/70 ring-1 ring-white/6 pl-9 pr-9 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:ring-indigo-500/40 transition-all"
+            />
+            <AnimatePresence>
+              {search && (
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.7 }}
+                  transition={{ duration: 0.12 }}
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 text-zinc-500 hover:text-white transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {!loading && (
           <p className="text-[11px] text-zinc-600 uppercase tracking-wider font-medium">
             {filtered.length === 0
               ? "Aucun resultat"
               : `${filtered.length} magnet${filtered.length > 1 ? "s" : ""}${search ? ` pour "${search}"` : ""}`
             }
           </p>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* List */}
-      <div className="flex-1 px-5 pb-6 overflow-y-auto">
+      <div className="mx-auto w-full max-w-3xl flex-1 px-6 pb-10 sm:px-8">
         {!loading && filtered.length === 0 && (
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center pt-16 gap-3 text-zinc-600"
+            className="flex flex-col items-center justify-center pt-16 gap-4 text-zinc-600"
           >
-            <Download className="h-10 w-10 opacity-30" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.03] ring-1 ring-white/6">
+              <Download className="h-7 w-7 opacity-40" />
+            </div>
             <p className="text-sm">Aucun magnet trouve.</p>
           </motion.div>
         )}
 
-        <AnimatePresence mode="popLayout">
-          <motion.div
-            key={`${statusFilter}-${search}-${page}`}
-            initial="hidden"
-            animate="visible"
-            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.035 } } }}
-            className="space-y-2"
-          >
+        <motion.div
+          key={`${statusFilter}-${search}-${page}`}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          className="space-y-2"
+        >
             {paginated.map((m) => {
               const isReady = m.statusCode === 4;
               const isActive = m.statusCode >= 0 && m.statusCode <= 3;
               const pct = m.size && m.downloaded ? Math.min(100, Math.round((m.downloaded / m.size) * 100)) : 0;
 
               return (
-                <motion.div
+                <div
                   key={m.id}
-                  variants={itemVariants}
-                  layout
-                  className="rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 overflow-hidden"
+                  className="rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 overflow-hidden transition-all duration-200 hover:bg-zinc-900 hover:ring-white/12 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
                 >
-                  <div className="px-4 py-3">
-                    <p className="text-sm font-semibold text-white leading-snug line-clamp-2 mb-2">{m.filename}</p>
+                  <div className="px-5 py-4">
+                    <p className="text-sm font-semibold text-white leading-snug line-clamp-2 mb-2.5">{m.filename}</p>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <StatusBadge code={m.statusCode} label={m.status} />
                       <span className="text-[11px] text-zinc-500">{formatSize(m.size)}</span>
                       {isActive && m.downloadSpeed > 0 && (
@@ -590,11 +621,10 @@ export function MagnetsPage({ onBack }: MagnetsPageProps) {
                       </div>
                     )}
                   </div>
-                </motion.div>
+                </div>
               );
             })}
-          </motion.div>
-        </AnimatePresence>
+        </motion.div>
 
         <Pagination page={page} totalPages={totalPages} onChange={setPage} />
       </div>

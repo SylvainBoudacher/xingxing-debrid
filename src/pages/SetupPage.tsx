@@ -1,5 +1,5 @@
-import { motion } from "motion/react";
 import { ApiKeysForm } from "@/components/ApiKeysForm";
+import { motion } from "motion/react";
 
 interface SetupPageProps {
   onComplete: () => void;
@@ -14,9 +14,10 @@ export function SetupPage({ onComplete }: SetupPageProps) {
         transition={{ duration: 0.3, ease: "easeOut" }}
         className="text-center"
       >
-        <h1 className="text-3xl font-bold">Bienvenue sur C411 Debrid</h1>
+        <h1 className="text-3xl font-bold">Bienvenue sur XingXing Debrid</h1>
         <p className="mt-2 text-muted-foreground">
-          Pour utiliser l'application, vous devez configurer vos deux cles API ci-dessous.
+          Pour utiliser l'application, vous devez configurer vos deux cles API
+          ci-dessous.
         </p>
       </motion.div>
       <motion.div
