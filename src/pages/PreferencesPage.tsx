@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { parseRelease } from "@/lib/parseRelease";
+import { ApiKeysForm } from "@/components/ApiKeysForm";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
@@ -18,7 +19,7 @@ const EXAMPLE = "Apple.Cider.Vinegar.S01E01.MULTi.1080p.WEB.H265-CHiLL.mkv";
 
 interface PreferencesPageProps {
   onBack: () => void;
-  onNavigate: (page: "settings" | "magnets") => void;
+  onNavigate: (page: "magnets") => void;
 }
 
 export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
@@ -39,7 +40,7 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
   return (
     <main className="relative flex min-h-screen flex-col bg-[#05060c]">
       {/* Grid background */}
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_0%,black,transparent_85%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.13)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.13)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:linear-gradient(to_right,black,transparent_38%,transparent_62%,black),radial-gradient(ellipse_85%_80%_at_50%_0%,black_25%,transparent_90%)] [mask-composite:intersect]" />
 
       {/* Header */}
       <div className="sticky top-0 z-10 border-b border-white/5 bg-black/30 backdrop-blur-xl">
@@ -69,10 +70,6 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
               <DropdownMenuItem onClick={() => onNavigate("magnets")}>
                 <Magnet className="mr-2 h-4 w-4" />
                 Magnets
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate("settings")}>
-                <KeyRound className="mr-2 h-4 w-4" />
-                Clés API
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -130,6 +127,20 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
           ) : (
             <p className="text-sm font-semibold text-white leading-snug break-all">{EXAMPLE}</p>
           )}
+        </div>
+
+        <div className="my-8 h-px bg-white/8" />
+
+        <div className="flex items-center gap-2 mb-1">
+          <KeyRound className="h-4 w-4 text-indigo-400" />
+          <h2 className="text-sm font-semibold text-white">Clés API</h2>
+        </div>
+        <p className="text-xs text-zinc-500 mb-5">
+          Les clés C411 et AllDebrid utilisées par l'application.
+        </p>
+
+        <div className="dark">
+          <ApiKeysForm />
         </div>
       </motion.div>
     </main>

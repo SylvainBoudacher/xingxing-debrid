@@ -59,7 +59,7 @@ function TutorialBlock({
           <button
             type="button"
             onClick={() => openUrl(url)}
-            className="text-blue-800 underline decoration-dotted underline-offset-4 hover:text-blue-700 transition-colors"
+            className="text-blue-800 underline decoration-dotted underline-offset-4 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
           >
             {title}
           </button>
