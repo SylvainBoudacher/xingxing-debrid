@@ -470,17 +470,7 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                 autoFocus
                 type="text"
                 value={query}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setQuery(val);
-                  if (!val) {
-                    setResults(null);
-                    setError(null);
-                    setPhase((prev) =>
-                      prev === "active" ? "bar-returning" : "idle",
-                    );
-                  }
-                }}
+                onChange={(e) => setQuery(e.target.value)}
                 placeholder="Rechercher un film, une serie..."
                 className="flex-1 bg-transparent text-white placeholder:text-zinc-500 outline-none text-lg pr-10"
               />
