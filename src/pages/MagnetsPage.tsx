@@ -361,7 +361,8 @@ interface MagnetsPageProps {
 export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
   const [magnets, setMagnets] = useState<MagnetEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ ids: number[]; label: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [filesModal, setFilesModal] = useState<{ id: number; name: string } | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -390,18 +391,21 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
     });
   }, [loadMagnets]);
 
-  async function handleDelete(id: number) {
-    setDeletingId(id);
+  async function handleDelete(ids: number[]) {
+    setDeleting(true);
     try {
-      const res = await fetch(`${AD_BASE}/magnet/delete?agent=c411&apikey=${apiKeyRef.current}&id=${id}`);
-      const json = await res.json() as { status: string };
-      if (json.status !== "success") throw new Error("Suppression echouee");
-      setMagnets((prev) => prev.filter((m) => m.id !== id));
-      toast.success("Magnet supprime");
+      for (const id of ids) {
+        const res = await fetch(`${AD_BASE}/magnet/delete?agent=c411&apikey=${apiKeyRef.current}&id=${id}`);
+        const json = await res.json() as { status: string };
+        if (json.status !== "success") throw new Error("Suppression echouee");
+      }
+      setMagnets((prev) => prev.filter((m) => !ids.includes(m.id)));
+      toast.success(ids.length > 1 ? `${ids.length} magnets supprimes` : "Magnet supprime");
+      setConfirmDelete(null);
     } catch (err) {
       toast.error(String(err));
     } finally {
-      setDeletingId(null);
+      setDeleting(false);
     }
   }
 
@@ -526,12 +530,27 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
         </div>
 
         {!loading && (
-          <p className="text-[11px] text-zinc-600 uppercase tracking-wider font-medium">
-            {filtered.length === 0
-              ? "Aucun resultat"
-              : `${filtered.length} magnet${filtered.length > 1 ? "s" : ""}${search ? ` pour "${search}"` : ""}`
-            }
-          </p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] text-zinc-600 uppercase tracking-wider font-medium">
+              {filtered.length === 0
+                ? "Aucun resultat"
+                : `${filtered.length} magnet${filtered.length > 1 ? "s" : ""}${search ? ` pour "${search}"` : ""}`
+              }
+            </p>
+            {statusFilter === "error" && counts.error > 0 && (
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setConfirmDelete({
+                  ids: magnets.filter((m) => getStatusFilter(m.statusCode) === "error").map((m) => m.id),
+                  label: `${counts.error} magnet${counts.error > 1 ? "s" : ""} en erreur`,
+                })}
+                className="flex shrink-0 items-center gap-1.5 h-7 px-3 rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"
+              >
+                <Trash2 className="h-3 w-3" />
+                <span className="text-[11px] font-medium">Tout supprimer ({counts.error})</span>
+              </motion.button>
+            )}
+          </div>
         )}
       </div>
 
@@ -599,14 +618,10 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                         )}
                         <motion.button
                           whileTap={{ scale: 0.97 }}
-                          onClick={() => handleDelete(m.id)}
-                          disabled={deletingId !== null}
-                          className="flex items-center justify-center h-7 w-7 rounded-lg bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          onClick={() => setConfirmDelete({ ids: [m.id], label: m.filename })}
+                          className="flex items-center justify-center h-7 w-7 rounded-lg bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 transition-colors"
                         >
-                          {deletingId === m.id
-                            ? <Loader2 className="h-3 w-3 animate-spin" />
-                            : <Trash2 className="h-3 w-3" />
-                          }
+                          <Trash2 className="h-3 w-3" />
                         </motion.button>
                       </div>
                     </div>
@@ -637,6 +652,54 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
             apiKey={apiKeyRef.current}
             onClose={() => setFilesModal(null)}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {confirmDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+            onClick={() => !deleting && setConfirmDelete(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm rounded-2xl bg-zinc-900/95 backdrop-blur-xl ring-1 ring-white/10 p-5 shadow-2xl"
+            >
+              <p className="text-sm font-semibold text-white mb-1">
+                {confirmDelete.ids.length > 1 ? "Supprimer ces magnets ?" : "Supprimer ce magnet ?"}
+              </p>
+              <p className="text-xs text-zinc-400 leading-snug line-clamp-2 mb-4">{confirmDelete.label}</p>
+              <div className="flex gap-2">
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setConfirmDelete(null)}
+                  disabled={deleting}
+                  className="flex-1 h-9 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-300 disabled:opacity-40 transition-colors"
+                >
+                  Annuler
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => handleDelete(confirmDelete.ids)}
+                  disabled={deleting}
+                  className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium text-white disabled:opacity-40 transition-colors"
+                >
+                  {deleting
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <Trash2 className="h-3.5 w-3.5" />
+                  }
+                  Supprimer
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </main>
