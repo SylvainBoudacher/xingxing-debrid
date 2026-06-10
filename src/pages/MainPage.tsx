@@ -66,22 +66,17 @@ const titleWordVariants = {
   },
 };
 
-const listVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.04, delayChildren: 0.1 } },
-  exit: { opacity: 0, transition: { duration: 0.1 } },
-};
-
 const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  visible: {
+  hidden: { opacity: 0, y: 8 },
+  visible: (i: number) => ({
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.3,
+      duration: 0.25,
+      delay: Math.min(i * 0.03, 0.3),
       ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
     },
-  },
+  }),
 };
 
 interface SearchResult {
@@ -337,7 +332,6 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
       const res = await fetch(url);
       if (!res.ok) throw new Error(`Erreur ${res.status}`);
       const xml = await res.text();
-      console.log("[C411 raw response]", xml);
       setSearchKey((k) => k + 1);
       setResults(parseXml(xml));
     } catch (err) {
@@ -425,9 +419,9 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
           layout
           transition={{
             type: "spring",
-            stiffness: 160,
+            stiffness: 240,
             damping: 30,
-            mass: 1.1,
+            mass: 0.9,
           }}
           onLayoutAnimationComplete={() => {
             if (phase === "bar-returning") setPhase("idle");
@@ -564,27 +558,23 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
           )}
         </AnimatePresence>
 
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence>
           {phase === "active" && results && results.length > 0 && (
             <motion.div
               key={searchKey}
               className="w-full max-w-2xl px-6 space-y-2 pb-6"
-              variants={listVariants}
               initial="hidden"
               animate="visible"
-              exit="exit"
+              exit={{ opacity: 0, transition: { duration: 0.12 } }}
             >
               {results.map((r, i) => {
                 const { icon: Icon, color } = getCategoryIcon(r.category);
                 return (
                   <motion.div
                     key={i}
+                    custom={i}
                     variants={itemVariants}
-                    whileHover={{
-                      scale: 1.015,
-                      backgroundColor: "rgba(63,63,70,0.6)",
-                    }}
-                    className="flex items-center gap-4 rounded-lg bg-zinc-800/60 ring-1 ring-white/8 px-4 py-3"
+                    className="flex items-center gap-4 rounded-lg bg-zinc-800/60 ring-1 ring-white/8 px-4 py-3 transition-colors duration-150 hover:bg-zinc-700/60 hover:ring-white/15"
                   >
                     <Icon className={`h-5 w-5 shrink-0 ${color}`} />
                     <div className="min-w-0 flex-1">
