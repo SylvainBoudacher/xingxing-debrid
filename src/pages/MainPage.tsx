@@ -355,9 +355,9 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
             <motion.button
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.93 }}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-colors"
             >
-              <Menu className="h-5 w-5" />
+              <Menu className="h-4 w-4" />
             </motion.button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className={import.meta.env.DEV ? "w-56" : "w-44"}>
