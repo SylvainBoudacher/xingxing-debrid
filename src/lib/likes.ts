@@ -8,6 +8,7 @@ export interface LikedItem {
   posterPath: string | null;
   year: string;
   voteAverage: number;
+  overview: string;
   likedAt: number;
 }
 
@@ -42,6 +43,7 @@ export function parseLikesJson(raw: string): LikedItem[] {
       posterPath: typeof e.posterPath === "string" ? e.posterPath : null,
       year: typeof e.year === "string" ? e.year : "",
       voteAverage: typeof e.voteAverage === "number" ? e.voteAverage : 0,
+      overview: typeof e.overview === "string" ? e.overview : "",
       likedAt: typeof e.likedAt === "number" ? e.likedAt : Date.now(),
     }));
 }
