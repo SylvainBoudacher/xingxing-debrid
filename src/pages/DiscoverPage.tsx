@@ -255,6 +255,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
 
   const c411KeyRef = useRef<string>("");
   const allDebridKeyRef = useRef<string>("");
+  const releasesReqRef = useRef(0);
 
   useEffect(() => {
     getApiKey("c411_api_key").then((v) => {
@@ -381,6 +382,13 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
     return { torrents: [...byHash.values()], nTitles: queries.map(normalize) };
   }
 
+  // Garantit que le skeleton reste affiche assez longtemps pour une transition douce
+  const MIN_SKELETON_MS = 900;
+  async function minDelay(start: number) {
+    const remaining = MIN_SKELETON_MS - (Date.now() - start);
+    if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
+  }
+
   function sortOccupants(occupants: Occupant[]): Occupant[] {
     return occupants.sort(
       (a, b) =>
@@ -391,6 +399,8 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
   }
 
   async function loadMovieReleases(item: TmdbItem) {
+    const start = Date.now();
+    const reqId = ++releasesReqRef.current;
     try {
       const { torrents, nTitles } = await searchC411(item);
       const nextYear = item.year ? String(Number(item.year) + 1) : "";
@@ -408,13 +418,17 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
           continue;
         occupants.push(toOccupant(t));
       }
+      await minDelay(start);
+      if (reqId !== releasesReqRef.current) return;
       setReleases(sortOccupants(occupants));
     } catch (err) {
-      setReleasesError(String(err));
+      if (reqId === releasesReqRef.current) setReleasesError(String(err));
     }
   }
 
   async function loadTvReleases(item: TmdbItem, season: number | null) {
+    const start = Date.now();
+    const reqId = ++releasesReqRef.current;
     try {
       const { torrents, nTitles } = await searchC411(item);
       // Matche "S01", "S01E05", "Saison 1", ou une integrale sans numero de saison
@@ -440,9 +454,11 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
           continue;
         occupants.push(toOccupant(t));
       }
+      await minDelay(start);
+      if (reqId !== releasesReqRef.current) return;
       setReleases(sortOccupants(occupants));
     } catch (err) {
-      setReleasesError(String(err));
+      if (reqId === releasesReqRef.current) setReleasesError(String(err));
     }
   }
 
@@ -875,12 +891,34 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
               )}
 
               <div className="h-[26rem] overflow-y-auto px-3 pb-3 space-y-1.5">
-                {releases === null && !releasesError && (
-                  <div className="flex h-full items-center justify-center gap-2 text-sm text-zinc-500">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Recherche des versions...
-                  </div>
-                )}
+                {releases === null &&
+                  !releasesError &&
+                  Array.from({ length: 6 }, (_, i) => (
+                    <motion.div
+                      key={`skeleton-${i}`}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.25, delay: i * 0.07 }}
+                      className="flex items-center gap-4 rounded-xl bg-zinc-800/60 px-4 py-3"
+                    >
+                      <div className="min-w-0 flex-1 animate-pulse">
+                        <div className="mb-2 flex items-center gap-1.5">
+                          <div className="h-[18px] w-12 rounded-md bg-zinc-700/70" />
+                          <div className="h-[18px] w-10 rounded-md bg-zinc-700/70" />
+                          <div className="h-[18px] w-12 rounded-md bg-zinc-700/70" />
+                          <div className="h-[18px] w-9 rounded-md bg-zinc-700/70" />
+                        </div>
+                        <div className="mb-2 flex items-center gap-3">
+                          <div className="h-3 w-14 rounded bg-zinc-700/70" />
+                          <div className="h-3 w-20 rounded bg-zinc-700/70" />
+                          <div className="h-3 w-16 rounded bg-zinc-700/50" />
+                        </div>
+                        <div className="h-2.5 w-3/4 rounded bg-zinc-700/40" />
+                      </div>
+                      <div className="h-8 w-8 shrink-0 rounded-full bg-zinc-700/70 animate-pulse" />
+                    </motion.div>
+                  ))}
                 {releasesError && (
                   <div className="flex h-full items-center justify-center px-6">
                     <p className="text-center text-sm text-red-400">
@@ -897,9 +935,16 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                     </p>
                   </div>
                 )}
-                {releases?.map((occ) => (
-                  <div
+                {releases?.map((occ, i) => (
+                  <motion.div
                     key={occ.infoHash}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      duration: 0.25,
+                      delay: Math.min(i * 0.04, 0.3),
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
                     className="flex items-center gap-4 rounded-xl bg-zinc-800/60 px-4 py-3"
                   >
                     <div className="min-w-0 flex-1">
@@ -965,7 +1010,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                         Télécharger
                       </span>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </motion.div>

@@ -676,7 +676,46 @@ export function MainPage({
             }}
           >
             {phase === "idle" && (
+              <motion.div
+                key="discover-cta"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: 0.5,
+                    delay: 0.45,
+                    ease: [0.22, 1, 0.36, 1],
+                  },
+                }}
+                exit={{
+                  opacity: 0,
+                  y: 20,
+                  transition: { duration: 0.18, ease: "easeIn" },
+                }}
+                className="absolute bottom-full mb-28 flex w-full justify-center"
+              >
+                <div className="relative">
+                  <span
+                    aria-hidden
+                    className="discover-halo absolute -inset-1 rounded-full blur-[6px]"
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => onNavigate("discover")}
+                    className="group relative z-10 flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 bg-[length:200%_100%] animate-[shimmer_4s_linear_infinite] px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 shadow-[0_0_30px_rgba(99,102,241,0.45)] hover:shadow-[0_0_50px_rgba(124,58,237,0.65)] transition-shadow"
+                  >
+                    <Compass className="h-4 w-4" />
+                    Découvrir
+                    <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+            {phase === "idle" && (
               <motion.h1
+                key="title"
                 variants={titleContainerVariants}
                 initial="hidden"
                 animate="visible"
