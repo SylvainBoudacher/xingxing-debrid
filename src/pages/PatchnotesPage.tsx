@@ -79,6 +79,12 @@ export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
               <span className="text-xs text-zinc-500">{note.date}</span>
             </div>
 
+            {note.intro && (
+              <p className="mb-6 text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                {note.intro}
+              </p>
+            )}
+
             <div className="space-y-6">
               {note.sections.map((section) => (
                 <section key={section.title}>
@@ -91,6 +97,24 @@ export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
                       </li>
                     ))}
                   </ul>
+                  {section.images?.map((image) => (
+                    <figure key={image.src} className="mt-4">
+                      <img
+                        src={image.src}
+                        alt={image.caption ?? section.title}
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.currentTarget.parentElement as HTMLElement).style.display = "none";
+                        }}
+                        className="w-full rounded-xl ring-1 ring-black/10 dark:ring-white/10 shadow-sm"
+                      />
+                      {image.caption && (
+                        <figcaption className="mt-1.5 text-center text-[11px] text-zinc-400 dark:text-zinc-500">
+                          {image.caption}
+                        </figcaption>
+                      )}
+                    </figure>
+                  ))}
                 </section>
               ))}
             </div>
