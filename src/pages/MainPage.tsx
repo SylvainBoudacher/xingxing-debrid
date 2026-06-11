@@ -8,9 +8,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeMenuItem } from "@/components/ThemeMenuItem";
 import { getApiKey } from "@/lib/apiKeys";
 import { parseRelease } from "@/lib/parseRelease";
-import { setTheme as persistTheme, type Theme } from "@/lib/theme";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
@@ -37,7 +37,6 @@ import {
   Loader2,
   Magnet,
   Menu,
-  Moon,
   Music,
   Package,
   RotateCcw,
@@ -45,7 +44,6 @@ import {
   Search,
   SlidersHorizontal,
   Sparkles,
-  Sun,
   Trash2,
   Tv,
   X,
@@ -288,9 +286,6 @@ export function MainPage({
   const [vlcLink, setVlcLink] = useState<string | null>(null);
   const [showPatchNotif, setShowPatchNotif] = useState(false);
   const [simpleSearchView, setSimpleSearchView] = useState(true);
-  const [theme, setTheme] = useState<Theme>(() =>
-    document.documentElement.classList.contains("dark") ? "dark" : "light",
-  );
   const apiKeyRef = useRef<string>("");
   const allDebridKeyRef = useRef<string>("");
   const searchedQueryRef = useRef<string>("");
@@ -310,12 +305,6 @@ export function MainPage({
       setSimpleSearchView((v ?? "simple") === "simple");
     });
   }, []);
-
-  async function toggleTheme() {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    await persistTheme(next);
-  }
 
   async function dismissPatchNotif() {
     setShowPatchNotif(false);
@@ -605,14 +594,7 @@ export function MainPage({
               Paramètres
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={toggleTheme}>
-              {theme === "dark" ? (
-                <Sun className="mr-2 h-4 w-4" />
-              ) : (
-                <Moon className="mr-2 h-4 w-4" />
-              )}
-              {theme === "dark" ? "Mode clair" : "Mode sombre"}
-            </DropdownMenuItem>
+            <ThemeMenuItem />
             <DropdownMenuItem onClick={() => onNavigate("patchnotes")}>
               <ScrollText className="mr-2 h-4 w-4" />
               Patch notes

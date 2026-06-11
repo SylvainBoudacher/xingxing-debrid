@@ -6,6 +6,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeMenuItem } from "@/components/ThemeMenuItem";
 import { getApiKey } from "@/lib/apiKeys";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { parseRelease } from "@/lib/parseRelease";
@@ -755,6 +756,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                 Paramètres
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <ThemeMenuItem />
               <DropdownMenuItem onClick={() => onNavigate("patchnotes")}>
                 <ScrollText className="mr-2 h-4 w-4" />
                 Patch notes

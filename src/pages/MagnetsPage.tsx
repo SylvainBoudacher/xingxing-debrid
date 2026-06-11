@@ -17,6 +17,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeMenuItem } from "@/components/ThemeMenuItem";
 import { toast } from "sonner";
 import vlcLogo from "@/assets/vlc.png";
 import { invoke } from "@tauri-apps/api/core";
@@ -599,6 +600,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                   Paramètres
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <ThemeMenuItem />
                 <DropdownMenuItem onClick={() => onNavigate("patchnotes")}>
                   <ScrollText className="mr-2 h-4 w-4" />
                   Patch notes

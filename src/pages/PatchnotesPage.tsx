@@ -4,8 +4,10 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeMenuItem } from "@/components/ThemeMenuItem";
 import { PATCH_NOTES } from "@/lib/patchnotes";
 
 interface PatchnotesPageProps {
@@ -54,6 +56,8 @@ export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
                 <SlidersHorizontal className="mr-2 h-4 w-4" />
                 Paramètres
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <ThemeMenuItem />
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
