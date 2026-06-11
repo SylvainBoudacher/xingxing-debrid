@@ -309,41 +309,48 @@ export function SetupPage({ onComplete }: SetupPageProps) {
             className="relative mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-6 py-12 sm:px-8"
           >
             <motion.div variants={item} className="flex flex-col items-center text-center mb-10">
-              <div className="relative mb-4 flex h-52 w-52 items-center justify-center">
+              <div className="relative mb-4 flex h-72 w-72 items-center justify-center [perspective:700px]">
                 <motion.div
                   animate={{ opacity: [0.4, 0.9, 0.4], scale: [0.95, 1.15, 0.95] }}
                   transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/50 blur-2xl"
+                  className="absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/50 blur-2xl"
                 />
-                <div className="absolute inset-5 rounded-full border border-dashed border-indigo-500/25" />
-                <img
-                  src={logo}
-                  alt="XingXing Debrid"
-                  className="relative h-24 w-24 rounded-2xl ring-1 ring-black/10 dark:ring-white/10 shadow-[0_0_50px_rgba(79,70,229,0.5)]"
-                />
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
-                  className="pointer-events-none absolute inset-0"
-                >
-                  {FEATURES.map((f, i) => (
-                    <div
-                      key={f.title}
-                      className="absolute left-1/2 top-1/2 -ml-[18px] -mt-[18px] h-9 w-9"
-                      style={{ transform: `rotate(${i * 90}deg) translateY(-84px)` }}
+                {/* 3D scene: the logo sits at z=0, the orbit plane is tilted so icons pass in front of and behind it */}
+                <div className="absolute inset-0 flex items-center justify-center [transform-style:preserve-3d]">
+                  <img
+                    src={logo}
+                    alt="XingXing Debrid"
+                    className="relative h-32 w-32 rounded-2xl ring-1 ring-black/10 dark:ring-white/10 shadow-[0_0_50px_rgba(79,70,229,0.5)]"
+                  />
+                  <div className="pointer-events-none absolute inset-0 [transform-style:preserve-3d] [transform:rotateX(70deg)]">
+                    <div className="absolute inset-[34px] rounded-full border border-dashed border-indigo-500/25" />
+                    <motion.div
+                      animate={{ rotateZ: 360 }}
+                      transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
+                      className="absolute inset-0 [transform-style:preserve-3d]"
                     >
-                      {/* counter-rotation to keep the icon upright while orbiting */}
-                      <motion.div
-                        initial={{ rotate: -i * 90 }}
-                        animate={{ rotate: -360 - i * 90 }}
-                        transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
-                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/80 dark:bg-zinc-900/80 ring-1 ring-indigo-500/30 shadow-lg shadow-indigo-500/10 backdrop-blur"
-                      >
-                        <f.icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                      </motion.div>
-                    </div>
-                  ))}
-                </motion.div>
+                      {FEATURES.map((f, i) => (
+                        <div
+                          key={f.title}
+                          className="absolute left-1/2 top-1/2 -ml-6 -mt-6 h-12 w-12 [transform-style:preserve-3d]"
+                          style={{ transform: `rotateZ(${i * 90}deg) translateY(-110px)` }}
+                        >
+                          {/* counter-rotation + un-tilt so the icon stays upright and faces the camera */}
+                          <motion.div
+                            initial={{ rotateZ: -i * 90 }}
+                            animate={{ rotateZ: -360 - i * 90 }}
+                            transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
+                            className="h-12 w-12 [transform-style:preserve-3d]"
+                          >
+                            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/90 dark:bg-zinc-900/90 ring-1 ring-indigo-500/30 shadow-lg shadow-indigo-500/10 [transform:rotateX(-70deg)]">
+                              <f.icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                          </motion.div>
+                        </div>
+                      ))}
+                    </motion.div>
+                  </div>
+                </div>
               </div>
               <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-3">XingXing Debrid</h1>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm leading-relaxed">

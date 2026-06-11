@@ -1,10 +1,85 @@
+export interface PatchNoteImage {
+  src: string; // fichier dans public/patchnotes/, ex: "/patchnotes/discover.png"
+  caption?: string;
+}
+
+export interface PatchNoteSection {
+  title: string;
+  items: string[];
+  images?: PatchNoteImage[];
+}
+
 export interface PatchNote {
   version: string;
   date: string;
-  sections: { title: string; items: string[] }[];
+  intro?: string;
+  sections: PatchNoteSection[];
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.0",
+    date: "11 juin 2026",
+    intro:
+      "L'application passe en version 1.0 ! Au programme : une toute nouvelle page Découvrir pour explorer films et séries, une liste de favoris, un mode sombre, et une interface entièrement repensée.",
+    sections: [
+      {
+        title: "Nouvelle page Découvrir",
+        items: [
+          "Explorez les films, séries et animations les mieux notés grâce au catalogue TMDB, avec affiches, notes et résumés.",
+          "Recherchez n'importe quel titre et trouvez en un clic les releases disponibles sur C411, sans quitter la page.",
+          "Triez et filtrez le catalogue pour trouver exactement ce que vous cherchez.",
+        ],
+        images: [
+          { src: "/patchnotes/v1-discover.png", caption: "La page Découvrir avec le catalogue TMDB" },
+        ],
+      },
+      {
+        title: "Ma liste",
+        items: [
+          "Ajoutez vos films et séries en favoris d'un simple clic sur le cœur.",
+          "Retrouvez-les à tout moment dans l'onglet \"Ma liste\" de la page Découvrir, avec leur résumé.",
+        ],
+        images: [
+          { src: "/patchnotes/v1-likes.png", caption: "Vos favoris regroupés dans Ma liste" },
+        ],
+      },
+      {
+        title: "Mode sombre",
+        items: [
+          "Passez du mode clair au mode sombre depuis le menu, sur toutes les pages de l'application.",
+          "L'ensemble de l'interface a été harmonisé pour être agréable dans les deux modes.",
+        ],
+        images: [
+          { src: "/patchnotes/v1-dark-mode.png", caption: "L'application en mode sombre" },
+        ],
+      },
+      {
+        title: "Fichiers .nfo",
+        items: [
+          "Deux nouvelles options dans les Paramètres : masquer les fichiers .nfo dans les listes, et ne pas les télécharger. Les deux sont activées par défaut.",
+        ],
+      },
+      {
+        title: "Première configuration repensée",
+        items: [
+          "La page de bienvenue a été entièrement revue, avec des animations et des explications pas à pas pour chaque clé.",
+          "Une clé TMDB (gratuite et optionnelle) peut être ajoutée pour activer la page Découvrir.",
+        ],
+        images: [
+          { src: "/patchnotes/v1-setup.png", caption: "Le nouvel écran de bienvenue" },
+        ],
+      },
+      {
+        title: "Interface et confort",
+        items: [
+          "Animations et transitions plus fluides sur toutes les pages.",
+          "Les Paramètres disposent d'un sommaire qui suit votre lecture.",
+          "Navigation harmonisée : le menu donne accès à l'Accueil, Découvrir, Magnets et Paramètres depuis n'importe quelle page.",
+        ],
+      },
+    ],
+  },
   {
     version: "0.3",
     date: "11 juin 2026",
