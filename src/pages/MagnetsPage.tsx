@@ -98,27 +98,27 @@ function getStatusFilter(code: number): Exclude<StatusFilter, "all"> {
 function StatusBadge({ code, label }: { code: number; label: string }) {
   if (code === 4) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/12 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
+      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/12 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
         <CheckCircle2 className="h-3 w-3" /> Termine
       </span>
     );
   }
   if (code >= 0 && code <= 3) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-indigo-500/12 px-2 py-0.5 text-[11px] font-medium text-indigo-400">
+      <span className="inline-flex items-center gap-1 rounded-md bg-indigo-500/12 px-2 py-0.5 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
         <Zap className="h-3 w-3" /> En cours
       </span>
     );
   }
   if (code >= 10) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-red-500/12 px-2 py-0.5 text-[11px] font-medium text-red-400">
+      <span className="inline-flex items-center gap-1 rounded-md bg-red-500/12 px-2 py-0.5 text-[11px] font-medium text-red-600 dark:text-red-400">
         <AlertCircle className="h-3 w-3" /> Erreur
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-zinc-700/50 px-2 py-0.5 text-[11px] font-medium text-zinc-400">
+    <span className="inline-flex items-center gap-1 rounded-md bg-zinc-300/60 dark:bg-zinc-700/50 px-2 py-0.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
       <Clock className="h-3 w-3" /> {label}
     </span>
   );
@@ -128,7 +128,7 @@ function ProgressBar({ downloaded, size }: { downloaded: number; size: number })
   if (!size || !downloaded) return null;
   const pct = Math.min(100, (downloaded / size) * 100);
   return (
-    <div className="mt-1.5 h-[3px] w-full rounded-full bg-white/6 overflow-hidden">
+    <div className="mt-1.5 h-[3px] w-full rounded-full bg-black/6 dark:bg-white/6 overflow-hidden">
       <motion.div
         className="h-full rounded-full bg-indigo-500"
         initial={{ width: 0 }}
@@ -254,22 +254,22 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfo
         exit={{ opacity: 0, scale: 0.95, y: 8 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg rounded-2xl bg-zinc-900/95 backdrop-blur-xl ring-1 ring-white/10 overflow-hidden shadow-2xl"
+        className="w-full max-w-lg rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
       >
         {/* Header */}
         <div className="px-5 pt-5 pb-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">Fichiers disponibles</p>
-              <p className="text-sm font-semibold text-white leading-snug line-clamp-2">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">
                 {simpleView ? parseRelease(magnetName).title : magnetName}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
+              className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
             >
-              <X className="h-3.5 w-3.5 text-zinc-400" />
+              <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
             </button>
           </div>
 
@@ -292,7 +292,7 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfo
         <div className="max-h-80 overflow-y-auto px-3 pb-3 space-y-1.5">
           {loading && (
             <div className="flex justify-center py-8">
-              <Loader2 className="h-5 w-5 text-zinc-400 animate-spin" />
+              <Loader2 className="h-5 w-5 text-zinc-500 dark:text-zinc-400 animate-spin" />
             </div>
           )}
           {!loading && files?.map((file, i) => {
@@ -300,10 +300,10 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfo
             const showName = fileName !== magnetName;
             const parsed = simpleView ? parseRelease(fileName) : null;
             return (
-              <div key={i} className="rounded-xl bg-zinc-800/60 px-4 py-3">
+              <div key={i} className="rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3">
                 <div className="mb-3">
                   {showName && (
-                    <p className="text-sm font-medium text-white leading-snug line-clamp-2 mb-0.5">
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white leading-snug line-clamp-2 mb-0.5">
                       {parsed ? parsed.title : fileName}
                     </p>
                   )}
@@ -319,24 +319,24 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfo
                       whileTap={{ scale: 0.97 }}
                       onClick={() => handleOpenVlc(file.link)}
                       disabled={busy}
-                      className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       {vlcing === file.link
-                        ? <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+                        ? <Loader2 className="h-3.5 w-3.5 text-zinc-900 dark:text-white animate-spin" />
                         : <img src={vlcLogo} className="h-4 w-4" />
                       }
-                      <span className="text-xs font-medium text-white">Lire avec VLC</span>
+                      <span className="text-xs font-medium text-zinc-900 dark:text-white">Lire avec VLC</span>
                     </motion.button>
                   )}
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={() => handleCopy(file.link)}
                     disabled={busy}
-                    className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
                     {copying === file.link
-                      ? <><Check className="h-3.5 w-3.5 text-green-400" /><span className="text-xs font-medium text-green-400">Copie !</span></>
-                      : <><Copy className="h-3.5 w-3.5 text-zinc-300" /><span className="text-xs font-medium text-zinc-300">Copier le lien</span></>
+                      ? <><Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" /><span className="text-xs font-medium text-green-600 dark:text-green-400">Copie !</span></>
+                      : <><Copy className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-300" /><span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Copier le lien</span></>
                     }
                   </motion.button>
                   <motion.button
@@ -381,13 +381,13 @@ function Pagination({
       <button
         onClick={() => onChange(page - 1)}
         disabled={page === 1}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
         <ChevronLeft className="h-4 w-4" />
       </button>
       {pages.map((p, i) =>
         p === "..." ? (
-          <span key={`ellipsis-${i}`} className="px-1 text-xs text-zinc-600">...</span>
+          <span key={`ellipsis-${i}`} className="px-1 text-xs text-zinc-400 dark:text-zinc-600">...</span>
         ) : (
           <button
             key={p}
@@ -395,7 +395,7 @@ function Pagination({
             className={`flex h-8 min-w-8 px-2 items-center justify-center rounded-lg text-xs font-medium transition-colors ${
               p === page
                 ? "bg-indigo-600 text-white"
-                : "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-zinc-800"
             }`}
           >
             {p}
@@ -405,7 +405,7 @@ function Pagination({
       <button
         onClick={() => onChange(page + 1)}
         disabled={page === totalPages}
-        className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
       >
         <ChevronRight className="h-4 w-4" />
       </button>
@@ -546,26 +546,26 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
   ];
 
   return (
-    <main className="relative flex min-h-screen flex-col bg-black bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
+    <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
 
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="sticky top-0 z-10 border-b border-white/5 bg-black/30 backdrop-blur-xl"
+        className="sticky top-0 z-10 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl"
       >
         <div className="relative mx-auto flex w-full max-w-3xl items-center justify-between px-6 py-4 sm:px-8">
           <motion.button
             whileTap={{ scale: 0.93 }}
             onClick={onBack}
-            className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm font-medium">Retour</span>
           </motion.button>
 
-          <h1 className="text-sm font-semibold text-white tracking-tight absolute left-1/2 -translate-x-1/2">Magnets</h1>
+          <h1 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight absolute left-1/2 -translate-x-1/2">Magnets</h1>
 
           <div className="flex items-center gap-2">
             <motion.button
@@ -574,7 +574,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
               transition={loading ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
               onClick={loadMagnets}
               disabled={loading}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-indigo-400 hover:text-indigo-300 hover:bg-white/5 disabled:opacity-40 transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 transition-colors"
             >
               <RefreshCw className="h-4 w-4" />
             </motion.button>
@@ -584,7 +584,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                 <motion.button
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.93 }}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700/80 transition-colors"
                 >
                   <Menu className="h-4 w-4" />
                 </motion.button>
@@ -617,7 +617,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
         className="mx-auto w-full max-w-3xl px-6 pt-6 pb-4 sm:px-8 space-y-3"
       >
         <div className="flex flex-col gap-3 sm:flex-row">
-          <div className="flex flex-1 gap-1 rounded-xl bg-zinc-900/70 p-1 ring-1 ring-white/6">
+          <div className="flex flex-1 gap-1 rounded-xl bg-white/80 dark:bg-zinc-900/70 p-1 ring-1 ring-black/6 dark:ring-white/6">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -625,7 +625,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                 className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${
                   statusFilter === tab.key
                     ? "bg-indigo-600 text-white shadow"
-                    : "text-zinc-500 hover:text-zinc-300"
+                    : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                 }`}
               >
                 {tab.label}
@@ -640,7 +640,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher..."
-              className="w-full rounded-xl bg-zinc-900/70 ring-1 ring-white/6 pl-9 pr-9 py-2 text-sm text-white placeholder:text-zinc-600 outline-none focus:ring-indigo-500/40 transition-all"
+              className="w-full rounded-xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 pl-9 pr-9 py-2 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-600 outline-none focus:ring-indigo-500/40 transition-all"
             />
             <AnimatePresence>
               {search && (
@@ -650,7 +650,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                   exit={{ opacity: 0, scale: 0.7 }}
                   transition={{ duration: 0.12 }}
                   onClick={() => setSearch("")}
-                  className="absolute right-3 text-zinc-500 hover:text-white transition-colors"
+                  className="absolute right-3 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
                 >
                   <X className="h-3.5 w-3.5" />
                 </motion.button>
@@ -661,7 +661,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
 
         {!loading && (
           <div className="flex items-center justify-between gap-3">
-            <p className="text-[11px] text-zinc-600 uppercase tracking-wider font-medium">
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-600 uppercase tracking-wider font-medium">
               {filtered.length === 0
                 ? "Aucun resultat"
                 : `${filtered.length} magnet${filtered.length > 1 ? "s" : ""}${search ? ` pour "${search}"` : ""}`
@@ -675,7 +675,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                     ids: magnets.filter((m) => getStatusFilter(m.statusCode) === "error").map((m) => m.id),
                     label: `${counts.error} magnet${counts.error > 1 ? "s" : ""} en erreur`,
                   })}
-                  className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-400 hover:bg-red-500/20 transition-colors"
+                  className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors"
                 >
                   <Trash2 className="h-3 w-3" />
                   <span className="text-[11px] font-medium">Tout supprimer ({counts.error})</span>
@@ -688,7 +688,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                   className={`flex items-center gap-1.5 h-7 px-3 rounded-lg ring-1 transition-colors ${
                     selectMode
                       ? "bg-indigo-600 ring-indigo-500 text-white"
-                      : "bg-white/5 ring-white/10 text-zinc-400 hover:text-white hover:bg-white/10"
+                      : "bg-black/5 dark:bg-white/5 ring-black/10 dark:ring-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10"
                   }`}
                 >
                   <ListChecks className="h-3 w-3" />
@@ -706,9 +706,9 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center pt-16 gap-4 text-zinc-600"
+            className="flex flex-col items-center justify-center pt-16 gap-4 text-zinc-400 dark:text-zinc-600"
           >
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.03] ring-1 ring-white/6">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-black/[0.03] dark:bg-white/[0.03] ring-1 ring-black/6 dark:ring-white/6">
               <Download className="h-7 w-7 opacity-40" />
             </div>
             <p className="text-sm">Aucun magnet trouve.</p>
@@ -728,7 +728,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.35, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
-                  className="rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 overflow-hidden transition-[background-color,box-shadow] duration-200 hover:bg-zinc-900 hover:ring-white/12 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
+                  className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 overflow-hidden transition-[background-color,box-shadow] duration-200 hover:bg-white dark:hover:bg-zinc-900 hover:ring-black/12 dark:hover:ring-white/12 hover:shadow-[0_8px_30px_rgba(0,0,0,0.10)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
                 >
                   <div className="flex gap-3 px-5 py-4">
                     {selectMode && isReady && (
@@ -737,7 +737,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md ring-1 transition-colors ${
                           selected.has(m.id)
                             ? "bg-indigo-600 ring-indigo-500"
-                            : "bg-zinc-800 ring-white/10 hover:ring-white/25"
+                            : "bg-zinc-200 dark:bg-zinc-800 ring-black/10 dark:ring-white/10 hover:ring-black/20 dark:hover:ring-white/25"
                         }`}
                       >
                         {selected.has(m.id) && <Check className="h-3 w-3 text-white" />}
@@ -748,20 +748,20 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                     {parsed && (parsed.quality || parsed.codec) && (
                       <div className="flex items-center gap-1.5 mb-1">
                         {parsed.quality && (
-                          <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">{parsed.quality}</span>
+                          <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">{parsed.quality}</span>
                         )}
                         {parsed.codec && (
-                          <span className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">{parsed.codec}</span>
+                          <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{parsed.codec}</span>
                         )}
                       </div>
                     )}
-                    <p className="text-sm font-semibold text-white leading-snug line-clamp-2 mb-2.5">{parsed ? parsed.title : m.filename}</p>
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2 mb-2.5">{parsed ? parsed.title : m.filename}</p>
 
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <StatusBadge code={m.statusCode} label={m.status} />
                       <span className="text-[11px] text-zinc-500">{formatSize(m.size)}</span>
                       {isActive && m.downloadSpeed > 0 && (
-                        <span className="text-[11px] text-indigo-400 font-medium">{formatSpeed(m.downloadSpeed)}</span>
+                        <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">{formatSpeed(m.downloadSpeed)}</span>
                       )}
                       {isActive && m.seeders > 0 && (
                         <span className="text-[11px] text-zinc-500">{m.seeders} seeders</span>
@@ -787,7 +787,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                         <motion.button
                           whileTap={{ scale: 0.97 }}
                           onClick={() => setConfirmDelete({ ids: [m.id], label: m.filename })}
-                          className="flex items-center justify-center h-7 w-7 rounded-lg bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-400 transition-colors"
+                          className="flex items-center justify-center h-7 w-7 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                         >
                           <Trash2 className="h-3 w-3" />
                         </motion.button>
@@ -798,8 +798,8 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                       <div className="mt-2">
                         <ProgressBar downloaded={m.downloaded} size={m.size} />
                         <div className="flex justify-between items-center mt-1">
-                          <span className="text-[10px] text-zinc-600">{formatSize(m.downloaded)} / {formatSize(m.size)}</span>
-                          <span className="text-[10px] text-zinc-600">{pct}%</span>
+                          <span className="text-[10px] text-zinc-400 dark:text-zinc-600">{formatSize(m.downloaded)} / {formatSize(m.size)}</span>
+                          <span className="text-[10px] text-zinc-400 dark:text-zinc-600">{pct}%</span>
                         </div>
                       </div>
                     )}
@@ -820,9 +820,9 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed bottom-5 left-0 right-0 z-40 mx-auto flex w-fit items-center gap-3 rounded-2xl bg-zinc-900/95 backdrop-blur-xl ring-1 ring-white/10 pl-4 pr-2 py-2 shadow-2xl"
+            className="fixed bottom-5 left-0 right-0 z-40 mx-auto flex w-fit items-center gap-3 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 pl-4 pr-2 py-2 shadow-2xl"
           >
-            <span className="text-xs font-medium text-zinc-300">
+            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
               {selected.size} selectionne{selected.size > 1 ? "s" : ""}
             </span>
             <motion.button
@@ -839,7 +839,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
             <button
               onClick={() => { setSelected(new Set()); setSelectMode(false); }}
               disabled={bulkDownloading !== null}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 disabled:opacity-40 transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 transition-colors"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -876,18 +876,18 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
               exit={{ opacity: 0, scale: 0.95, y: 8 }}
               transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-2xl bg-zinc-900/95 backdrop-blur-xl ring-1 ring-white/10 p-5 shadow-2xl"
+              className="w-full max-w-sm rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 p-5 shadow-2xl"
             >
-              <p className="text-sm font-semibold text-white mb-1">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">
                 {confirmDelete.ids.length > 1 ? "Supprimer ces magnets ?" : "Supprimer ce magnet ?"}
               </p>
-              <p className="text-xs text-zinc-400 leading-snug line-clamp-2 mb-4">{confirmDelete.label}</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug line-clamp-2 mb-4">{confirmDelete.label}</p>
               <div className="flex gap-2">
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={() => setConfirmDelete(null)}
                   disabled={deleting}
-                  className="flex-1 h-9 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-300 disabled:opacity-40 transition-colors"
+                  className="flex-1 h-9 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-xs font-medium text-zinc-600 dark:text-zinc-300 disabled:opacity-40 transition-colors"
                 >
                   Annuler
                 </motion.button>
