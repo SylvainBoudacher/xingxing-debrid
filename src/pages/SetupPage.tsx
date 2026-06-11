@@ -277,11 +277,18 @@ export function SetupPage({ onComplete }: SetupPageProps) {
             className="relative mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-6 py-12 sm:px-8"
           >
             <motion.div variants={item} className="flex flex-col items-center text-center mb-10">
-              <img
-                src={logo}
-                alt="XingXing Debrid"
-                className="h-16 w-16 rounded-2xl ring-1 ring-white/10 shadow-[0_0_50px_rgba(79,70,229,0.5)] mb-6"
-              />
+              <div className="relative mb-6">
+                <motion.div
+                  animate={{ opacity: [0.4, 0.9, 0.4], scale: [0.95, 1.15, 0.95] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute -inset-4 rounded-full bg-indigo-500/50 blur-2xl"
+                />
+                <img
+                  src={logo}
+                  alt="XingXing Debrid"
+                  className="relative h-24 w-24 rounded-2xl ring-1 ring-white/10 shadow-[0_0_50px_rgba(79,70,229,0.5)]"
+                />
+              </div>
               <h1 className="text-3xl font-bold tracking-tight text-white mb-3">XingXing Debrid</h1>
               <p className="text-sm text-zinc-400 max-w-sm leading-relaxed">
                 De la recherche au visionnage, tout votre contenu en un seul endroit.
