@@ -218,7 +218,7 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
           className="min-w-0 max-w-xl flex-1 space-y-8"
         >
           {/* Recherche */}
-          <section id="section-search" className="scroll-mt-24 rounded-2xl bg-zinc-900/40 ring-1 ring-white/6 overflow-hidden">
+          <section id="section-search" className="scroll-mt-24 rounded-2xl bg-[#0b0c13] ring-1 ring-white/6 overflow-hidden">
             <div className="flex items-center gap-3 border-b border-white/6 bg-white/[0.02] px-6 py-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/25">
                 <Search className="h-4 w-4 text-indigo-400" />
@@ -274,7 +274,7 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
           </section>
 
           {/* Magnets */}
-          <section id="section-magnets" className="scroll-mt-24 rounded-2xl bg-zinc-900/40 ring-1 ring-white/6 overflow-hidden">
+          <section id="section-magnets" className="scroll-mt-24 rounded-2xl bg-[#0b0c13] ring-1 ring-white/6 overflow-hidden">
             <div className="flex items-center gap-3 border-b border-white/6 bg-white/[0.02] px-6 py-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/25">
                 <Magnet className="h-4 w-4 text-indigo-400" />
@@ -345,7 +345,7 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
           </section>
 
           {/* Clés API */}
-          <section id="section-api-keys" className="scroll-mt-24 rounded-2xl bg-zinc-900/40 ring-1 ring-white/6 overflow-hidden">
+          <section id="section-api-keys" className="scroll-mt-24 rounded-2xl bg-[#0b0c13] ring-1 ring-white/6 overflow-hidden">
             <div className="flex items-center gap-3 border-b border-white/6 bg-white/[0.02] px-6 py-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/25">
                 <KeyRound className="h-4 w-4 text-indigo-400" />
