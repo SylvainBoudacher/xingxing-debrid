@@ -30,6 +30,14 @@ const ALLDEBRID_STEPS = [
   "Copiez la clé générée et collez-la ci-dessous.",
 ];
 
+const TMDB_STEPS = [
+  "Créez un compte gratuit sur themoviedb.org.",
+  'Allez dans "Paramètres" puis "API".',
+  "Demandez une clé API (usage personnel).",
+  'Copiez la "Clé d\'API" (v3) et collez-la ci-dessous.',
+  "Cette clé est optionnelle : elle sert uniquement à la page Découverte.",
+];
+
 const FEATURES = [
   {
     icon: Search,
@@ -60,7 +68,7 @@ const item = {
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } };
 
 function KeyCard({
-  number, title, url, urlLabel, steps, value, placeholder, onChange,
+  number, title, url, urlLabel, steps, value, placeholder, onChange, optional,
 }: {
   number: number;
   title: string;
@@ -70,12 +78,27 @@ function KeyCard({
   value: string;
   placeholder: string;
   onChange: (v: string) => void;
+  optional?: boolean;
 }) {
   return (
-    <motion.div variants={item} className="rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 px-5 py-5">
+    <motion.div variants={item}>
+      {optional && (
+        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+          Optionnel
+        </p>
+      )}
+      <div
+        className={`rounded-2xl px-5 py-5 ${
+          optional
+            ? "bg-zinc-900/40 border border-dashed border-white/15"
+            : "bg-zinc-900/70 ring-1 ring-white/6"
+        }`}
+      >
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
+          <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+            optional ? "bg-zinc-700 text-zinc-300" : "bg-indigo-600 text-white"
+          }`}>
             {number}
           </span>
           <p className="text-sm font-semibold text-white">{title}</p>
@@ -108,6 +131,7 @@ function KeyCard({
           placeholder={placeholder}
           className="w-full rounded-xl bg-zinc-950/60 ring-1 ring-white/6 pl-9 pr-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:ring-indigo-500/40 transition-all"
         />
+      </div>
       </div>
     </motion.div>
   );
@@ -207,6 +231,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   const [step, setStep] = useState<"intro" | "keys" | "display">("intro");
   const [c411Key, setC411Key] = useState("");
   const [allDebridKey, setAllDebridKey] = useState("");
+  const [tmdbKey, setTmdbKey] = useState("");
   const [searchViewMode, setSearchViewMode] = useState<ViewMode>("simple");
   const [viewMode, setViewMode] = useState<ViewMode>("simple");
   const [hideNfo, setHideNfo] = useState(true);
@@ -216,6 +241,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   useEffect(() => {
     getApiKey("c411_api_key").then((v) => { if (v) setC411Key(v); });
     getApiKey("alldebrid_api_key").then((v) => { if (v) setAllDebridKey(v); });
+    getApiKey("tmdb_api_key").then((v) => { if (v) setTmdbKey(v); });
     store.get<ViewMode>("search_view_mode").then((v) => { if (v) setSearchViewMode(v); });
     store.get<ViewMode>("view_mode").then((v) => { if (v) setViewMode(v); });
     store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));
@@ -229,6 +255,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     try {
       await setApiKey("c411_api_key", c411Key.trim());
       await setApiKey("alldebrid_api_key", allDebridKey.trim());
+      await setApiKey("tmdb_api_key", tmdbKey.trim());
       setStep("display");
     } catch (err) {
       toast.error(String(err));
@@ -348,7 +375,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               <div className="text-center mb-2">
                 <h1 className="text-2xl font-bold tracking-tight text-white mb-2">Configurez vos clés API</h1>
                 <p className="text-sm text-zinc-400 max-w-sm mx-auto">
-                  Deux clés gratuites suffisent pour relier l'application à C411 et AllDebrid.
+                  Deux clés gratuites suffisent pour relier l'application à C411 et AllDebrid. La clé TMDB est optionnelle.
                 </p>
               </div>
             </motion.div>
@@ -372,6 +399,17 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               value={allDebridKey}
               placeholder="Collez votre clé AllDebrid"
               onChange={setAllDebridKey}
+            />
+            <KeyCard
+              number={3}
+              title="Clé API TMDB"
+              url="https://www.themoviedb.org/settings/api"
+              urlLabel="themoviedb.org"
+              steps={TMDB_STEPS}
+              value={tmdbKey}
+              placeholder="Collez votre clé TMDB (optionnel)"
+              onChange={setTmdbKey}
+              optional
             />
 
             <motion.div variants={item} className="pt-2">
