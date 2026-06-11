@@ -25,6 +25,7 @@ import {
   ScrollText,
   Search,
   SlidersHorizontal,
+  Sparkles,
   Star,
   Tv,
   X,
@@ -34,6 +35,9 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 type MediaType = "movie" | "tv";
+type BrowseType = MediaType | "animation";
+
+const ANIMATION_GENRE_ID = 16;
 
 interface TmdbItem {
   id: number;
@@ -55,6 +59,7 @@ interface TmdbRawResult {
   release_date?: string | null;
   first_air_date?: string | null;
   vote_average: number;
+  genre_ids?: number[];
 }
 
 interface TmdbListResponse {
@@ -176,7 +181,8 @@ function toOccupant(t: C411Torrent): Occupant {
     source: sourceMatch
       ? SOURCE_LABELS[sourceMatch.toLowerCase().replace(/[^a-z]/g, "")]
       : null,
-    audioCodec: flat.match(AUDIO_RE)?.[1].toUpperCase().replace(/[._-]/g, " ") ?? null,
+    audioCodec:
+      flat.match(AUDIO_RE)?.[1].toUpperCase().replace(/[._-]/g, " ") ?? null,
     audioChannels: flat.match(CHANNELS_RE)?.[1] ?? null,
     specialVersion: flat.match(SPECIAL_RE)?.[1].toUpperCase() ?? null,
   };
@@ -232,7 +238,7 @@ interface DiscoverPageProps {
 export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
   const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(undefined);
   const [query, setQuery] = useState("");
-  const [mediaType, setMediaType] = useState<MediaType>("movie");
+  const [mediaType, setMediaType] = useState<BrowseType>("movie");
   const [items, setItems] = useState<TmdbItem[]>([]);
   const [mode, setMode] = useState<"top" | "search">("top");
   const [searchedQuery, setSearchedQuery] = useState("");
@@ -287,40 +293,67 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
     q: string,
     page: number,
     key: string,
-    type: MediaType,
+    type: BrowseType,
   ) {
     setLoadingMovies(true);
     setMoviesError(null);
     try {
-      let url: string;
-      if (m === "search" && IMDB_ID_RE.test(q)) {
-        url = `https://api.themoviedb.org/3/find/${q.toLowerCase()}?api_key=${key}&external_source=imdb_id&language=fr-FR`;
-      } else if (m === "search") {
-        url = `https://api.themoviedb.org/3/search/${type}?api_key=${key}&language=fr-FR&include_adult=false&query=${encodeURIComponent(q)}&page=${page}`;
-      } else {
-        url = `https://api.themoviedb.org/3/${type}/top_rated?api_key=${key}&language=fr-FR&page=${page}`;
-      }
-      const res = await fetch(url);
-      if (!res.ok)
-        throw new Error(
-          res.status === 401 ? "Clé TMDB invalide" : `Erreur TMDB ${res.status}`,
-        );
-      const json = await res.json();
-      let results: TmdbRawResult[];
+      const getJson = async (url: string) => {
+        const res = await fetch(url);
+        if (!res.ok)
+          throw new Error(
+            res.status === 401
+              ? "Clé TMDB invalide"
+              : `Erreur TMDB ${res.status}`,
+          );
+        return res.json();
+      };
+      let mapped: TmdbItem[];
       let totalPages: number;
       if (m === "search" && IMDB_ID_RE.test(q)) {
-        const found = json as {
+        const found = (await getJson(
+          `https://api.themoviedb.org/3/find/${q.toLowerCase()}?api_key=${key}&external_source=imdb_id&language=fr-FR`,
+        )) as {
           movie_results: TmdbRawResult[];
           tv_results: TmdbRawResult[];
         };
-        results = type === "movie" ? found.movie_results : found.tv_results;
+        mapped =
+          type === "tv"
+            ? found.tv_results.map((r) => mapTmdb(r, "tv"))
+            : type === "movie"
+              ? found.movie_results.map((r) => mapTmdb(r, "movie"))
+              : [
+                  ...found.movie_results.map((r) => mapTmdb(r, "movie")),
+                  ...found.tv_results.map((r) => mapTmdb(r, "tv")),
+                ];
         totalPages = 1;
+      } else if (type === "animation") {
+        const urlFor = (mt: MediaType) =>
+          m === "search"
+            ? `https://api.themoviedb.org/3/search/${mt}?api_key=${key}&language=fr-FR&include_adult=false&query=${encodeURIComponent(q)}&page=${page}`
+            : `https://api.themoviedb.org/3/discover/${mt}?api_key=${key}&language=fr-FR&with_genres=${ANIMATION_GENRE_ID}&sort_by=vote_average.desc&vote_count.gte=${mt === "movie" ? 300 : 150}&page=${page}`;
+        const [movies, tvs] = (await Promise.all([
+          getJson(urlFor("movie")),
+          getJson(urlFor("tv")),
+        ])) as [TmdbListResponse, TmdbListResponse];
+        const animOnly = (rs: TmdbRawResult[]) =>
+          m === "search"
+            ? rs.filter((r) => r.genre_ids?.includes(ANIMATION_GENRE_ID))
+            : rs;
+        mapped = [
+          ...animOnly(movies.results).map((r) => mapTmdb(r, "movie")),
+          ...animOnly(tvs.results).map((r) => mapTmdb(r, "tv")),
+        ].sort((a, b) => b.voteAverage - a.voteAverage);
+        totalPages = Math.max(movies.total_pages, tvs.total_pages);
       } else {
-        const list = json as TmdbListResponse;
-        results = list.results;
+        const url =
+          m === "search"
+            ? `https://api.themoviedb.org/3/search/${type}?api_key=${key}&language=fr-FR&include_adult=false&query=${encodeURIComponent(q)}&page=${page}`
+            : `https://api.themoviedb.org/3/${type}/top_rated?api_key=${key}&language=fr-FR&page=${page}`;
+        const list = (await getJson(url)) as TmdbListResponse;
+        mapped = list.results.map((r) => mapTmdb(r, type));
         totalPages = list.total_pages;
       }
-      const mapped = results.map((r) => mapTmdb(r, type));
       setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
       setMode(m);
       setSearchedQuery(q);
@@ -344,7 +377,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
     fetchItems("search", q, 1, tmdbKey, mediaType);
   }
 
-  function switchType(type: MediaType) {
+  function switchType(type: BrowseType) {
     if (type === mediaType || !tmdbKey) return;
     setMediaType(type);
     if (mode === "search" && searchedQuery) {
@@ -393,8 +426,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
     return occupants.sort(
       (a, b) =>
         (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) -
-          (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) ||
-        b.fileSize - a.fileSize,
+          (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) || b.fileSize - a.fileSize,
     );
   }
 
@@ -482,7 +514,10 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
       };
       const list = (detail.seasons ?? [])
         .filter((s) => s.season_number > 0)
-        .map((s) => ({ number: s.season_number, episodeCount: s.episode_count }));
+        .map((s) => ({
+          number: s.season_number,
+          episodeCount: s.episode_count,
+        }));
       setSeasons(list);
       const first = list[0]?.number ?? null;
       setActiveSeason(first);
@@ -503,7 +538,9 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
   async function handleSendToDebrid(occ: Occupant) {
     if (sendingHash !== null) return;
     if (!allDebridKeyRef.current) {
-      toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
+      toast.error(
+        "Cle AllDebrid manquante. Configurez-la dans les parametres.",
+      );
       return;
     }
     const torrentUrl = `https://c411.org/api?t=get&id=${encodeURIComponent(occ.infoHash)}&apikey=${c411KeyRef.current}`;
@@ -691,7 +728,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Rechercher un film ou une série (titre ou ID IMDB)..."
+                placeholder="Rechercher un film ou une série"
                 className="flex-1 bg-transparent text-white placeholder:text-zinc-500 outline-none text-base pr-8"
               />
               {(query.trim() || mode === "search") && (
@@ -712,7 +749,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
 
           <div className="mb-6 flex justify-center">
             <div className="flex rounded-full bg-zinc-800/80 ring-1 ring-white/10 p-1">
-              {(["movie", "tv"] as const).map((t) => (
+              {(["movie", "tv", "animation"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => switchType(t)}
@@ -724,10 +761,16 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                 >
                   {t === "movie" ? (
                     <Clapperboard className="h-3.5 w-3.5" />
-                  ) : (
+                  ) : t === "tv" ? (
                     <Tv className="h-3.5 w-3.5" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
                   )}
-                  {t === "movie" ? "Films" : "Séries"}
+                  {t === "movie"
+                    ? "Films"
+                    : t === "tv"
+                      ? "Séries"
+                      : "Animations"}
                 </button>
               ))}
             </div>
@@ -737,13 +780,13 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
             {mode === "top"
               ? mediaType === "movie"
                 ? "Films les mieux notés"
-                : "Séries les mieux notées"
+                : mediaType === "tv"
+                  ? "Séries les mieux notées"
+                  : "Animations les mieux notées"
               : `Résultats pour "${searchedQuery}"`}
           </h2>
 
-          {moviesError && (
-            <p className="text-sm text-red-400">{moviesError}</p>
-          )}
+          {moviesError && <p className="text-sm text-red-400">{moviesError}</p>}
 
           {!moviesError && items.length === 0 && !loadingMovies && (
             <p className="text-sm text-zinc-500">Aucun résultat trouvé.</p>
@@ -755,20 +798,30 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
               <motion.button
                 key={`${m.mediaType}-${m.id}-${i}`}
                 initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25, delay: Math.min((i % 20) * 0.02, 0.3) }}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: 0.25,
+                    delay: Math.min((i % 20) * 0.02, 0.3),
+                  },
+                }}
+                whileHover={{
+                  scale: 1.03,
+                  y: -5,
+                  transition: { type: "spring", stiffness: 300, damping: 22 },
+                }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => openItem(m)}
                 className="group text-left"
               >
-                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/8 transition-shadow group-hover:ring-indigo-500/50">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/8 transition-all duration-500 ease-out group-hover:ring-white/25 group-hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.7)]">
                   {m.posterPath ? (
                     <img
                       src={`https://image.tmdb.org/t/p/w342${m.posterPath}`}
                       alt={m.title}
                       loading="lazy"
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover transition-[filter] duration-500 ease-out group-hover:brightness-110"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-xs text-zinc-600 px-2 text-center">
@@ -794,7 +847,13 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
             <div className="mt-8 flex justify-center">
               <button
                 onClick={() =>
-                  fetchItems(mode, searchedQuery, tmdbPage + 1, tmdbKey, mediaType)
+                  fetchItems(
+                    mode,
+                    searchedQuery,
+                    tmdbPage + 1,
+                    tmdbKey,
+                    mediaType,
+                  )
                 }
                 disabled={loadingMovies}
                 className="flex items-center gap-2 rounded-full bg-zinc-800/80 ring-1 ring-white/10 px-5 py-2.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700/80 hover:text-white disabled:opacity-40 transition-colors"
@@ -1060,7 +1119,10 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                   const fileName = file.name.split("/").pop() ?? file.name;
                   const showName = fileName !== debridModal.torrentName;
                   return (
-                    <div key={i} className="rounded-xl bg-zinc-800/60 px-4 py-3">
+                    <div
+                      key={i}
+                      className="rounded-xl bg-zinc-800/60 px-4 py-3"
+                    >
                       <div className="mb-3">
                         {showName && (
                           <p className="text-sm font-medium text-white leading-snug line-clamp-2 mb-0.5">
