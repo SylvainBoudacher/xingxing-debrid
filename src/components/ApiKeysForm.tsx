@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
-import { LazyStore } from "@tauri-apps/plugin-store";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
+import { getApiKey, setApiKey } from "@/lib/apiKeys";
 
 const C411_STEPS = [
   "Connectez-vous a votre compte C411.",
@@ -89,8 +87,8 @@ export function ApiKeysForm() {
   const [allDebridKey, setAllDebridKey] = useState("");
 
   useEffect(() => {
-    store.get<string>("c411_api_key").then((v) => { if (v) setC411Key(v); });
-    store.get<string>("alldebrid_api_key").then((v) => { if (v) setAllDebridKey(v); });
+    getApiKey("c411_api_key").then((v) => { if (v) setC411Key(v); });
+    getApiKey("alldebrid_api_key").then((v) => { if (v) setAllDebridKey(v); });
   }, []);
 
   const bothFilled = c411Key.trim() !== "" && allDebridKey.trim() !== "";
@@ -98,9 +96,8 @@ export function ApiKeysForm() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     try {
-      await store.set("c411_api_key", c411Key.trim());
-      await store.set("alldebrid_api_key", allDebridKey.trim());
-      await store.save();
+      await setApiKey("c411_api_key", c411Key.trim());
+      await setApiKey("alldebrid_api_key", allDebridKey.trim());
       toast.success("Cles sauvegardees avec succes.");
     } catch (err) {
       toast.error(String(err));

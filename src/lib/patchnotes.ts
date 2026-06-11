@@ -12,22 +12,29 @@ export const PATCH_NOTES: PatchNote[] = [
       {
         title: "Recherche complète",
         items: [
-          "La recherche ne s'arrête plus à la première page : un bouton \"Charger plus\" récupère la suite des résultats, avec un compteur indiquant la progression (ex. 50 / 230).",
+          "La recherche affiche désormais tous les résultats disponibles, pas seulement les premiers : un bouton \"Charger plus\" permet de voir la suite, avec un compteur pour savoir où vous en êtes (ex. 50 résultats affichés sur 230).",
         ],
       },
       {
         title: "Filtres et tri",
         items: [
-          "Filtres par catégorie (Films, Séries, Musique, Logiciels & Jeux, Livres) avec le nombre de résultats par catégorie.",
-          "Filtres par qualité (4K, 2160p, 1080p, 720p...) et par encodage (H265, X264...), détectés automatiquement dans les résultats.",
-          "Tri par pertinence, seeders, taille ou date, en ordre croissant ou décroissant.",
-          "Les filtres se combinent et s'appliquent instantanément, avec des animations fluides lors du filtrage et du tri.",
+          "Triez les résultats par type de contenu : Films, Séries, Musique, Logiciels & Jeux ou Livres, avec le nombre de résultats pour chaque type.",
+          "Filtrez par qualité d'image (4K, 1080p, 720p...) : l'application la détecte automatiquement pour vous. Pour les connaisseurs, un filtre par format vidéo (H265, X264...) est aussi disponible.",
+          "Classez les résultats comme vous voulez : du plus populaire au moins populaire, du plus gros au plus petit fichier, ou du plus récent au plus ancien.",
+          "Tous ces filtres peuvent se combiner et le résultat s'affiche instantanément.",
         ],
       },
       {
         title: "Affichage de la recherche",
         items: [
-          "Nouveau paramètre \"Affichage de la recherche\" : vue simplifiée des résultats (titre reformaté, qualité et codec en labels) ou vue détaillée (nom brut), comme pour les titres des Magnets.",
+          "Nouveau choix dans les Paramètres : afficher les résultats avec des titres clairs et lisibles (recommandé), ou avec le nom de fichier complet d'origine pour ceux qui préfèrent tout voir.",
+        ],
+      },
+      {
+        title: "Vos clés mieux protégées",
+        items: [
+          "Vos clés C411 et AllDebrid sont maintenant rangées dans le coffre-fort sécurisé de votre ordinateur (le même endroit où sont protégés vos mots de passe), et non plus dans un simple fichier. Vous n'avez rien à faire : le transfert se fait tout seul au lancement de l'application.",
+          "Vos clés sont aussi mieux protégées pendant l'utilisation : elles ne peuvent plus apparaître dans un message d'erreur à l'écran.",
         ],
       },
     ],
@@ -37,29 +44,28 @@ export const PATCH_NOTES: PatchNote[] = [
     date: "11 juin 2026",
     sections: [
       {
-        title: "Nouveau système de paramètres",
+        title: "Nouvelle page Paramètres",
         items: [
-          "Nouvelle page Paramètres accessible depuis le menu, avec son fond quadrillé distinctif.",
-          "Choix de l'affichage des titres : vue simplifiée (titre reformaté, qualité et codec en labels) ou vue détaillée (nom de fichier brut).",
-          "Les clés API C411 et AllDebrid se gèrent désormais directement dans les Paramètres.",
+          "Une page Paramètres accessible depuis le menu pour régler l'application à votre goût.",
+          "Choisissez comment afficher les titres : version claire et lisible, ou nom de fichier complet d'origine.",
+          "Vos clés C411 et AllDebrid peuvent désormais être modifiées directement dans les Paramètres.",
         ],
       },
       {
         title: "Page Magnets",
         items: [
-          "Confirmation avant la suppression d'un magnet, et bouton pour supprimer d'un coup tous les magnets en erreur.",
-          "Mode sélection multiple pour télécharger plusieurs magnets à la fois.",
-          "Bouton \"Tout télécharger\" dans la fenêtre des fichiers pour récupérer une série entière en une fois.",
-          "\"Lire avec VLC\" n'apparaît plus que pour les fichiers vidéo.",
-          "Mise en page modernisée : contenu centré, header fixe, filtres par statut et recherche.",
+          "L'application demande confirmation avant de supprimer un téléchargement, et un bouton permet de nettoyer d'un coup tous ceux qui ont échoué.",
+          "Sélectionnez plusieurs éléments à la fois pour les télécharger ensemble.",
+          "Un bouton \"Tout télécharger\" permet de récupérer une série entière en un seul clic.",
+          "Le bouton \"Lire avec VLC\" n'apparaît plus que pour les vidéos.",
+          "Présentation améliorée : contenu centré, barre du haut toujours visible, recherche et filtres par état (en cours, terminé, en erreur).",
         ],
       },
       {
         title: "Autres améliorations",
         items: [
-          "Welcome page entièrement repensée en deux étapes : présentation du logiciel puis configuration des clés.",
-          "Recherche plus fluide : animations optimisées et retour à l'accueil retravaillé.",
-          "Menus harmonisés sur toutes les pages, avec retour rapide à l'accueil.",
+          "La page de bienvenue a été repensée en deux étapes simples : découverte du logiciel, puis configuration de vos clés.",
+          "Navigation plus fluide et plus agréable, avec un retour à l'accueil depuis toutes les pages.",
         ],
       },
     ],

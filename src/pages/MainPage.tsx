@@ -12,6 +12,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { LazyStore } from "@tauri-apps/plugin-store";
+import { getApiKey } from "@/lib/apiKeys";
 import {
   ArrowDown,
   ArrowUp,
@@ -249,10 +250,10 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
   const searchedQueryRef = useRef<string>("");
 
   useEffect(() => {
-    store.get<string>("c411_api_key").then((v) => {
+    getApiKey("c411_api_key").then((v) => {
       if (v) apiKeyRef.current = v;
     });
-    store.get<string>("alldebrid_api_key").then((v) => {
+    getApiKey("alldebrid_api_key").then((v) => {
       if (v) allDebridKeyRef.current = v;
     });
     store.get<string>("patchnotes_seen").then((v) => {
