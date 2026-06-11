@@ -5,7 +5,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   ArrowLeft, RefreshCw, Trash2, Loader2,
   CheckCircle2, Clock, AlertCircle, Download, Zap, Search, X,
-  ChevronLeft, ChevronRight, Copy, Check, Home, ListChecks, Menu, SlidersHorizontal,
+  ChevronLeft, ChevronRight, Copy, Check, Home, ListChecks, Menu, ScrollText, SlidersHorizontal,
 } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey } from "@/lib/apiKeys";
@@ -14,6 +14,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
@@ -414,7 +415,7 @@ function Pagination({
 
 interface MagnetsPageProps {
   onBack: () => void;
-  onNavigate: (page: "preferences") => void;
+  onNavigate: (page: "preferences" | "patchnotes") => void;
 }
 
 export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
@@ -548,7 +549,12 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
     <main className="relative flex min-h-screen flex-col bg-black bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
 
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-white/5 bg-black/30 backdrop-blur-xl">
+      <motion.div
+        initial={{ opacity: 0, y: -16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="sticky top-0 z-10 border-b border-white/5 bg-black/30 backdrop-blur-xl"
+      >
         <div className="relative mx-auto flex w-full max-w-3xl items-center justify-between px-6 py-4 sm:px-8">
           <motion.button
             whileTap={{ scale: 0.93 }}
@@ -592,14 +598,24 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                   <SlidersHorizontal className="mr-2 h-4 w-4" />
                   Paramètres
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onNavigate("patchnotes")}>
+                  <ScrollText className="mr-2 h-4 w-4" />
+                  Patch notes
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Toolbar */}
-      <div className="mx-auto w-full max-w-3xl px-6 pt-6 pb-4 sm:px-8 space-y-3">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+        className="mx-auto w-full max-w-3xl px-6 pt-6 pb-4 sm:px-8 space-y-3"
+      >
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="flex flex-1 gap-1 rounded-xl bg-zinc-900/70 p-1 ring-1 ring-white/6">
             {tabs.map((tab) => (
@@ -682,7 +698,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
             </div>
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* List */}
       <div className="mx-auto w-full max-w-3xl flex-1 px-6 pb-10 sm:px-8">
@@ -699,23 +715,20 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
           </motion.div>
         )}
 
-        <motion.div
-          key={`${statusFilter}-${search}-${page}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-2"
-        >
-            {paginated.map((m) => {
+        <div className="space-y-2">
+            {paginated.map((m, i) => {
               const isReady = m.statusCode === 4;
               const isActive = m.statusCode >= 0 && m.statusCode <= 3;
               const pct = m.size && m.downloaded ? Math.min(100, Math.round((m.downloaded / m.size) * 100)) : 0;
               const parsed = simpleView ? parseRelease(m.filename) : null;
 
               return (
-                <div
-                  key={m.id}
-                  className="rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 overflow-hidden transition-all duration-200 hover:bg-zinc-900 hover:ring-white/12 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
+                <motion.div
+                  key={`${statusFilter}-${search}-${page}-${m.id}`}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.35, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+                  className="rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 overflow-hidden transition-[background-color,box-shadow] duration-200 hover:bg-zinc-900 hover:ring-white/12 hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
                 >
                   <div className="flex gap-3 px-5 py-4">
                     {selectMode && isReady && (
@@ -792,10 +805,10 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
                     )}
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
-        </motion.div>
+        </div>
 
         <Pagination page={page} totalPages={totalPages} onChange={setPage} />
       </div>
