@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getApiKey } from "@/lib/apiKeys";
+import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { parseRelease } from "@/lib/parseRelease";
 import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
@@ -19,6 +20,7 @@ import {
   Clapperboard,
   Copy,
   Download,
+  Heart,
   Home,
   KeyRound,
   Loader2,
@@ -38,6 +40,7 @@ import { toast } from "sonner";
 
 type MediaType = "movie" | "tv";
 type BrowseType = MediaType | "animation";
+type DiscoverTab = BrowseType | "likes";
 
 const ANIMATION_GENRE_ID = 16;
 
@@ -240,7 +243,8 @@ interface DiscoverPageProps {
 export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
   const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(undefined);
   const [query, setQuery] = useState("");
-  const [mediaType, setMediaType] = useState<BrowseType>("movie");
+  const [mediaType, setMediaType] = useState<DiscoverTab>("movie");
+  const [likes, setLikes] = useState<LikedItem[]>([]);
   const [items, setItems] = useState<TmdbItem[]>([]);
   const [mode, setMode] = useState<"top" | "search">("top");
   const [searchedQuery, setSearchedQuery] = useState("");
@@ -309,6 +313,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
       if (v) allDebridKeyRef.current = v;
     });
     getApiKey("tmdb_api_key").then((v) => setTmdbKey(v || null));
+    getLikes().then(setLikes);
   }, []);
 
   useEffect(() => {
@@ -406,7 +411,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!tmdbKey) return;
+    if (!tmdbKey || mediaType === "likes") return;
     const q = query.trim();
     if (!q) {
       fetchItems("top", "", 1, tmdbKey, mediaType);
@@ -415,14 +420,26 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
     fetchItems("search", q, 1, tmdbKey, mediaType);
   }
 
-  function switchType(type: BrowseType) {
+  function switchType(type: DiscoverTab) {
     if (type === mediaType || !tmdbKey) return;
     setMediaType(type);
+    if (type === "likes") return;
     if (mode === "search" && searchedQuery) {
       fetchItems("search", searchedQuery, 1, tmdbKey, type);
     } else {
       fetchItems("top", "", 1, tmdbKey, type);
     }
+  }
+
+  const likedKeys = new Set(likes.map((l) => `${l.mediaType}-${l.id}`));
+
+  function toggleLike(item: TmdbItem) {
+    const key = `${item.mediaType}-${item.id}`;
+    const next = likedKeys.has(key)
+      ? likes.filter((l) => `${l.mediaType}-${l.id}` !== key)
+      : [{ ...item, likedAt: Date.now() }, ...likes];
+    setLikes(next);
+    saveLikes(next);
   }
 
   function closeMovie() {
@@ -760,13 +777,35 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
       {tmdbKey && (
         <div className="mx-auto w-full max-w-5xl flex-1 px-6 pt-8 pb-10 sm:px-8">
           {/* Search bar */}
-          <form onSubmit={handleSubmit} className="mx-auto mb-8 max-w-2xl">
+          <motion.form
+            initial={false}
+            animate={
+              mediaType === "likes"
+                ? { opacity: 0, y: -12, height: 0, marginBottom: 0 }
+                : { opacity: 1, y: 0, height: "auto", marginBottom: 32 }
+            }
+            transition={{
+              type: "spring",
+              stiffness: 220,
+              damping: 26,
+              opacity: { duration: 0.15 },
+            }}
+            onSubmit={handleSubmit}
+            className={`mx-auto max-w-2xl ${mediaType === "likes" ? "pointer-events-none" : ""}`}
+          >
             <div className="relative flex items-center gap-3 rounded-full bg-zinc-800/80 px-5 py-3.5 shadow-[0_8px_40px_rgba(0,0,0,0.7)]">
-              {loadingMovies ? (
-                <Loader2 className="h-5 w-5 shrink-0 text-zinc-400 animate-spin" />
-              ) : (
-                <Search className="h-5 w-5 shrink-0 text-zinc-400" />
-              )}
+              <span className="relative h-5 w-5 shrink-0">
+                <Search
+                  className={`absolute inset-0 h-5 w-5 text-zinc-400 transition-opacity duration-200 ${
+                    loadingMovies ? "opacity-0 delay-150" : "opacity-100"
+                  }`}
+                />
+                <Loader2
+                  className={`absolute inset-0 h-5 w-5 text-zinc-400 animate-spin transition-opacity duration-200 ${
+                    loadingMovies ? "opacity-100 delay-150" : "opacity-0"
+                  }`}
+                />
+              </span>
               <input
                 autoFocus
                 type="text"
@@ -780,7 +819,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                   type="button"
                   onClick={() => {
                     setQuery("");
-                    if (mode === "search")
+                    if (mode === "search" && mediaType !== "likes")
                       fetchItems("top", "", 1, tmdbKey, mediaType);
                   }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-700/80 hover:bg-zinc-600/80 transition-colors"
@@ -789,11 +828,11 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                 </button>
               )}
             </div>
-          </form>
+          </motion.form>
 
           <div className="mb-6 flex justify-center">
             <div className="flex rounded-full bg-zinc-800/80 ring-1 ring-white/10 p-1">
-              {(["movie", "tv", "animation"] as const).map((t) => (
+              {(["movie", "tv", "animation", "likes"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => switchType(t)}
@@ -807,38 +846,56 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                     <Clapperboard className="h-3.5 w-3.5" />
                   ) : t === "tv" ? (
                     <Tv className="h-3.5 w-3.5" />
-                  ) : (
+                  ) : t === "animation" ? (
                     <Sparkles className="h-3.5 w-3.5" />
+                  ) : (
+                    <Heart className="h-3.5 w-3.5" />
                   )}
                   {t === "movie"
                     ? "Films"
                     : t === "tv"
                       ? "Séries"
-                      : "Animations"}
+                      : t === "animation"
+                        ? "Animations"
+                        : "Ma liste"}
                 </button>
               ))}
             </div>
           </div>
 
           <h2 className="mb-4 text-sm font-semibold text-zinc-300">
-            {mode === "top"
-              ? mediaType === "movie"
-                ? "Films les mieux notés"
-                : mediaType === "tv"
-                  ? "Séries les mieux notées"
-                  : "Animations les mieux notées"
-              : `Résultats pour "${searchedQuery}"`}
+            {mediaType === "likes"
+              ? `Ma liste (${likes.length})`
+              : mode === "top"
+                ? mediaType === "movie"
+                  ? "Films les mieux notés"
+                  : mediaType === "tv"
+                    ? "Séries les mieux notées"
+                    : "Animations les mieux notées"
+                : `Résultats pour "${searchedQuery}"`}
           </h2>
 
-          {moviesError && <p className="text-sm text-red-400">{moviesError}</p>}
+          {mediaType !== "likes" && moviesError && (
+            <p className="text-sm text-red-400">{moviesError}</p>
+          )}
 
-          {!moviesError && items.length === 0 && !loadingMovies && (
-            <p className="text-sm text-zinc-500">Aucun résultat trouvé.</p>
+          {mediaType !== "likes" &&
+            !moviesError &&
+            items.length === 0 &&
+            !loadingMovies && (
+              <p className="text-sm text-zinc-500">Aucun résultat trouvé.</p>
+            )}
+
+          {mediaType === "likes" && likes.length === 0 && (
+            <p className="text-sm text-zinc-500">
+              Aucun contenu enregistré. Cliquez sur le coeur d'une affiche pour
+              l'ajouter à votre liste.
+            </p>
           )}
 
           {/* Poster grid */}
           <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-            {items.map((m, i) => (
+            {(mediaType === "likes" ? likes : items).map((m, i) => (
               <motion.button
                 key={`${m.mediaType}-${m.id}-${i}`}
                 initial={{ opacity: 0, y: 8 }}
@@ -878,6 +935,25 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                       {m.voteAverage.toFixed(1)}
                     </span>
                   )}
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLike(m);
+                    }}
+                    className={`absolute left-1.5 top-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-black/60 backdrop-blur-sm transition-opacity hover:bg-black/80 ${
+                      likedKeys.has(`${m.mediaType}-${m.id}`)
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-100"
+                    }`}
+                  >
+                    <Heart
+                      className={`h-3.5 w-3.5 transition-colors ${
+                        likedKeys.has(`${m.mediaType}-${m.id}`)
+                          ? "fill-rose-500 text-rose-500"
+                          : "text-white"
+                      }`}
+                    />
+                  </span>
                 </div>
                 <p className="mt-2 text-xs font-medium text-white leading-snug line-clamp-1">
                   {m.title}
@@ -887,7 +963,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
             ))}
           </div>
 
-          {tmdbPage < tmdbTotalPages && items.length > 0 && (
+          {mediaType !== "likes" && tmdbPage < tmdbTotalPages && items.length > 0 && (
             <div className="mt-8 flex justify-center">
               <button
                 onClick={() =>
@@ -955,6 +1031,18 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                     )}
                   </div>
                 </div>
+                <button
+                  onClick={() => toggleLike(selected)}
+                  className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                >
+                  <Heart
+                    className={`h-3.5 w-3.5 transition-colors ${
+                      likedKeys.has(`${selected.mediaType}-${selected.id}`)
+                        ? "fill-rose-500 text-rose-500"
+                        : "text-zinc-400"
+                    }`}
+                  />
+                </button>
                 <button
                   onClick={closeMovie}
                   className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
