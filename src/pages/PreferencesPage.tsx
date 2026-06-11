@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, Check, Home, Menu, KeyRound, Magnet, Search } from "lucide-react";
+import { ArrowLeft, Check, Home, Menu, KeyRound, Magnet, ScrollText, Search } from "lucide-react";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { parseRelease } from "@/lib/parseRelease";
@@ -72,7 +73,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 interface PreferencesPageProps {
   onBack: () => void;
-  onNavigate: (page: "magnets") => void;
+  onNavigate: (page: "magnets" | "patchnotes") => void;
 }
 
 export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
@@ -176,6 +177,11 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
               <DropdownMenuItem onClick={() => onNavigate("magnets")}>
                 <Magnet className="mr-2 h-4 w-4" />
                 Magnets
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onNavigate("patchnotes")}>
+                <ScrollText className="mr-2 h-4 w-4" />
+                Patch notes
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
