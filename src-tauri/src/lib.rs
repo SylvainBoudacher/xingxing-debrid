@@ -1,5 +1,25 @@
 use reqwest::multipart;
 use serde_json::Value;
+use tauri_plugin_store::StoreExt;
+
+const KEYRING_SERVICE: &str = "com.sulyk.c411-debrid-app";
+
+#[tauri::command]
+fn get_api_key(name: String) -> Result<Option<String>, String> {
+    let entry = keyring::Entry::new(KEYRING_SERVICE, &name).map_err(|e| e.to_string())?;
+    match entry.get_password() {
+        Ok(v) => Ok(Some(v)),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+fn set_api_key(name: String, value: String) -> Result<(), String> {
+    keyring::Entry::new(KEYRING_SERVICE, &name)
+        .and_then(|e| e.set_password(&value))
+        .map_err(|e| e.to_string())
+}
 
 #[tauri::command]
 async fn upload_torrent_to_debrid(
@@ -8,14 +28,18 @@ async fn upload_torrent_to_debrid(
 ) -> Result<Value, String> {
     let client = reqwest::Client::new();
 
+    // without_url: l'URL c411 contient la cle API, ne pas l'exposer dans les erreurs
     let torrent_res = client
         .get(&torrent_url)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| e.without_url().to_string())?;
 
     let torrent_status = torrent_res.status();
-    let torrent_bytes = torrent_res.bytes().await.map_err(|e| e.to_string())?;
+    let torrent_bytes = torrent_res
+        .bytes()
+        .await
+        .map_err(|e| e.without_url().to_string())?;
 
     if !torrent_status.is_success() {
         return Err(format!(
@@ -147,7 +171,32 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            // Migration : deplace les cles API de settings.json (clair) vers le trousseau OS
+            if let Ok(store) = app.store("settings.json") {
+                let mut migrated = false;
+                for name in ["c411_api_key", "alldebrid_api_key"] {
+                    let Some(value) = store.get(name).and_then(|v| v.as_str().map(str::to_string))
+                    else {
+                        continue;
+                    };
+                    let saved = keyring::Entry::new(KEYRING_SERVICE, name)
+                        .and_then(|e| e.set_password(&value))
+                        .is_ok();
+                    if saved {
+                        store.delete(name);
+                        migrated = true;
+                    }
+                }
+                if migrated {
+                    let _ = store.save();
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
+            get_api_key,
+            set_api_key,
             upload_torrent_to_debrid,
             get_magnet_files,
             unlock_link,

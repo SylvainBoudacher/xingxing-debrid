@@ -9,6 +9,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import { parseRelease } from "@/lib/parseRelease";
+import { getApiKey, setApiKey } from "@/lib/apiKeys";
 import type { ViewMode } from "./PreferencesPage";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
@@ -190,8 +191,8 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    store.get<string>("c411_api_key").then((v) => { if (v) setC411Key(v); });
-    store.get<string>("alldebrid_api_key").then((v) => { if (v) setAllDebridKey(v); });
+    getApiKey("c411_api_key").then((v) => { if (v) setC411Key(v); });
+    getApiKey("alldebrid_api_key").then((v) => { if (v) setAllDebridKey(v); });
     store.get<ViewMode>("search_view_mode").then((v) => { if (v) setSearchViewMode(v); });
     store.get<ViewMode>("view_mode").then((v) => { if (v) setViewMode(v); });
   }, []);
@@ -201,9 +202,8 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   async function handleKeysNext() {
     setSaving(true);
     try {
-      await store.set("c411_api_key", c411Key.trim());
-      await store.set("alldebrid_api_key", allDebridKey.trim());
-      await store.save();
+      await setApiKey("c411_api_key", c411Key.trim());
+      await setApiKey("alldebrid_api_key", allDebridKey.trim());
       setStep("display");
     } catch (err) {
       toast.error(String(err));

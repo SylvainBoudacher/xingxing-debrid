@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, Copy, Check, Home, ListChecks, Menu, SlidersHorizontal,
 } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
+import { getApiKey } from "@/lib/apiKeys";
 import type { ViewMode } from "@/pages/PreferencesPage";
 import {
   DropdownMenu,
@@ -160,7 +161,9 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, onClose }: Files
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${AD_BASE}/magnet/files?agent=c411&apikey=${apiKey}&id[]=${magnetId}`);
+        const res = await fetch(`${AD_BASE}/magnet/files?agent=c411&id[]=${magnetId}`, {
+          headers: { Authorization: `Bearer ${apiKey}` },
+        });
         const json = await res.json() as { status: string; data?: { magnets?: Array<{ files?: unknown[] }> } };
         const rawFiles = json.data?.magnets?.[0]?.files ?? [];
         setFiles(flattenFiles(rawFiles));
@@ -425,7 +428,9 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
     if (!apiKeyRef.current) return;
     setLoading(true);
     try {
-      const res = await fetch(`${AD_BASE}.1/magnet/status?agent=c411&apikey=${apiKeyRef.current}`);
+      const res = await fetch(`${AD_BASE}.1/magnet/status?agent=c411`, {
+        headers: { Authorization: `Bearer ${apiKeyRef.current}` },
+      });
       const json = await res.json() as { status: string; data?: { magnets?: MagnetEntry[] } };
       if (json.status !== "success") throw new Error("Erreur AllDebrid");
       setMagnets(json.data?.magnets ?? []);
@@ -437,7 +442,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
   }, []);
 
   useEffect(() => {
-    store.get<string>("alldebrid_api_key").then((v) => {
+    getApiKey("alldebrid_api_key").then((v) => {
       if (v) apiKeyRef.current = v;
       loadMagnets();
     });
@@ -448,7 +453,9 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
     setDeleting(true);
     try {
       for (const id of ids) {
-        const res = await fetch(`${AD_BASE}/magnet/delete?agent=c411&apikey=${apiKeyRef.current}&id=${id}`);
+        const res = await fetch(`${AD_BASE}/magnet/delete?agent=c411&id=${id}`, {
+          headers: { Authorization: `Bearer ${apiKeyRef.current}` },
+        });
         const json = await res.json() as { status: string };
         if (json.status !== "success") throw new Error("Suppression echouee");
       }
@@ -476,7 +483,9 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
     setBulkDownloading({ done: 0, total: 0 });
     try {
       const idParams = ids.map((id) => `id[]=${id}`).join("&");
-      const res = await fetch(`${AD_BASE}/magnet/files?agent=c411&apikey=${apiKeyRef.current}&${idParams}`);
+      const res = await fetch(`${AD_BASE}/magnet/files?agent=c411&${idParams}`, {
+        headers: { Authorization: `Bearer ${apiKeyRef.current}` },
+      });
       const json = await res.json() as { status: string; data?: { magnets?: Array<{ files?: unknown[] }> } };
       if (json.status !== "success") throw new Error("Erreur AllDebrid");
       const files = (json.data?.magnets ?? []).flatMap((m) => flattenFiles(m.files ?? []));
