@@ -19,6 +19,8 @@ import {
   Book,
   BookMarked,
   Check,
+  ChevronLeft,
+  ChevronRight,
   CircleFadingArrowUp,
   Clapperboard,
   Copy,
@@ -90,10 +92,7 @@ interface SearchResult {
   size: number;
   seeders: number;
   leechers: number;
-  magnetUrl: string;
   guid: string;
-  downloadUrl: string;
-  pubDate: string;
   category: number;
 }
 
@@ -167,46 +166,80 @@ const SORT_LABELS = {
 } as const;
 type SortKey = keyof typeof SORT_LABELS;
 
-function parseXml(xml: string): { items: SearchResult[]; total: number | null } {
-  const doc = new DOMParser().parseFromString(xml, "text/xml");
-  const items = doc.querySelectorAll("item");
+const PER_PAGE = 10;
 
-  // Torznab pagination: <newznab:response offset="N" total="M"/>
-  const totalAttr = doc
-    .getElementsByTagNameNS("*", "response")[0]
-    ?.getAttribute("total");
-  const total = totalAttr ? parseInt(totalAttr, 10) : null;
+const API_SORT: Record<SortKey, string> = {
+  pertinence: "relevance",
+  seeders: "seeders",
+  size: "size",
+  date: "createdAt",
+};
 
-  const parsed = Array.from(items).map((item) => {
-    const text = (tag: string) =>
-      item.querySelector(tag)?.textContent?.trim() ?? "";
-    const attr = (name: string) =>
-      item.querySelector(`[name="${name}"]`)?.getAttribute("value") ?? "";
+interface C411Torrent {
+  infoHash: string;
+  name: string;
+  size: number;
+  seeders: number;
+  leechers: number;
+  category: { id: number } | null;
+  subcategory: { slug: string } | null;
+}
 
-    const sizeText =
-      text("size") ||
-      item.querySelector("enclosure")?.getAttribute("length") ||
-      "0";
-    const categoryRaw = attr("category");
+interface C411Response {
+  data: C411Torrent[];
+  meta: { total: number; page: number; totalPages: number };
+}
 
-    return {
-      title: text("title"),
-      size: parseInt(sizeText, 10),
-      seeders: parseInt(attr("seeders") || "0", 10),
-      leechers: Math.max(
-        0,
-        parseInt(attr("peers") || "0", 10) -
-          parseInt(attr("seeders") || "0", 10),
-      ),
-      magnetUrl: attr("magneturl"),
-      guid: text("guid"),
-      downloadUrl: text("link"),
-      pubDate: text("pubDate"),
-      category: parseInt(categoryRaw || "0", 10),
-    };
-  });
+const SERIES_SLUGS = new Set([
+  "serie-tv",
+  "serie-documentaire",
+  "emission-tv",
+]);
 
-  return { items: parsed, total };
+// Map C411 JSON categories to the newznab-style ids used by icons/filters
+function mapCategory(catId: number, subSlug: string): number {
+  if (catId === 1) {
+    if (subSlug === "animation") return 2060;
+    if (subSlug === "animation-serie") return 5070;
+    return SERIES_SLUGS.has(subSlug) ? 5000 : 2000;
+  }
+  if (catId === 2) {
+    if (subSlug === "ebook-audio") return 3030;
+    if (subSlug === "bds" || subSlug === "comics" || subSlug === "manga")
+      return 7030;
+    return 7000;
+  }
+  if (catId === 3) return 3000;
+  if (catId === 4) return 4000;
+  if (catId === 5) return 4050;
+  return 0;
+}
+
+function mapTorrents(data: C411Torrent[]): SearchResult[] {
+  return data.map((t) => ({
+    title: t.name,
+    size: t.size,
+    seeders: t.seeders,
+    leechers: t.leechers,
+    guid: t.infoHash,
+    category: mapCategory(t.category?.id ?? 0, t.subcategory?.slug ?? ""),
+  }));
+}
+
+function pageNumbers(current: number, totalPages: number): (number | "...")[] {
+  if (totalPages <= 7)
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  const pages: (number | "...")[] = [1];
+  if (current > 3) pages.push("...");
+  for (
+    let p = Math.max(2, current - 1);
+    p <= Math.min(totalPages - 1, current + 1);
+    p++
+  )
+    pages.push(p);
+  if (current < totalPages - 2) pages.push("...");
+  pages.push(totalPages);
+  return pages;
 }
 
 function formatSize(bytes: number): string {
@@ -230,8 +263,8 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
   const [activeCodecs, setActiveCodecs] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortKey>("pertinence");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchKey, setSearchKey] = useState(0);
@@ -248,6 +281,7 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
   const apiKeyRef = useRef<string>("");
   const allDebridKeyRef = useRef<string>("");
   const searchedQueryRef = useRef<string>("");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     getApiKey("c411_api_key").then((v) => {
@@ -385,6 +419,17 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
     }
   }
 
+  async function fetchPage(
+    pageNum: number,
+    sort: SortKey,
+    dir: "desc" | "asc",
+  ): Promise<C411Response> {
+    const url = `https://c411.org/api/torrents?page=${pageNum}&perPage=${PER_PAGE}&sortBy=${API_SORT[sort]}&sortOrder=${dir}&name=${encodeURIComponent(searchedQueryRef.current)}&apikey=${apiKeyRef.current}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Erreur ${res.status}`);
+    return res.json();
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!query.trim()) return;
@@ -395,21 +440,17 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
 
     try {
       searchedQueryRef.current = query.trim();
-      const url = `https://c411.org/api?t=search&q=${encodeURIComponent(searchedQueryRef.current)}&offset=0&apikey=${apiKeyRef.current}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Erreur ${res.status}`);
-      const { items, total } = parseXml(await res.text());
+      const json = await fetchPage(1, "pertinence", "desc");
       setSearchKey((k) => k + 1);
-      setResults(items);
-      setTotal(total);
+      setResults(mapTorrents(json.data));
+      setTotal(json.meta.total);
+      setTotalPages(json.meta.totalPages);
+      setPage(1);
       setActiveCats([]);
       setActiveQualities([]);
       setActiveCodecs([]);
       setSortBy("pertinence");
       setSortDir("desc");
-      setHasMore(
-        items.length > 0 && (total === null || items.length < total),
-      );
     } catch (err) {
       setError(String(err));
     } finally {
@@ -417,25 +458,35 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
     }
   }
 
-  async function handleLoadMore() {
-    if (loadingMore || !results) return;
-    setLoadingMore(true);
+  async function goToPage(
+    pageNum: number,
+    sort: SortKey = sortBy,
+    dir: "desc" | "asc" = sortDir,
+  ) {
+    if (loading) return;
+    setLoading(true);
     try {
-      const url = `https://c411.org/api?t=search&q=${encodeURIComponent(searchedQueryRef.current)}&offset=${results.length}&apikey=${apiKeyRef.current}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Erreur ${res.status}`);
-      const { items, total } = parseXml(await res.text());
-      const merged = [...results, ...items];
-      setResults(merged);
-      setTotal(total);
-      setHasMore(
-        items.length > 0 && (total === null || merged.length < total),
-      );
+      const json = await fetchPage(pageNum, sort, dir);
+      setResults(mapTorrents(json.data));
+      setTotal(json.meta.total);
+      setTotalPages(json.meta.totalPages);
+      setPage(pageNum);
+      scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       toast.error(String(err));
     } finally {
-      setLoadingMore(false);
+      setLoading(false);
     }
+  }
+
+  function changeSort(key: SortKey) {
+    setSortBy(key);
+    goToPage(1, key, sortDir);
+  }
+
+  function changeSortDir(dir: "desc" | "asc") {
+    setSortDir(dir);
+    goToPage(1, sortBy, dir);
   }
 
   const groupCounts = new Map<number, number>();
@@ -465,16 +516,6 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
           (p.codec !== null && activeCodecs.includes(p.codec)))
       );
     });
-  const dir = sortDir === "desc" ? 1 : -1;
-  if (sortBy === "seeders")
-    displayed = [...displayed].sort((a, b) => (b.seeders - a.seeders) * dir);
-  else if (sortBy === "size")
-    displayed = [...displayed].sort((a, b) => (b.size - a.size) * dir);
-  else if (sortBy === "date")
-    displayed = [...displayed].sort(
-      (a, b) => (Date.parse(b.pubDate) - Date.parse(a.pubDate)) * dir,
-    );
-
   return (
     <main className="relative flex min-h-screen flex-col bg-black bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
       <AnimatePresence>
@@ -586,7 +627,7 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
         </DropdownMenu>
       </div>
 
-      <div className="flex-1 flex flex-col items-center overflow-y-auto">
+      <div ref={scrollRef} className="flex-1 flex flex-col items-center overflow-y-auto">
         <motion.div
           layout
           transition={{
@@ -788,7 +829,7 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                         key={key}
                         checked={sortBy === key}
                         onSelect={(e) => e.preventDefault()}
-                        onCheckedChange={() => setSortBy(key)}
+                        onCheckedChange={() => changeSort(key)}
                       >
                         {SORT_LABELS[key]}
                       </DropdownMenuCheckboxItem>
@@ -802,7 +843,7 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                         <DropdownMenuCheckboxItem
                           checked={sortDir === "desc"}
                           onSelect={(e) => e.preventDefault()}
-                          onCheckedChange={() => setSortDir("desc")}
+                          onCheckedChange={() => changeSortDir("desc")}
                         >
                           <ArrowDown className="mr-2 h-3.5 w-3.5" />
                           Décroissant
@@ -810,7 +851,7 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                         <DropdownMenuCheckboxItem
                           checked={sortDir === "asc"}
                           onSelect={(e) => e.preventDefault()}
-                          onCheckedChange={() => setSortDir("asc")}
+                          onCheckedChange={() => changeSortDir("asc")}
                         >
                           <ArrowUp className="mr-2 h-3.5 w-3.5" />
                           Croissant
@@ -953,26 +994,48 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                 );
               })}
               </AnimatePresence>
-              {hasMore && (
-                <motion.div layout className="flex justify-center pt-3">
-                  <motion.button
-                    whileHover={{ scale: 1.04 }}
-                    whileTap={{ scale: 0.96 }}
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="flex items-center gap-2 h-9 px-5 rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-sm text-zinc-300 hover:bg-zinc-700/80 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              {totalPages > 1 && (
+                <motion.div layout className="flex items-center justify-center gap-1.5 pt-3">
+                  <button
+                    onClick={() => goToPage(page - 1)}
+                    disabled={page <= 1 || loading}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-zinc-400 hover:bg-zinc-700/80 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                   >
-                    {loadingMore && (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    )}
-                    Charger plus
-                    {total !== null && (
-                      <span className="text-zinc-500">
-                        {results.length} / {total}
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  {pageNumbers(page, totalPages).map((p, i) =>
+                    p === "..." ? (
+                      <span key={`ellipsis-${i}`} className="px-1 text-sm text-zinc-600">
+                        ...
                       </span>
-                    )}
-                  </motion.button>
+                    ) : (
+                      <button
+                        key={p}
+                        onClick={() => goToPage(p)}
+                        disabled={loading || p === page}
+                        className={`flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-sm ring-1 transition-colors ${
+                          p === page
+                            ? "bg-indigo-600 text-white ring-indigo-500"
+                            : "bg-zinc-800/80 text-zinc-400 ring-white/10 hover:bg-zinc-700/80 hover:text-white disabled:opacity-40"
+                        }`}
+                      >
+                        {p}
+                      </button>
+                    ),
+                  )}
+                  <button
+                    onClick={() => goToPage(page + 1)}
+                    disabled={page >= totalPages || loading}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-zinc-400 hover:bg-zinc-700/80 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
                 </motion.div>
+              )}
+              {total !== null && (
+                <p className="text-center text-xs text-zinc-600 pt-1">
+                  {total} résultat{total > 1 ? "s" : ""}
+                </p>
               )}
             </motion.div>
           )}
