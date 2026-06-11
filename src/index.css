@@ -73,6 +73,35 @@
   --ring: oklch(0.556 0 0);
 }
 
+@keyframes shimmer {
+  from { background-position: 0% 0; }
+  to   { background-position: -200% 0; }
+}
+
+@property --halo-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes halo-spin {
+  to { --halo-angle: 360deg; }
+}
+
+.discover-halo {
+  background: conic-gradient(
+    from var(--halo-angle),
+    transparent 0%,
+    rgba(129, 140, 248, 0.35) 10%,
+    rgba(192, 132, 252, 0.45) 20%,
+    transparent 35%,
+    transparent 50%,
+    rgba(129, 140, 248, 0.25) 62%,
+    transparent 75%
+  );
+  animation: halo-spin 3.5s linear infinite;
+}
+
 @keyframes menu-in {
   from { opacity: 0; transform: scale(0.92); }
   to   { opacity: 1; transform: scale(1); }
