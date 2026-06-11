@@ -14,7 +14,8 @@
         { "url": "https://c411.org/**" },
         { "url": "https://alldebrid.fr/**" },
         { "url": "https://alldebrid.com/**" },
-        { "url": "https://api.alldebrid.com/**" }
+        { "url": "https://api.alldebrid.com/**" },
+        { "url": "https://api.themoviedb.org/**" }
       ]
     },
     "store:default"

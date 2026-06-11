@@ -23,6 +23,14 @@ const ALLDEBRID_STEPS = [
   "Copiez la cle generee et collez-la ci-dessous.",
 ];
 
+const TMDB_STEPS = [
+  "Creez un compte gratuit sur themoviedb.org.",
+  'Allez dans "Parametres" puis "API".',
+  "Demandez une cle API (usage personnel).",
+  'Copiez la "Cle d\'API" (v3) et collez-la ci-dessous.',
+  "Cette cle est optionnelle : elle sert uniquement a la page Decouverte.",
+];
+
 function TutorialBlock({
   number,
   title,
@@ -85,10 +93,12 @@ function TutorialBlock({
 export function ApiKeysForm() {
   const [c411Key, setC411Key] = useState("");
   const [allDebridKey, setAllDebridKey] = useState("");
+  const [tmdbKey, setTmdbKey] = useState("");
 
   useEffect(() => {
     getApiKey("c411_api_key").then((v) => { if (v) setC411Key(v); });
     getApiKey("alldebrid_api_key").then((v) => { if (v) setAllDebridKey(v); });
+    getApiKey("tmdb_api_key").then((v) => { if (v) setTmdbKey(v); });
   }, []);
 
   const bothFilled = c411Key.trim() !== "" && allDebridKey.trim() !== "";
@@ -98,6 +108,7 @@ export function ApiKeysForm() {
     try {
       await setApiKey("c411_api_key", c411Key.trim());
       await setApiKey("alldebrid_api_key", allDebridKey.trim());
+      await setApiKey("tmdb_api_key", tmdbKey.trim());
       toast.success("Cles sauvegardees avec succes.");
     } catch (err) {
       toast.error(String(err));
@@ -125,6 +136,16 @@ export function ApiKeysForm() {
         value={allDebridKey}
         placeholder="Collez votre cle AllDebrid"
         onChange={setAllDebridKey}
+      />
+      <TutorialBlock
+        number={3}
+        title="Cle API TMDB (optionnelle)"
+        url="https://www.themoviedb.org/settings/api"
+        steps={TMDB_STEPS}
+        inputId="tmdb-key"
+        value={tmdbKey}
+        placeholder="Collez votre cle TMDB"
+        onChange={setTmdbKey}
       />
       <Button type="submit" className="w-full" disabled={!bothFilled}>
         Sauvegarder
