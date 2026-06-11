@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ThemeMenuItem } from "@/components/ThemeMenuItem";
 import { parseRelease } from "@/lib/parseRelease";
 import { ApiKeysForm } from "@/components/ApiKeysForm";
 
@@ -216,6 +217,7 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
                 Magnets
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <ThemeMenuItem />
               <DropdownMenuItem onClick={() => onNavigate("patchnotes")}>
                 <ScrollText className="mr-2 h-4 w-4" />
                 Patch notes
