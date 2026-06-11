@@ -65,6 +65,10 @@ function isVideoFile(name: string): boolean {
   return VIDEO_EXTENSIONS.has(ext);
 }
 
+function isNfoFile(name: string): boolean {
+  return name.toLowerCase().endsWith(".nfo");
+}
+
 function formatSize(bytes: number): string {
   if (!bytes) return "-";
   if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} Go`;
@@ -139,10 +143,12 @@ interface FilesModalProps {
   magnetName: string;
   apiKey: string;
   simpleView: boolean;
+  hideNfo: boolean;
+  skipNfoDownload: boolean;
   onClose: () => void;
 }
 
-function FilesModal({ magnetId, magnetName, apiKey, simpleView, onClose }: FilesModalProps) {
+function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfoDownload, onClose }: FilesModalProps) {
   const [files, setFiles] = useState<DebridFile[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
@@ -166,7 +172,8 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, onClose }: Files
         });
         const json = await res.json() as { status: string; data?: { magnets?: Array<{ files?: unknown[] }> } };
         const rawFiles = json.data?.magnets?.[0]?.files ?? [];
-        setFiles(flattenFiles(rawFiles));
+        const flat = flattenFiles(rawFiles);
+        setFiles(hideNfo ? flat.filter((f) => !isNfoFile(f.name)) : flat);
       } catch (err) {
         toast.error(String(err));
         onClose();
@@ -174,7 +181,7 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, onClose }: Files
         setLoading(false);
       }
     })();
-  }, [magnetId, apiKey, onClose]);
+  }, [magnetId, apiKey, hideNfo, onClose]);
 
   async function handleOpenVlc(link: string) {
     setVlcing(link);
@@ -191,14 +198,15 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, onClose }: Files
 
   async function handleDownloadAll() {
     if (!files) return;
-    setDownloadingAll({ done: 0, total: files.length });
+    const toDownload = skipNfoDownload ? files.filter((f) => !isNfoFile(f.name)) : files;
+    setDownloadingAll({ done: 0, total: toDownload.length });
     try {
-      for (let i = 0; i < files.length; i++) {
-        const url = await invoke<string>("unlock_link", { link: files[i].link, alldebridKey: apiKey });
+      for (let i = 0; i < toDownload.length; i++) {
+        const url = await invoke<string>("unlock_link", { link: toDownload[i].link, alldebridKey: apiKey });
         await openUrl(url);
-        setDownloadingAll({ done: i + 1, total: files.length });
+        setDownloadingAll({ done: i + 1, total: toDownload.length });
       }
-      toast.success(`${files.length} telechargements lances`);
+      toast.success(`${toDownload.length} telechargements lances`);
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -418,6 +426,8 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkDownloading, setBulkDownloading] = useState<{ done: number; total: number } | null>(null);
   const [simpleView, setSimpleView] = useState(true);
+  const [hideNfo, setHideNfo] = useState(true);
+  const [skipNfoDownload, setSkipNfoDownload] = useState(true);
   const [filesModal, setFilesModal] = useState<{ id: number; name: string } | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -447,6 +457,8 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
       loadMagnets();
     });
     store.get<ViewMode>("view_mode").then((v) => setSimpleView((v ?? "simple") === "simple"));
+    store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));
+    store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
   }, [loadMagnets]);
 
   async function handleDelete(ids: number[]) {
@@ -488,7 +500,9 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
       });
       const json = await res.json() as { status: string; data?: { magnets?: Array<{ files?: unknown[] }> } };
       if (json.status !== "success") throw new Error("Erreur AllDebrid");
-      const files = (json.data?.magnets ?? []).flatMap((m) => flattenFiles(m.files ?? []));
+      const files = (json.data?.magnets ?? [])
+        .flatMap((m) => flattenFiles(m.files ?? []))
+        .filter((f) => !skipNfoDownload || !isNfoFile(f.name));
       if (files.length === 0) throw new Error("Aucun fichier trouve");
       setBulkDownloading({ done: 0, total: files.length });
       for (let i = 0; i < files.length; i++) {
@@ -827,6 +841,8 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
             magnetName={filesModal.name}
             apiKey={apiKeyRef.current}
             simpleView={simpleView}
+            hideNfo={hideNfo}
+            skipNfoDownload={skipNfoDownload}
             onClose={() => setFilesModal(null)}
           />
         )}

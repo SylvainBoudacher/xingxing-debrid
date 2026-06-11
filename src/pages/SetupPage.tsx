@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  ArrowLeft, ArrowRight, Download, ExternalLink, KeyRound, Loader2, Magnet, Search, Zap,
+  ArrowLeft, ArrowRight, Check, Download, ExternalLink, FileText, KeyRound, Loader2, Magnet, Search, Zap,
   type LucideIcon,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
@@ -113,6 +113,50 @@ function KeyCard({
   );
 }
 
+function ViewOption({ label, selected, onClick, children }: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col rounded-xl px-4 py-3 text-left transition-all ${
+        selected
+          ? "bg-indigo-500/[0.07] ring-2 ring-indigo-500"
+          : "bg-zinc-950/60 ring-1 ring-white/6 hover:ring-white/20"
+      }`}
+    >
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className={`text-xs font-semibold ${selected ? "text-indigo-300" : "text-zinc-400"}`}>{label}</span>
+        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${selected ? "bg-indigo-500" : "ring-1 ring-white/15"}`}>
+          {selected && <Check className="h-2.5 w-2.5 text-white" />}
+        </span>
+      </div>
+      {children}
+    </button>
+  );
+}
+
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onChange(!checked)}
+      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+        checked ? "bg-indigo-600" : "bg-zinc-700"
+      }`}
+    >
+      <motion.div
+        initial={false}
+        animate={{ x: checked ? 20 : 0 }}
+        transition={{ type: "spring", stiffness: 500, damping: 35 }}
+        className="absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow"
+      />
+    </button>
+  );
+}
+
 function ViewModeCard({
   icon: Icon, title, description, example, value, onChange,
 }: {
@@ -134,45 +178,22 @@ function ViewModeCard({
       </div>
       <p className="text-xs text-zinc-500 mb-4">{description}</p>
 
-      <div className="relative flex rounded-xl bg-zinc-950/60 p-1 ring-1 ring-white/6 mb-3">
-        <motion.div
-          initial={false}
-          animate={{ x: value === "simple" ? "0%" : "100%" }}
-          transition={{ type: "spring", stiffness: 420, damping: 32 }}
-          className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-lg bg-indigo-600 shadow"
-        />
-        {([
-          { key: "simple", label: "Simplifiée" },
-          { key: "detailed", label: "Détaillée" },
-        ] as { key: ViewMode; label: string }[]).map((opt) => (
-          <button
-            key={opt.key}
-            onClick={() => onChange(opt.key)}
-            className={`relative z-10 flex-1 rounded-lg px-2 py-2 text-xs font-medium transition-colors ${
-              value === opt.key ? "text-white" : "text-zinc-500 hover:text-zinc-300"
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <ViewOption label="Simplifiée" selected={value === "simple"} onClick={() => onChange("simple")}>
+          <div className="flex items-center gap-1.5 mb-1">
+            {parsed.quality && (
+              <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">{parsed.quality}</span>
+            )}
+            {parsed.codec && (
+              <span className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">{parsed.codec}</span>
+            )}
+          </div>
+          <p className="text-sm font-semibold text-white leading-snug">{parsed.title}</p>
+        </ViewOption>
 
-      <div className="rounded-xl bg-zinc-950/60 ring-1 ring-white/6 px-4 py-3">
-        {value === "simple" ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1">
-              {parsed.quality && (
-                <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">{parsed.quality}</span>
-              )}
-              {parsed.codec && (
-                <span className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">{parsed.codec}</span>
-              )}
-            </div>
-            <p className="text-sm font-semibold text-white leading-snug">{parsed.title}</p>
-          </>
-        ) : (
+        <ViewOption label="Détaillée" selected={value === "detailed"} onClick={() => onChange("detailed")}>
           <p className="text-sm font-semibold text-white leading-snug break-all">{example}</p>
-        )}
+        </ViewOption>
       </div>
     </motion.div>
   );
@@ -188,6 +209,8 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   const [allDebridKey, setAllDebridKey] = useState("");
   const [searchViewMode, setSearchViewMode] = useState<ViewMode>("simple");
   const [viewMode, setViewMode] = useState<ViewMode>("simple");
+  const [hideNfo, setHideNfo] = useState(true);
+  const [skipNfoDownload, setSkipNfoDownload] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -195,6 +218,8 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     getApiKey("alldebrid_api_key").then((v) => { if (v) setAllDebridKey(v); });
     store.get<ViewMode>("search_view_mode").then((v) => { if (v) setSearchViewMode(v); });
     store.get<ViewMode>("view_mode").then((v) => { if (v) setViewMode(v); });
+    store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));
+    store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
   }, []);
 
   const bothFilled = c411Key.trim() !== "" && allDebridKey.trim() !== "";
@@ -217,6 +242,8 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     try {
       await store.set("search_view_mode", searchViewMode);
       await store.set("view_mode", viewMode);
+      await store.set("hide_nfo_files", hideNfo);
+      await store.set("skip_nfo_download", skipNfoDownload);
       await store.save();
       onComplete();
     } catch (err) {
@@ -381,14 +408,14 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               <div className="text-center mb-2">
                 <h1 className="text-2xl font-bold tracking-tight text-white mb-2">Choisissez votre affichage</h1>
                 <p className="text-sm text-zinc-400 max-w-sm mx-auto">
-                  La vue simplifiée reformate les titres et affiche la qualité et le codec en labels. Modifiable à tout moment dans les Paramètres.
+                  Cliquez sur l'affichage que vous préférez. Modifiable à tout moment dans les Paramètres.
                 </p>
               </div>
             </motion.div>
 
             <ViewModeCard
               icon={Search}
-              title="Affichage de la recherche"
+              title="Affichage des résultats de recherche"
               description="Les résultats de recherche sur la page d'accueil."
               example="Dune.Part.Two.2024.MULTi.2160p.WEB.H265-Slay3R"
               value={searchViewMode}
@@ -396,12 +423,42 @@ export function SetupPage({ onComplete }: SetupPageProps) {
             />
             <ViewModeCard
               icon={Magnet}
-              title="Affichage des titres"
+              title="Affichage des noms de fichiers"
               description="Les noms de fichiers dans la page Magnets."
               example="Apple.Cider.Vinegar.S01E01.MULTi.1080p.WEB.H265-CHiLL.mkv"
               value={viewMode}
               onChange={setViewMode}
             />
+
+            <motion.div variants={item} className="rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 px-5 py-5">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
+                  <FileText className="h-4 w-4 text-indigo-400" />
+                </div>
+                <p className="text-sm font-semibold text-white">Fichiers .nfo</p>
+              </div>
+              <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+                Un fichier .nfo est un petit fichier texte ajouté par les teams de release pour décrire le contenu (qualité, langue, source). Il n'est pas nécessaire pour regarder vos films et séries.
+              </p>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-950/60 ring-1 ring-white/6 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-white">Ne pas afficher les fichiers .nfo</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">Les masque dans la liste des fichiers d'un magnet.</p>
+                  </div>
+                  <Toggle checked={hideNfo} onChange={setHideNfo} />
+                </div>
+
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-950/60 ring-1 ring-white/6 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-white">Ne pas télécharger les fichiers .nfo</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">Les exclut des téléchargements groupés ("Tout télécharger").</p>
+                  </div>
+                  <Toggle checked={skipNfoDownload} onChange={setSkipNfoDownload} />
+                </div>
+              </div>
+            </motion.div>
 
             <motion.div variants={item} className="pt-2">
               <motion.button
