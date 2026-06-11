@@ -1,5 +1,10 @@
+import discoverImg from "@/assets/patchnote/v1.0/discover-with-IMDB.png";
+import paramsImg from "@/assets/patchnote/v1.0/params.png";
+import themeImg from "@/assets/patchnote/v1.0/theme.png";
+import torrentFilterImg from "@/assets/patchnote/v1.0/torrent-filter.png";
+
 export interface PatchNoteImage {
-  src: string; // fichier dans public/patchnotes/, ex: "/patchnotes/discover.png"
+  src: string; // image importée depuis src/assets/patchnote/
   caption?: string;
 }
 
@@ -28,10 +33,13 @@ export const PATCH_NOTES: PatchNote[] = [
         items: [
           "Explorez les films, séries et animations les mieux notés grâce au catalogue TMDB, avec affiches, notes et résumés.",
           "Recherchez n'importe quel titre et trouvez en un clic les releases disponibles sur C411, sans quitter la page.",
-          "Triez et filtrez le catalogue pour trouver exactement ce que vous cherchez.",
+          "Une clé TMDB (gratuite et optionnelle) ajoutée lors de la configuration active cette page.",
         ],
         images: [
-          { src: "/patchnotes/v1-discover.png", caption: "La page Découvrir avec le catalogue TMDB" },
+          {
+            src: discoverImg,
+            caption: "Le catalogue TMDB : films, séries et animations les mieux notés, avec leur note",
+          },
         ],
       },
       {
@@ -39,9 +47,6 @@ export const PATCH_NOTES: PatchNote[] = [
         items: [
           "Ajoutez vos films et séries en favoris d'un simple clic sur le cœur.",
           "Retrouvez-les à tout moment dans l'onglet \"Ma liste\" de la page Découvrir, avec leur résumé.",
-        ],
-        images: [
-          { src: "/patchnotes/v1-likes.png", caption: "Vos favoris regroupés dans Ma liste" },
         ],
       },
       {
@@ -51,30 +56,35 @@ export const PATCH_NOTES: PatchNote[] = [
           "L'ensemble de l'interface a été harmonisé pour être agréable dans les deux modes.",
         ],
         images: [
-          { src: "/patchnotes/v1-dark-mode.png", caption: "L'application en mode sombre" },
+          { src: themeImg, caption: "Le changement de thème, accessible depuis le menu" },
         ],
       },
       {
-        title: "Fichiers .nfo",
+        title: "Recherche plus lisible",
         items: [
-          "Deux nouvelles options dans les Paramètres : masquer les fichiers .nfo dans les listes, et ne pas les télécharger. Les deux sont activées par défaut.",
-        ],
-      },
-      {
-        title: "Première configuration repensée",
-        items: [
-          "La page de bienvenue a été entièrement revue, avec des animations et des explications pas à pas pour chaque clé.",
-          "Une clé TMDB (gratuite et optionnelle) peut être ajoutée pour activer la page Découvrir.",
+          "Les résultats affichent des badges de qualité (2160P, 1080P) et de format (X265, X264, HEVC) en un coup d'oeil.",
+          "Les filtres par catégorie, qualité et format se combinent avec le tri par pertinence, taille ou date.",
         ],
         images: [
-          { src: "/patchnotes/v1-setup.png", caption: "Le nouvel écran de bienvenue" },
+          { src: torrentFilterImg, caption: "Les résultats de recherche avec leurs filtres de qualité et de format" },
+        ],
+      },
+      {
+        title: "Paramètres plus complets",
+        items: [
+          "Choisissez un affichage simplifié ou détaillé, séparément pour la recherche et pour vos magnets.",
+          "Deux nouvelles options pour les fichiers .nfo : les masquer dans les listes et ne pas les télécharger. Les deux sont activées par défaut.",
+          "Un sommaire suit votre lecture pour naviguer entre les sections.",
+        ],
+        images: [
+          { src: paramsImg, caption: "La page Paramètres : affichage des résultats et gestion des fichiers .nfo" },
         ],
       },
       {
         title: "Interface et confort",
         items: [
+          "La page de bienvenue a été entièrement revue, avec des animations et des explications pas à pas pour chaque clé.",
           "Animations et transitions plus fluides sur toutes les pages.",
-          "Les Paramètres disposent d'un sommaire qui suit votre lecture.",
           "Navigation harmonisée : le menu donne accès à l'Accueil, Découvrir, Magnets et Paramètres depuis n'importe quelle page.",
         ],
       },
