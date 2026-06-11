@@ -52,6 +52,7 @@ interface TmdbItem {
   posterPath: string | null;
   year: string;
   voteAverage: number;
+  overview: string;
 }
 
 interface TmdbRawResult {
@@ -64,6 +65,7 @@ interface TmdbRawResult {
   release_date?: string | null;
   first_air_date?: string | null;
   vote_average: number;
+  overview?: string;
   genre_ids?: number[];
 }
 
@@ -87,6 +89,7 @@ function mapTmdb(r: TmdbRawResult, mediaType: MediaType): TmdbItem {
         4,
       ) ?? "",
     voteAverage: r.vote_average,
+    overview: r.overview ?? "",
   };
 }
 
@@ -699,7 +702,19 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col bg-black bg-[radial-gradient(ellipse_70%_45%_at_50%_0%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
+    <main className="relative isolate flex min-h-screen flex-col bg-[#04050c]">
+      {/* Background */}
+      <div className="pointer-events-none fixed inset-0 -z-10">
+        <motion.div
+          animate={{ opacity: [0.7, 1, 0.7], scale: [1, 1.08, 1] }}
+          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute -top-40 left-1/2 -translate-x-1/2 h-[440px] w-[700px] rounded-full bg-indigo-600/25 blur-[120px]"
+        />
+        <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-violet-600/15 blur-[100px]" />
+        <div className="absolute -bottom-24 -right-32 h-96 w-96 rounded-full bg-sky-500/10 blur-[110px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.14)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_45%_at_50%_22%,black,transparent_75%)]" />
+      </div>
+
       {/* Header */}
       <div className="sticky top-0 z-10 border-b border-white/5 bg-black/30 backdrop-blur-xl">
         <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
@@ -1050,6 +1065,12 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                   <X className="h-3.5 w-3.5 text-zinc-400" />
                 </button>
               </div>
+
+              {selected.overview && (
+                <p className="mx-5 mb-4 text-xs text-zinc-400 leading-relaxed line-clamp-4">
+                  {selected.overview}
+                </p>
+              )}
 
               {selected.mediaType === "tv" && (
                 <div className="flex gap-1.5 overflow-x-auto px-5 pb-3">
