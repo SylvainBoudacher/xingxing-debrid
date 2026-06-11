@@ -1,3 +1,4 @@
+import vlcLogo from "@/assets/vlc.png";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -7,24 +8,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import vlcLogo from "@/assets/vlc.png";
+import { getApiKey } from "@/lib/apiKeys";
+import { parseRelease } from "@/lib/parseRelease";
+import { LATEST_VERSION } from "@/lib/patchnotes";
 import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { LazyStore } from "@tauri-apps/plugin-store";
-import { getApiKey } from "@/lib/apiKeys";
 import {
   ArrowDown,
   ArrowUp,
+  Bell,
   Book,
   BookMarked,
   Check,
   ChevronLeft,
   ChevronRight,
-  CircleFadingArrowUp,
   Clapperboard,
   Copy,
-  Bell,
   Download,
   FileText,
   FlaskConical,
@@ -49,8 +50,6 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { LATEST_VERSION } from "@/lib/patchnotes";
-import { parseRelease } from "@/lib/parseRelease";
 import type { ViewMode } from "./PreferencesPage";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
@@ -146,7 +145,12 @@ const CATEGORY_FILTERS: Array<{
   { key: 2000, label: "Films", icon: Clapperboard, color: "text-blue-400" },
   { key: 5000, label: "Séries", icon: Tv, color: "text-cyan-400" },
   { key: 3000, label: "Musique", icon: Music, color: "text-purple-400" },
-  { key: 4000, label: "Logiciels & Jeux", icon: Gamepad2, color: "text-green-400" },
+  {
+    key: 4000,
+    label: "Logiciels & Jeux",
+    icon: Gamepad2,
+    color: "text-green-400",
+  },
   { key: 7000, label: "Livres", icon: Book, color: "text-amber-400" },
   { key: 0, label: "Autres", icon: HelpCircle, color: "text-zinc-500" },
 ];
@@ -190,11 +194,7 @@ interface C411Response {
   meta: { total: number; page: number; totalPages: number };
 }
 
-const SERIES_SLUGS = new Set([
-  "serie-tv",
-  "serie-documentaire",
-  "emission-tv",
-]);
+const SERIES_SLUGS = new Set(["serie-tv", "serie-documentaire", "emission-tv"]);
 
 // Map C411 JSON categories to the newznab-style ids used by icons/filters
 function mapCategory(catId: number, subSlug: string): number {
@@ -249,12 +249,18 @@ function formatSize(bytes: number): string {
 }
 
 interface MainPageProps {
-  onNavigate: (page: "magnets" | "preferences" | "patchnotes" | "setup") => void;
+  onNavigate: (
+    page: "magnets" | "preferences" | "patchnotes" | "setup",
+  ) => void;
   devMode: boolean;
   onToggleDevMode: () => void;
 }
 
-export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps) {
+export function MainPage({
+  onNavigate,
+  devMode,
+  onToggleDevMode,
+}: MainPageProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [total, setTotal] = useState<number | null>(null);
@@ -524,14 +530,20 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1], delay: 0.4 }}
+            transition={{
+              duration: 0.25,
+              ease: [0.22, 1, 0.36, 1],
+              delay: 0.4,
+            }}
             className="absolute top-4 left-4 z-10 flex items-start gap-3 rounded-2xl bg-zinc-900/90 backdrop-blur-xl ring-1 ring-white/10 pl-3 pr-1.5 py-2 shadow-xl"
           >
             <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 ring-1 ring-indigo-500/25">
               <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
             </span>
             <div>
-              <p className="text-xs font-semibold text-white">Nouvelle version V{LATEST_VERSION}</p>
+              <p className="text-xs font-semibold text-white">
+                Nouvelle version V{LATEST_VERSION}
+              </p>
               <button
                 onClick={() => {
                   dismissPatchNotif();
@@ -563,7 +575,10 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
               <Menu className="h-4 w-4" />
             </motion.button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className={import.meta.env.DEV ? "w-56" : "w-44"}>
+          <DropdownMenuContent
+            align="end"
+            className={import.meta.env.DEV ? "w-56" : "w-44"}
+          >
             <DropdownMenuItem onClick={() => onNavigate("magnets")}>
               <Magnet className="mr-2 h-4 w-4" />
               Magnets
@@ -579,8 +594,13 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
             {import.meta.env.DEV && (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground">Développeur</DropdownMenuLabel>
-                <DropdownMenuCheckboxItem checked={devMode} onCheckedChange={onToggleDevMode}>
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  Développeur
+                </DropdownMenuLabel>
+                <DropdownMenuCheckboxItem
+                  checked={devMode}
+                  onCheckedChange={onToggleDevMode}
+                >
                   <FlaskConical className="mr-2 h-4 w-4" />
                   Mode développeur
                 </DropdownMenuCheckboxItem>
@@ -627,7 +647,10 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
         </DropdownMenu>
       </div>
 
-      <div ref={scrollRef} className="flex-1 flex flex-col items-center overflow-y-auto">
+      <div
+        ref={scrollRef}
+        className="flex-1 flex flex-col items-center overflow-y-auto"
+      >
         <motion.div
           layout
           transition={{
@@ -774,7 +797,11 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
               className="w-full max-w-2xl px-6 space-y-2 pb-6"
               initial="hidden"
               animate="visible"
-              exit={{ opacity: 0, y: 14, transition: { duration: 0.2, ease: "easeIn" } }}
+              exit={{
+                opacity: 0,
+                y: 14,
+                transition: { duration: 0.2, ease: "easeIn" },
+              }}
             >
               <div className="flex flex-wrap items-center gap-2 pb-1">
                 {CATEGORY_FILTERS.map(({ key, label, icon: Icon, color }) => {
@@ -801,7 +828,9 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                         className={`h-3.5 w-3.5 ${active ? "text-white" : color}`}
                       />
                       {label}
-                      <span className={active ? "text-indigo-200" : "text-zinc-600"}>
+                      <span
+                        className={active ? "text-indigo-200" : "text-zinc-600"}
+                      >
                         {count}
                       </span>
                     </button>
@@ -883,7 +912,11 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                           }`}
                         >
                           {q}
-                          <span className={active ? "text-indigo-200" : "text-zinc-600"}>
+                          <span
+                            className={
+                              active ? "text-indigo-200" : "text-zinc-600"
+                            }
+                          >
                             {qualityCounts.get(q)}
                           </span>
                         </button>
@@ -914,7 +947,11 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                           }`}
                         >
                           {codec}
-                          <span className={active ? "text-indigo-200" : "text-zinc-600"}>
+                          <span
+                            className={
+                              active ? "text-indigo-200" : "text-zinc-600"
+                            }
+                          >
                             {count}
                           </span>
                         </button>
@@ -932,70 +969,80 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                 </motion.p>
               )}
               <AnimatePresence mode="popLayout">
-              {displayed.map((r, i) => {
-                const { icon: Icon, color } = getCategoryIcon(r.category);
-                const parsed = simpleSearchView ? parseRelease(r.title) : null;
-                return (
-                  <motion.div
-                    key={r.guid || `${r.title}-${r.size}`}
-                    layout
-                    custom={i}
-                    variants={itemVariants}
-                    exit={{
-                      opacity: 0,
-                      scale: 0.96,
-                      transition: { duration: 0.15, ease: "easeIn" },
-                    }}
-                    className="flex items-center gap-4 rounded-lg bg-zinc-800/60 ring-1 ring-white/8 px-4 py-3 transition-colors duration-150 hover:bg-zinc-700/60 hover:ring-white/15"
-                  >
-                    <Icon className={`h-5 w-5 shrink-0 ${color}`} />
-                    <div className="min-w-0 flex-1">
-                      {parsed && (parsed.quality || parsed.codec) && (
-                        <div className="flex items-center gap-1.5 mb-1">
-                          {parsed.quality && (
-                            <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
-                              {parsed.quality}
-                            </span>
-                          )}
-                          {parsed.codec && (
-                            <span className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
-                              {parsed.codec}
-                            </span>
-                          )}
+                {displayed.map((r, i) => {
+                  const { icon: Icon, color } = getCategoryIcon(r.category);
+                  const parsed = simpleSearchView
+                    ? parseRelease(r.title)
+                    : null;
+                  return (
+                    <motion.div
+                      key={r.guid || `${r.title}-${r.size}`}
+                      layout
+                      custom={i}
+                      variants={itemVariants}
+                      exit={{
+                        opacity: 0,
+                        scale: 0.96,
+                        transition: { duration: 0.15, ease: "easeIn" },
+                      }}
+                      className="flex items-center gap-4 rounded-lg bg-zinc-800/60 ring-1 ring-white/8 px-4 py-3 transition-colors duration-150 hover:bg-zinc-700/60 hover:ring-white/15"
+                    >
+                      <Icon className={`h-5 w-5 shrink-0 ${color}`} />
+                      <div className="min-w-0 flex-1">
+                        {parsed && (parsed.quality || parsed.codec) && (
+                          <div className="flex items-center gap-1.5 mb-1">
+                            {parsed.quality && (
+                              <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
+                                {parsed.quality}
+                              </span>
+                            )}
+                            {parsed.codec && (
+                              <span className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                                {parsed.codec}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <p className="text-sm text-white font-medium leading-snug line-clamp-2">
+                          {parsed ? parsed.title : r.title}
+                        </p>
+                        <div className="mt-1 flex items-center gap-4 text-xs text-zinc-500">
+                          <span>{formatSize(r.size)}</span>
+                          <span className="text-green-500">
+                            {r.seeders} Seeders
+                          </span>
+                          <span className="text-red-500">
+                            {r.leechers} Leechers
+                          </span>
                         </div>
-                      )}
-                      <p className="text-sm text-white font-medium leading-snug line-clamp-2">
-                        {parsed ? parsed.title : r.title}
-                      </p>
-                      <div className="mt-1 flex items-center gap-4 text-xs text-zinc-500">
-                        <span>{formatSize(r.size)}</span>
-                        <span className="text-green-500">
-                          {r.seeders} Seeders
-                        </span>
-                        <span className="text-red-500">
-                          {r.leechers} Leechers
+                      </div>
+                      <div className="group relative shrink-0">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleSendToDebrid(r, i)}
+                          disabled={sendingIndex !== null}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {sendingIndex === i ? (
+                            <Loader2 className="h-4 w-4 text-white animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4 text-white" />
+                          )}
+                        </motion.button>
+                        <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
+                          Télécharger
                         </span>
                       </div>
-                    </div>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => handleSendToDebrid(r, i)}
-                      disabled={sendingIndex !== null}
-                      className="shrink-0 flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {sendingIndex === i ? (
-                        <Loader2 className="h-4 w-4 text-white animate-spin" />
-                      ) : (
-                        <CircleFadingArrowUp className="h-4 w-4 text-white" />
-                      )}
-                    </motion.button>
-                  </motion.div>
-                );
-              })}
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
               {totalPages > 1 && (
-                <motion.div layout className="flex items-center justify-center gap-1.5 pt-3">
+                <motion.div
+                  layout
+                  className="flex items-center justify-center gap-1.5 pt-3"
+                >
                   <button
                     onClick={() => goToPage(page - 1)}
                     disabled={page <= 1 || loading}
@@ -1005,7 +1052,10 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                   </button>
                   {pageNumbers(page, totalPages).map((p, i) =>
                     p === "..." ? (
-                      <span key={`ellipsis-${i}`} className="px-1 text-sm text-zinc-600">
+                      <span
+                        key={`ellipsis-${i}`}
+                        className="px-1 text-sm text-zinc-600"
+                      >
                         ...
                       </span>
                     ) : (
@@ -1104,7 +1154,9 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                           whileTap={{ scale: 0.97 }}
                           onClick={() => handleOpenVlc(file.link)}
                           disabled={
-                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
+                            downloadingLink !== null ||
+                            copiedLink !== null ||
+                            vlcLink !== null
                           }
                           className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
@@ -1113,13 +1165,17 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                           ) : (
                             <img src={vlcLogo} className="h-4 w-4" />
                           )}
-                          <span className="text-xs font-medium text-white">Lire avec VLC</span>
+                          <span className="text-xs font-medium text-white">
+                            Lire avec VLC
+                          </span>
                         </motion.button>
                         <motion.button
                           whileTap={{ scale: 0.97 }}
                           onClick={() => handleCopyLink(file.link)}
                           disabled={
-                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
+                            downloadingLink !== null ||
+                            copiedLink !== null ||
+                            vlcLink !== null
                           }
                           className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
@@ -1143,7 +1199,9 @@ export function MainPage({ onNavigate, devMode, onToggleDevMode }: MainPageProps
                           whileTap={{ scale: 0.97 }}
                           onClick={() => handleDownloadFile(file.link)}
                           disabled={
-                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
+                            downloadingLink !== null ||
+                            copiedLink !== null ||
+                            vlcLink !== null
                           }
                           className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
