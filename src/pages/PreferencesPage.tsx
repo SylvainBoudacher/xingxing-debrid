@@ -43,12 +43,12 @@ function ViewOptionCard({ label, selected, onClick, children }: {
       className={`flex flex-col rounded-xl px-4 py-3 text-left transition-all ${
         selected
           ? "bg-indigo-500/[0.07] ring-2 ring-indigo-500"
-          : "bg-zinc-900/80 ring-1 ring-white/8 hover:ring-white/20"
+          : "bg-white dark:bg-zinc-900/80 ring-1 ring-black/8 dark:ring-white/8 hover:ring-black/20 dark:hover:ring-white/20"
       }`}
     >
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className={`text-xs font-semibold ${selected ? "text-indigo-300" : "text-zinc-400"}`}>{label}</span>
-        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${selected ? "bg-indigo-500" : "ring-1 ring-white/15"}`}>
+        <span className={`text-xs font-semibold ${selected ? "text-indigo-700 dark:text-indigo-300" : "text-zinc-500 dark:text-zinc-400"}`}>{label}</span>
+        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${selected ? "bg-indigo-500" : "ring-1 ring-black/15 dark:ring-white/15"}`}>
           {selected && <Check className="h-2.5 w-2.5 text-white" />}
         </span>
       </div>
@@ -62,7 +62,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     <button
       onClick={() => onChange(!checked)}
       className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-        checked ? "bg-indigo-600" : "bg-zinc-700"
+        checked ? "bg-indigo-600" : "bg-zinc-300 dark:bg-zinc-700"
       }`}
     >
       <motion.div
@@ -178,30 +178,30 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
   const searchParsed = parseRelease(SEARCH_EXAMPLE);
 
   return (
-    <main className="relative flex min-h-screen flex-col bg-[#05060c]">
+    <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] dark:bg-[#05060c]">
       {/* Grid background */}
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.13)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.13)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:linear-gradient(to_right,black,transparent_38%,transparent_62%,black),radial-gradient(ellipse_85%_80%_at_50%_0%,black_25%,transparent_90%)] [mask-composite:intersect]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.06)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.13)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.13)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:linear-gradient(to_right,black,transparent_38%,transparent_62%,black),radial-gradient(ellipse_85%_80%_at_50%_0%,black_25%,transparent_90%)] [mask-composite:intersect]" />
 
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-white/5 bg-black/30 backdrop-blur-xl">
+      <div className="sticky top-0 z-10 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl">
         <div className="relative mx-auto flex w-full max-w-4xl items-center justify-between px-6 py-4 sm:px-8">
           <motion.button
             whileTap={{ scale: 0.93 }}
             onClick={onBack}
-            className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm font-medium">Retour</span>
           </motion.button>
 
-          <h1 className="text-sm font-semibold text-white tracking-tight absolute left-1/2 -translate-x-1/2">Paramètres</h1>
+          <h1 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight absolute left-1/2 -translate-x-1/2">Paramètres</h1>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <motion.button
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.93 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700/80 transition-colors"
               >
                 <Menu className="h-4 w-4" />
               </motion.button>
@@ -236,18 +236,18 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
                 onClick={() => scrollToSection(s.id)}
                 className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors ${
                   activeSection === s.id
-                    ? "text-white"
-                    : "text-zinc-500 hover:text-zinc-300"
+                    ? "text-zinc-900 dark:text-white"
+                    : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
                 }`}
               >
                 {activeSection === s.id && (
                   <motion.div
                     layoutId="section-nav-active"
                     transition={{ type: "spring", stiffness: 420, damping: 32 }}
-                    className="absolute inset-0 rounded-lg bg-zinc-800/80 ring-1 ring-white/8"
+                    className="absolute inset-0 rounded-lg bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/8 dark:ring-white/8"
                   />
                 )}
-                <s.icon className={`relative z-10 h-3.5 w-3.5 ${activeSection === s.id ? "text-indigo-400" : ""}`} />
+                <s.icon className={`relative z-10 h-3.5 w-3.5 ${activeSection === s.id ? "text-indigo-600 dark:text-indigo-400" : ""}`} />
                 <span className="relative z-10">{s.label}</span>
               </button>
             ))}
@@ -261,19 +261,19 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
           className="min-w-0 max-w-xl flex-1 space-y-8"
         >
           {/* Recherche */}
-          <section id="section-search" className="scroll-mt-24 rounded-2xl bg-[#0b0c13] ring-1 ring-white/6 overflow-hidden">
-            <div className="flex items-center gap-3 border-b border-white/6 bg-white/[0.02] px-6 py-4">
+          <section id="section-search" className="scroll-mt-24 rounded-2xl bg-white dark:bg-[#0b0c13] ring-1 ring-black/6 dark:ring-white/6 overflow-hidden">
+            <div className="flex items-center gap-3 border-b border-black/6 dark:border-white/6 bg-black/[0.02] dark:bg-white/[0.02] px-6 py-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/25">
-                <Search className="h-4 w-4 text-indigo-400" />
+                <Search className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-white tracking-tight">Recherche</h2>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">Recherche</h2>
                 <p className="text-xs text-zinc-500">Paramètres des résultats de recherche.</p>
               </div>
             </div>
 
             <div className="px-6 py-5">
-              <h3 className="text-sm font-semibold text-white mb-1">Affichage des résultats de recherche</h3>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">Affichage des résultats de recherche</h3>
               <p className="text-xs text-zinc-500 mb-5">
                 Cliquez sur l'affichage que vous préférez pour les résultats de recherche.
               </p>
@@ -286,13 +286,13 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
                 >
                   <div className="flex items-center gap-1.5 mb-1">
                     {searchParsed.quality && (
-                      <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">{searchParsed.quality}</span>
+                      <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">{searchParsed.quality}</span>
                     )}
                     {searchParsed.codec && (
-                      <span className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">{searchParsed.codec}</span>
+                      <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{searchParsed.codec}</span>
                     )}
                   </div>
-                  <p className="text-sm font-semibold text-white leading-snug">{searchParsed.title}</p>
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug">{searchParsed.title}</p>
                   <div className="mt-1 flex items-center gap-3 text-xs text-zinc-500">
                     <span>8.2 Go</span>
                     <span className="text-green-500">124 Seeders</span>
@@ -305,7 +305,7 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
                   selected={searchViewMode === "detailed"}
                   onClick={() => handleSearchChange("detailed")}
                 >
-                  <p className="text-sm font-semibold text-white leading-snug break-all">{SEARCH_EXAMPLE}</p>
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug break-all">{SEARCH_EXAMPLE}</p>
                   <div className="mt-1 flex items-center gap-3 text-xs text-zinc-500">
                     <span>8.2 Go</span>
                     <span className="text-green-500">124 Seeders</span>
@@ -317,19 +317,19 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
           </section>
 
           {/* Magnets */}
-          <section id="section-magnets" className="scroll-mt-24 rounded-2xl bg-[#0b0c13] ring-1 ring-white/6 overflow-hidden">
-            <div className="flex items-center gap-3 border-b border-white/6 bg-white/[0.02] px-6 py-4">
+          <section id="section-magnets" className="scroll-mt-24 rounded-2xl bg-white dark:bg-[#0b0c13] ring-1 ring-black/6 dark:ring-white/6 overflow-hidden">
+            <div className="flex items-center gap-3 border-b border-black/6 dark:border-white/6 bg-black/[0.02] dark:bg-white/[0.02] px-6 py-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/25">
-                <Magnet className="h-4 w-4 text-indigo-400" />
+                <Magnet className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-white tracking-tight">Magnets</h2>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">Magnets</h2>
                 <p className="text-xs text-zinc-500">Paramètres de la page magnets et des téléchargements.</p>
               </div>
             </div>
 
             <div className="px-6 py-5">
-              <h3 className="text-sm font-semibold text-white mb-1">Affichage des noms de fichiers</h3>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">Affichage des noms de fichiers</h3>
               <p className="text-xs text-zinc-500 mb-5">
                 Cliquez sur l'affichage que vous préférez pour vos magnets et leurs fichiers.
               </p>
@@ -342,13 +342,13 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
                 >
                   <div className="flex items-center gap-1.5 mb-1">
                     {parsed.quality && (
-                      <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">{parsed.quality}</span>
+                      <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">{parsed.quality}</span>
                     )}
                     {parsed.codec && (
-                      <span className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">{parsed.codec}</span>
+                      <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{parsed.codec}</span>
                     )}
                   </div>
-                  <p className="text-sm font-semibold text-white leading-snug">{parsed.title}</p>
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug">{parsed.title}</p>
                 </ViewOptionCard>
 
                 <ViewOptionCard
@@ -356,29 +356,29 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
                   selected={viewMode === "detailed"}
                   onClick={() => handleChange("detailed")}
                 >
-                  <p className="text-sm font-semibold text-white leading-snug break-all">{EXAMPLE}</p>
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug break-all">{EXAMPLE}</p>
                 </ViewOptionCard>
               </div>
 
-              <div className="my-6 h-px bg-white/8" />
+              <div className="my-6 h-px bg-black/8 dark:bg-white/8" />
 
-              <h3 className="text-sm font-semibold text-white mb-1">Fichiers .nfo</h3>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">Fichiers .nfo</h3>
               <p className="text-xs text-zinc-500 mb-5 leading-relaxed">
                 Un fichier .nfo est un petit fichier texte ajouté par les teams de release pour décrire le contenu (qualité, langue, source). Il n'est pas nécessaire pour regarder vos films et séries.
               </p>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-900/80 ring-1 ring-white/8 px-4 py-3">
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-white dark:bg-zinc-900/80 ring-1 ring-black/8 dark:ring-white/8 px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-white">Ne pas afficher les fichiers .nfo</p>
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white">Ne pas afficher les fichiers .nfo</p>
                     <p className="text-xs text-zinc-500 mt-0.5">Les masque dans la liste des fichiers d'un magnet.</p>
                   </div>
                   <Toggle checked={hideNfo} onChange={handleHideNfoChange} />
                 </div>
 
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-900/80 ring-1 ring-white/8 px-4 py-3">
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-white dark:bg-zinc-900/80 ring-1 ring-black/8 dark:ring-white/8 px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-white">Ne pas télécharger les fichiers .nfo</p>
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white">Ne pas télécharger les fichiers .nfo</p>
                     <p className="text-xs text-zinc-500 mt-0.5">Les exclut des téléchargements groupés ("Tout télécharger").</p>
                   </div>
                   <Toggle checked={skipNfoDownload} onChange={handleSkipNfoDownloadChange} />
@@ -388,19 +388,19 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
           </section>
 
           {/* Découverte */}
-          <section id="section-discover" className="scroll-mt-24 rounded-2xl bg-[#0b0c13] ring-1 ring-white/6 overflow-hidden">
-            <div className="flex items-center gap-3 border-b border-white/6 bg-white/[0.02] px-6 py-4">
+          <section id="section-discover" className="scroll-mt-24 rounded-2xl bg-white dark:bg-[#0b0c13] ring-1 ring-black/6 dark:ring-white/6 overflow-hidden">
+            <div className="flex items-center gap-3 border-b border-black/6 dark:border-white/6 bg-black/[0.02] dark:bg-white/[0.02] px-6 py-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/25">
-                <Compass className="h-4 w-4 text-indigo-400" />
+                <Compass className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-white tracking-tight">Découverte</h2>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">Découverte</h2>
                 <p className="text-xs text-zinc-500">Paramètres de la page Découverte.</p>
               </div>
             </div>
 
             <div className="px-6 py-5">
-              <h3 className="text-sm font-semibold text-white mb-1">Ma liste</h3>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">Ma liste</h3>
               <p className="text-xs text-zinc-500 mb-5 leading-relaxed">
                 Sauvegardez les contenus likés dans un fichier JSON ou restaurez une liste depuis un fichier. L'import fusionne avec la liste actuelle sans créer de doublons.
               </p>
@@ -415,7 +415,7 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
                 </button>
                 <button
                   onClick={() => importInputRef.current?.click()}
-                  className="flex items-center gap-2 rounded-full bg-zinc-800/80 ring-1 ring-white/10 px-4 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-700/80 hover:text-white transition-colors"
+                  className="flex items-center gap-2 rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 px-4 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white transition-colors"
                 >
                   <Upload className="h-3.5 w-3.5" />
                   Importer une liste
@@ -432,21 +432,19 @@ export function PreferencesPage({ onBack, onNavigate }: PreferencesPageProps) {
           </section>
 
           {/* Clés API */}
-          <section id="section-api-keys" className="scroll-mt-24 rounded-2xl bg-[#0b0c13] ring-1 ring-white/6 overflow-hidden">
-            <div className="flex items-center gap-3 border-b border-white/6 bg-white/[0.02] px-6 py-4">
+          <section id="section-api-keys" className="scroll-mt-24 rounded-2xl bg-white dark:bg-[#0b0c13] ring-1 ring-black/6 dark:ring-white/6 overflow-hidden">
+            <div className="flex items-center gap-3 border-b border-black/6 dark:border-white/6 bg-black/[0.02] dark:bg-white/[0.02] px-6 py-4">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/25">
-                <KeyRound className="h-4 w-4 text-indigo-400" />
+                <KeyRound className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
-                <h2 className="text-base font-semibold text-white tracking-tight">Clés API</h2>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">Clés API</h2>
                 <p className="text-xs text-zinc-500">Les clés C411 et AllDebrid utilisées par l'application.</p>
               </div>
             </div>
 
             <div className="px-6 py-5">
-              <div className="dark">
-                <ApiKeysForm />
-              </div>
+              <ApiKeysForm />
             </div>
           </section>
         </motion.div>

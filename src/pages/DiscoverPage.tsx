@@ -702,7 +702,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
   }
 
   return (
-    <main className="relative isolate flex min-h-screen flex-col bg-[#04050c]">
+    <main className="relative isolate flex min-h-screen flex-col bg-[#f4f6fc] dark:bg-[#04050c]">
       {/* Background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <motion.div
@@ -712,22 +712,22 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
         />
         <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-violet-600/15 blur-[100px]" />
         <div className="absolute -bottom-24 -right-32 h-96 w-96 rounded-full bg-sky-500/10 blur-[110px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.14)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_45%_at_50%_22%,black,transparent_75%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(rgba(15,23,42,0.10)_1px,transparent_1px)] dark:bg-[radial-gradient(rgba(255,255,255,0.14)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_45%_at_50%_22%,black,transparent_75%)]" />
       </div>
 
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-white/5 bg-black/30 backdrop-blur-xl">
+      <div className="sticky top-0 z-10 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl">
         <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
           <motion.button
             whileTap={{ scale: 0.93 }}
             onClick={onBack}
-            className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors"
+            className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
             <span className="text-sm font-medium">Retour</span>
           </motion.button>
 
-          <h1 className="text-sm font-semibold text-white tracking-tight absolute left-1/2 -translate-x-1/2">
+          <h1 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight absolute left-1/2 -translate-x-1/2">
             Découverte
           </h1>
 
@@ -736,7 +736,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
               <motion.button
                 whileHover={{ scale: 1.08 }}
                 whileTap={{ scale: 0.93 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800/80 ring-1 ring-white/10 text-zinc-400 hover:text-white hover:bg-zinc-700/80 transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700/80 transition-colors"
               >
                 <Menu className="h-4 w-4" />
               </motion.button>
@@ -768,10 +768,10 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
       {tmdbKey === null && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/12 ring-1 ring-indigo-500/25">
-            <KeyRound className="h-5 w-5 text-indigo-400" />
+            <KeyRound className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-white">
+            <p className="text-sm font-semibold text-zinc-900 dark:text-white">
               Clé API TMDB manquante
             </p>
             <p className="mt-1 max-w-sm text-xs text-zinc-500 leading-relaxed">
@@ -808,15 +808,15 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
             onSubmit={handleSubmit}
             className={`mx-auto max-w-2xl ${mediaType === "likes" ? "pointer-events-none" : ""}`}
           >
-            <div className="relative flex items-center gap-3 rounded-full bg-zinc-800/80 px-5 py-3.5 shadow-[0_8px_40px_rgba(0,0,0,0.7)]">
+            <div className="relative flex items-center gap-3 rounded-full bg-white/90 dark:bg-zinc-800/80 px-5 py-3.5 shadow-[0_8px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)]">
               <span className="relative h-5 w-5 shrink-0">
                 <Search
-                  className={`absolute inset-0 h-5 w-5 text-zinc-400 transition-opacity duration-200 ${
+                  className={`absolute inset-0 h-5 w-5 text-zinc-500 dark:text-zinc-400 transition-opacity duration-200 ${
                     loadingMovies ? "opacity-0 delay-150" : "opacity-100"
                   }`}
                 />
                 <Loader2
-                  className={`absolute inset-0 h-5 w-5 text-zinc-400 animate-spin transition-opacity duration-200 ${
+                  className={`absolute inset-0 h-5 w-5 text-zinc-500 dark:text-zinc-400 animate-spin transition-opacity duration-200 ${
                     loadingMovies ? "opacity-100 delay-150" : "opacity-0"
                   }`}
                 />
@@ -827,7 +827,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Rechercher un film ou une série"
-                className="flex-1 bg-transparent text-white placeholder:text-zinc-500 outline-none text-base pr-8"
+                className="flex-1 bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-500 outline-none text-base pr-8"
               />
               {(query.trim() || mode === "search") && (
                 <button
@@ -837,16 +837,16 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                     if (mode === "search" && mediaType !== "likes")
                       fetchItems("top", "", 1, tmdbKey, mediaType);
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-700/80 hover:bg-zinc-600/80 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200/90 dark:bg-zinc-700/80 hover:bg-zinc-300 dark:hover:bg-zinc-600/80 transition-colors"
                 >
-                  <X className="h-4 w-4 text-zinc-300" />
+                  <X className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
                 </button>
               )}
             </div>
           </motion.form>
 
           <div className="mb-6 flex justify-center">
-            <div className="flex rounded-full bg-zinc-800/80 ring-1 ring-white/10 p-1">
+            <div className="flex rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 p-1">
               {(["movie", "tv", "animation", "likes"] as const).map((t) => (
                 <button
                   key={t}
@@ -854,7 +854,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                   className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
                     mediaType === t
                       ? "bg-indigo-600 text-white"
-                      : "text-zinc-400 hover:text-white"
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                   }`}
                 >
                   {t === "movie" ? (
@@ -878,7 +878,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
             </div>
           </div>
 
-          <h2 className="mb-4 text-sm font-semibold text-zinc-300">
+          <h2 className="mb-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
             {mediaType === "likes"
               ? `Ma liste (${likes.length})`
               : mode === "top"
@@ -891,7 +891,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
           </h2>
 
           {mediaType !== "likes" && moviesError && (
-            <p className="text-sm text-red-400">{moviesError}</p>
+            <p className="text-sm text-red-600 dark:text-red-400">{moviesError}</p>
           )}
 
           {mediaType !== "likes" &&
@@ -931,7 +931,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                 onClick={() => openItem(m)}
                 className="group text-left"
               >
-                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-900 ring-1 ring-white/8 transition-all duration-500 ease-out group-hover:ring-white/25 group-hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.7)]">
+                <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-200 dark:bg-zinc-900 ring-1 ring-black/8 dark:ring-white/8 transition-all duration-500 ease-out group-hover:ring-black/20 dark:group-hover:ring-white/25 group-hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.25)] dark:group-hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.7)]">
                   {m.posterPath ? (
                     <img
                       src={`https://image.tmdb.org/t/p/w342${m.posterPath}`}
@@ -940,7 +940,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                       className="h-full w-full object-cover transition-[filter] duration-500 ease-out group-hover:brightness-110"
                     />
                   ) : (
-                    <div className="flex h-full w-full items-center justify-center text-xs text-zinc-600 px-2 text-center">
+                    <div className="flex h-full w-full items-center justify-center text-xs text-zinc-400 dark:text-zinc-600 px-2 text-center">
                       {m.title}
                     </div>
                   )}
@@ -970,7 +970,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                     />
                   </span>
                 </div>
-                <p className="mt-2 text-xs font-medium text-white leading-snug line-clamp-1">
+                <p className="mt-2 text-xs font-medium text-zinc-900 dark:text-white leading-snug line-clamp-1">
                   {m.title}
                 </p>
                 <p className="text-[11px] text-zinc-500">{m.year}</p>
@@ -991,7 +991,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                   )
                 }
                 disabled={loadingMovies}
-                className="flex items-center gap-2 rounded-full bg-zinc-800/80 ring-1 ring-white/10 px-5 py-2.5 text-xs font-medium text-zinc-300 hover:bg-zinc-700/80 hover:text-white disabled:opacity-40 transition-colors"
+                className="flex items-center gap-2 rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 px-5 py-2.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white disabled:opacity-40 transition-colors"
               >
                 {loadingMovies && (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1019,27 +1019,27 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
               exit={{ opacity: 0, scale: 0.95, y: 8 }}
               transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl rounded-2xl bg-zinc-900/95 backdrop-blur-xl ring-1 ring-white/10 overflow-hidden shadow-2xl"
+              className="w-full max-w-2xl rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
             >
               <div className="flex items-start gap-4 px-5 pt-5 pb-4">
                 {selected.posterPath && (
                   <img
                     src={`https://image.tmdb.org/t/p/w154${selected.posterPath}`}
                     alt=""
-                    className="h-24 w-16 shrink-0 rounded-lg object-cover ring-1 ring-white/10"
+                    className="h-24 w-16 shrink-0 rounded-lg object-cover ring-1 ring-black/10 dark:ring-white/10"
                   />
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">
                     Versions disponibles
                   </p>
-                  <p className="text-base font-semibold text-white leading-snug">
+                  <p className="text-base font-semibold text-zinc-900 dark:text-white leading-snug">
                     {selected.title}
                   </p>
                   <div className="mt-1 flex items-center gap-3 text-xs text-zinc-500">
                     <span>{selected.year}</span>
                     {selected.voteAverage > 0 && (
-                      <span className="flex items-center gap-1 text-amber-400">
+                      <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
                         <Star className="h-3 w-3 fill-amber-400" />
                         {selected.voteAverage.toFixed(1)}
                       </span>
@@ -1048,26 +1048,26 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                 </div>
                 <button
                   onClick={() => toggleLike(selected)}
-                  className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                  className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
                 >
                   <Heart
                     className={`h-3.5 w-3.5 transition-colors ${
                       likedKeys.has(`${selected.mediaType}-${selected.id}`)
                         ? "fill-rose-500 text-rose-500"
-                        : "text-zinc-400"
+                        : "text-zinc-500 dark:text-zinc-400"
                     }`}
                   />
                 </button>
                 <button
                   onClick={closeMovie}
-                  className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                  className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
                 >
-                  <X className="h-3.5 w-3.5 text-zinc-400" />
+                  <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
                 </button>
               </div>
 
               {selected.overview && (
-                <p className="mx-5 mb-4 text-xs text-zinc-400 leading-relaxed line-clamp-4">
+                <p className="mx-5 mb-4 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed line-clamp-4">
                   {selected.overview}
                 </p>
               )}
@@ -1078,7 +1078,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                     ? Array.from({ length: 4 }, (_, i) => (
                         <div
                           key={i}
-                          className="h-[26px] w-24 shrink-0 rounded-full bg-zinc-800/60 animate-pulse"
+                          className="h-[26px] w-24 shrink-0 rounded-full bg-white/80 dark:bg-zinc-800/60 animate-pulse"
                         />
                       ))
                     : seasons.map((s) => (
@@ -1088,12 +1088,12 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                           className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-medium ring-1 transition-colors ${
                             activeSeason === s.number
                               ? "bg-indigo-600 text-white ring-indigo-500"
-                              : "bg-zinc-800/80 text-zinc-400 ring-white/10 hover:bg-zinc-700/80 hover:text-white"
+                              : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
                           }`}
                         >
                           Saison {s.number}
                           <span
-                            className={`ml-1 ${activeSeason === s.number ? "text-indigo-200" : "text-zinc-600"}`}
+                            className={`ml-1 ${activeSeason === s.number ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"}`}
                           >
                             {s.episodeCount} ép.
                           </span>
@@ -1104,11 +1104,11 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
 
               {releases === null && !releasesError && (
                 <div className="flex flex-wrap items-center gap-1.5 px-5 pb-3">
-                  <SlidersHorizontal className="mr-0.5 h-3.5 w-3.5 text-zinc-600" />
+                  <SlidersHorizontal className="mr-0.5 h-3.5 w-3.5 text-zinc-400 dark:text-zinc-600" />
                   {[64, 48, 56, 52, 44, 48].map((w, i) => (
                     <div
                       key={i}
-                      className="h-6 animate-pulse rounded-full bg-zinc-800/60"
+                      className="h-6 animate-pulse rounded-full bg-white/80 dark:bg-zinc-800/60"
                       style={{ width: w }}
                     />
                   ))}
@@ -1138,7 +1138,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                       className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 transition-colors ${
                         releaseSort === key
                           ? "bg-indigo-600 text-white ring-indigo-500"
-                          : "bg-zinc-800/80 text-zinc-400 ring-white/10 hover:bg-zinc-700/80 hover:text-white"
+                          : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
                       }`}
                     >
                       {label}
@@ -1151,7 +1151,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                     </button>
                   ))}
                   {(resOptions.length > 1 || langOptions.length > 1) && (
-                    <span className="mx-1 h-4 w-px bg-white/10" />
+                    <span className="mx-1 h-4 w-px bg-black/10 dark:bg-white/10" />
                   )}
                   {resOptions.length > 1 &&
                     resOptions.map((r) => (
@@ -1160,8 +1160,8 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                         onClick={() => setResFilter(resFilter === r ? null : r)}
                         className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase ring-1 transition-colors ${
                           resFilter === r
-                            ? "bg-indigo-500/20 text-indigo-300 ring-indigo-500/50"
-                            : "bg-zinc-800/80 text-zinc-400 ring-white/10 hover:bg-zinc-700/80 hover:text-white"
+                            ? "bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 ring-indigo-500/50"
+                            : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
                         }`}
                       >
                         {r}
@@ -1176,8 +1176,8 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                         }
                         className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase ring-1 transition-colors ${
                           langFilter === l
-                            ? "bg-green-500/15 text-green-400 ring-green-500/40"
-                            : "bg-zinc-800/80 text-zinc-400 ring-white/10 hover:bg-zinc-700/80 hover:text-white"
+                            ? "bg-green-500/15 text-green-600 dark:text-green-400 ring-green-500/40"
+                            : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
                         }`}
                       >
                         {l}
@@ -1196,28 +1196,28 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.25, delay: i * 0.07 }}
-                      className="flex items-center gap-4 rounded-xl bg-zinc-800/60 px-4 py-3"
+                      className="flex items-center gap-4 rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3"
                     >
                       <div className="min-w-0 flex-1 animate-pulse">
                         <div className="mb-2 flex items-center gap-1.5">
-                          <div className="h-[18px] w-12 rounded-md bg-zinc-700/70" />
-                          <div className="h-[18px] w-10 rounded-md bg-zinc-700/70" />
-                          <div className="h-[18px] w-12 rounded-md bg-zinc-700/70" />
-                          <div className="h-[18px] w-9 rounded-md bg-zinc-700/70" />
+                          <div className="h-[18px] w-12 rounded-md bg-zinc-300/70 dark:bg-zinc-700/70" />
+                          <div className="h-[18px] w-10 rounded-md bg-zinc-300/70 dark:bg-zinc-700/70" />
+                          <div className="h-[18px] w-12 rounded-md bg-zinc-300/70 dark:bg-zinc-700/70" />
+                          <div className="h-[18px] w-9 rounded-md bg-zinc-300/70 dark:bg-zinc-700/70" />
                         </div>
                         <div className="mb-2 flex items-center gap-3">
-                          <div className="h-3 w-14 rounded bg-zinc-700/70" />
-                          <div className="h-3 w-20 rounded bg-zinc-700/70" />
-                          <div className="h-3 w-16 rounded bg-zinc-700/50" />
+                          <div className="h-3 w-14 rounded bg-zinc-300/70 dark:bg-zinc-700/70" />
+                          <div className="h-3 w-20 rounded bg-zinc-300/70 dark:bg-zinc-700/70" />
+                          <div className="h-3 w-16 rounded bg-zinc-300/60 dark:bg-zinc-700/50" />
                         </div>
-                        <div className="h-2.5 w-3/4 rounded bg-zinc-700/40" />
+                        <div className="h-2.5 w-3/4 rounded bg-zinc-300/40 dark:bg-zinc-700/40" />
                       </div>
-                      <div className="h-8 w-8 shrink-0 rounded-full bg-zinc-700/70 animate-pulse" />
+                      <div className="h-8 w-8 shrink-0 rounded-full bg-zinc-300/70 dark:bg-zinc-700/70 animate-pulse" />
                     </motion.div>
                   ))}
                 {releasesError && (
                   <div className="flex h-full items-center justify-center px-6">
-                    <p className="text-center text-sm text-red-400">
+                    <p className="text-center text-sm text-red-600 dark:text-red-400">
                       {releasesError}
                     </p>
                   </div>
@@ -1250,36 +1250,36 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                       delay: Math.min(i * 0.04, 0.3),
                       ease: [0.22, 1, 0.36, 1],
                     }}
-                    className="flex items-center gap-4 rounded-xl bg-zinc-800/60 px-4 py-3"
+                    className="flex items-center gap-4 rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5 mb-1">
                         {occ.resolution && (
-                          <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
+                          <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
                             {occ.resolution}
                           </span>
                         )}
                         {occ.videoCodec && (
-                          <span className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                          <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                             {occ.videoCodec}
                           </span>
                         )}
                         {occ.specialVersion && (
-                          <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                          <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
                             {occ.specialVersion}
                           </span>
                         )}
                         {occ.languages.map((l) => (
                           <span
                             key={l}
-                            className="rounded-md bg-green-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-400"
+                            className="rounded-md bg-green-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-600 dark:text-green-400"
                           >
                             {l}
                           </span>
                         ))}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-500">
-                        <span className="text-zinc-300 font-medium">
+                        <span className="text-zinc-600 dark:text-zinc-300 font-medium">
                           {formatSize(occ.fileSize)}
                         </span>
                         <span className="text-green-500">
@@ -1293,7 +1293,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-[11px] text-zinc-600 truncate">
+                      <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-600 truncate">
                         {occ.torrentName}
                       </p>
                     </div>
@@ -1311,7 +1311,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                           <Download className="h-4 w-4 text-white" />
                         )}
                       </motion.button>
-                      <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
+                      <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
                         Télécharger
                       </span>
                     </div>
@@ -1339,7 +1339,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
               exit={{ opacity: 0, scale: 0.95, y: 8 }}
               transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-2xl bg-zinc-900/95 backdrop-blur-xl ring-1 ring-white/10 overflow-hidden shadow-2xl"
+              className="w-full max-w-lg rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
             >
               <div className="px-5 pt-5 pb-4">
                 <div className="flex items-start justify-between gap-4">
@@ -1347,15 +1347,15 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                     <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">
                       Fichiers disponibles
                     </p>
-                    <p className="text-sm font-semibold text-white leading-snug line-clamp-2">
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">
                       {debridModal.torrentName}
                     </p>
                   </div>
                   <button
                     onClick={() => setDebridModal(null)}
-                    className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-800 hover:bg-zinc-700 transition-colors"
+                    className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
                   >
-                    <X className="h-3.5 w-3.5 text-zinc-400" />
+                    <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
                   </button>
                 </div>
               </div>
@@ -1367,11 +1367,11 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                   return (
                     <div
                       key={i}
-                      className="rounded-xl bg-zinc-800/60 px-4 py-3"
+                      className="rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3"
                     >
                       <div className="mb-3">
                         {showName && (
-                          <p className="text-sm font-medium text-white leading-snug line-clamp-2 mb-0.5">
+                          <p className="text-sm font-medium text-zinc-900 dark:text-white leading-snug line-clamp-2 mb-0.5">
                             {fileName}
                           </p>
                         )}
@@ -1388,14 +1388,14 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                             copiedLink !== null ||
                             vlcLink !== null
                           }
-                          className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
                           {vlcLink === file.link ? (
-                            <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+                            <Loader2 className="h-3.5 w-3.5 text-zinc-900 dark:text-white animate-spin" />
                           ) : (
                             <img src={vlcLogo} className="h-4 w-4" />
                           )}
-                          <span className="text-xs font-medium text-white">
+                          <span className="text-xs font-medium text-zinc-900 dark:text-white">
                             Lire avec VLC
                           </span>
                         </motion.button>
@@ -1407,19 +1407,19 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                             copiedLink !== null ||
                             vlcLink !== null
                           }
-                          className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-700 hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
                           {copiedLink === file.link ? (
                             <>
-                              <Check className="h-3.5 w-3.5 text-green-400" />
-                              <span className="text-xs font-medium text-green-400">
+                              <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                              <span className="text-xs font-medium text-green-600 dark:text-green-400">
                                 Copie !
                               </span>
                             </>
                           ) : (
                             <>
-                              <Copy className="h-3.5 w-3.5 text-zinc-300" />
-                              <span className="text-xs font-medium text-zinc-300">
+                              <Copy className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-300" />
+                              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                                 Copier le lien
                               </span>
                             </>

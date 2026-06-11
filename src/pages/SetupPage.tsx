@@ -90,23 +90,23 @@ function KeyCard({
       <div
         className={`rounded-2xl px-5 py-5 ${
           optional
-            ? "bg-zinc-900/40 border border-dashed border-white/15"
-            : "bg-zinc-900/70 ring-1 ring-white/6"
+            ? "bg-white/60 dark:bg-zinc-900/40 border border-dashed border-black/15 dark:border-white/15"
+            : "bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6"
         }`}
       >
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">
           <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-            optional ? "bg-zinc-700 text-zinc-300" : "bg-indigo-600 text-white"
+            optional ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300" : "bg-indigo-600 text-white"
           }`}>
             {number}
           </span>
-          <p className="text-sm font-semibold text-white">{title}</p>
+          <p className="text-sm font-semibold text-zinc-900 dark:text-white">{title}</p>
         </div>
         <button
           type="button"
           onClick={() => openUrl(url)}
-          className="flex items-center gap-1.5 text-xs font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+          className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
         >
           {urlLabel}
           <ExternalLink className="h-3 w-3" />
@@ -115,7 +115,7 @@ function KeyCard({
 
       <ol className="space-y-1.5 mb-4">
         {steps.map((step, i) => (
-          <li key={i} className="flex gap-2 text-xs text-zinc-400 leading-relaxed">
+          <li key={i} className="flex gap-2 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
             <span className="shrink-0 font-semibold text-zinc-500">{i + 1}.</span>
             {step}
           </li>
@@ -129,7 +129,7 @@ function KeyCard({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full rounded-xl bg-zinc-950/60 ring-1 ring-white/6 pl-9 pr-3 py-2.5 text-sm text-white placeholder:text-zinc-600 outline-none focus:ring-indigo-500/40 transition-all"
+          className="w-full rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 pl-9 pr-3 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-600 outline-none focus:ring-indigo-500/40 transition-all"
         />
       </div>
       </div>
@@ -149,12 +149,12 @@ function ViewOption({ label, selected, onClick, children }: {
       className={`flex flex-col rounded-xl px-4 py-3 text-left transition-all ${
         selected
           ? "bg-indigo-500/[0.07] ring-2 ring-indigo-500"
-          : "bg-zinc-950/60 ring-1 ring-white/6 hover:ring-white/20"
+          : "bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 hover:ring-black/20 dark:hover:ring-white/20"
       }`}
     >
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className={`text-xs font-semibold ${selected ? "text-indigo-300" : "text-zinc-400"}`}>{label}</span>
-        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${selected ? "bg-indigo-500" : "ring-1 ring-white/15"}`}>
+        <span className={`text-xs font-semibold ${selected ? "text-indigo-700 dark:text-indigo-300" : "text-zinc-500 dark:text-zinc-400"}`}>{label}</span>
+        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${selected ? "bg-indigo-500" : "ring-1 ring-black/15 dark:ring-white/15"}`}>
           {selected && <Check className="h-2.5 w-2.5 text-white" />}
         </span>
       </div>
@@ -168,7 +168,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
     <button
       onClick={() => onChange(!checked)}
       className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
-        checked ? "bg-indigo-600" : "bg-zinc-700"
+        checked ? "bg-indigo-600" : "bg-zinc-300 dark:bg-zinc-700"
       }`}
     >
       <motion.div
@@ -193,12 +193,12 @@ function ViewModeCard({
 }) {
   const parsed = parseRelease(example);
   return (
-    <motion.div variants={item} className="rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 px-5 py-5">
+    <motion.div variants={item} className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-5">
       <div className="flex items-center gap-3 mb-1">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
-          <Icon className="h-4 w-4 text-indigo-400" />
+          <Icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
         </div>
-        <p className="text-sm font-semibold text-white">{title}</p>
+        <p className="text-sm font-semibold text-zinc-900 dark:text-white">{title}</p>
       </div>
       <p className="text-xs text-zinc-500 mb-4">{description}</p>
 
@@ -206,17 +206,17 @@ function ViewModeCard({
         <ViewOption label="Simplifiée" selected={value === "simple"} onClick={() => onChange("simple")}>
           <div className="flex items-center gap-1.5 mb-1">
             {parsed.quality && (
-              <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">{parsed.quality}</span>
+              <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">{parsed.quality}</span>
             )}
             {parsed.codec && (
-              <span className="rounded-md bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">{parsed.codec}</span>
+              <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{parsed.codec}</span>
             )}
           </div>
-          <p className="text-sm font-semibold text-white leading-snug">{parsed.title}</p>
+          <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug">{parsed.title}</p>
         </ViewOption>
 
         <ViewOption label="Détaillée" selected={value === "detailed"} onClick={() => onChange("detailed")}>
-          <p className="text-sm font-semibold text-white leading-snug break-all">{example}</p>
+          <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug break-all">{example}</p>
         </ViewOption>
       </div>
     </motion.div>
@@ -280,7 +280,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   }
 
   return (
-    <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#04050c]">
+    <main className="relative flex min-h-screen flex-col overflow-hidden bg-[#f4f6fc] dark:bg-[#04050c]">
       {/* Background */}
       <div className="pointer-events-none absolute inset-0">
         <motion.div
@@ -290,7 +290,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
         />
         <div className="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-violet-600/15 blur-[100px]" />
         <div className="absolute -bottom-24 -right-32 h-96 w-96 rounded-full bg-sky-500/10 blur-[110px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.14)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_45%_at_50%_22%,black,transparent_75%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(rgba(15,23,42,0.10)_1px,transparent_1px)] dark:bg-[radial-gradient(rgba(255,255,255,0.14)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_45%_at_50%_22%,black,transparent_75%)]" />
       </div>
 
       <AnimatePresence mode="wait">
@@ -313,11 +313,11 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 <img
                   src={logo}
                   alt="XingXing Debrid"
-                  className="relative h-24 w-24 rounded-2xl ring-1 ring-white/10 shadow-[0_0_50px_rgba(79,70,229,0.5)]"
+                  className="relative h-24 w-24 rounded-2xl ring-1 ring-black/10 dark:ring-white/10 shadow-[0_0_50px_rgba(79,70,229,0.5)]"
                 />
               </div>
-              <h1 className="text-3xl font-bold tracking-tight text-white mb-3">XingXing Debrid</h1>
-              <p className="text-sm text-zinc-400 max-w-sm leading-relaxed">
+              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-3">XingXing Debrid</h1>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm leading-relaxed">
                 De la recherche au visionnage, tout votre contenu en un seul endroit.
               </p>
             </motion.div>
@@ -327,14 +327,14 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 <motion.div
                   key={f.title}
                   variants={item}
-                  className="flex items-start gap-4 rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 px-5 py-4"
+                  className="flex items-start gap-4 rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-4"
                 >
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
-                    <f.icon className="h-4 w-4 text-indigo-400" />
+                    <f.icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-white mb-0.5">{f.title}</p>
-                    <p className="text-xs text-zinc-400 leading-relaxed">{f.text}</p>
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-0.5">{f.title}</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">{f.text}</p>
                   </div>
                 </motion.div>
               ))}
@@ -366,15 +366,15 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               <motion.button
                 whileTap={{ scale: 0.93 }}
                 onClick={() => setStep("intro")}
-                className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors mb-6"
+                className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span className="text-sm font-medium">Retour</span>
               </motion.button>
 
               <div className="text-center mb-2">
-                <h1 className="text-2xl font-bold tracking-tight text-white mb-2">Configurez vos clés API</h1>
-                <p className="text-sm text-zinc-400 max-w-sm mx-auto">
+                <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">Configurez vos clés API</h1>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
                   Deux clés gratuites suffisent pour relier l'application à C411 et AllDebrid. La clé TMDB est optionnelle.
                 </p>
               </div>
@@ -425,7 +425,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 }
               </motion.button>
               {!bothFilled && (
-                <p className="mt-2 text-center text-[11px] text-zinc-600">Renseignez les deux clés pour continuer.</p>
+                <p className="mt-2 text-center text-[11px] text-zinc-400 dark:text-zinc-600">Renseignez les deux clés pour continuer.</p>
               )}
             </motion.div>
           </motion.div>
@@ -444,15 +444,15 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               <motion.button
                 whileTap={{ scale: 0.93 }}
                 onClick={() => setStep("keys")}
-                className="flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 transition-colors mb-6"
+                className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span className="text-sm font-medium">Retour</span>
               </motion.button>
 
               <div className="text-center mb-2">
-                <h1 className="text-2xl font-bold tracking-tight text-white mb-2">Choisissez votre affichage</h1>
-                <p className="text-sm text-zinc-400 max-w-sm mx-auto">
+                <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">Choisissez votre affichage</h1>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
                   Cliquez sur l'affichage que vous préférez. Modifiable à tout moment dans les Paramètres.
                 </p>
               </div>
@@ -475,29 +475,29 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               onChange={setViewMode}
             />
 
-            <motion.div variants={item} className="rounded-2xl bg-zinc-900/70 ring-1 ring-white/6 px-5 py-5">
+            <motion.div variants={item} className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-5">
               <div className="flex items-center gap-3 mb-1">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
-                  <FileText className="h-4 w-4 text-indigo-400" />
+                  <FileText className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 </div>
-                <p className="text-sm font-semibold text-white">Fichiers .nfo</p>
+                <p className="text-sm font-semibold text-zinc-900 dark:text-white">Fichiers .nfo</p>
               </div>
               <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
                 Un fichier .nfo est un petit fichier texte ajouté par les teams de release pour décrire le contenu (qualité, langue, source). Il n'est pas nécessaire pour regarder vos films et séries.
               </p>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-950/60 ring-1 ring-white/6 px-4 py-3">
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-white">Ne pas afficher les fichiers .nfo</p>
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white">Ne pas afficher les fichiers .nfo</p>
                     <p className="text-xs text-zinc-500 mt-0.5">Les masque dans la liste des fichiers d'un magnet.</p>
                   </div>
                   <Toggle checked={hideNfo} onChange={setHideNfo} />
                 </div>
 
-                <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-950/60 ring-1 ring-white/6 px-4 py-3">
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-white">Ne pas télécharger les fichiers .nfo</p>
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white">Ne pas télécharger les fichiers .nfo</p>
                     <p className="text-xs text-zinc-500 mt-0.5">Les exclut des téléchargements groupés ("Tout télécharger").</p>
                   </div>
                   <Toggle checked={skipNfoDownload} onChange={setSkipNfoDownload} />
