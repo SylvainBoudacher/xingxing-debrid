@@ -24,8 +24,13 @@ function App() {
   const [devMode, setDevMode] = useState(false);
 
   useEffect(() => {
-    store.get<boolean>("setup_complete")
-      .then((done) => setPage(done ? "main" : "setup"))
+    Promise.all([
+      store.get<boolean>("setup_complete"),
+      store.get<boolean>("welcome_v1_seen"),
+    ])
+      .then(([done, welcomeSeen]) => {
+        setPage(done && welcomeSeen ? "main" : "setup");
+      })
       .catch((err) => {
         console.error("Store read failed:", err);
         setPage("setup");
@@ -34,6 +39,7 @@ function App() {
 
   async function handleSetupComplete() {
     await store.set("setup_complete", true);
+    await store.set("welcome_v1_seen", true);
     await store.save();
     setPage("main");
   }
