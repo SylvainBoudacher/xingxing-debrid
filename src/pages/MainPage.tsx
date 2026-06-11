@@ -587,6 +587,7 @@ export function MainPage({
               <SlidersHorizontal className="mr-2 h-4 w-4" />
               Paramètres
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onNavigate("patchnotes")}>
               <ScrollText className="mr-2 h-4 w-4" />
               Patch notes
