@@ -12,7 +12,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
+  ArrowDown,
   ArrowLeft,
+  ArrowUp,
   Check,
   Clapperboard,
   Copy,
@@ -252,6 +254,12 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
   const [releasesError, setReleasesError] = useState<string | null>(null);
   const [seasons, setSeasons] = useState<TmdbSeason[] | null>(null);
   const [activeSeason, setActiveSeason] = useState<number | null>(null);
+  const [releaseSort, setReleaseSort] = useState<
+    "seeders" | "size" | "resolution"
+  >("seeders");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [resFilter, setResFilter] = useState<string | null>(null);
+  const [langFilter, setLangFilter] = useState<string | null>(null);
 
   const [sendingHash, setSendingHash] = useState<string | null>(null);
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
@@ -262,6 +270,36 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
   const c411KeyRef = useRef<string>("");
   const allDebridKeyRef = useRef<string>("");
   const releasesReqRef = useRef(0);
+
+  const resOptions = releases
+    ? [
+        ...new Set(
+          releases.map((o) => o.resolution).filter((r): r is string => !!r),
+        ),
+      ].sort((a, b) => (RESOLUTION_RANK[b] ?? 0) - (RESOLUTION_RANK[a] ?? 0))
+    : [];
+  const langOptions = releases
+    ? [...new Set(releases.flatMap((o) => o.languages))]
+    : [];
+  const visibleReleases = releases
+    ? releases
+        .filter(
+          (o) =>
+            (!resFilter || o.resolution === resFilter) &&
+            (!langFilter || o.languages.includes(langFilter)),
+        )
+        .sort((a, b) => {
+          const cmp =
+            releaseSort === "size"
+              ? b.fileSize - a.fileSize
+              : releaseSort === "resolution"
+                ? (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) -
+                    (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) ||
+                  b.seeders - a.seeders
+                : b.seeders - a.seeders;
+          return sortDir === "asc" ? -cmp : cmp;
+        })
+    : null;
 
   useEffect(() => {
     getApiKey("c411_api_key").then((v) => {
@@ -393,6 +431,10 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
     setReleasesError(null);
     setSeasons(null);
     setActiveSeason(null);
+    setReleaseSort("seeders");
+    setSortDir("desc");
+    setResFilter(null);
+    setLangFilter(null);
   }
 
   // Recherche C411 par titre francais et titre original, dedupliquee par infoHash
@@ -532,6 +574,8 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
     setActiveSeason(season);
     setReleases(null);
     setReleasesError(null);
+    setResFilter(null);
+    setLangFilter(null);
     loadTvReleases(selected, season);
   }
 
@@ -896,7 +940,7 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">
-                    Versions disponibles sur C411
+                    Versions disponibles
                   </p>
                   <p className="text-base font-semibold text-white leading-snug">
                     {selected.title}
@@ -949,7 +993,91 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                 </div>
               )}
 
-              <div className="h-[26rem] overflow-y-auto px-3 pb-3 space-y-1.5">
+              {releases === null && !releasesError && (
+                <div className="flex flex-wrap items-center gap-1.5 px-5 pb-3">
+                  <SlidersHorizontal className="mr-0.5 h-3.5 w-3.5 text-zinc-600" />
+                  {[64, 48, 56, 52, 44, 48].map((w, i) => (
+                    <div
+                      key={i}
+                      className="h-6 animate-pulse rounded-full bg-zinc-800/60"
+                      style={{ width: w }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {releases !== null && releases.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 px-5 pb-3">
+                  <SlidersHorizontal className="mr-0.5 h-3.5 w-3.5 text-zinc-500" />
+                  {(
+                    [
+                      ["seeders", "Seeders"],
+                      ["size", "Taille"],
+                      ["resolution", "Qualité"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        if (releaseSort === key) {
+                          setSortDir(sortDir === "desc" ? "asc" : "desc");
+                        } else {
+                          setReleaseSort(key);
+                          setSortDir("desc");
+                        }
+                      }}
+                      className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 transition-colors ${
+                        releaseSort === key
+                          ? "bg-indigo-600 text-white ring-indigo-500"
+                          : "bg-zinc-800/80 text-zinc-400 ring-white/10 hover:bg-zinc-700/80 hover:text-white"
+                      }`}
+                    >
+                      {label}
+                      {releaseSort === key &&
+                        (sortDir === "desc" ? (
+                          <ArrowDown className="h-3 w-3" />
+                        ) : (
+                          <ArrowUp className="h-3 w-3" />
+                        ))}
+                    </button>
+                  ))}
+                  {(resOptions.length > 1 || langOptions.length > 1) && (
+                    <span className="mx-1 h-4 w-px bg-white/10" />
+                  )}
+                  {resOptions.length > 1 &&
+                    resOptions.map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => setResFilter(resFilter === r ? null : r)}
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase ring-1 transition-colors ${
+                          resFilter === r
+                            ? "bg-indigo-500/20 text-indigo-300 ring-indigo-500/50"
+                            : "bg-zinc-800/80 text-zinc-400 ring-white/10 hover:bg-zinc-700/80 hover:text-white"
+                        }`}
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  {langOptions.length > 1 &&
+                    langOptions.map((l) => (
+                      <button
+                        key={l}
+                        onClick={() =>
+                          setLangFilter(langFilter === l ? null : l)
+                        }
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase ring-1 transition-colors ${
+                          langFilter === l
+                            ? "bg-green-500/15 text-green-400 ring-green-500/40"
+                            : "bg-zinc-800/80 text-zinc-400 ring-white/10 hover:bg-zinc-700/80 hover:text-white"
+                        }`}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                </div>
+              )}
+
+              <div className="h-[32rem] max-h-[65vh] overflow-y-auto px-3 pb-3 space-y-1.5">
                 {releases === null &&
                   !releasesError &&
                   Array.from({ length: 6 }, (_, i) => (
@@ -994,7 +1122,16 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
                     </p>
                   </div>
                 )}
-                {releases?.map((occ, i) => (
+                {releases !== null &&
+                  releases.length > 0 &&
+                  visibleReleases?.length === 0 && (
+                    <div className="flex h-full items-center justify-center">
+                      <p className="text-center text-sm text-zinc-500">
+                        Aucune version ne correspond aux filtres.
+                      </p>
+                    </div>
+                  )}
+                {visibleReleases?.map((occ, i) => (
                   <motion.div
                     key={occ.infoHash}
                     initial={{ opacity: 0, y: 8 }}
