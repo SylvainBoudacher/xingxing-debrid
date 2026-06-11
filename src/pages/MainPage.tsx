@@ -25,6 +25,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Clapperboard,
+  Compass,
   Copy,
   Download,
   FileText,
@@ -250,7 +251,7 @@ function formatSize(bytes: number): string {
 
 interface MainPageProps {
   onNavigate: (
-    page: "magnets" | "preferences" | "patchnotes" | "setup",
+    page: "magnets" | "preferences" | "patchnotes" | "setup" | "discover",
   ) => void;
   devMode: boolean;
   onToggleDevMode: () => void;
@@ -579,6 +580,10 @@ export function MainPage({
             align="end"
             className={import.meta.env.DEV ? "w-56" : "w-44"}
           >
+            <DropdownMenuItem onClick={() => onNavigate("discover")}>
+              <Compass className="mr-2 h-4 w-4" />
+              Découverte
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onNavigate("magnets")}>
               <Magnet className="mr-2 h-4 w-4" />
               Magnets

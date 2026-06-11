@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-export type ApiKeyName = "c411_api_key" | "alldebrid_api_key";
+export type ApiKeyName = "c411_api_key" | "alldebrid_api_key" | "tmdb_api_key";
 
 export function getApiKey(name: ApiKeyName): Promise<string | null> {
   return invoke<string | null>("get_api_key", { name });
