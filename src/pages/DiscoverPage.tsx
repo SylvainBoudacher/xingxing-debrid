@@ -242,9 +242,10 @@ const IMDB_ID_RE = /^tt\d{5,10}$/i;
 interface DiscoverPageProps {
   onBack: () => void;
   onNavigate: (page: "magnets" | "preferences" | "patchnotes") => void;
+  summerEnabled: boolean;
 }
 
-export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
+export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPageProps) {
   const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(undefined);
   const [query, setQuery] = useState("");
   const [mediaType, setMediaType] = useState<DiscoverTab>("movie");
@@ -703,7 +704,11 @@ export function DiscoverPage({ onBack, onNavigate }: DiscoverPageProps) {
   }
 
   return (
-    <main className="relative isolate flex min-h-screen flex-col bg-[#f4f6fc] dark:bg-[#04050c]">
+    <main
+      className={`relative isolate flex min-h-screen flex-col ${
+        summerEnabled ? "" : "bg-[#f4f6fc] dark:bg-[#04050c]"
+      }`}
+    >
       {/* Background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <motion.div
