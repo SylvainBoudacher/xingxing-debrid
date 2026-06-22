@@ -4,11 +4,23 @@ import { useEffect, useRef } from "react";
 // drifting around. A new duck appears every SPAWN_MS until MAX_DUCKS.
 
 const MAX_DUCKS = 15;
-const SPAWN_MS = 20_000;
+const SPAWN_MS = 10_000;
+const FIRST_SPAWN_MS = 5_000;
 const BORDER = 16; // pool coping width
 const DUCK_BASE = 92; // on-screen height of a scale-1 duck
 
-type Accessory = "none" | "shades" | "pirate" | "crown" | "party";
+type Accessory =
+  | "none"
+  | "shades"
+  | "pirate"
+  | "crown"
+  | "party"
+  | "tophat"
+  | "sunhat"
+  | "flower"
+  | "snorkel"
+  | "bowtie"
+  | "headphones";
 
 interface Variant {
   body: string;
@@ -42,6 +54,17 @@ const VARIANTS: Variant[] = [
   { body: "#7C6B8A", beak: "#F5811F", acc: "none" }, // dusk purple
   { body: "#4A5568", beak: "#F5A623", acc: "none" }, // charcoal
   { body: "#F5C518", beak: "#F5811F", acc: "crown", accColor: "#FFF0A0" }, // gold king
+  // accessorized
+  { body: "#FFD21E", beak: "#F5811F", acc: "tophat", accColor: "#E0457B" },
+  { body: "#F4F7FB", beak: "#F5811F", acc: "sunhat", accColor: "#FF6F61" },
+  { body: "#FF9A3C", beak: "#E8620F", acc: "sunhat", accColor: "#3FD0C8" },
+  { body: "#FB7AA8", beak: "#F5811F", acc: "flower", accColor: "#FFFFFF" },
+  { body: "#7BD850", beak: "#F5811F", acc: "flower", accColor: "#FF5C8A" },
+  { body: "#4FB0F0", beak: "#F5811F", acc: "snorkel" },
+  { body: "#5EE6C5", beak: "#F5811F", acc: "snorkel" },
+  { body: "#F4F7FB", beak: "#F5811F", acc: "bowtie", accColor: "#E0457B" },
+  { body: "#A78BFA", beak: "#F5811F", acc: "headphones", accColor: "#FB7185" },
+  { body: "#FFD21E", beak: "#F5811F", acc: "headphones", accColor: "#5B8DEF" },
 ];
 
 const SW = 130;
@@ -68,6 +91,18 @@ function makeDuckSprite(v: Variant): HTMLCanvasElement {
     c.beginPath();
     c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
     c.fill();
+  };
+  const tri = (
+    _c: CanvasRenderingContext2D,
+    pts: [number, number][],
+    style: string,
+  ) => {
+    _c.fillStyle = style;
+    _c.beginPath();
+    _c.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) _c.lineTo(pts[i][0], pts[i][1]);
+    _c.closePath();
+    _c.fill();
   };
 
   // soft dark rim behind the silhouette for definition
@@ -207,6 +242,56 @@ function makeDuckSprite(v: Variant): HTMLCanvasElement {
     c.fillRect(84, 6, 3, 3);
     c.fillRect(79, -6, 3, 3);
     fillEll(80, -18, 3.2, 3.2, "#FACC15"); // pom-pom
+  } else if (v.acc === "tophat") {
+    c.fillStyle = "#23272e";
+    fillEll(80, 15, 27, 6.5, "#23272e"); // brim
+    c.fillRect(67, 0, 28, 15); // cylinder
+    c.fillStyle = v.accColor!;
+    c.fillRect(67, 5, 28, 4); // band
+    c.fillStyle = "rgba(255,255,255,0.12)";
+    c.fillRect(70, 1, 3, 13); // sheen
+  } else if (v.acc === "sunhat") {
+    fillEll(80, 16, 31, 8, "#F2CE7E"); // straw brim
+    fillEll(80, 9, 15, 9, "#F2CE7E"); // dome
+    c.strokeStyle = "rgba(150,110,40,0.4)";
+    c.lineWidth = 1;
+    c.beginPath();
+    c.ellipse(80, 16, 31, 8, 0, 0, Math.PI * 2);
+    c.stroke();
+    fillEll(80, 13, 14, 3.4, v.accColor!); // ribbon
+  } else if (v.acc === "flower") {
+    const pc = v.accColor!;
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      fillEll(64 + Math.cos(a) * 5.5, 15 + Math.sin(a) * 5.5, 4, 4, pc);
+    }
+    fillEll(64, 15, 3, 3, "#FFD21E"); // center
+  } else if (v.acc === "snorkel") {
+    c.fillStyle = "#22303C";
+    c.fillRect(70, 32, 22, 3); // strap
+    fillEll(95, 37, 12.5, 10, "#22303C"); // mask frame
+    fillEll(95, 37, 9.5, 7.5, "rgba(150,225,255,0.7)"); // glass
+    c.fillStyle = "#F5811F";
+    c.fillRect(110, 6, 4.5, 34); // tube
+    c.fillRect(110, 6, 9, 4); // bend
+    c.fillStyle = "#1f2937";
+    c.fillRect(112.5, 36, 5, 5); // mouthpiece
+  } else if (v.acc === "bowtie") {
+    const bc = v.accColor!;
+    tri(c, [[86, 60], [78, 55], [78, 65]], bc);
+    tri(c, [[86, 60], [94, 55], [94, 65]], bc);
+    fillEll(86, 60, 2.2, 3, "rgba(0,0,0,0.25)");
+    fillEll(86, 60, 1.8, 2.5, bc);
+  } else if (v.acc === "headphones") {
+    c.strokeStyle = "#22303C";
+    c.lineWidth = 4;
+    c.beginPath();
+    c.ellipse(82, 44, 30, 30, 0, Math.PI * 1.2, Math.PI * 1.8);
+    c.stroke();
+    c.fillStyle = "#22303C";
+    c.fillRect(53, 30, 4, 14); // side bar
+    fillEll(56, 46, 6, 8, "#22303C"); // ear cup
+    fillEll(56, 46, 3.5, 5, v.accColor!); // cushion
   }
 
   return cv;
@@ -289,14 +374,20 @@ function spawnDuck() {
 }
 
 // Started once; keeps spawning (up to MAX_DUCKS) even while off the page.
+// The very first duck arrives after FIRST_SPAWN_MS, then one every SPAWN_MS.
 function ensureSpawning() {
   if (spawnTimer !== null) return;
-  if (pool.length === 0) spawnDuck();
-  spawnTimer = window.setInterval(spawnDuck, SPAWN_MS);
+  const firstDelay = pool.length === 0 ? FIRST_SPAWN_MS : SPAWN_MS;
+  spawnTimer = window.setTimeout(() => {
+    spawnDuck();
+    spawnTimer = window.setInterval(spawnDuck, SPAWN_MS);
+  }, firstDelay);
 }
 
-export function PixelPool() {
+export function PixelPool({ active = true }: { active?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const activeRef = useRef(active);
+  activeRef.current = active;
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -304,6 +395,112 @@ export function PixelPool() {
     let w = 0;
     let h = 0;
     let dpr = 1;
+
+    // drag-to-move state
+    let dragging: Duck | null = null;
+    let dragDX = 0;
+    let dragDY = 0;
+    let lastPX = 0;
+    let lastPY = 0;
+    let lastPT = 0;
+    let throwVX = 0;
+    let throwVY = 0;
+    let appliedCursor = "";
+
+    const setCursor = (cur: string) => {
+      if (appliedCursor === cur) return;
+      appliedCursor = cur;
+      document.body.style.cursor = cur;
+    };
+
+    function overUI(e: PointerEvent): boolean {
+      const t = e.target as HTMLElement | null;
+      return !!t?.closest(
+        "button, a, input, textarea, select, [role='button'], [role='menuitem']",
+      );
+    }
+
+    function updateHoverCursor(e: PointerEvent) {
+      if (!activeRef.current) return setCursor("");
+      setCursor(!overUI(e) && duckAt(e.clientX, e.clientY) ? "grab" : "");
+    }
+
+    function duckAt(px: number, py: number): Duck | null {
+      // topmost first (drawn last = highest y after the per-frame sort)
+      for (let i = pool.length - 1; i >= 0; i--) {
+        const d = pool[i];
+        const dh = DUCK_BASE * d.scale;
+        const dw = dh * (SW / SH);
+        if (
+          px >= d.x - dw / 2 &&
+          px <= d.x + dw / 2 &&
+          py >= d.y - dh / 2 &&
+          py <= d.y + dh / 2
+        )
+          return d;
+      }
+      return null;
+    }
+
+    function onPointerDown(e: PointerEvent) {
+      if (!activeRef.current || overUI(e)) return;
+      const d = duckAt(e.clientX, e.clientY);
+      if (!d) return;
+      dragging = d;
+      dragDX = d.x - e.clientX;
+      dragDY = d.y - e.clientY;
+      d.vx = 0;
+      d.vy = 0;
+      d.entering = false;
+      lastPX = e.clientX;
+      lastPY = e.clientY;
+      lastPT = performance.now();
+      throwVX = throwVY = 0;
+      setCursor("grabbing");
+      e.preventDefault();
+    }
+
+    function onPointerMove(e: PointerEvent) {
+      if (!dragging) {
+        updateHoverCursor(e);
+        return;
+      }
+      const now = performance.now();
+      const dtp = Math.max(8, now - lastPT);
+      throwVX = ((e.clientX - lastPX) / dtp) * 1000;
+      throwVY = ((e.clientY - lastPY) / dtp) * 1000;
+      lastPX = e.clientX;
+      lastPY = e.clientY;
+      lastPT = now;
+      dragging.x = e.clientX + dragDX;
+      dragging.y = e.clientY + dragDY;
+    }
+
+    function onPointerUp(e: PointerEvent) {
+      if (!dragging) return;
+      // dropped into the drain: remove it, freeing a slot for a new duck
+      if (overDrain(dragging.x, dragging.y)) {
+        const i = pool.indexOf(dragging);
+        if (i >= 0) pool.splice(i, 1);
+        dragging = null;
+        updateHoverCursor(e);
+        return;
+      }
+      let vx = throwVX;
+      let vy = throwVY;
+      const sp = Math.hypot(vx, vy);
+      if (sp < 4) {
+        // released without a flick: drift off gently
+        const a = Math.random() * Math.PI * 2;
+        (vx = Math.cos(a) * 12), (vy = Math.sin(a) * 12);
+      } else if (sp > 60) {
+        (vx *= 60 / sp), (vy *= 60 / sp);
+      }
+      dragging.vx = vx;
+      dragging.vy = vy;
+      dragging = null;
+      updateHoverCursor(e);
+    }
 
     const isDark = () => document.documentElement.classList.contains("dark");
 
@@ -374,6 +571,65 @@ export function PixelPool() {
       ctx.fillRect(w - BORDER, BORDER - 3, 3, h - 2 * (BORDER - 3));
     }
 
+    function drain() {
+      const r = 36;
+      return { x: w - BORDER - r - 16, y: h - BORDER - r - 16, r };
+    }
+
+    function overDrain(px: number, py: number): boolean {
+      const d = drain();
+      return Math.hypot(px - d.x, py - d.y) <= d.r;
+    }
+
+    function drawDrain(now: number, hot: boolean) {
+      const dark = isDark();
+      const d = drain();
+
+      // coping ring
+      ctx.fillStyle = dark ? "#0c2a40" : "#d4ecf8";
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // dark hole
+      const hole = ctx.createRadialGradient(d.x, d.y, 2, d.x, d.y, d.r * 0.82);
+      hole.addColorStop(0, dark ? "#01040a" : "#063147");
+      hole.addColorStop(1, dark ? "#06223a" : "#0b4a6e");
+      ctx.fillStyle = hole;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r * 0.82, 0, Math.PI * 2);
+      ctx.fill();
+
+      // rotating whirlpool
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r * 0.82, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.strokeStyle = hot ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.28)";
+      ctx.lineWidth = 2.5;
+      const rot = now * 0.0025;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        for (let a = 0; a < Math.PI * 1.8; a += 0.2) {
+          const rr = d.r * 0.78 * (1 - a / (Math.PI * 2.1));
+          const ang = a + rot + (i * Math.PI * 2) / 3;
+          const px = d.x + Math.cos(ang) * rr;
+          const py = d.y + Math.sin(ang) * rr;
+          a === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // highlight ring when a duck hovers over it
+      ctx.strokeStyle = hot ? "#ffffff" : dark ? "#1B6E94" : "#1E6F94";
+      ctx.lineWidth = hot ? 3.5 : 2;
+      const pulse = hot ? Math.sin(now * 0.012) * 2 : 0;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r + 1 + pulse, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
     function drawDuck(d: Duck, t: number) {
       const bob = Math.sin(t * 0.003 + d.phase) * 3;
       const tilt = Math.sin(t * 0.003 + d.phase + 1) * 0.05;
@@ -406,9 +662,11 @@ export function PixelPool() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.imageSmoothingEnabled = false;
       drawWater(now);
+      drawDrain(now, !!(dragging && overDrain(dragging.x, dragging.y)));
 
       const b = inner();
       for (const d of pool) {
+        if (d === dragging) continue; // held by the cursor
         d.x += d.vx * dt;
         d.y += d.vy * dt;
         if (d.entering) {
@@ -443,6 +701,10 @@ export function PixelPool() {
     resize();
     ensureSpawning();
     window.addEventListener("resize", resize);
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
     raf = requestAnimationFrame(frame);
 
     // Note: the ducks (pool) and spawn timer are intentionally kept alive on
@@ -450,6 +712,11 @@ export function PixelPool() {
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+      document.body.style.cursor = "";
     };
   }, []);
 
