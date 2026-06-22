@@ -50,7 +50,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { ViewMode } from "./PreferencesPage";
 
@@ -294,17 +294,16 @@ export function MainPage({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    getApiKey("c411_api_key").then((v) => {
-      if (v) apiKeyRef.current = v;
-    });
-    getApiKey("alldebrid_api_key").then((v) => {
-      if (v) allDebridKeyRef.current = v;
-    });
-    store.get<string>("patchnotes_seen").then((v) => {
-      if (v !== LATEST_VERSION) setShowPatchNotif(true);
-    });
-    store.get<ViewMode>("search_view_mode").then((v) => {
-      setSimpleSearchView((v ?? "simple") === "simple");
+    Promise.all([
+      getApiKey("c411_api_key"),
+      getApiKey("alldebrid_api_key"),
+      store.get<string>("patchnotes_seen"),
+      store.get<ViewMode>("search_view_mode"),
+    ]).then(([c411Key, allDebridKey, patchnotesSeen, searchViewMode]) => {
+      if (c411Key) apiKeyRef.current = c411Key;
+      if (allDebridKey) allDebridKeyRef.current = allDebridKey;
+      if (patchnotesSeen !== LATEST_VERSION) setShowPatchNotif(true);
+      setSimpleSearchView((searchViewMode ?? "simple") === "simple");
     });
   }, []);
 
@@ -499,33 +498,43 @@ export function MainPage({
     goToPage(1, sortBy, dir);
   }
 
-  const groupCounts = new Map<number, number>();
-  const qualityCounts = new Map<string, number>();
-  const codecCounts = new Map<string, number>();
-  for (const r of results ?? []) {
-    const g = getCategoryGroup(r.category);
-    groupCounts.set(g, (groupCounts.get(g) ?? 0) + 1);
-    const p = parseRelease(r.title);
-    if (p.quality)
-      qualityCounts.set(p.quality, (qualityCounts.get(p.quality) ?? 0) + 1);
-    if (p.codec) codecCounts.set(p.codec, (codecCounts.get(p.codec) ?? 0) + 1);
-  }
+  const parsedResults = useMemo(
+    () =>
+      (results ?? []).map((r) => ({
+        result: r,
+        group: getCategoryGroup(r.category),
+        parsed: parseRelease(r.title),
+      })),
+    [results],
+  );
 
-  let displayed = results ?? [];
-  if (activeCats.length > 0)
-    displayed = displayed.filter((r) =>
-      activeCats.includes(getCategoryGroup(r.category)),
-    );
-  if (activeQualities.length > 0 || activeCodecs.length > 0)
-    displayed = displayed.filter((r) => {
-      const p = parseRelease(r.title);
-      return (
-        (activeQualities.length === 0 ||
-          (p.quality !== null && activeQualities.includes(p.quality))) &&
-        (activeCodecs.length === 0 ||
-          (p.codec !== null && activeCodecs.includes(p.codec)))
-      );
-    });
+  const { groupCounts, qualityCounts, codecCounts } = useMemo(() => {
+    const gc = new Map<number, number>();
+    const qc = new Map<string, number>();
+    const cc = new Map<string, number>();
+    for (const { group, parsed } of parsedResults) {
+      gc.set(group, (gc.get(group) ?? 0) + 1);
+      if (parsed.quality) qc.set(parsed.quality, (qc.get(parsed.quality) ?? 0) + 1);
+      if (parsed.codec) cc.set(parsed.codec, (cc.get(parsed.codec) ?? 0) + 1);
+    }
+    return { groupCounts: gc, qualityCounts: qc, codecCounts: cc };
+  }, [parsedResults]);
+
+  const displayed = useMemo(() => {
+    let list = parsedResults;
+    if (activeCats.length > 0)
+      list = list.filter(({ group }) => activeCats.includes(group));
+    if (activeQualities.length > 0 || activeCodecs.length > 0)
+      list = list.filter(({ parsed }) => {
+        return (
+          (activeQualities.length === 0 ||
+            (parsed.quality !== null && activeQualities.includes(parsed.quality))) &&
+          (activeCodecs.length === 0 ||
+            (parsed.codec !== null && activeCodecs.includes(parsed.codec)))
+        );
+      });
+    return list;
+  }, [parsedResults, activeCats, activeQualities, activeCodecs]);
   return (
     <main
       className={`relative flex min-h-screen flex-col ${
@@ -1014,7 +1023,7 @@ export function MainPage({
                     })}
                 </div>
               )}
-              {displayed.length === 0 && (
+              {displayed.length === 0 && results !== null && results.length > 0 && (
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -1024,11 +1033,9 @@ export function MainPage({
                 </motion.p>
               )}
               <AnimatePresence mode="popLayout">
-                {displayed.map((r, i) => {
+                {displayed.map(({ result: r, parsed: p }, i) => {
                   const { icon: Icon, color } = getCategoryIcon(r.category);
-                  const parsed = simpleSearchView
-                    ? parseRelease(r.title)
-                    : null;
+                  const parsed = simpleSearchView ? p : null;
                   return (
                     <motion.div
                       key={r.guid || `${r.title}-${r.size}`}

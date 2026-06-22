@@ -24,6 +24,7 @@ function App() {
   const [page, setPage] = useState<Page | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [summerEnabled, setSummerEnabled] = useState(true);
+  const [summerFps, setSummerFps] = useState<30 | 60>(30);
 
   useEffect(() => {
     Promise.all([
@@ -49,8 +50,16 @@ function App() {
         const v = await store.get<boolean>("summer_pool_enabled");
         setSummerEnabled(v ?? true);
       }
+      const savedFps = await store.get<number>("summer_pool_fps");
+      if (savedFps === 60) setSummerFps(60);
     })();
   }, []);
+
+  async function handleSetSummerFps(v: 30 | 60) {
+    setSummerFps(v);
+    await store.set("summer_pool_fps", v);
+    await store.save();
+  }
 
   async function handleToggleSummer(v: boolean) {
     setSummerEnabled(v);
@@ -79,7 +88,10 @@ function App() {
             page === "main" || page === "discover" ? "opacity-100" : "opacity-0"
           }`}
         >
-          <PixelPool active={page === "main" || page === "discover"} />
+          <PixelPool
+            active={page === "main" || page === "discover"}
+            fps={summerFps}
+          />
         </div>
       )}
       {devMode && (
@@ -139,6 +151,8 @@ function App() {
               onNavigate={setPage}
               summerEnabled={summerEnabled}
               onToggleSummer={handleToggleSummer}
+              summerFps={summerFps}
+              onSetSummerFps={handleSetSummerFps}
             />
           </motion.div>
         )}

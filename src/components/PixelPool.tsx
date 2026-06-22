@@ -384,10 +384,18 @@ function ensureSpawning() {
   }, firstDelay);
 }
 
-export function PixelPool({ active = true }: { active?: boolean }) {
+export function PixelPool({
+  active = true,
+  fps = 30,
+}: {
+  active?: boolean;
+  fps?: number;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const activeRef = useRef(active);
   activeRef.current = active;
+  const fpsRef = useRef(fps);
+  fpsRef.current = fps;
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -667,12 +675,12 @@ export function PixelPool({ active = true }: { active?: boolean }) {
       ctx.restore();
     }
 
-    const FRAME_MS = 1000 / 30; // cap the ambient canvas at ~30fps
     let last = performance.now();
     let raf = 0;
     function frame(now: number) {
       raf = requestAnimationFrame(frame);
-      if (now - last < FRAME_MS) return;
+      // cap the ambient canvas at the configured fps (30 or 60)
+      if (now - last < 1000 / fpsRef.current) return;
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
 

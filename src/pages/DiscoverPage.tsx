@@ -35,8 +35,8 @@ import {
   Tv,
   X,
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 type MediaType = "movie" | "tv";
@@ -279,36 +279,48 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
   const c411KeyRef = useRef<string>("");
   const allDebridKeyRef = useRef<string>("");
   const releasesReqRef = useRef(0);
+  const prefersReducedMotion = useReducedMotion();
 
-  const resOptions = releases
-    ? [
-        ...new Set(
-          releases.map((o) => o.resolution).filter((r): r is string => !!r),
-        ),
-      ].sort((a, b) => (RESOLUTION_RANK[b] ?? 0) - (RESOLUTION_RANK[a] ?? 0))
-    : [];
-  const langOptions = releases
-    ? [...new Set(releases.flatMap((o) => o.languages))]
-    : [];
-  const visibleReleases = releases
-    ? releases
-        .filter(
-          (o) =>
-            (!resFilter || o.resolution === resFilter) &&
-            (!langFilter || o.languages.includes(langFilter)),
-        )
-        .sort((a, b) => {
-          const cmp =
-            releaseSort === "size"
-              ? b.fileSize - a.fileSize
-              : releaseSort === "resolution"
-                ? (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) -
-                    (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) ||
-                  b.seeders - a.seeders
-                : b.seeders - a.seeders;
-          return sortDir === "asc" ? -cmp : cmp;
-        })
-    : null;
+  const resOptions = useMemo(
+    () =>
+      releases
+        ? [
+            ...new Set(
+              releases.map((o) => o.resolution).filter((r): r is string => !!r),
+            ),
+          ].sort((a, b) => (RESOLUTION_RANK[b] ?? 0) - (RESOLUTION_RANK[a] ?? 0))
+        : [],
+    [releases],
+  );
+
+  const langOptions = useMemo(
+    () => (releases ? [...new Set(releases.flatMap((o) => o.languages))] : []),
+    [releases],
+  );
+
+  const visibleReleases = useMemo(
+    () =>
+      releases
+        ? [...releases]
+            .filter(
+              (o) =>
+                (!resFilter || o.resolution === resFilter) &&
+                (!langFilter || o.languages.includes(langFilter)),
+            )
+            .sort((a, b) => {
+              const cmp =
+                releaseSort === "size"
+                  ? b.fileSize - a.fileSize
+                  : releaseSort === "resolution"
+                    ? (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) -
+                        (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) ||
+                      b.seeders - a.seeders
+                    : b.seeders - a.seeders;
+              return sortDir === "asc" ? -cmp : cmp;
+            })
+        : null,
+    [releases, resFilter, langFilter, releaseSort, sortDir],
+  );
 
   useEffect(() => {
     getApiKey("c411_api_key").then((v) => {
@@ -436,7 +448,10 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
     }
   }
 
-  const likedKeys = new Set(likes.map((l) => `${l.mediaType}-${l.id}`));
+  const likedKeys = useMemo(
+    () => new Set(likes.map((l) => `${l.mediaType}-${l.id}`)),
+    [likes],
+  );
 
   function toggleLike(item: TmdbItem) {
     const key = `${item.mediaType}-${item.id}`;
@@ -466,13 +481,18 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
   }> {
     const titles = [item.title, item.originalTitle].filter(Boolean);
     const queries = [...new Map(titles.map((t) => [normalize(t), t])).values()];
+    const results = await Promise.allSettled(
+      queries.map(async (q) => {
+        const url = `https://c411.org/api/torrents?page=1&perPage=50&sortBy=seeders&sortOrder=desc&name=${encodeURIComponent(q)}&apikey=${c411KeyRef.current}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Erreur C411 ${res.status}`);
+        return (await res.json()) as { data: C411Torrent[] };
+      }),
+    );
     const byHash = new Map<string, C411Torrent>();
-    for (const q of queries) {
-      const url = `https://c411.org/api/torrents?page=1&perPage=50&sortBy=seeders&sortOrder=desc&name=${encodeURIComponent(q)}&apikey=${c411KeyRef.current}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Erreur C411 ${res.status}`);
-      const json = (await res.json()) as { data: C411Torrent[] };
-      for (const t of json.data) {
+    for (const r of results) {
+      if (r.status === "rejected") throw new Error(r.reason);
+      for (const t of r.value.data) {
         if (!byHash.has(t.infoHash)) byHash.set(t.infoHash, t);
       }
     }
@@ -487,7 +507,7 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
   }
 
   function sortOccupants(occupants: Occupant[]): Occupant[] {
-    return occupants.sort(
+    return [...occupants].sort(
       (a, b) =>
         (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) -
           (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) || b.fileSize - a.fileSize,
@@ -712,7 +732,7 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
       {/* Background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <motion.div
-          animate={{ opacity: [0.7, 1, 0.7], scale: [1, 1.08, 1] }}
+          animate={prefersReducedMotion ? {} : { opacity: [0.7, 1, 0.7], scale: [1, 1.08, 1] }}
           transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
           className="absolute -top-40 left-1/2 -translate-x-1/2 h-[440px] w-[700px] rounded-full bg-indigo-600/25 blur-[120px]"
         />
