@@ -41,7 +41,13 @@ The app follows standard Tauri 2 architecture:
 
 **HTTP requests**: use `@tauri-apps/plugin-http` (frontend) or `tauri-plugin-http` (Rust) — both are already enabled. Direct `fetch()` from the renderer is also permitted (CSP is `null`).
 
-**Persistent storage**: `tauri-plugin-store` is initialized; use `@tauri-apps/plugin-store` on the frontend for key-value persistence.
+**Persistent storage**: `tauri-plugin-store` is initialized; use `@tauri-apps/plugin-store` on the frontend for key-value persistence. The store file is `settings.json`.
+
+**Sensitive keys (API keys, session cookies)**: stored in the OS keyring via the `keyring` crate. Use the `get_api_key` / `set_api_key` Tauri commands from the frontend - never write secrets to the store.
+
+**Navigation**: no router library. Page state is a `Page` union type held in `App.tsx`; pass a `setPage` callback down to pages that need to navigate.
+
+**UI components**: shadcn/ui components live in `src/components/ui/`. Page-level components are in `src/pages/`. Page transitions use `motion/react` (`AnimatePresence` + `motion.div`).
 
 ## Output
 
