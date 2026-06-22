@@ -256,12 +256,14 @@ interface MainPageProps {
   ) => void;
   devMode: boolean;
   onToggleDevMode: () => void;
+  summerEnabled: boolean;
 }
 
 export function MainPage({
   onNavigate,
   devMode,
   onToggleDevMode,
+  summerEnabled,
 }: MainPageProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -525,7 +527,13 @@ export function MainPage({
       );
     });
   return (
-    <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
+    <main
+      className={`relative flex min-h-screen flex-col ${
+        summerEnabled
+          ? ""
+          : "bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]"
+      }`}
+    >
       <AnimatePresence>
         {showPatchNotif && (
           <motion.div

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { Toaster } from "@/components/ui/sonner";
+import { PixelPool } from "@/components/PixelPool";
 import { SetupPage } from "@/pages/SetupPage";
 import { MainPage } from "@/pages/MainPage";
 import { MagnetsPage } from "@/pages/MagnetsPage";
@@ -22,6 +23,7 @@ type Page =
 function App() {
   const [page, setPage] = useState<Page | null>(null);
   const [devMode, setDevMode] = useState(false);
+  const [summerEnabled, setSummerEnabled] = useState(true);
 
   useEffect(() => {
     Promise.all([
@@ -35,7 +37,26 @@ function App() {
         console.error("Store read failed:", err);
         setPage("setup");
       });
+    // SUMMER is enabled by default and force-enabled once for this update.
+    (async () => {
+      const applied = await store.get<boolean>("summer_default_v1");
+      if (!applied) {
+        await store.set("summer_pool_enabled", true);
+        await store.set("summer_default_v1", true);
+        await store.save();
+        setSummerEnabled(true);
+      } else {
+        const v = await store.get<boolean>("summer_pool_enabled");
+        setSummerEnabled(v ?? true);
+      }
+    })();
   }, []);
+
+  async function handleToggleSummer(v: boolean) {
+    setSummerEnabled(v);
+    await store.set("summer_pool_enabled", v);
+    await store.save();
+  }
 
   async function handleSetupComplete() {
     await store.set("setup_complete", true);
@@ -49,6 +70,18 @@ function App() {
   return (
     <>
       <Toaster />
+      {/* Shared duck pool, mounted once so it lives across pages and stays out
+          of page transitions. Only revealed on main and discover. */}
+      {summerEnabled && (
+        <div
+          aria-hidden
+          className={`pointer-events-none fixed inset-0 -z-10 ${
+            page === "main" || page === "discover" ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <PixelPool active={page === "main" || page === "discover"} />
+        </div>
+      )}
       {devMode && (
         <div className="fixed bottom-3 left-3 z-50 rounded-md bg-amber-500/15 ring-1 ring-amber-500/30 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-600 dark:text-amber-400">
           MODE DEV
@@ -78,6 +111,7 @@ function App() {
               onNavigate={setPage}
               devMode={devMode}
               onToggleDevMode={() => setDevMode((v) => !v)}
+              summerEnabled={summerEnabled}
             />
           </motion.div>
         )}
@@ -100,7 +134,12 @@ function App() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.22, ease: "easeInOut" }}
           >
-            <PreferencesPage onBack={() => setPage("main")} onNavigate={setPage} />
+            <PreferencesPage
+              onBack={() => setPage("main")}
+              onNavigate={setPage}
+              summerEnabled={summerEnabled}
+              onToggleSummer={handleToggleSummer}
+            />
           </motion.div>
         )}
         {page === "discover" && (
@@ -111,7 +150,11 @@ function App() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.22, ease: "easeInOut" }}
           >
-            <DiscoverPage onBack={() => setPage("main")} onNavigate={setPage} />
+            <DiscoverPage
+              onBack={() => setPage("main")}
+              onNavigate={setPage}
+              summerEnabled={summerEnabled}
+            />
           </motion.div>
         )}
         {page === "patchnotes" && (
