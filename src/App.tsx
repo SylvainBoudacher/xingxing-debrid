@@ -37,9 +37,19 @@ function App() {
         console.error("Store read failed:", err);
         setPage("setup");
       });
-    store
-      .get<boolean>("summer_pool_enabled")
-      .then((v) => setSummerEnabled(v ?? true));
+    // SUMMER is enabled by default and force-enabled once for this update.
+    (async () => {
+      const applied = await store.get<boolean>("summer_default_v1");
+      if (!applied) {
+        await store.set("summer_pool_enabled", true);
+        await store.set("summer_default_v1", true);
+        await store.save();
+        setSummerEnabled(true);
+      } else {
+        const v = await store.get<boolean>("summer_pool_enabled");
+        setSummerEnabled(v ?? true);
+      }
+    })();
   }, []);
 
   async function handleToggleSummer(v: boolean) {
@@ -69,7 +79,7 @@ function App() {
             page === "main" || page === "discover" ? "opacity-100" : "opacity-0"
           }`}
         >
-          <PixelPool />
+          <PixelPool active={page === "main" || page === "discover"} />
         </div>
       )}
       {devMode && (
