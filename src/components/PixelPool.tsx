@@ -396,6 +396,10 @@ export function PixelPool({ active = true }: { active?: boolean }) {
     let h = 0;
     let dpr = 1;
 
+    // pre-rendered static water (gradient + tiles + coping); rebuilt on resize/theme
+    let staticLayer: HTMLCanvasElement | null = null;
+    let staticDark = false;
+
     // drag-to-move state
     let dragging: Duck | null = null;
     let dragDX = 0;
@@ -512,13 +516,19 @@ export function PixelPool({ active = true }: { active?: boolean }) {
       bounds.h = h;
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
+      staticLayer = null; // size changed: rebuild static layer
     }
 
-    function drawWater(t: number) {
+    // Pre-render the non-animated water (gradient + glow + tiles + coping) once.
+    function buildStatic() {
       const dark = isDark();
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.floor(w * dpr));
+      c.height = Math.max(1, Math.floor(h * dpr));
+      const x = c.getContext("2d")!;
+      x.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // dreamy vertical blue gradient
-      const wg = ctx.createLinearGradient(0, 0, 0, h);
+      const wg = x.createLinearGradient(0, 0, 0, h);
       if (dark) {
         wg.addColorStop(0, "#0B3B7A");
         wg.addColorStop(0.5, "#0A2E66");
@@ -528,47 +538,51 @@ export function PixelPool({ active = true }: { active?: boolean }) {
         wg.addColorStop(0.45, "#2E8FE6");
         wg.addColorStop(1, "#1A5FD0");
       }
-      ctx.fillStyle = wg;
-      ctx.fillRect(0, 0, w, h);
+      x.fillStyle = wg;
+      x.fillRect(0, 0, w, h);
 
-      // soft glow near the top for a luminous, oneiric feel
-      const glow = ctx.createRadialGradient(w * 0.5, h * 0.1, 0, w * 0.5, h * 0.1, h * 0.7);
+      const glow = x.createRadialGradient(w * 0.5, h * 0.1, 0, w * 0.5, h * 0.1, h * 0.7);
       glow.addColorStop(0, dark ? "rgba(120,190,255,0.16)" : "rgba(190,240,255,0.45)");
       glow.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, w, h);
+      x.fillStyle = glow;
+      x.fillRect(0, 0, w, h);
 
-      ctx.fillStyle = dark ? "rgba(255,255,255,0.025)" : "rgba(255,255,255,0.05)";
+      x.fillStyle = dark ? "rgba(255,255,255,0.025)" : "rgba(255,255,255,0.05)";
       const tile = 40;
       for (let yy = 0; yy < h; yy += tile) {
         for (let xx = 0; xx < w; xx += tile) {
           if (((xx / tile) | 0) % 2 === ((yy / tile) | 0) % 2)
-            ctx.fillRect(xx, yy, tile, tile);
+            x.fillRect(xx, yy, tile, tile);
         }
       }
 
-      // shimmering caustic ripples
-      ctx.fillStyle = dark ? "rgba(150,215,255,0.22)" : "rgba(225,248,255,0.6)";
-      for (let yy = BORDER + 14; yy < h - BORDER; yy += 24) {
+      x.fillStyle = dark ? "#13334A" : "#E8F4FA";
+      x.fillRect(0, 0, w, BORDER);
+      x.fillRect(0, h - BORDER, w, BORDER);
+      x.fillRect(0, 0, BORDER, h);
+      x.fillRect(w - BORDER, 0, BORDER, h);
+      x.fillStyle = dark ? "#1B6E94" : "#1E6F94";
+      x.fillRect(BORDER - 3, BORDER - 3, w - 2 * (BORDER - 3), 3);
+      x.fillRect(BORDER - 3, h - BORDER, w - 2 * (BORDER - 3), 3);
+      x.fillRect(BORDER - 3, BORDER - 3, 3, h - 2 * (BORDER - 3));
+      x.fillRect(w - BORDER, BORDER - 3, 3, h - 2 * (BORDER - 3));
+
+      staticLayer = c;
+      staticDark = dark;
+    }
+
+    // shimmering caustic ripples (the only animated part of the water)
+    function drawRipples(t: number) {
+      ctx.fillStyle = isDark() ? "rgba(150,215,255,0.22)" : "rgba(225,248,255,0.6)";
+      for (let yy = BORDER + 14; yy < h - BORDER; yy += 26) {
         const base = Math.sin(t * 0.0012 + yy * 0.15);
-        for (let xx = BORDER; xx < w - BORDER; xx += 13) {
+        for (let xx = BORDER; xx < w - BORDER; xx += 16) {
           const o = Math.sin(t * 0.0016 + xx * 0.08 + yy) * 3;
           const s = base + Math.sin(xx * 0.05);
           if (s > 0.55) ctx.fillRect(xx, yy + o, 7, 2);
           else if (s > 0.35) ctx.fillRect(xx, yy + o, 3, 2);
         }
       }
-
-      ctx.fillStyle = dark ? "#13334A" : "#E8F4FA";
-      ctx.fillRect(0, 0, w, BORDER);
-      ctx.fillRect(0, h - BORDER, w, BORDER);
-      ctx.fillRect(0, 0, BORDER, h);
-      ctx.fillRect(w - BORDER, 0, BORDER, h);
-      ctx.fillStyle = dark ? "#1B6E94" : "#1E6F94";
-      ctx.fillRect(BORDER - 3, BORDER - 3, w - 2 * (BORDER - 3), 3);
-      ctx.fillRect(BORDER - 3, h - BORDER, w - 2 * (BORDER - 3), 3);
-      ctx.fillRect(BORDER - 3, BORDER - 3, 3, h - 2 * (BORDER - 3));
-      ctx.fillRect(w - BORDER, BORDER - 3, 3, h - 2 * (BORDER - 3));
     }
 
     function drain() {
@@ -653,15 +667,22 @@ export function PixelPool({ active = true }: { active?: boolean }) {
       ctx.restore();
     }
 
+    const FRAME_MS = 1000 / 30; // cap the ambient canvas at ~30fps
     let last = performance.now();
     let raf = 0;
     function frame(now: number) {
+      raf = requestAnimationFrame(frame);
+      if (now - last < FRAME_MS) return;
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
 
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (!staticLayer || staticDark !== isDark()) buildStatic();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.imageSmoothingEnabled = false;
-      drawWater(now);
+      ctx.drawImage(staticLayer!, 0, 0);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      drawRipples(now);
       drawDrain(now, !!(dragging && overDrain(dragging.x, dragging.y)));
 
       const b = inner();
@@ -694,8 +715,6 @@ export function PixelPool({ active = true }: { active?: boolean }) {
       }
       pool.sort((a, c) => a.y - c.y);
       for (const d of pool) drawDuck(d, now);
-
-      raf = requestAnimationFrame(frame);
     }
 
     resize();
