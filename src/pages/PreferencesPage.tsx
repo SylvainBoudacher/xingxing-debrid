@@ -22,7 +22,7 @@ import {
   Menu,
   ScrollText,
   Search,
-  SlidersHorizontal,
+
   Sun,
   Upload,
 } from "lucide-react";
