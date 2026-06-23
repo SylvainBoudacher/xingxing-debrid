@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  ArrowLeft, ArrowRight, Check, Compass, Download, ExternalLink, FileText, KeyRound, Loader2, Magnet, Search, Zap,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Compass,
+  Download,
+  ExternalLink,
+  FileText,
+  KeyRound,
+  Loader2,
+  Magnet,
+  Search,
+  Zap,
   type LucideIcon,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
@@ -73,7 +84,15 @@ const item = {
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } };
 
 function KeyCard({
-  number, title, url, urlLabel, steps, value, placeholder, onChange, optional,
+  number,
+  title,
+  url,
+  urlLabel,
+  steps,
+  value,
+  placeholder,
+  onChange,
+  optional,
 }: {
   number: number;
   title: string;
@@ -99,50 +118,62 @@ function KeyCard({
             : "bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6"
         }`}
       >
-      <div className="flex items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-3">
-          <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-            optional ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300" : "bg-indigo-600 text-white"
-          }`}>
-            {number}
-          </span>
-          <p className="text-sm font-semibold text-zinc-900 dark:text-white">{title}</p>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <span
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                optional
+                  ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
+                  : "bg-indigo-600 text-white"
+              }`}
+            >
+              {number}
+            </span>
+            <p className="text-sm font-semibold text-zinc-900 dark:text-white">{title}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => openUrl(url)}
+            className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+          >
+            {urlLabel}
+            <ExternalLink className="h-3 w-3" />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => openUrl(url)}
-          className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-        >
-          {urlLabel}
-          <ExternalLink className="h-3 w-3" />
-        </button>
-      </div>
 
-      <ol className="space-y-1.5 mb-4">
-        {steps.map((step, i) => (
-          <li key={i} className="flex gap-2 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-            <span className="shrink-0 font-semibold text-zinc-500">{i + 1}.</span>
-            {step}
-          </li>
-        ))}
-      </ol>
+        <ol className="space-y-1.5 mb-4">
+          {steps.map((step, i) => (
+            <li
+              key={i}
+              className="flex gap-2 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed"
+            >
+              <span className="shrink-0 font-semibold text-zinc-500">{i + 1}.</span>
+              {step}
+            </li>
+          ))}
+        </ol>
 
-      <div className="relative flex items-center">
-        <KeyRound className="absolute left-3 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
-        <input
-          type="password"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          className="w-full rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 pl-9 pr-3 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-600 outline-none focus:ring-indigo-500/40 transition-all"
-        />
-      </div>
+        <div className="relative flex items-center">
+          <KeyRound className="absolute left-3 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
+          <input
+            type="password"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            className="w-full rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 pl-9 pr-3 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-600 outline-none focus:ring-indigo-500/40 transition-all"
+          />
+        </div>
       </div>
     </motion.div>
   );
 }
 
-function ViewOption({ label, selected, onClick, children }: {
+function ViewOption({
+  label,
+  selected,
+  onClick,
+  children,
+}: {
   label: string;
   selected: boolean;
   onClick: () => void;
@@ -158,8 +189,14 @@ function ViewOption({ label, selected, onClick, children }: {
       }`}
     >
       <div className="mb-3 flex items-center justify-between gap-2">
-        <span className={`text-xs font-semibold ${selected ? "text-indigo-700 dark:text-indigo-300" : "text-zinc-500 dark:text-zinc-400"}`}>{label}</span>
-        <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${selected ? "bg-indigo-500" : "ring-1 ring-black/15 dark:ring-white/15"}`}>
+        <span
+          className={`text-xs font-semibold ${selected ? "text-indigo-700 dark:text-indigo-300" : "text-zinc-500 dark:text-zinc-400"}`}
+        >
+          {label}
+        </span>
+        <span
+          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${selected ? "bg-indigo-500" : "ring-1 ring-black/15 dark:ring-white/15"}`}
+        >
           {selected && <Check className="h-2.5 w-2.5 text-white" />}
         </span>
       </div>
@@ -187,7 +224,12 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 }
 
 function ViewModeCard({
-  icon: Icon, title, description, example, value, onChange,
+  icon: Icon,
+  title,
+  description,
+  example,
+  value,
+  onChange,
 }: {
   icon: LucideIcon;
   title: string;
@@ -198,7 +240,10 @@ function ViewModeCard({
 }) {
   const parsed = parseRelease(example);
   return (
-    <motion.div variants={item} className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-5">
+    <motion.div
+      variants={item}
+      className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-5"
+    >
       <div className="flex items-center gap-3 mb-1">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
           <Icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
@@ -208,20 +253,36 @@ function ViewModeCard({
       <p className="text-xs text-zinc-500 mb-4">{description}</p>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <ViewOption label="Simplifiée" selected={value === "simple"} onClick={() => onChange("simple")}>
+        <ViewOption
+          label="Simplifiée"
+          selected={value === "simple"}
+          onClick={() => onChange("simple")}
+        >
           <div className="flex items-center gap-1.5 mb-1">
             {parsed.quality && (
-              <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">{parsed.quality}</span>
+              <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                {parsed.quality}
+              </span>
             )}
             {parsed.codec && (
-              <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{parsed.codec}</span>
+              <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                {parsed.codec}
+              </span>
             )}
           </div>
-          <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug">{parsed.title}</p>
+          <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug">
+            {parsed.title}
+          </p>
         </ViewOption>
 
-        <ViewOption label="Détaillée" selected={value === "detailed"} onClick={() => onChange("detailed")}>
-          <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug break-all">{example}</p>
+        <ViewOption
+          label="Détaillée"
+          selected={value === "detailed"}
+          onClick={() => onChange("detailed")}
+        >
+          <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug break-all">
+            {example}
+          </p>
         </ViewOption>
       </div>
     </motion.div>
@@ -244,11 +305,21 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    getApiKey("c411_api_key").then((v) => { if (v) setC411Key(v); });
-    getApiKey("alldebrid_api_key").then((v) => { if (v) setAllDebridKey(v); });
-    getApiKey("tmdb_api_key").then((v) => { if (v) setTmdbKey(v); });
-    store.get<ViewMode>("search_view_mode").then((v) => { if (v) setSearchViewMode(v); });
-    store.get<ViewMode>("view_mode").then((v) => { if (v) setViewMode(v); });
+    getApiKey("c411_api_key").then((v) => {
+      if (v) setC411Key(v);
+    });
+    getApiKey("alldebrid_api_key").then((v) => {
+      if (v) setAllDebridKey(v);
+    });
+    getApiKey("tmdb_api_key").then((v) => {
+      if (v) setTmdbKey(v);
+    });
+    store.get<ViewMode>("search_view_mode").then((v) => {
+      if (v) setSearchViewMode(v);
+    });
+    store.get<ViewMode>("view_mode").then((v) => {
+      if (v) setViewMode(v);
+    });
     store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));
     store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
   }, []);
@@ -352,7 +423,9 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                   </div>
                 </div>
               </div>
-              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-3">XingXing Debrid</h1>
+              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-3">
+                XingXing Debrid
+              </h1>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm leading-relaxed">
                 De la recherche au visionnage, tout votre contenu en un seul endroit.
               </p>
@@ -369,8 +442,12 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                     <f.icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-0.5">{f.title}</p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">{f.text}</p>
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-0.5">
+                      {f.title}
+                    </p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                      {f.text}
+                    </p>
                   </div>
                 </motion.div>
               ))}
@@ -409,9 +486,12 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               </motion.button>
 
               <div className="text-center mb-2">
-                <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">Configurez vos clés API</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
+                  Configurez vos clés API
+                </h1>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-                  Deux clés gratuites suffisent pour relier l'application à C411 et AllDebrid. La clé TMDB est optionnelle.
+                  Deux clés gratuites suffisent pour relier l'application à C411 et AllDebrid. La
+                  clé TMDB est optionnelle.
                 </p>
               </div>
             </motion.div>
@@ -455,13 +535,19 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 disabled={!bothFilled || saving}
                 className="flex w-full items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold text-white transition-colors"
               >
-                {saving
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <>Continuer<ArrowRight className="h-4 w-4" /></>
-                }
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    Continuer
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </motion.button>
               {!bothFilled && (
-                <p className="mt-2 text-center text-[11px] text-zinc-400 dark:text-zinc-600">Renseignez les deux clés pour continuer.</p>
+                <p className="mt-2 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
+                  Renseignez les deux clés pour continuer.
+                </p>
               )}
             </motion.div>
           </motion.div>
@@ -487,9 +573,12 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               </motion.button>
 
               <div className="text-center mb-2">
-                <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">Choisissez votre affichage</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
+                  Choisissez votre affichage
+                </h1>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-                  Cliquez sur l'affichage que vous préférez. Modifiable à tout moment dans les Paramètres.
+                  Cliquez sur l'affichage que vous préférez. Modifiable à tout moment dans les
+                  Paramètres.
                 </p>
               </div>
             </motion.div>
@@ -511,7 +600,10 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               onChange={setViewMode}
             />
 
-            <motion.div variants={item} className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-5">
+            <motion.div
+              variants={item}
+              className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-5"
+            >
               <div className="flex items-center gap-3 mb-1">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
                   <FileText className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
@@ -519,22 +611,32 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 <p className="text-sm font-semibold text-zinc-900 dark:text-white">Fichiers .nfo</p>
               </div>
               <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
-                Un fichier .nfo est un petit fichier texte ajouté par les teams de release pour décrire le contenu (qualité, langue, source). Il n'est pas nécessaire pour regarder vos films et séries.
+                Un fichier .nfo est un petit fichier texte ajouté par les teams de release pour
+                décrire le contenu (qualité, langue, source). Il n'est pas nécessaire pour regarder
+                vos films et séries.
               </p>
 
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-zinc-900 dark:text-white">Ne pas afficher les fichiers .nfo</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Les masque dans la liste des fichiers d'un magnet.</p>
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                      Ne pas afficher les fichiers .nfo
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Les masque dans la liste des fichiers d'un magnet.
+                    </p>
                   </div>
                   <Toggle checked={hideNfo} onChange={setHideNfo} />
                 </div>
 
                 <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium text-zinc-900 dark:text-white">Ne pas télécharger les fichiers .nfo</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">Les exclut des téléchargements groupés ("Tout télécharger").</p>
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                      Ne pas télécharger les fichiers .nfo
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Les exclut des téléchargements groupés ("Tout télécharger").
+                    </p>
                   </div>
                   <Toggle checked={skipNfoDownload} onChange={setSkipNfoDownload} />
                 </div>
@@ -548,10 +650,14 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 disabled={saving}
                 className="flex w-full items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold text-white transition-colors"
               >
-                {saving
-                  ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <>Commencer<ArrowRight className="h-4 w-4" /></>
-                }
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    Commencer
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </motion.button>
             </motion.div>
           </motion.div>

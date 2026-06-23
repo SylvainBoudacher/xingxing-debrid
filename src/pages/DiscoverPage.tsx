@@ -60,10 +60,7 @@ type DiscoverTab = BrowseType | "likes";
 // Les listes TMDB bougent peu : cache 10 min pour couper les refetch au
 // changement d'onglet / retour sur une recherche deja vue.
 const TMDB_STALE_MS = 10 * 60_000;
-function cachedTmdb<T>(
-  queryKey: readonly unknown[],
-  queryFn: () => Promise<T>,
-): Promise<T> {
+function cachedTmdb<T>(queryKey: readonly unknown[], queryFn: () => Promise<T>): Promise<T> {
   return queryClient.fetchQuery({ queryKey, queryFn, staleTime: TMDB_STALE_MS });
 }
 
@@ -83,14 +80,9 @@ function mapTmdb(r: TmdbRawResult, mediaType: MediaType): TmdbItem {
     id: r.id,
     mediaType,
     title: (mediaType === "movie" ? r.title : r.name) ?? "",
-    originalTitle:
-      (mediaType === "movie" ? r.original_title : r.original_name) ?? "",
+    originalTitle: (mediaType === "movie" ? r.original_title : r.original_name) ?? "",
     posterPath: r.poster_path,
-    year:
-      (mediaType === "movie" ? r.release_date : r.first_air_date)?.slice(
-        0,
-        4,
-      ) ?? "",
+    year: (mediaType === "movie" ? r.release_date : r.first_air_date)?.slice(0, 4) ?? "",
     voteAverage: r.vote_average,
     overview: r.overview ?? "",
   };
@@ -115,12 +107,7 @@ interface Occupant {
   specialVersion: string | null;
 }
 
-const SERIES_SLUGS = new Set([
-  "serie-tv",
-  "serie-documentaire",
-  "emission-tv",
-  "animation-serie",
-]);
+const SERIES_SLUGS = new Set(["serie-tv", "serie-documentaire", "emission-tv", "animation-serie"]);
 
 function normalize(s: string): string {
   return s
@@ -131,25 +118,14 @@ function normalize(s: string): string {
     .trim();
 }
 
-const LANG_TOKENS = [
-  "MULTI",
-  "VFF",
-  "VFQ",
-  "VF2",
-  "VOSTFR",
-  "TRUEFRENCH",
-  "FRENCH",
-  "VF",
-  "VO",
-];
+const LANG_TOKENS = ["MULTI", "VFF", "VFQ", "VF2", "VOSTFR", "TRUEFRENCH", "FRENCH", "VF", "VO"];
 
 function parseLanguages(name: string): string[] {
   const up = ` ${name.toUpperCase().replace(/[._-]/g, " ")} `;
   return LANG_TOKENS.filter((t) => up.includes(` ${t} `));
 }
 
-const SOURCE_RE =
-  /\b(remux|blu-?ray|bdrip|brrip|web-?dl|webrip|web|hdtv|dvdrip|hdlight)\b/i;
+const SOURCE_RE = /\b(remux|blu-?ray|bdrip|brrip|web-?dl|webrip|web|hdtv|dvdrip|hdlight)\b/i;
 const SOURCE_LABELS: Record<string, string> = {
   remux: "REMUX",
   bluray: "BluRay",
@@ -162,10 +138,8 @@ const SOURCE_LABELS: Record<string, string> = {
   dvdrip: "DVDRip",
   hdlight: "HDLight",
 };
-const SPECIAL_RE =
-  /\b(extended|remastered|unrated|imax|uncut|director'?s[ ._-]?cut)\b/i;
-const AUDIO_RE =
-  /\b(dts[ ._-]?hd[ ._-]?ma|dts|truehd|atmos|eac3|ddp|ac3|aac|flac|opus)\b/i;
+const SPECIAL_RE = /\b(extended|remastered|unrated|imax|uncut|director'?s[ ._-]?cut)\b/i;
+const AUDIO_RE = /\b(dts[ ._-]?hd[ ._-]?ma|dts|truehd|atmos|eac3|ddp|ac3|aac|flac|opus)\b/i;
 const CHANNELS_RE = /\b(7\.1|5\.1|2\.0)\b/;
 
 function toOccupant(t: C411Torrent): Occupant {
@@ -180,11 +154,8 @@ function toOccupant(t: C411Torrent): Occupant {
     resolution: parsed.quality,
     videoCodec: parsed.codec,
     languages: parseLanguages(t.name),
-    source: sourceMatch
-      ? SOURCE_LABELS[sourceMatch.toLowerCase().replace(/[^a-z]/g, "")]
-      : null,
-    audioCodec:
-      flat.match(AUDIO_RE)?.[1].toUpperCase().replace(/[._-]/g, " ") ?? null,
+    source: sourceMatch ? SOURCE_LABELS[sourceMatch.toLowerCase().replace(/[^a-z]/g, "")] : null,
+    audioCodec: flat.match(AUDIO_RE)?.[1].toUpperCase().replace(/[._-]/g, " ") ?? null,
     audioChannels: flat.match(CHANNELS_RE)?.[1] ?? null,
     specialVersion: flat.match(SPECIAL_RE)?.[1].toUpperCase() ?? null,
   };
@@ -204,8 +175,8 @@ const IMDB_ID_RE = /^tt\d{5,10}$/i;
 function sortOccupants(occupants: Occupant[]): Occupant[] {
   return [...occupants].sort(
     (a, b) =>
-      (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) -
-        (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) || b.fileSize - a.fileSize,
+      (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) - (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) ||
+      b.fileSize - a.fileSize,
   );
 }
 
@@ -221,8 +192,7 @@ function filterMovieReleases(
     if (SERIES_SLUGS.has(t.subcategory?.slug ?? "")) continue;
     const nName = normalize(t.name);
     if (!nTitles.some((nt) => nName.includes(nt))) continue;
-    if (item.year && !nName.includes(item.year) && !nName.includes(nextYear))
-      continue;
+    if (item.year && !nName.includes(item.year) && !nName.includes(nextYear)) continue;
     occupants.push(toOccupant(t));
   }
   return occupants;
@@ -236,9 +206,7 @@ function filterTvReleases(
   // Matche "S01", "S01E05", "Saison 1", ou une integrale sans numero de saison
   const seasonRe =
     season !== null
-      ? new RegExp(
-          `\\bs0*${season}(?:e\\d+)?\\b|\\bsaison 0*${season}\\b|\\bseason 0*${season}\\b`,
-        )
+      ? new RegExp(`\\bs0*${season}(?:e\\d+)?\\b|\\bsaison 0*${season}\\b|\\bseason 0*${season}\\b`)
       : null;
   const anySeasonRe = /\bs\d{1,2}(?:e\d+)?\b|\bsaison \d+\b|\bseason \d+\b/;
   const completeRe = /\bintegrale\b|\bcomplete\b|\bcomplet\b/;
@@ -248,11 +216,7 @@ function filterTvReleases(
     if (!SERIES_SLUGS.has(t.subcategory?.slug ?? "")) continue;
     const nName = normalize(t.name);
     if (!nTitles.some((nt) => nName.includes(nt))) continue;
-    if (
-      seasonRe &&
-      !seasonRe.test(nName) &&
-      !(completeRe.test(nName) && !anySeasonRe.test(nName))
-    )
+    if (seasonRe && !seasonRe.test(nName) && !(completeRe.test(nName) && !anySeasonRe.test(nName)))
       continue;
     occupants.push(toOccupant(t));
   }
@@ -297,9 +261,7 @@ export function DiscoverPage({
 
   const [selected, setSelected] = useState<TmdbItem | null>(null);
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
-  const [releaseSort, setReleaseSort] = useState<
-    "seeders" | "size" | "resolution"
-  >("seeders");
+  const [releaseSort, setReleaseSort] = useState<"seeders" | "size" | "resolution">("seeders");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [resFilter, setResFilter] = useState<string | null>(null);
   const [langFilter, setLangFilter] = useState<string | null>(null);
@@ -351,8 +313,7 @@ export function DiscoverPage({
       selected?.id,
       selected?.mediaType === "tv" ? activeSeason : null,
     ],
-    enabled:
-      !!selected && (selected.mediaType === "movie" || tvDetailQuery.isSuccess),
+    enabled: !!selected && (selected.mediaType === "movie" || tvDetailQuery.isSuccess),
     staleTime: 60_000,
     queryFn: async () => {
       const item = selected!;
@@ -373,11 +334,9 @@ export function DiscoverPage({
   const resOptions = useMemo(
     () =>
       releases
-        ? [
-            ...new Set(
-              releases.map((o) => o.resolution).filter((r): r is string => !!r),
-            ),
-          ].sort((a, b) => (RESOLUTION_RANK[b] ?? 0) - (RESOLUTION_RANK[a] ?? 0))
+        ? [...new Set(releases.map((o) => o.resolution).filter((r): r is string => !!r))].sort(
+            (a, b) => (RESOLUTION_RANK[b] ?? 0) - (RESOLUTION_RANK[a] ?? 0),
+          )
         : [],
     [releases],
   );
@@ -402,8 +361,7 @@ export function DiscoverPage({
                   ? b.fileSize - a.fileSize
                   : releaseSort === "resolution"
                     ? (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) -
-                        (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) ||
-                      b.seeders - a.seeders
+                        (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) || b.seeders - a.seeders
                     : b.seeders - a.seeders;
               return sortDir === "asc" ? -cmp : cmp;
             })
@@ -415,10 +373,14 @@ export function DiscoverPage({
     // Ne re-fetch les clés que si elles n'ont pas été injectées par useAppInit.
     // These are intentional initial-value props — only read once on mount.
     if (initialC411Key === undefined) {
-      getApiKey("c411_api_key").then((v) => { if (v) c411KeyRef.current = v; });
+      getApiKey("c411_api_key").then((v) => {
+        if (v) c411KeyRef.current = v;
+      });
     }
     if (initialAllDebridKey === undefined) {
-      getApiKey("alldebrid_api_key").then((v) => { if (v) allDebridKeyRef.current = v; });
+      getApiKey("alldebrid_api_key").then((v) => {
+        if (v) allDebridKeyRef.current = v;
+      });
     }
     if (initialTmdbKey === undefined) {
       getApiKey("tmdb_api_key").then((v) => setTmdbKey(v || null));
@@ -426,7 +388,7 @@ export function DiscoverPage({
     if (!initialLikes) {
       getLikes().then(setLikes);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -470,9 +432,7 @@ export function DiscoverPage({
       let mapped: TmdbItem[];
       let totalPages: number;
       if (m === "search" && IMDB_ID_RE.test(q)) {
-        const found = await cachedTmdb(tmdbKeys.find(q), () =>
-          tmdbFindByImdb(q, key),
-        );
+        const found = await cachedTmdb(tmdbKeys.find(q), () => tmdbFindByImdb(q, key));
         mapped =
           type === "tv"
             ? found.tv_results.map((r) => mapTmdb(r, "tv"))
@@ -486,20 +446,13 @@ export function DiscoverPage({
       } else if (type === "animation") {
         const fetchFor = (mt: MediaType) =>
           m === "search"
-            ? cachedTmdb(tmdbKeys.search(mt, q, page), () =>
-                tmdbSearch(mt, q, page, key),
-              )
+            ? cachedTmdb(tmdbKeys.search(mt, q, page), () => tmdbSearch(mt, q, page, key))
             : cachedTmdb(tmdbKeys.discoverAnimation(mt, page), () =>
                 tmdbDiscoverAnimation(mt, page, key),
               );
-        const [movies, tvs] = await Promise.all([
-          fetchFor("movie"),
-          fetchFor("tv"),
-        ]);
+        const [movies, tvs] = await Promise.all([fetchFor("movie"), fetchFor("tv")]);
         const animOnly = (rs: TmdbRawResult[]) =>
-          m === "search"
-            ? rs.filter((r) => r.genre_ids?.includes(ANIMATION_GENRE_ID))
-            : rs;
+          m === "search" ? rs.filter((r) => r.genre_ids?.includes(ANIMATION_GENRE_ID)) : rs;
         mapped = [
           ...animOnly(movies.results).map((r) => mapTmdb(r, "movie")),
           ...animOnly(tvs.results).map((r) => mapTmdb(r, "tv")),
@@ -508,12 +461,8 @@ export function DiscoverPage({
       } else {
         const list =
           m === "search"
-            ? await cachedTmdb(tmdbKeys.search(type, q, page), () =>
-                tmdbSearch(type, q, page, key),
-              )
-            : await cachedTmdb(tmdbKeys.topRated(type, page), () =>
-                tmdbTopRated(type, page, key),
-              );
+            ? await cachedTmdb(tmdbKeys.search(type, q, page), () => tmdbSearch(type, q, page, key))
+            : await cachedTmdb(tmdbKeys.topRated(type, page), () => tmdbTopRated(type, page, key));
         mapped = list.results.map((r) => mapTmdb(r, type));
         totalPages = list.total_pages;
       }
@@ -551,10 +500,7 @@ export function DiscoverPage({
     }
   }
 
-  const likedKeys = useMemo(
-    () => new Set(likes.map((l) => `${l.mediaType}-${l.id}`)),
-    [likes],
-  );
+  const likedKeys = useMemo(() => new Set(likes.map((l) => `${l.mediaType}-${l.id}`)), [likes]);
 
   function toggleLike(item: TmdbItem) {
     const key = `${item.mediaType}-${item.id}`;
@@ -627,9 +573,10 @@ export function DiscoverPage({
       // filterTvReleases sera applique dans queryFn une seule fois).
       queryClient.prefetchQuery({
         queryKey: ["c411-releases", item.mediaType, item.id, null],
-        queryFn: () => searchC411(item).then(({ torrents, nTitles }) =>
-          sortOccupants(filterTvReleases(torrents, nTitles, null))
-        ),
+        queryFn: () =>
+          searchC411(item).then(({ torrents, nTitles }) =>
+            sortOccupants(filterTvReleases(torrents, nTitles, null)),
+          ),
         staleTime: 60_000,
       });
     }
@@ -645,9 +592,7 @@ export function DiscoverPage({
   async function handleSendToDebrid(occ: Occupant) {
     if (sendingHash !== null) return;
     if (!allDebridKeyRef.current) {
-      toast.error(
-        "Cle AllDebrid manquante. Configurez-la dans les parametres.",
-      );
+      toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
       return;
     }
     const torrentUrl = `https://c411.org/api?t=get&id=${encodeURIComponent(occ.infoHash)}&apikey=${c411KeyRef.current}`;
@@ -776,9 +721,8 @@ export function DiscoverPage({
               Clé API TMDB manquante
             </p>
             <p className="mt-1 max-w-sm text-xs text-zinc-500 leading-relaxed">
-              La page Découverte utilise The Movie Database pour lister les
-              films. Créez une clé gratuite sur themoviedb.org puis ajoutez-la
-              dans les paramètres.
+              La page Découverte utilise The Movie Database pour lister les films. Créez une clé
+              gratuite sur themoviedb.org puis ajoutez-la dans les paramètres.
             </p>
           </div>
           <button
@@ -895,17 +839,14 @@ export function DiscoverPage({
             <p className="text-sm text-red-600 dark:text-red-400">{moviesError}</p>
           )}
 
-          {mediaType !== "likes" &&
-            !moviesError &&
-            items.length === 0 &&
-            !loadingMovies && (
-              <p className="text-sm text-zinc-500">Aucun résultat trouvé.</p>
-            )}
+          {mediaType !== "likes" && !moviesError && items.length === 0 && !loadingMovies && (
+            <p className="text-sm text-zinc-500">Aucun résultat trouvé.</p>
+          )}
 
           {mediaType === "likes" && likes.length === 0 && (
             <p className="text-sm text-zinc-500">
-              Aucun contenu enregistré. Cliquez sur le coeur d'une affiche pour
-              l'ajouter à votre liste.
+              Aucun contenu enregistré. Cliquez sur le coeur d'une affiche pour l'ajouter à votre
+              liste.
             </p>
           )}
 
@@ -982,21 +923,11 @@ export function DiscoverPage({
           {mediaType !== "likes" && tmdbPage < tmdbTotalPages && items.length > 0 && (
             <div className="mt-8 flex justify-center">
               <button
-                onClick={() =>
-                  fetchItems(
-                    mode,
-                    searchedQuery,
-                    tmdbPage + 1,
-                    tmdbKey,
-                    mediaType,
-                  )
-                }
+                onClick={() => fetchItems(mode, searchedQuery, tmdbPage + 1, tmdbKey, mediaType)}
                 disabled={loadingMovies}
                 className="flex items-center gap-2 rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 px-5 py-2.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white disabled:opacity-40 transition-colors"
               >
-                {loadingMovies && (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                )}
+                {loadingMovies && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 Charger plus
               </button>
             </div>
@@ -1172,9 +1103,7 @@ export function DiscoverPage({
                     langOptions.map((l) => (
                       <button
                         key={l}
-                        onClick={() =>
-                          setLangFilter(langFilter === l ? null : l)
-                        }
+                        onClick={() => setLangFilter(langFilter === l ? null : l)}
                         className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase ring-1 transition-colors ${
                           langFilter === l
                             ? "bg-green-500/15 text-green-600 dark:text-green-400 ring-green-500/40"
@@ -1232,15 +1161,13 @@ export function DiscoverPage({
                     </p>
                   </div>
                 )}
-                {releases !== null &&
-                  releases.length > 0 &&
-                  visibleReleases?.length === 0 && (
-                    <div className="flex h-full items-center justify-center">
-                      <p className="text-center text-sm text-zinc-500">
-                        Aucune version ne correspond aux filtres.
-                      </p>
-                    </div>
-                  )}
+                {releases !== null && releases.length > 0 && visibleReleases?.length === 0 && (
+                  <div className="flex h-full items-center justify-center">
+                    <p className="text-center text-sm text-zinc-500">
+                      Aucune version ne correspond aux filtres.
+                    </p>
+                  </div>
+                )}
                 {visibleReleases?.map((occ, i) => (
                   <motion.div
                     key={occ.infoHash}
@@ -1283,9 +1210,7 @@ export function DiscoverPage({
                         <span className="text-zinc-600 dark:text-zinc-300 font-medium">
                           {formatSize(occ.fileSize)}
                         </span>
-                        <span className="text-green-500">
-                          {occ.seeders} Seeders
-                        </span>
+                        <span className="text-green-500">{occ.seeders} Seeders</span>
                         {occ.source && <span>{occ.source}</span>}
                         {occ.audioCodec && (
                           <span>
@@ -1366,28 +1291,21 @@ export function DiscoverPage({
                   const fileName = file.name.split("/").pop() ?? file.name;
                   const showName = fileName !== debridModal.torrentName;
                   return (
-                    <div
-                      key={i}
-                      className="rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3"
-                    >
+                    <div key={i} className="rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3">
                       <div className="mb-3">
                         {showName && (
                           <p className="text-sm font-medium text-zinc-900 dark:text-white leading-snug line-clamp-2 mb-0.5">
                             {fileName}
                           </p>
                         )}
-                        <p className="text-xs text-zinc-500">
-                          {formatSize(file.size)}
-                        </p>
+                        <p className="text-xs text-zinc-500">{formatSize(file.size)}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <motion.button
                           whileTap={{ scale: 0.97 }}
                           onClick={() => handleOpenVlc(file.link)}
                           disabled={
-                            downloadingLink !== null ||
-                            copiedLink !== null ||
-                            vlcLink !== null
+                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
                           }
                           className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
@@ -1404,9 +1322,7 @@ export function DiscoverPage({
                           whileTap={{ scale: 0.97 }}
                           onClick={() => handleCopyLink(file.link)}
                           disabled={
-                            downloadingLink !== null ||
-                            copiedLink !== null ||
-                            vlcLink !== null
+                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
                           }
                           className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
@@ -1430,25 +1346,19 @@ export function DiscoverPage({
                           whileTap={{ scale: 0.97 }}
                           onClick={() => handleDownloadFile(file.link)}
                           disabled={
-                            downloadingLink !== null ||
-                            copiedLink !== null ||
-                            vlcLink !== null
+                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
                           }
                           className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
                           {downloadingLink === file.link ? (
                             <>
                               <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
-                              <span className="text-xs font-medium text-white">
-                                Ouverture...
-                              </span>
+                              <span className="text-xs font-medium text-white">Ouverture...</span>
                             </>
                           ) : (
                             <>
                               <Download className="h-3.5 w-3.5 text-white" />
-                              <span className="text-xs font-medium text-white">
-                                Telecharger
-                              </span>
+                              <span className="text-xs font-medium text-white">Telecharger</span>
                             </>
                           )}
                         </motion.button>

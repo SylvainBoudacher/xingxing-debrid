@@ -22,7 +22,6 @@ import {
   Menu,
   ScrollText,
   Search,
-
   Sun,
   Upload,
 } from "lucide-react";
@@ -84,13 +83,7 @@ function ViewOptionCard({
   );
 }
 
-function Toggle({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
       onClick={() => onChange(!checked)}
@@ -129,8 +122,7 @@ export function PreferencesPage({
   const [searchViewMode, setSearchViewMode] = useState<ViewMode>("simple");
   const [hideNfo, setHideNfo] = useState(true);
   const [skipNfoDownload, setSkipNfoDownload] = useState(true);
-  const [activeSection, setActiveSection] =
-    useState<SectionId>("section-search");
+  const [activeSection, setActiveSection] = useState<SectionId>("section-search");
   const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -141,18 +133,13 @@ export function PreferencesPage({
       if (v) setSearchViewMode(v);
     });
     store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));
-    store
-      .get<boolean>("skip_nfo_download")
-      .then((v) => setSkipNfoDownload(v ?? true));
+    store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
   }, []);
 
   useEffect(() => {
     function onScroll() {
       // At the bottom of the page the last section may never reach the top
-      if (
-        window.innerHeight + window.scrollY >=
-        document.documentElement.scrollHeight - 2
-      ) {
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
         setActiveSection(SECTIONS[SECTIONS.length - 1].id);
         return;
       }
@@ -336,9 +323,7 @@ export function PreferencesPage({
                 <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">
                   Recherche
                 </h2>
-                <p className="text-xs text-zinc-500">
-                  Paramètres des résultats de recherche.
-                </p>
+                <p className="text-xs text-zinc-500">Paramètres des résultats de recherche.</p>
               </div>
             </div>
 
@@ -347,8 +332,7 @@ export function PreferencesPage({
                 Affichage des résultats de recherche
               </h3>
               <p className="text-xs text-zinc-500 mb-5">
-                Cliquez sur l'affichage que vous préférez pour les résultats de
-                recherche.
+                Cliquez sur l'affichage que vous préférez pour les résultats de recherche.
               </p>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -421,8 +405,7 @@ export function PreferencesPage({
                 Affichage des noms de fichiers
               </h3>
               <p className="text-xs text-zinc-500 mb-5">
-                Cliquez sur l'affichage que vous préférez pour vos magnets et
-                leurs fichiers.
+                Cliquez sur l'affichage que vous préférez pour vos magnets et leurs fichiers.
               </p>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -465,9 +448,9 @@ export function PreferencesPage({
                 Fichiers .nfo
               </h3>
               <p className="text-xs text-zinc-500 mb-5 leading-relaxed">
-                Un fichier .nfo est un petit fichier texte ajouté par les teams
-                de release pour décrire le contenu (qualité, langue, source). Il
-                n'est pas nécessaire pour regarder vos films et séries.
+                Un fichier .nfo est un petit fichier texte ajouté par les teams de release pour
+                décrire le contenu (qualité, langue, source). Il n'est pas nécessaire pour regarder
+                vos films et séries.
               </p>
 
               <div className="space-y-3">
@@ -489,14 +472,10 @@ export function PreferencesPage({
                       Ne pas télécharger les fichiers .nfo
                     </p>
                     <p className="text-xs text-zinc-500 mt-0.5">
-                      Les exclut des téléchargements groupés ("Tout
-                      télécharger").
+                      Les exclut des téléchargements groupés ("Tout télécharger").
                     </p>
                   </div>
-                  <Toggle
-                    checked={skipNfoDownload}
-                    onChange={handleSkipNfoDownloadChange}
-                  />
+                  <Toggle checked={skipNfoDownload} onChange={handleSkipNfoDownloadChange} />
                 </div>
               </div>
             </div>
@@ -515,20 +494,15 @@ export function PreferencesPage({
                 <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">
                   Découverte
                 </h2>
-                <p className="text-xs text-zinc-500">
-                  Paramètres de la page Découverte.
-                </p>
+                <p className="text-xs text-zinc-500">Paramètres de la page Découverte.</p>
               </div>
             </div>
 
             <div className="px-6 py-5">
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">
-                Ma liste
-              </h3>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">Ma liste</h3>
               <p className="text-xs text-zinc-500 mb-5 leading-relaxed">
-                Sauvegardez les contenus likés dans un fichier JSON ou restaurez
-                une liste depuis un fichier. L'import fusionne avec la liste
-                actuelle sans créer de doublons.
+                Sauvegardez les contenus likés dans un fichier JSON ou restaurez une liste depuis un
+                fichier. L'import fusionne avec la liste actuelle sans créer de doublons.
               </p>
 
               <div className="flex flex-wrap gap-3">
@@ -579,12 +553,9 @@ export function PreferencesPage({
             <div className="px-6 py-5">
               <div className="flex items-center justify-between gap-4 rounded-xl bg-white dark:bg-zinc-900/80 ring-1 ring-black/8 dark:ring-white/8 px-4 py-3">
                 <div>
-                  <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                    Une piscine ?
-                  </p>
+                  <p className="text-sm font-medium text-zinc-900 dark:text-white">Une piscine ?</p>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    Pour se rafraîchir pendant les longues sessions de
-                    téléchargement.
+                    Pour se rafraîchir pendant les longues sessions de téléchargement.
                   </p>
                 </div>
                 <Toggle checked={summerEnabled} onChange={onToggleSummer} />
