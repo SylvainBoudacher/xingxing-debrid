@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 const MAX_DUCKS = 15;
 const SPAWN_MS = 40_000;
 const FIRST_SPAWN_MS = 5_000;
-const BORDER = 16; // pool coping width
+const BORDER = 0; // no coping — water fills the full canvas
 const DUCK_BASE = 92; // on-screen height of a scale-1 duck
 
 type Accessory =
@@ -581,16 +581,7 @@ export function PixelPool({
         }
       }
 
-      x.fillStyle = dark ? "#13334A" : "#E8F4FA";
-      x.fillRect(0, 0, w, BORDER);
-      x.fillRect(0, h - BORDER, w, BORDER);
-      x.fillRect(0, 0, BORDER, h);
-      x.fillRect(w - BORDER, 0, BORDER, h);
-      x.fillStyle = dark ? "#1B6E94" : "#1E6F94";
-      x.fillRect(BORDER - 3, BORDER - 3, w - 2 * (BORDER - 3), 3);
-      x.fillRect(BORDER - 3, h - BORDER, w - 2 * (BORDER - 3), 3);
-      x.fillRect(BORDER - 3, BORDER - 3, 3, h - 2 * (BORDER - 3));
-      x.fillRect(w - BORDER, BORDER - 3, 3, h - 2 * (BORDER - 3));
+      // no coping border — water fills edge to edge
 
       staticLayer = c;
       staticDark = dark;
