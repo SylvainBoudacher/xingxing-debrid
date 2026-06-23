@@ -25,6 +25,21 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.1.4",
+    date: "23 juin 2026",
+    intro:
+      "Corrections visuelles et amelioration du comportement de la notification de mise a jour.",
+    sections: [
+      {
+        title: "Corrections",
+        items: [
+          "Le positionnement du halo sur les accessoires de canard a ete ajuste pour un meilleur alignement visuel.",
+          "La dialog de mise a jour n'apparait plus avant que l'application soit completement chargee.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.1.3",
     date: "23 juin 2026",
     intro: "Version de test du systeme de mise a jour automatique sur Windows.",
