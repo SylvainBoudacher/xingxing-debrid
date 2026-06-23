@@ -25,6 +25,21 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.1.2",
+    date: "23 juin 2026",
+    intro:
+      "Correction d'un bug ou la mise a jour se telechargait mais l'application ne redemarrait pas sur Windows.",
+    sections: [
+      {
+        title: "Correction de la mise a jour automatique (Windows)",
+        items: [
+          "L'installeur de mise a jour tournait sans les droits necessaires sur certaines configurations Windows, causant un echec silencieux apres le telechargement.",
+          "L'application se fermait correctement mais ne redemarrait jamais. Le probleme est desormais resolu.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.1.1",
     date: "23 juin 2026",
     intro:

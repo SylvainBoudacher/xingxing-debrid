@@ -354,7 +354,7 @@ dependencies = [
 
 [[package]]
 name = "c411-debrid-app"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "keyring",
  "reqwest 0.12.28",

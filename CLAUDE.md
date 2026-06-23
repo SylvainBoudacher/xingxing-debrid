@@ -27,7 +27,7 @@ bunx tsc --noEmit
 
 Rust compilation happens automatically inside `tauri dev` / `tauri build`. Run `cargo check` inside `src-tauri/` for a faster Rust-only type check.
 
-**Publishing an update**: bump the version, tag `vX.Y.Z`, and push. The auto-update pipeline (build, sign, release, `latest.json`) is documented in `RELEASING.md`.
+**Publishing an update**: bump the version, tag `vX.Y.Z`, and push. The auto-update pipeline (build, sign, release, `latest.json`) is documented in `RELEASING.md`. Version bump checklist is in `VERSIONING.md`.
 
 ## Architecture
 
