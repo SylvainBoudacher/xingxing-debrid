@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="src-tauri/icons/128x128.png" alt="XingXing Debrid" width="96" height="96" />
+
 # XingXing Debrid
 
 **Recherche de torrents, debrid et streaming dans une seule application de bureau.**
@@ -12,8 +14,8 @@ De la recherche C411 au lien debride AllDebrid, sans quitter l'app.
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
 ![Rust](https://img.shields.io/badge/Rust-backend-DEA584?logo=rust&logoColor=white)
 
-<!-- Capture d'ecran principale ici -->
-<!-- ![Apercu de XingXing Debrid](docs/screenshot-main.png) -->
+<!-- Capture d'ecran principale -->
+<!-- ![Apercu de XingXing Debrid](docs/screenshot-main.webp) -->
 
 </div>
 
@@ -29,19 +31,19 @@ XingXing Debrid connecte trois services en un seul flux : vous cherchez un conte
 
 Recherchez directement dans le catalogue C411 et envoyez un magnet vers AllDebrid en un clic.
 
-<!-- ![Page de recherche](docs/screenshot-search.png) -->
+<!-- ![Page de recherche](docs/screenshot-search.webp) -->
 
 ### Decouverte
 
 Parcourez les films et series populaires via **TMDB**, avec correspondance automatique vers les releases disponibles (qualite, langues, saisons detectees depuis le nom de la release).
 
-<!-- ![Page Decouverte](docs/screenshot-discover.png) -->
+<!-- ![Page Decouverte](docs/screenshot-discover.webp) -->
 
 ### Magnets
 
 Suivez vos magnets AllDebrid en temps reel : statut, progression, vitesse, seeders. Telechargez les fichiers, copiez les liens debrides ou lancez la lecture directement dans **VLC**.
 
-<!-- ![Page Magnets](docs/screenshot-magnets.png) -->
+<!-- ![Page Magnets](docs/screenshot-magnets.webp) -->
 
 ### Et aussi
 
