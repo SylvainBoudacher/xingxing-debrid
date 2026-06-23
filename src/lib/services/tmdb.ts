@@ -36,8 +36,7 @@ export interface TmdbTvDetail {
 
 // queryKeys sans la cle API : rotation sans invalidation, secret hors du cache.
 export const tmdbKeys = {
-  topRated: (mt: TmdbMediaType, page: number) =>
-    ["tmdb", "top_rated", mt, page] as const,
+  topRated: (mt: TmdbMediaType, page: number) => ["tmdb", "top_rated", mt, page] as const,
   search: (mt: TmdbMediaType, query: string, page: number) =>
     ["tmdb", "search", mt, query, page] as const,
   discoverAnimation: (mt: TmdbMediaType, page: number) =>
@@ -49,9 +48,7 @@ export const tmdbKeys = {
 async function get<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok)
-    throw new Error(
-      res.status === 401 ? "Clé TMDB invalide" : `Erreur TMDB ${res.status}`,
-    );
+    throw new Error(res.status === 401 ? "Clé TMDB invalide" : `Erreur TMDB ${res.status}`);
   return res.json() as Promise<T>;
 }
 
@@ -61,22 +58,13 @@ export function topRated(mt: TmdbMediaType, page: number, apiKey: string) {
   );
 }
 
-export function search(
-  mt: TmdbMediaType,
-  query: string,
-  page: number,
-  apiKey: string,
-) {
+export function search(mt: TmdbMediaType, query: string, page: number, apiKey: string) {
   return get<TmdbListResponse>(
     `${BASE}/search/${mt}?api_key=${apiKey}&language=fr-FR&include_adult=false&query=${encodeURIComponent(query)}&page=${page}`,
   );
 }
 
-export function discoverAnimation(
-  mt: TmdbMediaType,
-  page: number,
-  apiKey: string,
-) {
+export function discoverAnimation(mt: TmdbMediaType, page: number, apiKey: string) {
   return get<TmdbListResponse>(
     `${BASE}/discover/${mt}?api_key=${apiKey}&language=fr-FR&with_genres=${ANIMATION_GENRE_ID}&sort_by=vote_average.desc&vote_count.gte=${mt === "movie" ? 300 : 150}&page=${page}`,
   );
@@ -89,7 +77,5 @@ export function findByImdb(imdbId: string, apiKey: string) {
 }
 
 export function tvDetail(id: number, apiKey: string) {
-  return get<TmdbTvDetail>(
-    `${BASE}/tv/${id}?api_key=${apiKey}&language=fr-FR`,
-  );
+  return get<TmdbTvDetail>(`${BASE}/tv/${id}?api_key=${apiKey}&language=fr-FR`);
 }

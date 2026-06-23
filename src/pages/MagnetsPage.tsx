@@ -4,9 +4,27 @@ import { motion, AnimatePresence } from "motion/react";
 import { fetch } from "@tauri-apps/plugin-http";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import {
-  ArrowLeft, RefreshCw, Trash2, Loader2,
-  CheckCircle2, Clock, AlertCircle, Download, Zap, Search, X,
-  ChevronLeft, ChevronRight, Compass, Copy, Check, Home, ListChecks, Menu, ScrollText, SlidersHorizontal,
+  ArrowLeft,
+  RefreshCw,
+  Trash2,
+  Loader2,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
+  Download,
+  Zap,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Compass,
+  Copy,
+  Check,
+  Home,
+  ListChecks,
+  Menu,
+  ScrollText,
+  SlidersHorizontal,
 } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey } from "@/lib/apiKeys";
@@ -54,15 +72,26 @@ async function forEachLimit<T>(
       }
     }
   };
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, worker),
-  );
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   if (firstError !== null) throw firstError;
 }
 
 const VIDEO_EXTENSIONS = new Set([
-  "mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v",
-  "mpg", "mpeg", "ts", "m2ts", "3gp", "ogv", "vob",
+  "mp4",
+  "mkv",
+  "avi",
+  "mov",
+  "wmv",
+  "flv",
+  "webm",
+  "m4v",
+  "mpg",
+  "mpeg",
+  "ts",
+  "m2ts",
+  "3gp",
+  "ogv",
+  "vob",
 ]);
 
 function isVideoFile(name: string): boolean {
@@ -82,7 +111,11 @@ function formatSpeed(bps: number): string {
 
 function formatDate(ts: number): string {
   if (!ts) return "-";
-  return new Date(ts * 1000).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+  return new Date(ts * 1000).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 type StatusFilter = "all" | "active" | "ready" | "error";
@@ -147,22 +180,40 @@ interface FilesModalProps {
   onClose: () => void;
 }
 
-function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfoDownload, onClose }: FilesModalProps) {
+function FilesModal({
+  magnetId,
+  magnetName,
+  apiKey,
+  simpleView,
+  hideNfo,
+  skipNfoDownload,
+  onClose,
+}: FilesModalProps) {
   const [downloading, setDownloading] = useState<string | null>(null);
   const [copying, setCopying] = useState<string | null>(null);
   const [vlcing, setVlcing] = useState<string | null>(null);
-  const [downloadingAll, setDownloadingAll] = useState<{ done: number; total: number } | null>(null);
+  const [downloadingAll, setDownloadingAll] = useState<{ done: number; total: number } | null>(
+    null,
+  );
 
-  const busy = downloading !== null || copying !== null || vlcing !== null || downloadingAll !== null;
+  const busy =
+    downloading !== null || copying !== null || vlcing !== null || downloadingAll !== null;
 
   // Fetch mis en cache par TanStack Query — rouvrir le même magnet est instantané.
-  const { data: allFiles, isLoading: loading, isError } = useQuery({
+  const {
+    data: allFiles,
+    isLoading: loading,
+    isError,
+  } = useQuery({
     queryKey: ["magnet-files", magnetId],
     queryFn: async () => {
       const res = await fetch(`${AD_BASE}/magnet/files?agent=c411&id[]=${magnetId}`, {
         headers: { Authorization: `Bearer ${apiKey}` },
       });
-      const json = await res.json() as { status: string; data?: { magnets?: Array<{ files?: unknown[] }> } };
+      const json = (await res.json()) as {
+        status: string;
+        data?: { magnets?: Array<{ files?: unknown[] }> };
+      };
       const rawFiles = json.data?.magnets?.[0]?.files ?? [];
       return flattenFiles(rawFiles);
     },
@@ -172,7 +223,7 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfo
 
   // hideNfo est appliqué côté client, sans déclencher un nouveau fetch
   const files = useMemo(
-    () => hideNfo ? (allFiles ?? []).filter((f) => !isNfoFile(f.name)) : (allFiles ?? []),
+    () => (hideNfo ? (allFiles ?? []).filter((f) => !isNfoFile(f.name)) : (allFiles ?? [])),
     [allFiles, hideNfo],
   );
 
@@ -184,7 +235,9 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfo
   }, [isError, onClose]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
@@ -266,7 +319,9 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfo
         <div className="px-5 pt-5 pb-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">Fichiers disponibles</p>
+              <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">
+                Fichiers disponibles
+              </p>
               <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">
                 {simpleView ? parseRelease(magnetName).title : magnetName}
               </p>
@@ -286,10 +341,21 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfo
               disabled={busy}
               className="mt-3 flex w-full items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              {downloadingAll
-                ? <><Loader2 className="h-3.5 w-3.5 text-white animate-spin" /><span className="text-xs font-medium text-white">{downloadingAll.done}/{downloadingAll.total}...</span></>
-                : <><Download className="h-3.5 w-3.5 text-white" /><span className="text-xs font-medium text-white">Tout telecharger ({files.length})</span></>
-              }
+              {downloadingAll ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+                  <span className="text-xs font-medium text-white">
+                    {downloadingAll.done}/{downloadingAll.total}...
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-3.5 w-3.5 text-white" />
+                  <span className="text-xs font-medium text-white">
+                    Tout telecharger ({files.length})
+                  </span>
+                </>
+              )}
             </motion.button>
           )}
         </div>
@@ -301,65 +367,87 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfo
               <Loader2 className="h-5 w-5 text-zinc-500 dark:text-zinc-400 animate-spin" />
             </div>
           )}
-          {!loading && files?.map((file, i) => {
-            const fileName = file.name.split("/").pop() ?? file.name;
-            const showName = fileName !== magnetName;
-            const parsed = simpleView ? parseRelease(fileName) : null;
-            return (
-              <div key={i} className="rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3">
-                <div className="mb-3">
-                  {showName && (
-                    <p className="text-sm font-medium text-zinc-900 dark:text-white leading-snug line-clamp-2 mb-0.5">
-                      {parsed ? parsed.title : fileName}
+          {!loading &&
+            files?.map((file, i) => {
+              const fileName = file.name.split("/").pop() ?? file.name;
+              const showName = fileName !== magnetName;
+              const parsed = simpleView ? parseRelease(fileName) : null;
+              return (
+                <div key={i} className="rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3">
+                  <div className="mb-3">
+                    {showName && (
+                      <p className="text-sm font-medium text-zinc-900 dark:text-white leading-snug line-clamp-2 mb-0.5">
+                        {parsed ? parsed.title : fileName}
+                      </p>
+                    )}
+                    <p className="text-xs text-zinc-500">
+                      {formatSize(file.size)}
+                      {parsed?.quality ? ` · ${parsed.quality}` : ""}
+                      {parsed?.codec ? ` · ${parsed.codec}` : ""}
                     </p>
-                  )}
-                  <p className="text-xs text-zinc-500">
-                    {formatSize(file.size)}
-                    {parsed?.quality ? ` · ${parsed.quality}` : ""}
-                    {parsed?.codec ? ` · ${parsed.codec}` : ""}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {isVideoFile(file.name) && (
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isVideoFile(file.name) && (
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => handleOpenVlc(file.link)}
+                        disabled={busy}
+                        className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {vlcing === file.link ? (
+                          <Loader2 className="h-3.5 w-3.5 text-zinc-900 dark:text-white animate-spin" />
+                        ) : (
+                          <img src={vlcLogo} className="h-4 w-4" />
+                        )}
+                        <span className="text-xs font-medium text-zinc-900 dark:text-white">
+                          Lire avec VLC
+                        </span>
+                      </motion.button>
+                    )}
                     <motion.button
                       whileTap={{ scale: 0.97 }}
-                      onClick={() => handleOpenVlc(file.link)}
+                      onClick={() => handleCopy(file.link)}
                       disabled={busy}
-                      className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
-                      {vlcing === file.link
-                        ? <Loader2 className="h-3.5 w-3.5 text-zinc-900 dark:text-white animate-spin" />
-                        : <img src={vlcLogo} className="h-4 w-4" />
-                      }
-                      <span className="text-xs font-medium text-zinc-900 dark:text-white">Lire avec VLC</span>
+                      {copying === file.link ? (
+                        <>
+                          <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                          <span className="text-xs font-medium text-green-600 dark:text-green-400">
+                            Copie !
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-300" />
+                          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                            Copier le lien
+                          </span>
+                        </>
+                      )}
                     </motion.button>
-                  )}
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => handleCopy(file.link)}
-                    disabled={busy}
-                    className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {copying === file.link
-                      ? <><Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" /><span className="text-xs font-medium text-green-600 dark:text-green-400">Copie !</span></>
-                      : <><Copy className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-300" /><span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Copier le lien</span></>
-                    }
-                  </motion.button>
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => handleDownload(file.link)}
-                    disabled={busy}
-                    className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {downloading === file.link
-                      ? <><Loader2 className="h-3.5 w-3.5 text-white animate-spin" /><span className="text-xs font-medium text-white">Ouverture...</span></>
-                      : <><Download className="h-3.5 w-3.5 text-white" /><span className="text-xs font-medium text-white">Telecharger</span></>
-                    }
-                  </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => handleDownload(file.link)}
+                      disabled={busy}
+                      className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {downloading === file.link ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+                          <span className="text-xs font-medium text-white">Ouverture...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-3.5 w-3.5 text-white" />
+                          <span className="text-xs font-medium text-white">Telecharger</span>
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
       </motion.div>
     </motion.div>
@@ -367,8 +455,14 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfo
 }
 
 function Pagination({
-  page, totalPages, onChange,
-}: { page: number; totalPages: number; onChange: (p: number) => void }) {
+  page,
+  totalPages,
+  onChange,
+}: {
+  page: number;
+  totalPages: number;
+  onChange: (p: number) => void;
+}) {
   if (totalPages <= 1) return null;
 
   const pages: (number | "...")[] = [];
@@ -393,7 +487,9 @@ function Pagination({
       </button>
       {pages.map((p, i) =>
         p === "..." ? (
-          <span key={`ellipsis-${i}`} className="px-1 text-xs text-zinc-400 dark:text-zinc-600">...</span>
+          <span key={`ellipsis-${i}`} className="px-1 text-xs text-zinc-400 dark:text-zinc-600">
+            ...
+          </span>
         ) : (
           <button
             key={p}
@@ -406,7 +502,7 @@ function Pagination({
           >
             {p}
           </button>
-        )
+        ),
       )}
       <button
         onClick={() => onChange(page + 1)}
@@ -444,7 +540,9 @@ export function MagnetsPage({
   const [deleting, setDeleting] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [bulkDownloading, setBulkDownloading] = useState<{ done: number; total: number } | null>(null);
+  const [bulkDownloading, setBulkDownloading] = useState<{ done: number; total: number } | null>(
+    null,
+  );
   const [simpleView, setSimpleView] = useState((initialViewMode ?? "simple") === "simple");
   const [hideNfo, setHideNfo] = useState(initialHideNfoFiles ?? true);
   const [skipNfoDownload, setSkipNfoDownload] = useState(initialSkipNfoDownload ?? true);
@@ -500,7 +598,10 @@ export function MagnetsPage({
       loadMagnets();
     } else {
       getApiKey("alldebrid_api_key").then((v) => {
-        if (v) { apiKeyRef.current = v; setApiKey(v); }
+        if (v) {
+          apiKeyRef.current = v;
+          setApiKey(v);
+        }
         loadMagnets();
       });
     }
@@ -513,8 +614,8 @@ export function MagnetsPage({
     if (initialSkipNfoDownload === undefined) {
       store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
     }
-  // initialXxx props are intentional initial-value-only inputs — not reactive deps.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // initialXxx props are intentional initial-value-only inputs — not reactive deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadMagnets]);
 
   async function handleDelete(ids: number[]) {
@@ -536,8 +637,7 @@ export function MagnetsPage({
     } catch (err) {
       toast.error(String(err));
     } finally {
-      if (deleted.length > 0)
-        setMagnets((prev) => prev.filter((m) => !deleted.includes(m.id)));
+      if (deleted.length > 0) setMagnets((prev) => prev.filter((m) => !deleted.includes(m.id)));
       setDeleting(false);
     }
   }
@@ -559,7 +659,10 @@ export function MagnetsPage({
       const res = await fetch(`${AD_BASE}/magnet/files?agent=c411&${idParams}`, {
         headers: { Authorization: `Bearer ${apiKeyRef.current}` },
       });
-      const json = await res.json() as { status: string; data?: { magnets?: Array<{ files?: unknown[] }> } };
+      const json = (await res.json()) as {
+        status: string;
+        data?: { magnets?: Array<{ files?: unknown[] }> };
+      };
       if (json.status !== "success") throw new Error("Erreur AllDebrid");
       const files = (json.data?.magnets ?? [])
         .flatMap((m) => flattenFiles(m.files ?? []))
@@ -568,7 +671,10 @@ export function MagnetsPage({
       setBulkDownloading({ done: 0, total: files.length });
       let done = 0;
       await forEachLimit(files, CONCURRENCY, async (file) => {
-        const url = await invoke<string>("unlock_link", { link: file.link, alldebridKey: apiKeyRef.current });
+        const url = await invoke<string>("unlock_link", {
+          link: file.link,
+          alldebridKey: apiKeyRef.current,
+        });
         await openUrl(url);
         setBulkDownloading({ done: ++done, total: files.length });
       });
@@ -581,7 +687,9 @@ export function MagnetsPage({
     }
   }
 
-  useEffect(() => { void Promise.resolve().then(() => setPage(1)); }, [search, statusFilter]);
+  useEffect(() => {
+    void Promise.resolve().then(() => setPage(1));
+  }, [search, statusFilter]);
 
   const counts = useMemo(() => {
     const c = { all: magnets.length, active: 0, ready: 0, error: 0 };
@@ -605,15 +713,14 @@ export function MagnetsPage({
   );
 
   const tabs: { key: StatusFilter; label: string }[] = [
-    { key: "all",    label: `Tous (${counts.all})` },
+    { key: "all", label: `Tous (${counts.all})` },
     { key: "active", label: `En cours (${counts.active})` },
-    { key: "ready",  label: `Termine (${counts.ready})` },
-    { key: "error",  label: `Erreur (${counts.error})` },
+    { key: "ready", label: `Termine (${counts.ready})` },
+    { key: "error", label: `Erreur (${counts.error})` },
   ];
 
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
-
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -16 }}
@@ -631,7 +738,9 @@ export function MagnetsPage({
             <span className="text-sm font-medium">Retour</span>
           </motion.button>
 
-          <h1 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight absolute left-1/2 -translate-x-1/2">Magnets</h1>
+          <h1 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight absolute left-1/2 -translate-x-1/2">
+            Magnets
+          </h1>
 
           <div className="flex items-center gap-2">
             <motion.button
@@ -735,17 +844,20 @@ export function MagnetsPage({
             <p className="text-[11px] text-zinc-400 dark:text-zinc-600 uppercase tracking-wider font-medium">
               {filtered.length === 0
                 ? "Aucun resultat"
-                : `${filtered.length} magnet${filtered.length > 1 ? "s" : ""}${search ? ` pour "${search}"` : ""}`
-              }
+                : `${filtered.length} magnet${filtered.length > 1 ? "s" : ""}${search ? ` pour "${search}"` : ""}`}
             </p>
             <div className="flex shrink-0 items-center gap-2">
               {statusFilter === "error" && counts.error > 0 && (
                 <motion.button
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => setConfirmDelete({
-                    ids: magnets.filter((m) => getStatusFilter(m.statusCode) === "error").map((m) => m.id),
-                    label: `${counts.error} magnet${counts.error > 1 ? "s" : ""} en erreur`,
-                  })}
+                  onClick={() =>
+                    setConfirmDelete({
+                      ids: magnets
+                        .filter((m) => getStatusFilter(m.statusCode) === "error")
+                        .map((m) => m.id),
+                      label: `${counts.error} magnet${counts.error > 1 ? "s" : ""} en erreur`,
+                    })
+                  }
                   className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors"
                 >
                   <Trash2 className="h-3 w-3" />
@@ -755,7 +867,10 @@ export function MagnetsPage({
               {filtered.length > 0 && (
                 <motion.button
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => { setSelectMode((v) => !v); setSelected(new Set()); }}
+                  onClick={() => {
+                    setSelectMode((v) => !v);
+                    setSelected(new Set());
+                  }}
                   className={`flex items-center gap-1.5 h-7 px-3 rounded-lg ring-1 transition-colors ${
                     selectMode
                       ? "bg-indigo-600 ring-indigo-500 text-white"
@@ -787,61 +902,74 @@ export function MagnetsPage({
         )}
 
         <div className="space-y-2">
-            {paginated.map((m, i) => {
-              const isReady = m.statusCode === 4;
-              const isActive = m.statusCode >= 0 && m.statusCode <= 3;
-              const pct = m.size && m.downloaded ? Math.min(100, Math.round((m.downloaded / m.size) * 100)) : 0;
-              const parsed = simpleView ? parseRelease(m.filename) : null;
+          {paginated.map((m, i) => {
+            const isReady = m.statusCode === 4;
+            const isActive = m.statusCode >= 0 && m.statusCode <= 3;
+            const pct =
+              m.size && m.downloaded ? Math.min(100, Math.round((m.downloaded / m.size) * 100)) : 0;
+            const parsed = simpleView ? parseRelease(m.filename) : null;
 
-              return (
-                <motion.div
-                  key={`${statusFilter}-${search}-${page}-${m.id}`}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.35, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
-                  className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 overflow-hidden transition-[background-color,box-shadow] duration-200 hover:bg-white dark:hover:bg-zinc-900 hover:ring-black/12 dark:hover:ring-white/12 hover:shadow-[0_8px_30px_rgba(0,0,0,0.10)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
-                >
-                  <div className="flex gap-3 px-5 py-4">
-                    {selectMode && isReady && (
-                      <button
-                        onClick={() => toggleSelect(m.id)}
-                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md ring-1 transition-colors ${
-                          selected.has(m.id)
-                            ? "bg-indigo-600 ring-indigo-500"
-                            : "bg-zinc-200 dark:bg-zinc-800 ring-black/10 dark:ring-white/10 hover:ring-black/20 dark:hover:ring-white/25"
-                        }`}
-                      >
-                        {selected.has(m.id) && <Check className="h-3 w-3 text-white" />}
-                      </button>
-                    )}
+            return (
+              <motion.div
+                key={`${statusFilter}-${search}-${page}-${m.id}`}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: i * 0.05, ease: [0.22, 1, 0.36, 1] }}
+                className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 overflow-hidden transition-[background-color,box-shadow] duration-200 hover:bg-white dark:hover:bg-zinc-900 hover:ring-black/12 dark:hover:ring-white/12 hover:shadow-[0_8px_30px_rgba(0,0,0,0.10)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
+              >
+                <div className="flex gap-3 px-5 py-4">
+                  {selectMode && isReady && (
+                    <button
+                      onClick={() => toggleSelect(m.id)}
+                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md ring-1 transition-colors ${
+                        selected.has(m.id)
+                          ? "bg-indigo-600 ring-indigo-500"
+                          : "bg-zinc-200 dark:bg-zinc-800 ring-black/10 dark:ring-white/10 hover:ring-black/20 dark:hover:ring-white/25"
+                      }`}
+                    >
+                      {selected.has(m.id) && <Check className="h-3 w-3 text-white" />}
+                    </button>
+                  )}
 
-                    <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1">
                     {parsed && (parsed.quality || parsed.codec) && (
                       <div className="flex items-center gap-1.5 mb-1">
                         {parsed.quality && (
-                          <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">{parsed.quality}</span>
+                          <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                            {parsed.quality}
+                          </span>
                         )}
                         {parsed.codec && (
-                          <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{parsed.codec}</span>
+                          <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                            {parsed.codec}
+                          </span>
                         )}
                       </div>
                     )}
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2 mb-2.5">{parsed ? parsed.title : m.filename}</p>
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2 mb-2.5">
+                      {parsed ? parsed.title : m.filename}
+                    </p>
 
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                       <StatusBadge code={m.statusCode} label={m.status} />
                       <span className="text-[11px] text-zinc-500">{formatSize(m.size)}</span>
                       {isActive && m.downloadSpeed > 0 && (
-                        <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">{formatSpeed(m.downloadSpeed)}</span>
+                        <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium">
+                          {formatSpeed(m.downloadSpeed)}
+                        </span>
                       )}
                       {isActive && m.seeders > 0 && (
                         <span className="text-[11px] text-zinc-500">{m.seeders} seeders</span>
                       )}
                       {isReady && (
-                        <span className="text-[11px] text-zinc-500">{formatDate(m.completionDate)}</span>
+                        <span className="text-[11px] text-zinc-500">
+                          {formatDate(m.completionDate)}
+                        </span>
                       )}
                       {!isReady && !isActive && (
-                        <span className="text-[11px] text-zinc-500">{formatDate(m.uploadDate)}</span>
+                        <span className="text-[11px] text-zinc-500">
+                          {formatDate(m.uploadDate)}
+                        </span>
                       )}
 
                       <div className="flex items-center gap-1.5 ml-auto shrink-0">
@@ -852,7 +980,9 @@ export function MagnetsPage({
                             className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition-colors"
                           >
                             <Download className="h-3 w-3 text-white" />
-                            <span className="text-[11px] font-medium text-white">Voir les fichiers</span>
+                            <span className="text-[11px] font-medium text-white">
+                              Voir les fichiers
+                            </span>
                           </motion.button>
                         )}
                         <motion.button
@@ -869,16 +999,20 @@ export function MagnetsPage({
                       <div className="mt-2">
                         <ProgressBar downloaded={m.downloaded} size={m.size} />
                         <div className="flex justify-between items-center mt-1">
-                          <span className="text-[10px] text-zinc-400 dark:text-zinc-600">{formatSize(m.downloaded)} / {formatSize(m.size)}</span>
-                          <span className="text-[10px] text-zinc-400 dark:text-zinc-600">{pct}%</span>
+                          <span className="text-[10px] text-zinc-400 dark:text-zinc-600">
+                            {formatSize(m.downloaded)} / {formatSize(m.size)}
+                          </span>
+                          <span className="text-[10px] text-zinc-400 dark:text-zinc-600">
+                            {pct}%
+                          </span>
                         </div>
                       </div>
                     )}
-                    </div>
                   </div>
-                </motion.div>
-              );
-            })}
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
 
         <Pagination page={page} totalPages={totalPages} onChange={setPage} />
@@ -902,13 +1036,25 @@ export function MagnetsPage({
               disabled={bulkDownloading !== null}
               className="flex items-center gap-2 h-8 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
-              {bulkDownloading
-                ? <><Loader2 className="h-3.5 w-3.5 text-white animate-spin" /><span className="text-xs font-medium text-white">{bulkDownloading.done}/{bulkDownloading.total || "..."}</span></>
-                : <><Download className="h-3.5 w-3.5 text-white" /><span className="text-xs font-medium text-white">Tout telecharger</span></>
-              }
+              {bulkDownloading ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
+                  <span className="text-xs font-medium text-white">
+                    {bulkDownloading.done}/{bulkDownloading.total || "..."}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Download className="h-3.5 w-3.5 text-white" />
+                  <span className="text-xs font-medium text-white">Tout telecharger</span>
+                </>
+              )}
             </motion.button>
             <button
-              onClick={() => { setSelected(new Set()); setSelectMode(false); }}
+              onClick={() => {
+                setSelected(new Set());
+                setSelectMode(false);
+              }}
               disabled={bulkDownloading !== null}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 transition-colors"
             >
@@ -952,7 +1098,9 @@ export function MagnetsPage({
               <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">
                 {confirmDelete.ids.length > 1 ? "Supprimer ces magnets ?" : "Supprimer ce magnet ?"}
               </p>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug line-clamp-2 mb-4">{confirmDelete.label}</p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-snug line-clamp-2 mb-4">
+                {confirmDelete.label}
+              </p>
               <div className="flex gap-2">
                 <motion.button
                   whileTap={{ scale: 0.97 }}
@@ -968,10 +1116,11 @@ export function MagnetsPage({
                   disabled={deleting}
                   className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-medium text-white disabled:opacity-40 transition-colors"
                 >
-                  {deleting
-                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    : <Trash2 className="h-3.5 w-3.5" />
-                  }
+                  {deleting ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
                   Supprimer
                 </motion.button>
               </div>
