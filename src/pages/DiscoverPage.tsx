@@ -12,9 +12,21 @@ import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { parseRelease } from "@/lib/parseRelease";
 import { flattenFiles, formatSize, type DebridModal } from "@/lib/debrid";
 import type { C411Torrent } from "@/lib/c411";
+import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+import { c411Keys, searchTorrents } from "@/lib/services/c411";
+import { useDebridActions } from "@/lib/useDebridActions";
+import {
+  ANIMATION_GENRE_ID,
+  tmdbKeys,
+  type TmdbRawResult,
+  topRated as tmdbTopRated,
+  search as tmdbSearch,
+  discoverAnimation as tmdbDiscoverAnimation,
+  findByImdb as tmdbFindByImdb,
+  tvDetail as tmdbTvDetail,
+} from "@/lib/services/tmdb";
 import { invoke } from "@tauri-apps/api/core";
-import { fetch } from "@tauri-apps/plugin-http";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   ArrowDown,
   ArrowLeft,
@@ -45,7 +57,15 @@ type MediaType = "movie" | "tv";
 type BrowseType = MediaType | "animation";
 type DiscoverTab = BrowseType | "likes";
 
-const ANIMATION_GENRE_ID = 16;
+// Les listes TMDB bougent peu : cache 10 min pour couper les refetch au
+// changement d'onglet / retour sur une recherche deja vue.
+const TMDB_STALE_MS = 10 * 60_000;
+function cachedTmdb<T>(
+  queryKey: readonly unknown[],
+  queryFn: () => Promise<T>,
+): Promise<T> {
+  return queryClient.fetchQuery({ queryKey, queryFn, staleTime: TMDB_STALE_MS });
+}
 
 interface TmdbItem {
   id: number;
@@ -56,26 +76,6 @@ interface TmdbItem {
   year: string;
   voteAverage: number;
   overview: string;
-}
-
-interface TmdbRawResult {
-  id: number;
-  title?: string;
-  original_title?: string;
-  name?: string;
-  original_name?: string;
-  poster_path: string | null;
-  release_date?: string | null;
-  first_air_date?: string | null;
-  vote_average: number;
-  overview?: string;
-  genre_ids?: number[];
-}
-
-interface TmdbListResponse {
-  page: number;
-  total_pages: number;
-  results: TmdbRawResult[];
 }
 
 function mapTmdb(r: TmdbRawResult, mediaType: MediaType): TmdbItem {
@@ -201,6 +201,64 @@ const RESOLUTION_RANK: Record<string, number> = {
 
 const IMDB_ID_RE = /^tt\d{5,10}$/i;
 
+function sortOccupants(occupants: Occupant[]): Occupant[] {
+  return [...occupants].sort(
+    (a, b) =>
+      (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) -
+        (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) || b.fileSize - a.fileSize,
+  );
+}
+
+function filterMovieReleases(
+  torrents: C411Torrent[],
+  nTitles: string[],
+  item: TmdbItem,
+): Occupant[] {
+  const nextYear = item.year ? String(Number(item.year) + 1) : "";
+  const occupants: Occupant[] = [];
+  for (const t of torrents) {
+    if (t.category?.id !== 1) continue;
+    if (SERIES_SLUGS.has(t.subcategory?.slug ?? "")) continue;
+    const nName = normalize(t.name);
+    if (!nTitles.some((nt) => nName.includes(nt))) continue;
+    if (item.year && !nName.includes(item.year) && !nName.includes(nextYear))
+      continue;
+    occupants.push(toOccupant(t));
+  }
+  return occupants;
+}
+
+function filterTvReleases(
+  torrents: C411Torrent[],
+  nTitles: string[],
+  season: number | null,
+): Occupant[] {
+  // Matche "S01", "S01E05", "Saison 1", ou une integrale sans numero de saison
+  const seasonRe =
+    season !== null
+      ? new RegExp(
+          `\\bs0*${season}(?:e\\d+)?\\b|\\bsaison 0*${season}\\b|\\bseason 0*${season}\\b`,
+        )
+      : null;
+  const anySeasonRe = /\bs\d{1,2}(?:e\d+)?\b|\bsaison \d+\b|\bseason \d+\b/;
+  const completeRe = /\bintegrale\b|\bcomplete\b|\bcomplet\b/;
+  const occupants: Occupant[] = [];
+  for (const t of torrents) {
+    if (t.category?.id !== 1) continue;
+    if (!SERIES_SLUGS.has(t.subcategory?.slug ?? "")) continue;
+    const nName = normalize(t.name);
+    if (!nTitles.some((nt) => nName.includes(nt))) continue;
+    if (
+      seasonRe &&
+      !seasonRe.test(nName) &&
+      !(completeRe.test(nName) && !anySeasonRe.test(nName))
+    )
+      continue;
+    occupants.push(toOccupant(t));
+  }
+  return occupants;
+}
+
 interface DiscoverPageProps {
   onBack: () => void;
   onNavigate: (page: "magnets" | "preferences" | "patchnotes") => void;
@@ -221,10 +279,7 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
   const [moviesError, setMoviesError] = useState<string | null>(null);
 
   const [selected, setSelected] = useState<TmdbItem | null>(null);
-  const [releases, setReleases] = useState<Occupant[] | null>(null);
-  const [releasesError, setReleasesError] = useState<string | null>(null);
-  const [seasons, setSeasons] = useState<TmdbSeason[] | null>(null);
-  const [activeSeason, setActiveSeason] = useState<number | null>(null);
+  const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
   const [releaseSort, setReleaseSort] = useState<
     "seeders" | "size" | "resolution"
   >("seeders");
@@ -234,14 +289,79 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
 
   const [sendingHash, setSendingHash] = useState<string | null>(null);
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
-  const [downloadingLink, setDownloadingLink] = useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = useState<string | null>(null);
-  const [vlcLink, setVlcLink] = useState<string | null>(null);
 
   const c411KeyRef = useRef<string>("");
   const allDebridKeyRef = useRef<string>("");
-  const releasesReqRef = useRef(0);
+
+  const {
+    downloadingLink,
+    copiedLink,
+    vlcLink,
+    copyLink: handleCopyLink,
+    openVlc: handleOpenVlc,
+    downloadFile: handleDownloadFile,
+  } = useDebridActions(() => allDebridKeyRef.current);
   const prefersReducedMotion = useReducedMotion();
+
+  // Detail TV (saisons) : sert a peupler le selecteur de saison et a defaut
+  // d'une saison choisie, la premiere.
+  const tvDetailQuery = useQuery({
+    queryKey: tmdbKeys.tvDetail(selected?.id ?? 0),
+    enabled: !!selected && selected.mediaType === "tv",
+    staleTime: TMDB_STALE_MS,
+    queryFn: () => tmdbTvDetail(selected!.id, tmdbKey!),
+  });
+
+  const seasons = useMemo<TmdbSeason[] | null>(() => {
+    if (selected?.mediaType !== "tv" || !tvDetailQuery.data) return null;
+    return (tvDetailQuery.data.seasons ?? [])
+      .filter((s) => s.season_number > 0)
+      .map((s) => ({ number: s.season_number, episodeCount: s.episode_count }));
+  }, [selected, tvDetailQuery.data]);
+
+  const activeSeason = selectedSeason ?? seasons?.[0]?.number ?? null;
+
+  // Releases C411 du film / de la saison selectionnee. TanStack gere la course
+  // (les resultats perimes sont ignores) et le cache (re-ouverture, switch saison).
+  const releasesQuery = useQuery({
+    queryKey: [
+      "c411-releases",
+      selected?.mediaType,
+      selected?.id,
+      selected?.mediaType === "tv" ? activeSeason : null,
+    ],
+    enabled:
+      !!selected && (selected.mediaType === "movie" || tvDetailQuery.isSuccess),
+    staleTime: 60_000,
+    queryFn: async ({ queryKey }) => {
+      console.log("[releases] queryFn FETCH (cache miss) key=", JSON.stringify(queryKey));
+      const item = selected!;
+      const { torrents, nTitles } = await searchC411(item);
+      return item.mediaType === "movie"
+        ? sortOccupants(filterMovieReleases(torrents, nTitles, item))
+        : sortOccupants(filterTvReleases(torrents, nTitles, activeSeason));
+    },
+  });
+
+  console.log("[releases] render", {
+    status: releasesQuery.status,
+    fetch: releasesQuery.fetchStatus,
+    hasData: releasesQuery.data !== undefined,
+    enabled: !!selected && (selected?.mediaType === "movie" || tvDetailQuery.isSuccess),
+    key: JSON.stringify([
+      "c411-releases",
+      selected?.mediaType,
+      selected?.id,
+      selected?.mediaType === "tv" ? activeSeason : null,
+    ]),
+  });
+
+  const releases = releasesQuery.data ?? null;
+  const releasesError = tvDetailQuery.isError
+    ? String(tvDetailQuery.error)
+    : releasesQuery.isError
+      ? String(releasesQuery.error)
+      : null;
 
   const resOptions = useMemo(
     () =>
@@ -320,25 +440,12 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
     setLoadingMovies(true);
     setMoviesError(null);
     try {
-      const getJson = async (url: string) => {
-        const res = await fetch(url);
-        if (!res.ok)
-          throw new Error(
-            res.status === 401
-              ? "Clé TMDB invalide"
-              : `Erreur TMDB ${res.status}`,
-          );
-        return res.json();
-      };
       let mapped: TmdbItem[];
       let totalPages: number;
       if (m === "search" && IMDB_ID_RE.test(q)) {
-        const found = (await getJson(
-          `https://api.themoviedb.org/3/find/${q.toLowerCase()}?api_key=${key}&external_source=imdb_id&language=fr-FR`,
-        )) as {
-          movie_results: TmdbRawResult[];
-          tv_results: TmdbRawResult[];
-        };
+        const found = await cachedTmdb(tmdbKeys.find(q), () =>
+          tmdbFindByImdb(q, key),
+        );
         mapped =
           type === "tv"
             ? found.tv_results.map((r) => mapTmdb(r, "tv"))
@@ -350,14 +457,18 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
                 ];
         totalPages = 1;
       } else if (type === "animation") {
-        const urlFor = (mt: MediaType) =>
+        const fetchFor = (mt: MediaType) =>
           m === "search"
-            ? `https://api.themoviedb.org/3/search/${mt}?api_key=${key}&language=fr-FR&include_adult=false&query=${encodeURIComponent(q)}&page=${page}`
-            : `https://api.themoviedb.org/3/discover/${mt}?api_key=${key}&language=fr-FR&with_genres=${ANIMATION_GENRE_ID}&sort_by=vote_average.desc&vote_count.gte=${mt === "movie" ? 300 : 150}&page=${page}`;
-        const [movies, tvs] = (await Promise.all([
-          getJson(urlFor("movie")),
-          getJson(urlFor("tv")),
-        ])) as [TmdbListResponse, TmdbListResponse];
+            ? cachedTmdb(tmdbKeys.search(mt, q, page), () =>
+                tmdbSearch(mt, q, page, key),
+              )
+            : cachedTmdb(tmdbKeys.discoverAnimation(mt, page), () =>
+                tmdbDiscoverAnimation(mt, page, key),
+              );
+        const [movies, tvs] = await Promise.all([
+          fetchFor("movie"),
+          fetchFor("tv"),
+        ]);
         const animOnly = (rs: TmdbRawResult[]) =>
           m === "search"
             ? rs.filter((r) => r.genre_ids?.includes(ANIMATION_GENRE_ID))
@@ -368,11 +479,14 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
         ].sort((a, b) => b.voteAverage - a.voteAverage);
         totalPages = Math.max(movies.total_pages, tvs.total_pages);
       } else {
-        const url =
+        const list =
           m === "search"
-            ? `https://api.themoviedb.org/3/search/${type}?api_key=${key}&language=fr-FR&include_adult=false&query=${encodeURIComponent(q)}&page=${page}`
-            : `https://api.themoviedb.org/3/${type}/top_rated?api_key=${key}&language=fr-FR&page=${page}`;
-        const list = (await getJson(url)) as TmdbListResponse;
+            ? await cachedTmdb(tmdbKeys.search(type, q, page), () =>
+                tmdbSearch(type, q, page, key),
+              )
+            : await cachedTmdb(tmdbKeys.topRated(type, page), () =>
+                tmdbTopRated(type, page, key),
+              );
         mapped = list.results.map((r) => mapTmdb(r, type));
         totalPages = list.total_pages;
       }
@@ -426,10 +540,7 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
 
   function closeMovie() {
     setSelected(null);
-    setReleases(null);
-    setReleasesError(null);
-    setSeasons(null);
-    setActiveSeason(null);
+    setSelectedSeason(null);
     setReleaseSort("seeders");
     setSortDir("desc");
     setResFilter(null);
@@ -444,11 +555,19 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
     const titles = [item.title, item.originalTitle].filter(Boolean);
     const queries = [...new Map(titles.map((t) => [normalize(t), t])).values()];
     const results = await Promise.allSettled(
-      queries.map(async (q) => {
-        const url = `https://c411.org/api/torrents?page=1&perPage=50&sortBy=seeders&sortOrder=desc&name=${encodeURIComponent(q)}&apikey=${c411KeyRef.current}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Erreur C411 ${res.status}`);
-        return (await res.json()) as { data: C411Torrent[] };
+      queries.map((q) => {
+        const params = {
+          name: q,
+          page: 1,
+          perPage: 50,
+          sortBy: "seeders",
+          sortOrder: "desc" as const,
+        };
+        return queryClient.fetchQuery({
+          queryKey: c411Keys.search(params),
+          queryFn: () => searchTorrents(params, c411KeyRef.current),
+          staleTime: 60_000,
+        });
       }),
     );
     const byHash = new Map<string, C411Torrent>();
@@ -461,126 +580,20 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
     return { torrents: [...byHash.values()], nTitles: queries.map(normalize) };
   }
 
-  // Garantit que le skeleton reste affiche assez longtemps pour une transition douce
-  const MIN_SKELETON_MS = 900;
-  async function minDelay(start: number) {
-    const remaining = MIN_SKELETON_MS - (Date.now() - start);
-    if (remaining > 0) await new Promise((r) => setTimeout(r, remaining));
-  }
-
-  function sortOccupants(occupants: Occupant[]): Occupant[] {
-    return [...occupants].sort(
-      (a, b) =>
-        (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) -
-          (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) || b.fileSize - a.fileSize,
-    );
-  }
-
-  async function loadMovieReleases(item: TmdbItem) {
-    const start = Date.now();
-    const reqId = ++releasesReqRef.current;
-    try {
-      const { torrents, nTitles } = await searchC411(item);
-      const nextYear = item.year ? String(Number(item.year) + 1) : "";
-      const occupants: Occupant[] = [];
-      for (const t of torrents) {
-        if (t.category?.id !== 1) continue;
-        if (SERIES_SLUGS.has(t.subcategory?.slug ?? "")) continue;
-        const nName = normalize(t.name);
-        if (!nTitles.some((nt) => nName.includes(nt))) continue;
-        if (
-          item.year &&
-          !nName.includes(item.year) &&
-          !nName.includes(nextYear)
-        )
-          continue;
-        occupants.push(toOccupant(t));
-      }
-      await minDelay(start);
-      if (reqId !== releasesReqRef.current) return;
-      setReleases(sortOccupants(occupants));
-    } catch (err) {
-      if (reqId === releasesReqRef.current) setReleasesError(String(err));
-    }
-  }
-
-  async function loadTvReleases(item: TmdbItem, season: number | null) {
-    const start = Date.now();
-    const reqId = ++releasesReqRef.current;
-    try {
-      const { torrents, nTitles } = await searchC411(item);
-      // Matche "S01", "S01E05", "Saison 1", ou une integrale sans numero de saison
-      const seasonRe =
-        season !== null
-          ? new RegExp(
-              `\\bs0*${season}(?:e\\d+)?\\b|\\bsaison 0*${season}\\b|\\bseason 0*${season}\\b`,
-            )
-          : null;
-      const anySeasonRe = /\bs\d{1,2}(?:e\d+)?\b|\bsaison \d+\b|\bseason \d+\b/;
-      const completeRe = /\bintegrale\b|\bcomplete\b|\bcomplet\b/;
-      const occupants: Occupant[] = [];
-      for (const t of torrents) {
-        if (t.category?.id !== 1) continue;
-        if (!SERIES_SLUGS.has(t.subcategory?.slug ?? "")) continue;
-        const nName = normalize(t.name);
-        if (!nTitles.some((nt) => nName.includes(nt))) continue;
-        if (
-          seasonRe &&
-          !seasonRe.test(nName) &&
-          !(completeRe.test(nName) && !anySeasonRe.test(nName))
-        )
-          continue;
-        occupants.push(toOccupant(t));
-      }
-      await minDelay(start);
-      if (reqId !== releasesReqRef.current) return;
-      setReleases(sortOccupants(occupants));
-    } catch (err) {
-      if (reqId === releasesReqRef.current) setReleasesError(String(err));
-    }
-  }
-
-  async function openItem(item: TmdbItem) {
+  // Selection d'un item : les saisons (TV) et les releases sont chargees par
+  // les queries reactives ci-dessus, qui reagissent a `selected`/`activeSeason`.
+  function openItem(item: TmdbItem) {
     setSelected(item);
-    setReleases(null);
-    setReleasesError(null);
-    setSeasons(null);
-    setActiveSeason(null);
-    if (item.mediaType === "movie") {
-      loadMovieReleases(item);
-      return;
-    }
-    try {
-      const res = await fetch(
-        `https://api.themoviedb.org/3/tv/${item.id}?api_key=${tmdbKey}&language=fr-FR`,
-      );
-      if (!res.ok) throw new Error(`Erreur TMDB ${res.status}`);
-      const detail = (await res.json()) as {
-        seasons?: Array<{ season_number: number; episode_count: number }>;
-      };
-      const list = (detail.seasons ?? [])
-        .filter((s) => s.season_number > 0)
-        .map((s) => ({
-          number: s.season_number,
-          episodeCount: s.episode_count,
-        }));
-      setSeasons(list);
-      const first = list[0]?.number ?? null;
-      setActiveSeason(first);
-      loadTvReleases(item, first);
-    } catch (err) {
-      setReleasesError(String(err));
-    }
+    setSelectedSeason(null);
+    setResFilter(null);
+    setLangFilter(null);
   }
 
   function changeSeason(season: number) {
     if (!selected || season === activeSeason) return;
-    setActiveSeason(season);
-    setReleases(null);
-    setReleasesError(null);
+    setSelectedSeason(season);
     setResFilter(null);
     setLangFilter(null);
-    loadTvReleases(selected, season);
   }
 
   async function handleSendToDebrid(occ: Occupant) {
@@ -635,53 +648,6 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
       toast.error(String(err));
     } finally {
       setSendingHash(null);
-    }
-  }
-
-  async function handleCopyLink(link: string) {
-    setCopiedLink(link);
-    try {
-      const url = await invoke<string>("unlock_link", {
-        link,
-        alldebridKey: allDebridKeyRef.current,
-      });
-      await navigator.clipboard.writeText(url);
-      toast.success("Lien copié");
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setTimeout(() => setCopiedLink(null), 2000);
-    }
-  }
-
-  async function handleOpenVlc(link: string) {
-    setVlcLink(link);
-    try {
-      const url = await invoke<string>("unlock_link", {
-        link,
-        alldebridKey: allDebridKeyRef.current,
-      });
-      await invoke("open_with_vlc", { url });
-      toast.success("Ouvert dans VLC");
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setVlcLink(null);
-    }
-  }
-
-  async function handleDownloadFile(link: string) {
-    setDownloadingLink(link);
-    try {
-      const url = await invoke<string>("unlock_link", {
-        link,
-        alldebridKey: allDebridKeyRef.current,
-      });
-      await openUrl(url);
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setDownloadingLink(null);
     }
   }
 

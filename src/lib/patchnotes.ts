@@ -1,7 +1,7 @@
-import discoverImg from "@/assets/patchnote/v1.0/discover-with-IMDB.png";
-import paramsImg from "@/assets/patchnote/v1.0/params.png";
-import themeImg from "@/assets/patchnote/v1.0/theme.png";
-import torrentFilterImg from "@/assets/patchnote/v1.0/torrent-filter.png";
+import discoverImg from "@/assets/patchnote/v1.0/discover-with-IMDB.webp";
+import paramsImg from "@/assets/patchnote/v1.0/params.webp";
+import themeImg from "@/assets/patchnote/v1.0/theme.webp";
+import torrentFilterImg from "@/assets/patchnote/v1.0/torrent-filter.webp";
 
 export interface PatchNoteImage {
   src: string; // image importée depuis src/assets/patchnote/
