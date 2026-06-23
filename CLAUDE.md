@@ -59,13 +59,19 @@ The app follows standard Tauri 2 architecture:
 
 ## Code Rules
 
-- Simplest working solution. No over-engineering.
-- No abstractions for single-use operations.
+- Simplest working solution that stays readable. No over-engineering.
 - No speculative features or "you might also want..."
 - Read the file before modifying it. Never edit blind.
 - No docstrings or type annotations on code not being changed.
 - No error handling for scenarios that cannot happen.
-- Three similar lines is better than a premature abstraction.
+
+## Code Structure
+
+- Split by concern. Don't let a file accumulate unrelated responsibilities or grow into a monolith - extract before that happens (a few hundred lines is a smell, not a hard limit).
+- One component per file. Page-level components in `src/pages/`, reusable ones in `src/components/`.
+- Pull pure helpers, types, constants, and data tables out of component files into sibling modules (e.g. `duckSprite.ts` next to `PixelPool.tsx`) and import them.
+- Prefer normal component composition over one big component doing everything.
+- Splitting for readability is not over-engineering. The "simplest solution" rule never justifies a bloated file.
 
 ## Review Rules
 
