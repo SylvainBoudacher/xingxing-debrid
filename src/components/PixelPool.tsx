@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { makeDuckSprite, SH, SW, VARIANTS, type Effect } from "./duckSprite";
 
 // Pixel-art pool with smoothly-shaded rubber ducks (3/4 isometric view)
 // drifting around. A new duck appears every SPAWN_MS until MAX_DUCKS.
@@ -9,306 +10,6 @@ const FIRST_SPAWN_MS = 5_000;
 const BORDER = 0; // no coping — water fills the full canvas
 const DUCK_BASE = 92; // on-screen height of a scale-1 duck
 
-type Accessory =
-  | "none"
-  | "shades"
-  | "pirate"
-  | "crown"
-  | "party"
-  | "tophat"
-  | "sunhat"
-  | "flower"
-  | "snorkel"
-  | "bowtie"
-  | "headphones";
-
-interface Variant {
-  body: string;
-  beak: string;
-  acc: Accessory;
-  accColor?: string;
-}
-
-const VARIANTS: Variant[] = [
-  // classic yellow appears a bit more often
-  { body: "#FFD21E", beak: "#F5811F", acc: "none" },
-  { body: "#FFD21E", beak: "#F5811F", acc: "none" },
-  { body: "#FFD21E", beak: "#F5811F", acc: "shades" },
-  { body: "#FFD21E", beak: "#2A2A2A", acc: "pirate" },
-  { body: "#FFD21E", beak: "#F5811F", acc: "crown", accColor: "#FFE066" },
-  // colors
-  { body: "#F4F7FB", beak: "#F5811F", acc: "none" }, // white
-  { body: "#FB7AA8", beak: "#F5811F", acc: "none" }, // pink
-  { body: "#E0457B", beak: "#F5811F", acc: "none" }, // magenta
-  { body: "#FF6F61", beak: "#F5811F", acc: "none" }, // coral
-  { body: "#F0584E", beak: "#F5811F", acc: "none" }, // red
-  { body: "#FF9A3C", beak: "#E8620F", acc: "none" }, // orange
-  { body: "#5EE6C5", beak: "#F5811F", acc: "none" }, // mint
-  { body: "#3FD0C8", beak: "#F5811F", acc: "none" }, // teal
-  { body: "#7BD850", beak: "#F5811F", acc: "none" }, // lime
-  { body: "#4FB0F0", beak: "#F5811F", acc: "none" }, // sky blue
-  { body: "#5B8DEF", beak: "#F5811F", acc: "shades" }, // blue
-  { body: "#A7D8FF", beak: "#F5811F", acc: "none" }, // baby blue
-  { body: "#A78BFA", beak: "#F5811F", acc: "party", accColor: "#FB7185" }, // purple
-  { body: "#C9A8FF", beak: "#F5811F", acc: "none" }, // lavender
-  { body: "#7C6B8A", beak: "#F5811F", acc: "none" }, // dusk purple
-  { body: "#4A5568", beak: "#F5A623", acc: "none" }, // charcoal
-  { body: "#F5C518", beak: "#F5811F", acc: "crown", accColor: "#FFF0A0" }, // gold king
-  // accessorized
-  { body: "#FFD21E", beak: "#F5811F", acc: "tophat", accColor: "#E0457B" },
-  { body: "#F4F7FB", beak: "#F5811F", acc: "sunhat", accColor: "#FF6F61" },
-  { body: "#FF9A3C", beak: "#E8620F", acc: "sunhat", accColor: "#3FD0C8" },
-  { body: "#FB7AA8", beak: "#F5811F", acc: "flower", accColor: "#FFFFFF" },
-  { body: "#7BD850", beak: "#F5811F", acc: "flower", accColor: "#FF5C8A" },
-  { body: "#4FB0F0", beak: "#F5811F", acc: "snorkel" },
-  { body: "#5EE6C5", beak: "#F5811F", acc: "snorkel" },
-  { body: "#F4F7FB", beak: "#F5811F", acc: "bowtie", accColor: "#E0457B" },
-  { body: "#A78BFA", beak: "#F5811F", acc: "headphones", accColor: "#FB7185" },
-  { body: "#FFD21E", beak: "#F5811F", acc: "headphones", accColor: "#5B8DEF" },
-];
-
-const SW = 130;
-const SH = 120;
-const BODY = { cx: 56, cy: 82, rx: 46, ry: 32 };
-const HEAD = { cx: 82, cy: 44, r: 32 };
-
-// Build a smoothly-shaded rubber-duck sprite (facing right).
-function makeDuckSprite(v: Variant): HTMLCanvasElement {
-  const cv = document.createElement("canvas");
-  cv.width = SW;
-  cv.height = SH;
-  const c = cv.getContext("2d")!;
-  c.imageSmoothingEnabled = true;
-
-  const fillEll = (
-    cx: number,
-    cy: number,
-    rx: number,
-    ry: number,
-    style: string | CanvasGradient,
-  ) => {
-    c.fillStyle = style;
-    c.beginPath();
-    c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-    c.fill();
-  };
-  const tri = (_c: CanvasRenderingContext2D, pts: [number, number][], style: string) => {
-    _c.fillStyle = style;
-    _c.beginPath();
-    _c.moveTo(pts[0][0], pts[0][1]);
-    for (let i = 1; i < pts.length; i++) _c.lineTo(pts[i][0], pts[i][1]);
-    _c.closePath();
-    _c.fill();
-  };
-
-  // soft dark rim behind the silhouette for definition
-  const rim = "rgba(70,45,0,0.20)";
-  fillEll(BODY.cx, BODY.cy + 2, BODY.rx + 2.5, BODY.ry + 2.5, rim);
-  fillEll(HEAD.cx, HEAD.cy + 2, HEAD.r + 2.5, HEAD.r + 2.5, rim);
-
-  // tail (back-left)
-  c.fillStyle = v.body;
-  c.beginPath();
-  c.moveTo(16, 70);
-  c.quadraticCurveTo(0, 60, 14, 54);
-  c.quadraticCurveTo(26, 60, 30, 74);
-  c.closePath();
-  c.fill();
-
-  // ---- BODY ----
-  fillEll(BODY.cx, BODY.cy, BODY.rx, BODY.ry, v.body);
-  c.save();
-  c.beginPath();
-  c.ellipse(BODY.cx, BODY.cy, BODY.rx, BODY.ry, 0, 0, Math.PI * 2);
-  c.clip();
-  let g = c.createRadialGradient(62, 106, 4, 62, 106, 48);
-  g.addColorStop(0, "rgba(0,0,0,0.34)");
-  g.addColorStop(1, "rgba(0,0,0,0)");
-  fillEll(62, 106, 48, 32, g);
-  g = c.createRadialGradient(94, 88, 4, 94, 88, 40);
-  g.addColorStop(0, "rgba(0,0,0,0.16)");
-  g.addColorStop(1, "rgba(0,0,0,0)");
-  fillEll(94, 88, 40, 30, g);
-  g = c.createRadialGradient(34, 62, 2, 34, 62, 40);
-  g.addColorStop(0, "rgba(255,255,255,0.55)");
-  g.addColorStop(1, "rgba(255,255,255,0)");
-  fillEll(34, 62, 36, 24, g);
-  c.restore();
-
-  // wing seam
-  c.strokeStyle = "rgba(0,0,0,0.15)";
-  c.lineWidth = 2.4;
-  c.beginPath();
-  c.moveTo(58, 70);
-  c.quadraticCurveTo(88, 74, 84, 100);
-  c.stroke();
-
-  // ---- HEAD ----
-  fillEll(HEAD.cx, HEAD.cy, HEAD.r, HEAD.r, v.body);
-  c.save();
-  c.beginPath();
-  c.ellipse(HEAD.cx, HEAD.cy, HEAD.r, HEAD.r, 0, 0, Math.PI * 2);
-  c.clip();
-  let h = c.createRadialGradient(90, 64, 3, 90, 64, 36);
-  h.addColorStop(0, "rgba(0,0,0,0.30)");
-  h.addColorStop(1, "rgba(0,0,0,0)");
-  fillEll(90, 64, 36, 28, h);
-  h = c.createRadialGradient(66, 26, 2, 66, 26, 30);
-  h.addColorStop(0, "rgba(255,255,255,0.85)");
-  h.addColorStop(1, "rgba(255,255,255,0)");
-  fillEll(66, 27, 26, 22, h);
-  h = c.createRadialGradient(72, 20, 0, 72, 20, 9);
-  h.addColorStop(0, "rgba(255,255,255,0.95)");
-  h.addColorStop(1, "rgba(255,255,255,0)");
-  fillEll(72, 20, 9, 9, h);
-  c.restore();
-
-  // ---- BEAK ----
-  const bk = c.createLinearGradient(0, 46, 0, 64);
-  bk.addColorStop(0, v.beak === "#2A2A2A" ? "#3a3a3a" : "#FBA94C");
-  bk.addColorStop(1, v.beak === "#2A2A2A" ? "#1f1f1f" : v.beak);
-  c.fillStyle = bk;
-  c.beginPath();
-  c.moveTo(103, 48);
-  c.quadraticCurveTo(129, 47, 123, 56);
-  c.quadraticCurveTo(117, 62, 102, 59);
-  c.closePath();
-  c.fill();
-  c.strokeStyle = "rgba(120,50,0,0.45)";
-  c.lineWidth = 1.6;
-  c.beginPath();
-  c.moveTo(105, 55);
-  c.quadraticCurveTo(115, 56, 121, 55);
-  c.stroke();
-
-  // ---- EYE ----
-  if (v.acc !== "shades") {
-    fillEll(96, 38, 4.7, 5.3, "#181818");
-    fillEll(94.4, 35.8, 1.7, 1.9, "#ffffff");
-  }
-
-  // ---- ACCESSORIES ----
-  if (v.acc === "shades") {
-    c.fillStyle = "#1f2937";
-    fillEll(90, 35, 9.5, 7.5, "#1f2937");
-    fillEll(73, 35, 8.5, 6.5, "#1f2937");
-    c.fillRect(80, 32, 4, 3); // bridge
-    c.fillRect(55, 33, 16, 3); // temple arm
-    c.fillStyle = "rgba(120,180,255,0.7)";
-    fillEll(92, 32, 3.5, 2.5, "rgba(120,180,255,0.7)");
-    fillEll(75, 32, 3, 2.2, "rgba(120,180,255,0.7)");
-  } else if (v.acc === "pirate") {
-    c.fillStyle = "#1f2937";
-    fillEll(80, 18, 31, 8, "#1f2937"); // brim
-    c.beginPath();
-    c.moveTo(56, 18);
-    c.quadraticCurveTo(80, -14, 104, 18);
-    c.closePath();
-    c.fill();
-    fillEll(80, 11, 5.5, 5.5, "#f4f7fb"); // skull
-    c.fillStyle = "#1f2937";
-    fillEll(78, 10, 1.2, 1.5, "#1f2937");
-    fillEll(82, 10, 1.2, 1.5, "#1f2937");
-    c.fillRect(78.5, 13, 3, 1.4);
-  } else if (v.acc === "crown") {
-    c.fillStyle = v.accColor!;
-    c.beginPath();
-    c.moveTo(58, 16);
-    c.lineTo(63, 2);
-    c.lineTo(70, 11);
-    c.lineTo(80, -1);
-    c.lineTo(90, 11);
-    c.lineTo(97, 2);
-    c.lineTo(102, 16);
-    c.closePath();
-    c.fill();
-    fillEll(63, 4, 2, 2, "#FF5C8A");
-    fillEll(80, 1, 2.2, 2.2, "#5CC8FF");
-    fillEll(97, 4, 2, 2, "#FF5C8A");
-  } else if (v.acc === "party") {
-    c.fillStyle = v.accColor!;
-    c.beginPath();
-    c.moveTo(60, 14);
-    c.lineTo(80, -18);
-    c.lineTo(100, 14);
-    c.closePath();
-    c.fill();
-    c.fillStyle = "#ffffff";
-    c.fillRect(74, 2, 3, 3);
-    c.fillRect(84, 6, 3, 3);
-    c.fillRect(79, -6, 3, 3);
-    fillEll(80, -18, 3.2, 3.2, "#FACC15"); // pom-pom
-  } else if (v.acc === "tophat") {
-    c.fillStyle = "#23272e";
-    fillEll(80, 15, 27, 6.5, "#23272e"); // brim
-    c.fillRect(67, 0, 28, 15); // cylinder
-    c.fillStyle = v.accColor!;
-    c.fillRect(67, 5, 28, 4); // band
-    c.fillStyle = "rgba(255,255,255,0.12)";
-    c.fillRect(70, 1, 3, 13); // sheen
-  } else if (v.acc === "sunhat") {
-    fillEll(80, 16, 31, 8, "#F2CE7E"); // straw brim
-    fillEll(80, 9, 15, 9, "#F2CE7E"); // dome
-    c.strokeStyle = "rgba(150,110,40,0.4)";
-    c.lineWidth = 1;
-    c.beginPath();
-    c.ellipse(80, 16, 31, 8, 0, 0, Math.PI * 2);
-    c.stroke();
-    fillEll(80, 13, 14, 3.4, v.accColor!); // ribbon
-  } else if (v.acc === "flower") {
-    const pc = v.accColor!;
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2;
-      fillEll(64 + Math.cos(a) * 5.5, 15 + Math.sin(a) * 5.5, 4, 4, pc);
-    }
-    fillEll(64, 15, 3, 3, "#FFD21E"); // center
-  } else if (v.acc === "snorkel") {
-    c.fillStyle = "#22303C";
-    c.fillRect(70, 32, 22, 3); // strap
-    fillEll(95, 37, 12.5, 10, "#22303C"); // mask frame
-    fillEll(95, 37, 9.5, 7.5, "rgba(150,225,255,0.7)"); // glass
-    c.fillStyle = "#F5811F";
-    c.fillRect(110, 6, 4.5, 34); // tube
-    c.fillRect(110, 6, 9, 4); // bend
-    c.fillStyle = "#1f2937";
-    c.fillRect(112.5, 36, 5, 5); // mouthpiece
-  } else if (v.acc === "bowtie") {
-    const bc = v.accColor!;
-    tri(
-      c,
-      [
-        [86, 60],
-        [78, 55],
-        [78, 65],
-      ],
-      bc,
-    );
-    tri(
-      c,
-      [
-        [86, 60],
-        [94, 55],
-        [94, 65],
-      ],
-      bc,
-    );
-    fillEll(86, 60, 2.2, 3, "rgba(0,0,0,0.25)");
-    fillEll(86, 60, 1.8, 2.5, bc);
-  } else if (v.acc === "headphones") {
-    c.strokeStyle = "#22303C";
-    c.lineWidth = 4;
-    c.beginPath();
-    c.ellipse(82, 44, 30, 30, 0, Math.PI * 1.2, Math.PI * 1.8);
-    c.stroke();
-    c.fillStyle = "#22303C";
-    c.fillRect(53, 30, 4, 14); // side bar
-    fillEll(56, 46, 6, 8, "#22303C"); // ear cup
-    fillEll(56, 46, 3.5, 5, v.accColor!); // cushion
-  }
-
-  return cv;
-}
-
 interface Duck {
   x: number;
   y: number;
@@ -317,7 +18,13 @@ interface Duck {
   scale: number;
   phase: number;
   sprite: HTMLCanvasElement;
+  effect?: Effect; // animated aura rendered at draw time (glow/ghost/sparkle/bubbles)
+  lean?: number; // eased pitch toward vertical travel direction
+  spin?: number; // angular velocity (rad/s) from flicks / glancing hits
+  spinAngle?: number; // accumulated spin rotation, unwound back to upright at rest
   entering: boolean; // swimming in from off-screen; skips wall bounce until inside
+  draining?: boolean; // being sucked into the drain
+  drainT?: number; // timestamp when drain animation started
 }
 
 // Pool state lives at module scope so the ducks persist across page changes
@@ -341,7 +48,8 @@ function spawnDuck() {
   const W = bounds.w;
   const H = bounds.h;
   const scale = 0.55 + Math.random() * 0.3;
-  const sprite = makeDuckSprite(VARIANTS[(Math.random() * VARIANTS.length) | 0]);
+  const variant = VARIANTS[(Math.random() * VARIANTS.length) | 0];
+  const sprite = makeDuckSprite(variant);
   const dh = DUCK_BASE * scale;
   const dw = dh * (SW / SH);
   const speed = 12 + Math.random() * 12;
@@ -369,6 +77,7 @@ function spawnDuck() {
     scale,
     phase: Math.random() * Math.PI * 2,
     sprite,
+    effect: variant.effect,
     entering: true,
   });
 }
@@ -433,6 +142,34 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
     let throwVY = 0;
     let appliedCursor = "";
 
+    // transient water droplets thrown up by impacts (throws, wall hits, collisions)
+    interface Splash {
+      x: number;
+      y: number;
+      vx: number;
+      vy: number;
+      life: number;
+      r: number;
+    }
+    const splashes: Splash[] = [];
+
+    function spawnSplash(x: number, y: number, power: number) {
+      if (splashes.length > 220) return;
+      const n = 5 + Math.min(12, (power / 24) | 0);
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const sp = 60 + Math.random() * power * 0.7;
+        splashes.push({
+          x,
+          y,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp,
+          life: 1,
+          r: 1.5 + Math.random() * 2.5,
+        });
+      }
+    }
+
     const setCursor = (cur: string) => {
       if (appliedCursor === cur) return;
       appliedCursor = cur;
@@ -461,10 +198,31 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
       return null;
     }
 
+    // clicking bare water shoves nearby ducks radially and throws up a splash
+    function pokeWater(px: number, py: number) {
+      spawnSplash(px, py, 150);
+      const R = 150;
+      for (const d of pool) {
+        if (d.draining || d === dragging) continue;
+        const dx = d.x - px;
+        const dy = d.y - py;
+        const dist = Math.hypot(dx, dy) || 0.001;
+        if (dist > R) continue;
+        const f = (1 - dist / R) * 160;
+        d.vx += (dx / dist) * f;
+        d.vy += (dy / dist) * f;
+        d.spin = (d.spin ?? 0) + (Math.random() - 0.5) * 6;
+        d.entering = false;
+      }
+    }
+
     function onPointerDown(e: PointerEvent) {
       if (!activeRef.current || overUI(e)) return;
       const d = duckAt(e.clientX, e.clientY);
-      if (!d) return;
+      if (!d) {
+        pokeWater(e.clientX, e.clientY);
+        return;
+      }
       dragging = d;
       dragDX = d.x - e.clientX;
       dragDY = d.y - e.clientY;
@@ -497,10 +255,12 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
 
     function onPointerUp(e: PointerEvent) {
       if (!dragging) return;
-      // dropped into the drain: remove it, freeing a slot for a new duck
+      // dropped into the drain: start the drain animation
       if (overDrain(dragging.x, dragging.y)) {
-        const i = pool.indexOf(dragging);
-        if (i >= 0) pool.splice(i, 1);
+        dragging.draining = true;
+        dragging.drainT = performance.now();
+        dragging.vx = 0;
+        dragging.vy = 0;
         dragging = null;
         updateHoverCursor(e);
         return;
@@ -513,12 +273,14 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
         const a = Math.random() * Math.PI * 2;
         vx = Math.cos(a) * 12;
         vy = Math.sin(a) * 12;
-      } else if (sp > 60) {
-        vx *= 60 / sp;
-        vy *= 60 / sp;
+      } else if (sp > 220) {
+        vx *= 220 / sp;
+        vy *= 220 / sp;
       }
       dragging.vx = vx;
       dragging.vy = vy;
+      dragging.spin = (vx / 220) * 7; // fling imparts spin, direction follows the throw
+      if (Math.hypot(vx, vy) > 90) spawnSplash(dragging.x, dragging.y, Math.hypot(vx, vy));
       dragging = null;
       updateHoverCursor(e);
     }
@@ -658,11 +420,36 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
     }
 
     function drawDuck(d: Duck, t: number) {
+      if (d.draining && d.drainT !== undefined) {
+        const progress = Math.min(1, (t - d.drainT) / DRAIN_MS);
+        const dr = drain();
+        // ease-in: slow start then accelerate toward the hole
+        const ease = progress * progress;
+        const drawX = d.x + (dr.x - d.x) * ease;
+        const drawY = d.y + (dr.y - d.y) * ease;
+        const shrink = 1 - ease;
+        const dh = DUCK_BASE * d.scale * shrink;
+        const dw = dh * (d.sprite.width / d.sprite.height);
+        const spin = ease * Math.PI * 4; // 2 full rotations
+
+        ctx.save();
+        ctx.globalAlpha = 1 - ease * ease;
+        ctx.translate(drawX, drawY);
+        ctx.rotate(spin);
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(d.sprite, -dw / 2, -dh / 2, dw, dh);
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        return;
+      }
+
       const bob = Math.sin(t * 0.003 + d.phase) * 3;
-      const tilt = Math.sin(t * 0.003 + d.phase + 1) * 0.05;
+      const idle = Math.sin(t * 0.003 + d.phase + 1) * 0.05;
       const dh = DUCK_BASE * d.scale;
       const dw = dh * (d.sprite.width / d.sprite.height);
       const flip = d.vx < 0 ? -1 : 1;
+      // lean follows the flip so the leading edge dips either way; spin is added flat
+      const tilt = (idle + (d.lean ?? 0)) * flip + (d.spinAngle ?? 0);
 
       // contact shadow
       ctx.fillStyle = "rgba(0,0,0,0.14)";
@@ -670,16 +457,82 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
       ctx.ellipse(d.x, d.y + dh * 0.42, dw * 0.36, dh * 0.1, 0, 0, Math.PI * 2);
       ctx.fill();
 
+      // glowing aura behind the duck (neon / halo ducks)
+      if (d.effect === "glow") {
+        const pulse = 0.35 + Math.sin(t * 0.004 + d.phase) * 0.1;
+        const gr = ctx.createRadialGradient(d.x, d.y + bob, dw * 0.2, d.x, d.y + bob, dw * 0.85);
+        gr.addColorStop(0, `rgba(140,235,255,${pulse})`);
+        gr.addColorStop(1, "rgba(140,235,255,0)");
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y + bob, dw * 0.85, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       // duck
       ctx.save();
+      ctx.globalAlpha = d.effect === "ghost" ? 0.5 : 1;
       ctx.translate(d.x, d.y + bob);
       ctx.rotate(tilt);
       ctx.scale(flip, 1);
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(d.sprite, -dw / 2, -dh / 2, dw, dh);
       ctx.restore();
+
+      // twinkling sparkles orbiting the duck (galaxy / magic ducks)
+      if (d.effect === "sparkle") {
+        for (let i = 0; i < 4; i++) {
+          const a = t * 0.001 + i * 1.7 + d.phase;
+          const tw = (Math.sin(t * 0.006 + i * 2) + 1) / 2;
+          const sx = d.x + Math.cos(a) * dw * 0.5;
+          const sy = d.y + bob + Math.sin(a) * dh * 0.45;
+          const r = 1 + tw * 2.5;
+          ctx.fillStyle = `rgba(255,240,150,${0.3 + tw * 0.6})`;
+          ctx.fillRect(sx - r, sy - 0.6, r * 2, 1.2);
+          ctx.fillRect(sx - 0.6, sy - r, 1.2, r * 2);
+        }
+      }
+
+      // bubbles rising off the duck (snorkel / underwater vibe)
+      if (d.effect === "bubbles") {
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 3; i++) {
+          const p = (t * 0.0006 + d.phase + i * 0.37) % 1;
+          const bx = d.x + dw * 0.28 + Math.sin(t * 0.002 + i * 2 + d.phase) * 8;
+          const by = d.y + bob - dh * 0.15 - p * dh * 0.9;
+          ctx.beginPath();
+          ctx.arc(bx, by, (1.4 + i * 0.7) * (1 - p * 0.4), 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
     }
 
+    function updateSplashes(dt: number) {
+      for (let i = splashes.length - 1; i >= 0; i--) {
+        const s = splashes[i];
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        const drag = Math.pow(0.04, dt); // droplets brake fast as they land
+        s.vx *= drag;
+        s.vy *= drag;
+        s.life -= dt * 2.4; // ~0.4s lifetime
+        if (s.life <= 0) splashes.splice(i, 1);
+      }
+    }
+
+    function drawSplashes(dark: boolean) {
+      ctx.fillStyle = dark ? "rgba(200,235,255,0.9)" : "#ffffff";
+      for (const s of splashes) {
+        ctx.globalAlpha = Math.max(0, s.life) * 0.85;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r * (0.4 + s.life * 0.6), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    const DRAIN_MS = 900;
     let last = performance.now();
     let raf = 0;
     function frame(now: number) {
@@ -705,33 +558,74 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
       drawRipples(now, dark);
       drawDrain(now, !!(dragging && overDrain(dragging.x, dragging.y)), dark);
 
+      // remove ducks whose drain animation has finished
+      for (let i = pool.length - 1; i >= 0; i--) {
+        const d = pool[i];
+        if (d.draining && d.drainT !== undefined && now - d.drainT >= DRAIN_MS) {
+          pool.splice(i, 1);
+        }
+      }
+
       const b = inner();
       for (const d of pool) {
-        if (d === dragging) continue; // held by the cursor
+        if (d === dragging || d.draining) continue; // held by cursor or animating out
         d.x += d.vx * dt;
         d.y += d.vy * dt;
+
+        // heading: ease a pitch toward vertical travel (left/right is the flip)
+        const targetLean = Math.max(-0.4, Math.min(0.4, d.vy / 140));
+        d.lean = (d.lean ?? 0) + (targetLean - (d.lean ?? 0)) * Math.min(1, dt * 5);
+
+        // spin: integrate angular velocity, then unwind back to upright at rest
+        if (d.spin) {
+          d.spinAngle = (d.spinAngle ?? 0) + d.spin * dt;
+          d.spin *= Math.pow(0.25, dt);
+          if (Math.abs(d.spin) < 0.05) d.spin = 0;
+        } else if (d.spinAngle) {
+          let a = d.spinAngle % (Math.PI * 2);
+          if (a > Math.PI) a -= Math.PI * 2;
+          if (a < -Math.PI) a += Math.PI * 2;
+          d.spinAngle = Math.abs(a) < 0.01 ? 0 : a * Math.pow(0.08, dt);
+        }
+
         if (d.entering) {
           // let it swim in freely until it's fully inside the pool
           if (d.x >= b.minX && d.x <= b.maxX && d.y >= b.minY && d.y <= b.maxY) d.entering = false;
           continue;
         }
+        const WALL_SPLASH = 80;
         if (d.x < b.minX) {
           d.x = b.minX;
+          if (d.vx < -WALL_SPLASH) spawnSplash(d.x, d.y, -d.vx);
           d.vx = Math.abs(d.vx);
         }
         if (d.x > b.maxX) {
           d.x = b.maxX;
+          if (d.vx > WALL_SPLASH) spawnSplash(d.x, d.y, d.vx);
           d.vx = -Math.abs(d.vx);
         }
         if (d.y < b.minY) {
           d.y = b.minY;
+          if (d.vy < -WALL_SPLASH) spawnSplash(d.x, d.y, -d.vy);
           d.vy = Math.abs(d.vy);
         }
         if (d.y > b.maxY) {
           d.y = b.maxY;
+          if (d.vy > WALL_SPLASH) spawnSplash(d.x, d.y, d.vy);
           d.vy = -Math.abs(d.vy);
         }
-        if (Math.random() < 0.01) {
+        // thrown momentum bleeds off: any speed above the gentle cruise decays
+        // back toward it, so a hard fling glides and slows like it's in water.
+        const sp0 = Math.hypot(d.vx, d.vy);
+        const CRUISE = 22;
+        if (sp0 > CRUISE) {
+          const target = CRUISE + (sp0 - CRUISE) * Math.pow(0.6, dt);
+          d.vx *= target / sp0;
+          d.vy *= target / sp0;
+        }
+        // only wander once the duck has settled to cruise speed, otherwise the
+        // 26 px/s clamp would instantly kill an in-flight throw.
+        if (sp0 <= CRUISE && Math.random() < 0.01) {
           d.vx += (Math.random() - 0.5) * 6;
           d.vy += (Math.random() - 0.5) * 6;
           const sp = Math.hypot(d.vx, d.vy);
@@ -742,8 +636,53 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
           }
         }
       }
+
+      // duck-duck collisions: separate overlapping pairs (lighter duck yields
+      // more) and resolve the bounce with mass taken from each duck's scale.
+      for (let i = 0; i < pool.length; i++) {
+        const a = pool[i];
+        if (a === dragging || a.draining || a.entering) continue;
+        const ar = DUCK_BASE * a.scale * 0.32;
+        for (let j = i + 1; j < pool.length; j++) {
+          const c = pool[j];
+          if (c === dragging || c.draining || c.entering) continue;
+          const cr = DUCK_BASE * c.scale * 0.32;
+          const dx = c.x - a.x;
+          const dy = c.y - a.y;
+          const dist = Math.hypot(dx, dy) || 0.001;
+          const min = ar + cr;
+          if (dist >= min) continue;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const ma = a.scale;
+          const mb = c.scale;
+          const sum = ma + mb;
+          const pen = min - dist;
+          a.x -= nx * pen * (mb / sum);
+          a.y -= ny * pen * (mb / sum);
+          c.x += nx * pen * (ma / sum);
+          c.y += ny * pen * (ma / sum);
+          const vn = (c.vx - a.vx) * nx + (c.vy - a.vy) * ny;
+          if (vn < 0) {
+            const e = 0.92; // restitution: bouncy but bleeds a little energy
+            const jimp = (-(1 + e) * vn) / (1 / ma + 1 / mb);
+            a.vx -= (jimp / ma) * nx;
+            a.vy -= (jimp / ma) * ny;
+            c.vx += (jimp / mb) * nx;
+            c.vy += (jimp / mb) * ny;
+            // glancing hits spin the ducks (tangential relative velocity)
+            const vt = (c.vx - a.vx) * -ny + (c.vy - a.vy) * nx;
+            a.spin = Math.max(-12, Math.min(12, (a.spin ?? 0) + vt * 0.03));
+            c.spin = Math.max(-12, Math.min(12, (c.spin ?? 0) - vt * 0.03));
+            if (-vn > 70) spawnSplash((a.x + c.x) / 2, (a.y + c.y) / 2, -vn);
+          }
+        }
+      }
+
+      updateSplashes(dt);
       pool.sort((a, c) => a.y - c.y);
       for (const d of pool) drawDuck(d, now);
+      drawSplashes(dark);
     }
 
     resize();
