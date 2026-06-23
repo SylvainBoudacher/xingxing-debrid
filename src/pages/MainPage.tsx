@@ -255,12 +255,23 @@ export function MainPage({
   >("idle");
   const [sendingIndex, setSendingIndex] = useState<number | null>(null);
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
-  const [showPatchNotif, setShowPatchNotif] = useState(false);
+  const [showPatchNotif, setShowPatchNotif] = useState(
+    initialPatchnotesSeen !== undefined
+      ? initialPatchnotesSeen !== LATEST_VERSION
+      : false,
+  );
   const [simpleSearchView, setSimpleSearchView] = useState(
     (initialSearchViewMode ?? "simple") === "simple",
   );
   const apiKeyRef = useRef<string>(initialC411Key ?? "");
   const allDebridKeyRef = useRef<string>(initialAllDebridKey ?? "");
+  // Snapshot initial props so the mount-only effect doesn't need them as deps
+  const initialPropsRef = useRef({
+    c411Key: initialC411Key,
+    allDebridKey: initialAllDebridKey,
+    patchnotesSeen: initialPatchnotesSeen,
+    searchViewMode: initialSearchViewMode,
+  });
 
   const {
     downloadingLink,
@@ -274,16 +285,13 @@ export function MainPage({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Si les données ont été pré-chargées par useAppInit, on applique
-    // immédiatement le badge patchnotes sans aucun appel réseau/store.
-    if (initialPatchnotesSeen !== undefined) {
-      if (initialPatchnotesSeen !== LATEST_VERSION) setShowPatchNotif(true);
-    }
+    const { c411Key, allDebridKey, patchnotesSeen, searchViewMode } =
+      initialPropsRef.current;
 
     // On ne re-fetch les clés que si elles n'ont pas été injectées
     // (ex: navigation retour vers MainPage depuis une autre page).
-    const needsKeys = !initialC411Key && !initialAllDebridKey;
-    const needsPrefs = initialSearchViewMode === undefined || initialPatchnotesSeen === undefined;
+    const needsKeys = !c411Key && !allDebridKey;
+    const needsPrefs = searchViewMode === undefined || patchnotesSeen === undefined;
 
     if (!needsKeys && !needsPrefs) return;
 
@@ -293,9 +301,9 @@ export function MainPage({
         Promise.all([
           getApiKey("c411_api_key"),
           getApiKey("alldebrid_api_key"),
-        ]).then(([c411Key, allDebridKey]) => {
-          if (c411Key) apiKeyRef.current = c411Key;
-          if (allDebridKey) allDebridKeyRef.current = allDebridKey;
+        ]).then(([fetchedC411Key, fetchedAllDebridKey]) => {
+          if (fetchedC411Key) apiKeyRef.current = fetchedC411Key;
+          if (fetchedAllDebridKey) allDebridKeyRef.current = fetchedAllDebridKey;
         }),
       );
     }
@@ -304,12 +312,12 @@ export function MainPage({
         Promise.all([
           store.get<string>("patchnotes_seen"),
           store.get<ViewMode>("search_view_mode"),
-        ]).then(([patchnotesSeen, searchViewMode]) => {
-          if (initialPatchnotesSeen === undefined && patchnotesSeen !== LATEST_VERSION) {
+        ]).then(([fetchedPatchnotesSeen, fetchedSearchViewMode]) => {
+          if (patchnotesSeen === undefined && fetchedPatchnotesSeen !== LATEST_VERSION) {
             setShowPatchNotif(true);
           }
-          if (initialSearchViewMode === undefined) {
-            setSimpleSearchView((searchViewMode ?? "simple") === "simple");
+          if (searchViewMode === undefined) {
+            setSimpleSearchView((fetchedSearchViewMode ?? "simple") === "simple");
           }
         }),
       );

@@ -412,7 +412,8 @@ export function DiscoverPage({
   );
 
   useEffect(() => {
-    // Ne re-fetch les clés que si elles n'ont pas été injectées par useAppInit
+    // Ne re-fetch les clés que si elles n'ont pas été injectées par useAppInit.
+    // These are intentional initial-value props — only read once on mount.
     if (initialC411Key === undefined) {
       getApiKey("c411_api_key").then((v) => { if (v) c411KeyRef.current = v; });
     }
@@ -425,6 +426,7 @@ export function DiscoverPage({
     if (!initialLikes) {
       getLikes().then(setLikes);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -432,15 +434,17 @@ export function DiscoverPage({
     // Si les données sont déjà dans le cache (prefetchées au démarrage),
     // on les lit directement sans passer par fetchItems (pas de spinner).
     const cached = queryClient.getQueryData(tmdbKeys.topRated("movie", 1));
-    if (cached) {
-      const list = cached as import("@/lib/services/tmdb").TmdbListResponse;
-      setItems(list.results.map((r) => mapTmdb(r, "movie")));
-      setMode("top");
-      setTmdbPage(1);
-      setTmdbTotalPages(list.total_pages);
-    } else {
-      fetchItems("top", "", 1, tmdbKey, "movie");
-    }
+    void Promise.resolve(cached).then((data) => {
+      if (data) {
+        const list = data as import("@/lib/services/tmdb").TmdbListResponse;
+        setItems(list.results.map((r) => mapTmdb(r, "movie")));
+        setMode("top");
+        setTmdbPage(1);
+        setTmdbTotalPages(list.total_pages);
+      } else {
+        fetchItems("top", "", 1, tmdbKey, "movie");
+      }
+    });
   }, [tmdbKey]);
 
   useEffect(() => {

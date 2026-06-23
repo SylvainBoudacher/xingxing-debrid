@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { motion, useAnimate } from "motion/react";
 import logo from "@/assets/logo.png";
 
@@ -21,44 +21,52 @@ export function SplashTransition({ onComplete, dark }: Props) {
   const [scope, animate] = useAnimate();
   const rippleCanvasRef = useRef<HTMLCanvasElement>(null);
   const rippleRaf = useRef(0);
-
-  function playRipple(canvas: HTMLCanvasElement) {
-    const ctx = canvas.getContext("2d")!;
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const cx = canvas.width / 2;
-    const cy = canvas.height * 0.52; // légèrement en dessous du centre
-    let t = 0;
-    const color = dark ? "100,180,255" : "30,111,148";
-
-    function draw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const rings = 4;
-      for (let i = 0; i < rings; i++) {
-        const delay = i * 6;
-        const age = Math.max(0, t - delay);
-        const maxR = 90 + i * 30;
-        const r = (age / 30) * maxR;
-        const alpha = Math.max(0, 0.6 - age / 30);
-        if (r > 0) {
-          ctx.strokeStyle = `rgba(${color},${alpha.toFixed(2)})`;
-          ctx.lineWidth = 2.8 - i * 0.5;
-          ctx.beginPath();
-          ctx.ellipse(cx, cy, r, r * 0.38, 0, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-      }
-      t++;
-      if (t < 45) {
-        rippleRaf.current = requestAnimationFrame(draw);
-      } else {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-    rippleRaf.current = requestAnimationFrame(draw);
-  }
+  // Store onComplete in a ref so the effect doesn't need it as a dependency
+  // (the animation runs once on mount; re-running on callback identity change would be wrong).
+  const onCompleteRef = useRef(onComplete);
+  useLayoutEffect(() => {
+    onCompleteRef.current = onComplete;
+  });
 
   useEffect(() => {
+    const rippleCanvasEl = rippleCanvasRef.current;
+
+    function playRipple(canvas: HTMLCanvasElement) {
+      const ctx = canvas.getContext("2d")!;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const cx = canvas.width / 2;
+      const cy = canvas.height * 0.52;
+      let t = 0;
+      const color = dark ? "100,180,255" : "30,111,148";
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const rings = 4;
+        for (let i = 0; i < rings; i++) {
+          const delay = i * 6;
+          const age = Math.max(0, t - delay);
+          const maxR = 90 + i * 30;
+          const r = (age / 30) * maxR;
+          const alpha = Math.max(0, 0.6 - age / 30);
+          if (r > 0) {
+            ctx.strokeStyle = `rgba(${color},${alpha.toFixed(2)})`;
+            ctx.lineWidth = 2.8 - i * 0.5;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, r, r * 0.38, 0, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+        t++;
+        if (t < 45) {
+          rippleRaf.current = requestAnimationFrame(draw);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+      rippleRaf.current = requestAnimationFrame(draw);
+    }
+
     async function run() {
       // 1. Le voile remonte comme un rideau
       await animate(
@@ -80,8 +88,8 @@ export function SplashTransition({ onComplete, dark }: Props) {
       );
 
       // 3. Ripple
-      if (rippleCanvasRef.current) {
-        playRipple(rippleCanvasRef.current);
+      if (rippleCanvasEl) {
+        playRipple(rippleCanvasEl);
       }
 
       await new Promise<void>((r) => setTimeout(r, 200));
@@ -89,14 +97,14 @@ export function SplashTransition({ onComplete, dark }: Props) {
       // 4. Fade out
       await animate(scope.current, { opacity: 0 }, { duration: 0.15, ease: "easeOut" });
 
-      onComplete();
+      onCompleteRef.current();
     }
 
     run();
     return () => {
       cancelAnimationFrame(rippleRaf.current);
     };
-  }, []);
+  }, [animate, dark, scope]);
 
   const bgColor = dark ? "#04050c" : "#f4f6fc";
 
