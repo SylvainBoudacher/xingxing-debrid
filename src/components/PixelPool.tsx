@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 // drifting around. A new duck appears every SPAWN_MS until MAX_DUCKS.
 
 const MAX_DUCKS = 15;
-const SPAWN_MS = 10_000;
+const SPAWN_MS = 40_000;
 const FIRST_SPAWN_MS = 5_000;
 const BORDER = 16; // pool coping width
 const DUCK_BASE = 92; // on-screen height of a scale-1 duck
