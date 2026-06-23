@@ -3,7 +3,10 @@ import { motion } from "motion/react";
 
 /**
  * Écran de démarrage affiché pendant le prefetch des données TMDB.
- * S'anime à l'entrée et à la sortie via AnimatePresence dans App.tsx.
+ * La sortie est gérée via AnimatePresence dans App.tsx.
+ * L'exit doit être instantané (opacity 0 immédiat) car le SplashTransition
+ * prend le relais et repose son propre logo et son propre fond — on évite tout
+ * double affichage.
  */
 export function SplashScreen() {
   return (
@@ -11,11 +14,11 @@ export function SplashScreen() {
       key="splash"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 1.04 }}
-      transition={{ duration: 0.35, ease: "easeInOut" }}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#f4f6fc] dark:bg-[#04050c]"
+      exit={{ opacity: 0, transition: { duration: 0.15, ease: "easeIn" } }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-[#f4f6fc] dark:bg-[#04050c]"
     >
-      {/* Halo d'ambiance indigo — identique à DiscoverPage */}
+      {/* Halos d'ambiance */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
           animate={{ opacity: [0.6, 1, 0.6], scale: [1, 1.1, 1] }}
@@ -27,7 +30,6 @@ export function SplashScreen() {
       </div>
 
       <div className="relative flex flex-col items-center gap-8">
-        {/* Logo avec animation pulse douce */}
         <motion.img
           src={logo}
           alt="c411"
@@ -51,11 +53,7 @@ export function SplashScreen() {
           <motion.div
             className="h-full rounded-full bg-indigo-500"
             animate={{ x: ["-100%", "200%"] }}
-            transition={{
-              duration: 1.2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
             style={{ width: "50%" }}
           />
         </div>
