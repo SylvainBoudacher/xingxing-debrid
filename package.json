@@ -10,6 +10,9 @@
     "format:check": "prettier --check .",
     "build": "eslint src && tsc && vite build",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "tauri": "tauri",
     "prepare": "simple-git-hooks"
   },
@@ -54,6 +57,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@vitejs/plugin-react": "^4.6.0",
+    "@vitest/coverage-v8": "^4.1.9",
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -62,6 +66,7 @@
     "simple-git-hooks": "^2.13.1",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.62.0",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "vitest": "^4.1.9"
   }
 }
