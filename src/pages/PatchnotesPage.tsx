@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { ArrowLeft, Home, Magnet, Menu, SlidersHorizontal } from "lucide-react";
+import { ArrowLeft, Compass, Home, Magnet, Menu, SlidersHorizontal } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +12,7 @@ import { PATCH_NOTES } from "@/lib/patchnotes";
 
 interface PatchnotesPageProps {
   onBack: () => void;
-  onNavigate: (page: "magnets" | "preferences") => void;
+  onNavigate: (page: "discover" | "magnets" | "preferences") => void;
 }
 
 export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
@@ -47,6 +47,10 @@ export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
               <DropdownMenuItem onClick={onBack}>
                 <Home className="mr-2 h-4 w-4" />
                 Accueil
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onNavigate("discover")}>
+                <Compass className="mr-2 h-4 w-4" />
+                Découverte
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onNavigate("magnets")}>
                 <Magnet className="mr-2 h-4 w-4" />

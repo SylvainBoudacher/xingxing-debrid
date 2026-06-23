@@ -6,7 +6,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   ArrowLeft, RefreshCw, Trash2, Loader2,
   CheckCircle2, Clock, AlertCircle, Download, Zap, Search, X,
-  ChevronLeft, ChevronRight, Copy, Check, Home, ListChecks, Menu, ScrollText, SlidersHorizontal,
+  ChevronLeft, ChevronRight, Compass, Copy, Check, Home, ListChecks, Menu, ScrollText, SlidersHorizontal,
 } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey } from "@/lib/apiKeys";
@@ -421,7 +421,7 @@ function Pagination({
 
 interface MagnetsPageProps {
   onBack: () => void;
-  onNavigate: (page: "preferences" | "patchnotes") => void;
+  onNavigate: (page: "discover" | "preferences" | "patchnotes") => void;
   /** Clé AllDebrid pré-lue par useAppInit */
   initialAllDebridKey?: string | null;
   /** Préférences UI pré-lues par useAppInit */
@@ -655,6 +655,10 @@ export function MagnetsPage({
                 <DropdownMenuItem onClick={onBack}>
                   <Home className="mr-2 h-4 w-4" />
                   Accueil
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onNavigate("discover")}>
+                  <Compass className="mr-2 h-4 w-4" />
+                  Découverte
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onNavigate("preferences")}>
                   <SlidersHorizontal className="mr-2 h-4 w-4" />

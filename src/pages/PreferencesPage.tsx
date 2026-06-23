@@ -22,6 +22,7 @@ import {
   Menu,
   ScrollText,
   Search,
+  SlidersHorizontal,
   Sun,
   Upload,
 } from "lucide-react";
@@ -109,7 +110,7 @@ function Toggle({
 
 interface PreferencesPageProps {
   onBack: () => void;
-  onNavigate: (page: "magnets" | "patchnotes") => void;
+  onNavigate: (page: "discover" | "magnets" | "patchnotes") => void;
   summerEnabled: boolean;
   onToggleSummer: (v: boolean) => void;
   summerFps: 30 | 60;
@@ -265,6 +266,10 @@ export function PreferencesPage({
               <DropdownMenuItem onClick={onBack}>
                 <Home className="mr-2 h-4 w-4" />
                 Accueil
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onNavigate("discover")}>
+                <Compass className="mr-2 h-4 w-4" />
+                Découverte
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onNavigate("magnets")}>
                 <Magnet className="mr-2 h-4 w-4" />
