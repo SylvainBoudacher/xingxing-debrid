@@ -16,7 +16,11 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
     body: update.body,
     download: async () => {
       await update.downloadAndInstall();
-      await relaunch();
+      // On Windows, the NSIS installer handles closing and relaunching the app.
+      // relaunch() is only needed on macOS/Linux.
+      if (!navigator.userAgent.includes("Windows")) {
+        await relaunch();
+      }
     },
   };
 }
