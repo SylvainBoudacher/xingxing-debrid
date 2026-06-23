@@ -26,21 +26,25 @@ XingXing Debrid connecte trois services en un seul flux : vous cherchez un conte
 ## Fonctionnalites
 
 ### Recherche
+
 Recherchez directement dans le catalogue C411 et envoyez un magnet vers AllDebrid en un clic.
 
 <!-- ![Page de recherche](docs/screenshot-search.png) -->
 
 ### Decouverte
+
 Parcourez les films et series populaires via **TMDB**, avec correspondance automatique vers les releases disponibles (qualite, langues, saisons detectees depuis le nom de la release).
 
 <!-- ![Page Decouverte](docs/screenshot-discover.png) -->
 
 ### Magnets
+
 Suivez vos magnets AllDebrid en temps reel : statut, progression, vitesse, seeders. Telechargez les fichiers, copiez les liens debrides ou lancez la lecture directement dans **VLC**.
 
 <!-- ![Page Magnets](docs/screenshot-magnets.png) -->
 
 ### Et aussi
+
 - **Configuration guidee** : un assistant de premier lancement pour renseigner vos cles API (C411, AllDebrid, TMDB)
 - **Stockage securise** : les cles sont gerees cote Rust, jamais exposees au front
 - **Theme clair / sombre** avec animations fluides
@@ -49,12 +53,12 @@ Suivez vos magnets AllDebrid en temps reel : statut, progression, vitesse, seede
 
 ## Stack technique
 
-| Couche | Technologie |
-|---|---|
-| Interface | React 19, TypeScript, Tailwind CSS 4, Motion, Radix UI |
-| Shell natif | Tauri 2 (Rust) |
-| Build | Vite 7, Bun |
-| Persistance | tauri-plugin-store |
+| Couche      | Technologie                                            |
+| ----------- | ------------------------------------------------------ |
+| Interface   | React 19, TypeScript, Tailwind CSS 4, Motion, Radix UI |
+| Shell natif | Tauri 2 (Rust)                                         |
+| Build       | Vite 7, Bun                                            |
+| Persistance | tauri-plugin-store                                     |
 
 ## Prerequis
 
