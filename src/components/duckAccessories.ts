@@ -212,12 +212,12 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
     c.strokeStyle = "rgba(255,240,150,0.5)";
     c.lineWidth = 7;
     c.beginPath();
-    c.ellipse(80, 2, 18, 6, 0, 0, Math.PI * 2);
+    c.ellipse(80, 10, 18, 6, 0, 0, Math.PI * 2);
     c.stroke();
     c.strokeStyle = "#FFE066";
     c.lineWidth = 4;
     c.beginPath();
-    c.ellipse(80, 2, 18, 6, 0, 0, Math.PI * 2);
+    c.ellipse(80, 10, 18, 6, 0, 0, Math.PI * 2);
     c.stroke();
   } else if (v.acc === "devil") {
     tri(
