@@ -23,23 +23,12 @@ import { toast } from "sonner";
 import vlcLogo from "@/assets/vlc.png";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { queryClient } from "@/lib/queryClient";
+import { allDebridKeys, fetchMagnets, type MagnetEntry } from "@/lib/services/allDebrid";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 const AD_BASE = "https://api.alldebrid.com/v4";
 const PAGE_SIZE = 10;
-
-interface MagnetEntry {
-  id: number;
-  filename: string;
-  size: number;
-  status: string;
-  statusCode: number;
-  downloaded: number;
-  seeders: number;
-  downloadSpeed: number;
-  uploadDate: number;
-  completionDate: number;
-}
 
 // Nombre de requetes AllDebrid menees de front (deblocage de liens, suppression).
 const CONCURRENCY = 4;
@@ -448,12 +437,33 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
     if (!apiKeyRef.current) return;
     setLoading(true);
     try {
-      const res = await fetch(`${AD_BASE}.1/magnet/status?agent=c411`, {
-        headers: { Authorization: `Bearer ${apiKeyRef.current}` },
+      // Utilise queryClient pour bénéficier du cache prefetché au démarrage.
+      // Si les données sont fraîches (< 60s), aucun appel réseau n'est fait.
+      const data = await queryClient.fetchQuery({
+        queryKey: allDebridKeys.magnets(),
+        queryFn: () => fetchMagnets(apiKeyRef.current),
+        staleTime: 60_000,
       });
-      const json = await res.json() as { status: string; data?: { magnets?: MagnetEntry[] } };
-      if (json.status !== "success") throw new Error("Erreur AllDebrid");
-      setMagnets(json.data?.magnets ?? []);
+      setMagnets(data);
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Force un re-fetch réseau même si le cache est frais (bouton refresh).
+  const forceReloadMagnets = useCallback(async () => {
+    if (!apiKeyRef.current) return;
+    setLoading(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: allDebridKeys.magnets() });
+      const data = await queryClient.fetchQuery({
+        queryKey: allDebridKeys.magnets(),
+        queryFn: () => fetchMagnets(apiKeyRef.current),
+        staleTime: 0,
+      });
+      setMagnets(data);
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -485,6 +495,8 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
       });
       toast.success(ids.length > 1 ? `${ids.length} magnets supprimes` : "Magnet supprime");
       setConfirmDelete(null);
+      // Invalide le cache pour que le prochain chargement soit à jour
+      queryClient.invalidateQueries({ queryKey: allDebridKeys.magnets() });
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -590,7 +602,7 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
               whileTap={{ scale: 0.93 }}
               animate={loading ? { rotate: 360 } : { rotate: 0 }}
               transition={loading ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
-              onClick={loadMagnets}
+              onClick={forceReloadMagnets}
               disabled={loading}
               className="flex h-8 w-8 items-center justify-center rounded-lg text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 transition-colors"
             >

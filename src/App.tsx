@@ -14,12 +14,8 @@ const SetupPage = lazy(() =>
 const MainPage = lazy(() =>
   import("@/pages/MainPage").then((m) => ({ default: m.MainPage })),
 );
-const MagnetsPage = lazy(() =>
-  import("@/pages/MagnetsPage").then((m) => ({ default: m.MagnetsPage })),
-);
-const DiscoverPage = lazy(() =>
-  import("@/pages/DiscoverPage").then((m) => ({ default: m.DiscoverPage })),
-);
+import { MagnetsPage } from "@/pages/MagnetsPage";
+import { DiscoverPage } from "@/pages/DiscoverPage";
 const PreferencesPage = lazy(() =>
   import("@/pages/PreferencesPage").then((m) => ({ default: m.PreferencesPage })),
 );
