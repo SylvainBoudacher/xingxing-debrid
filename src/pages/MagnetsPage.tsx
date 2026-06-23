@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey } from "@/lib/apiKeys";
+import { flattenFiles, formatSize, type DebridFile } from "@/lib/debrid";
 import type { ViewMode } from "@/pages/PreferencesPage";
 import {
   DropdownMenu,
@@ -38,23 +39,6 @@ interface MagnetEntry {
   downloadSpeed: number;
   uploadDate: number;
   completionDate: number;
-}
-
-interface DebridFile {
-  name: string;
-  size: number;
-  link: string;
-}
-
-function flattenFiles(entries: unknown[], prefix = ""): DebridFile[] {
-  const result: DebridFile[] = [];
-  for (const entry of entries) {
-    const e = entry as Record<string, unknown>;
-    const name = prefix ? `${prefix}/${e.n}` : String(e.n);
-    if (Array.isArray(e.e)) result.push(...flattenFiles(e.e, name));
-    else if (e.l) result.push({ name, size: Number(e.s) || 0, link: String(e.l) });
-  }
-  return result;
 }
 
 // Nombre de requetes AllDebrid menees de front (deblocage de liens, suppression).
@@ -98,12 +82,6 @@ function isVideoFile(name: string): boolean {
 
 function isNfoFile(name: string): boolean {
   return name.toLowerCase().endsWith(".nfo");
-}
-
-function formatSize(bytes: number): string {
-  if (!bytes) return "-";
-  if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} Go`;
-  return `${(bytes / 1_048_576).toFixed(0)} Mo`;
 }
 
 function formatSpeed(bps: number): string {
