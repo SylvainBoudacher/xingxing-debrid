@@ -1,14 +1,13 @@
 import vlcLogo from "@/assets/vlc.png";
+import { AppMenu, type Page } from "@/components/AppMenu";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ThemeMenuItem } from "@/components/ThemeMenuItem";
 import { getApiKey } from "@/lib/apiKeys";
 import { parseRelease } from "@/lib/parseRelease";
 import { LATEST_VERSION } from "@/lib/patchnotes";
@@ -23,7 +22,6 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   ArrowDown,
   ArrowUp,
-  Bell,
   Book,
   BookMarked,
   Check,
@@ -34,21 +32,15 @@ import {
   Copy,
   Download,
   FileText,
-  FlaskConical,
   Gamepad2,
   Headphones,
   HelpCircle,
   Loader2,
-  Magnet,
-  Menu,
   Music,
   Package,
-  RotateCcw,
-  ScrollText,
   Search,
   SlidersHorizontal,
   Sparkles,
-  Trash2,
   Tv,
   X,
   type LucideIcon,
@@ -158,9 +150,12 @@ interface C411Response {
 }
 
 interface MainPageProps {
-  onNavigate: (page: "magnets" | "preferences" | "patchnotes" | "setup" | "discover") => void;
+  onNavigate: (page: Page) => void;
   devMode: boolean;
   onToggleDevMode: () => void;
+  onShowUpdatePreview: () => void;
+  hasPendingUpdate: boolean;
+  onShowPendingUpdate: () => void;
   summerEnabled: boolean;
   /** Clés API pré-lues par useAppInit — zéro latence au montage */
   initialC411Key?: string | null;
@@ -174,6 +169,9 @@ export function MainPage({
   onNavigate,
   devMode,
   onToggleDevMode,
+  onShowUpdatePreview,
+  hasPendingUpdate,
+  onShowPendingUpdate,
   summerEnabled,
   initialC411Key,
   initialAllDebridKey,
@@ -495,86 +493,15 @@ export function MainPage({
       </AnimatePresence>
 
       <div className="absolute top-4 right-4 z-10">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <motion.button
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.93 }}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700/80 transition-colors"
-            >
-              <Menu className="h-4 w-4" />
-            </motion.button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className={import.meta.env.DEV ? "w-56" : "w-44"}>
-            <DropdownMenuItem onClick={() => onNavigate("discover")}>
-              <Compass className="mr-2 h-4 w-4" />
-              Découverte
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onNavigate("magnets")}>
-              <Magnet className="mr-2 h-4 w-4" />
-              Magnets
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onNavigate("preferences")}>
-              <SlidersHorizontal className="mr-2 h-4 w-4" />
-              Paramètres
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <ThemeMenuItem />
-            <DropdownMenuItem onClick={() => onNavigate("patchnotes")}>
-              <ScrollText className="mr-2 h-4 w-4" />
-              Patch notes
-            </DropdownMenuItem>
-            {import.meta.env.DEV && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  Développeur
-                </DropdownMenuLabel>
-                <DropdownMenuCheckboxItem checked={devMode} onCheckedChange={onToggleDevMode}>
-                  <FlaskConical className="mr-2 h-4 w-4" />
-                  Mode développeur
-                </DropdownMenuCheckboxItem>
-                {devMode && (
-                  <>
-                    <DropdownMenuItem onClick={() => onNavigate("setup")}>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Voir la welcome page
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        await store.set("setup_complete", false);
-                        await store.save();
-                        toast.success("Premier lancement réinitialisé");
-                      }}
-                    >
-                      <RotateCcw className="mr-2 h-4 w-4" />
-                      Réinitialiser 1er lancement
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => {
-                        toast.success("Toast de succès");
-                        toast.error("Toast d'erreur");
-                      }}
-                    >
-                      <Bell className="mr-2 h-4 w-4" />
-                      Tester les toasts
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={async () => {
-                        await store.clear();
-                        await store.save();
-                        location.reload();
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Vider le store
-                    </DropdownMenuItem>
-                  </>
-                )}
-              </>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <AppMenu
+          currentPage="main"
+          onNavigate={onNavigate}
+          hasPendingUpdate={hasPendingUpdate}
+          onShowPendingUpdate={onShowPendingUpdate}
+          devMode={devMode}
+          onToggleDevMode={onToggleDevMode}
+          onShowUpdatePreview={onShowUpdatePreview}
+        />
       </div>
 
       <div ref={scrollRef} className="flex-1 flex flex-col items-center overflow-y-auto">

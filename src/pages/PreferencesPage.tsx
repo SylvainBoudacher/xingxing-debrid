@@ -1,12 +1,5 @@
 import { ApiKeysForm } from "@/components/ApiKeysForm";
-import { ThemeMenuItem } from "@/components/ThemeMenuItem";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { AppMenu, type Page } from "@/components/AppMenu";
 import { getLikes, parseLikesJson, saveLikes } from "@/lib/likes";
 import { parseRelease } from "@/lib/parseRelease";
 import { invoke } from "@tauri-apps/api/core";
@@ -16,11 +9,8 @@ import {
   Check,
   Compass,
   Download,
-  Home,
   KeyRound,
   Magnet,
-  Menu,
-  ScrollText,
   Search,
   Sun,
   Upload,
@@ -103,7 +93,9 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 
 interface PreferencesPageProps {
   onBack: () => void;
-  onNavigate: (page: "discover" | "magnets" | "patchnotes") => void;
+  onNavigate: (page: Page) => void;
+  hasPendingUpdate: boolean;
+  onShowPendingUpdate: () => void;
   summerEnabled: boolean;
   onToggleSummer: (v: boolean) => void;
   summerFps: 30 | 60;
@@ -113,6 +105,8 @@ interface PreferencesPageProps {
 export function PreferencesPage({
   onBack,
   onNavigate,
+  hasPendingUpdate,
+  onShowPendingUpdate,
   summerEnabled,
   onToggleSummer,
   summerFps,
@@ -239,37 +233,13 @@ export function PreferencesPage({
             Paramètres
           </h1>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <motion.button
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.93 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700/80 transition-colors"
-              >
-                <Menu className="h-4 w-4" />
-              </motion.button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onClick={onBack}>
-                <Home className="mr-2 h-4 w-4" />
-                Accueil
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate("discover")}>
-                <Compass className="mr-2 h-4 w-4" />
-                Découverte
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate("magnets")}>
-                <Magnet className="mr-2 h-4 w-4" />
-                Magnets
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <ThemeMenuItem />
-              <DropdownMenuItem onClick={() => onNavigate("patchnotes")}>
-                <ScrollText className="mr-2 h-4 w-4" />
-                Patch notes
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AppMenu
+            currentPage="preferences"
+            onNavigate={onNavigate}
+            onBack={onBack}
+            hasPendingUpdate={hasPendingUpdate}
+            onShowPendingUpdate={onShowPendingUpdate}
+          />
         </div>
       </div>
 

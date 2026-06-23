@@ -17,27 +17,15 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  Compass,
   Copy,
   Check,
-  Home,
   ListChecks,
-  Menu,
-  ScrollText,
-  SlidersHorizontal,
 } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey } from "@/lib/apiKeys";
 import { flattenFiles, formatSize } from "@/lib/debrid";
 import type { ViewMode } from "@/pages/PreferencesPage";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ThemeMenuItem } from "@/components/ThemeMenuItem";
+import { AppMenu, type Page } from "@/components/AppMenu";
 import { toast } from "sonner";
 import vlcLogo from "@/assets/vlc.png";
 import { invoke } from "@tauri-apps/api/core";
@@ -517,7 +505,9 @@ function Pagination({
 
 interface MagnetsPageProps {
   onBack: () => void;
-  onNavigate: (page: "discover" | "preferences" | "patchnotes") => void;
+  onNavigate: (page: Page) => void;
+  hasPendingUpdate: boolean;
+  onShowPendingUpdate: () => void;
   /** Clé AllDebrid pré-lue par useAppInit */
   initialAllDebridKey?: string | null;
   /** Préférences UI pré-lues par useAppInit */
@@ -529,6 +519,8 @@ interface MagnetsPageProps {
 export function MagnetsPage({
   onBack,
   onNavigate,
+  hasPendingUpdate,
+  onShowPendingUpdate,
   initialAllDebridKey,
   initialViewMode,
   initialHideNfoFiles,
@@ -754,37 +746,13 @@ export function MagnetsPage({
               <RefreshCw className="h-4 w-4" />
             </motion.button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <motion.button
-                  whileHover={{ scale: 1.08 }}
-                  whileTap={{ scale: 0.93 }}
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700/80 transition-colors"
-                >
-                  <Menu className="h-4 w-4" />
-                </motion.button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem onClick={onBack}>
-                  <Home className="mr-2 h-4 w-4" />
-                  Accueil
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onNavigate("discover")}>
-                  <Compass className="mr-2 h-4 w-4" />
-                  Découverte
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onNavigate("preferences")}>
-                  <SlidersHorizontal className="mr-2 h-4 w-4" />
-                  Paramètres
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <ThemeMenuItem />
-                <DropdownMenuItem onClick={() => onNavigate("patchnotes")}>
-                  <ScrollText className="mr-2 h-4 w-4" />
-                  Patch notes
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <AppMenu
+              currentPage="magnets"
+              onNavigate={onNavigate}
+              onBack={onBack}
+              hasPendingUpdate={hasPendingUpdate}
+              onShowPendingUpdate={onShowPendingUpdate}
+            />
           </div>
         </div>
       </motion.div>

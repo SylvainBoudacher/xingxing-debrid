@@ -5,6 +5,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { SplashScreen } from "@/components/SplashScreen";
 import { SplashTransition } from "@/components/SplashTransition";
 import { useAppInit } from "@/lib/useAppInit";
+import { UpdateDialog } from "@/components/UpdateDialog";
+import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
+import type { Page } from "@/components/AppMenu";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -21,8 +24,6 @@ const PatchnotesPage = lazy(() =>
 );
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
-
-type Page = "setup" | "main" | "magnets" | "preferences" | "patchnotes" | "discover";
 
 /**
  * Phases de démarrage :
@@ -47,6 +48,26 @@ function App() {
   const [summerFps, setSummerFps] = useState<30 | 60>(30);
   const [startPhase, setStartPhase] = useState<StartPhase>("splash");
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+  const [pendingUpdate, setPendingUpdate] = useState<UpdateInfo | null>(null);
+  const fakeUpdate: UpdateInfo = {
+    version: "9.9.9",
+    body: "- Nouvelle fonctionnalite incroyable\n- Correction de bugs\n- Amelioration des performances",
+    download: async () => {},
+  };
+  const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(
+    import.meta.env.DEV ? fakeUpdate : null,
+  );
+
+  useEffect(() => {
+    checkForUpdate()
+      .then((u) => {
+        if (u) {
+          setAvailableUpdate(u);
+          setPendingUpdate(u);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Observe le thème pour passer la bonne couleur à SplashTransition
   useEffect(() => {
@@ -116,6 +137,10 @@ function App() {
     <>
       <Toaster />
 
+      {pendingUpdate && (
+        <UpdateDialog update={pendingUpdate} onDismiss={() => setPendingUpdate(null)} />
+      )}
+
       {/* Pool canvas — montée dès la phase "transition" pour qu'elle soit déjà
           visible quand le voile du splash se lève */}
       {summerEnabled && (
@@ -171,6 +196,15 @@ function App() {
                 onNavigate={setPage}
                 devMode={devMode}
                 onToggleDevMode={() => setDevMode((v) => !v)}
+                onShowUpdatePreview={() =>
+                  setPendingUpdate({
+                    version: "9.9.9",
+                    body: "- Nouvelle fonctionnalite incroyable\n- Correction de bugs\n- Amelioration des performances",
+                    download: async () => {},
+                  })
+                }
+                hasPendingUpdate={availableUpdate !== null}
+                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 summerEnabled={summerEnabled}
                 initialC411Key={initC411Key}
                 initialAllDebridKey={initAllDebridKey}
@@ -190,6 +224,8 @@ function App() {
               <MagnetsPage
                 onBack={() => setPage("main")}
                 onNavigate={setPage}
+                hasPendingUpdate={availableUpdate !== null}
+                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 initialAllDebridKey={initAllDebridKey}
                 initialViewMode={initPrefs.viewMode}
                 initialHideNfoFiles={initPrefs.hideNfoFiles}
@@ -208,6 +244,8 @@ function App() {
               <PreferencesPage
                 onBack={() => setPage("main")}
                 onNavigate={setPage}
+                hasPendingUpdate={availableUpdate !== null}
+                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 summerEnabled={summerEnabled}
                 onToggleSummer={handleToggleSummer}
                 summerFps={summerFps}
@@ -226,6 +264,8 @@ function App() {
               <DiscoverPage
                 onBack={() => setPage("main")}
                 onNavigate={setPage}
+                hasPendingUpdate={availableUpdate !== null}
+                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 summerEnabled={summerEnabled}
                 initialTmdbKey={initTmdbKey}
                 initialC411Key={initC411Key}
@@ -242,7 +282,12 @@ function App() {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.22, ease: "easeInOut" }}
             >
-              <PatchnotesPage onBack={() => setPage("main")} onNavigate={setPage} />
+              <PatchnotesPage
+                onBack={() => setPage("main")}
+                onNavigate={setPage}
+                hasPendingUpdate={availableUpdate !== null}
+                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+              />
             </motion.div>
           )}
         </AnimatePresence>

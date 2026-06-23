@@ -1,21 +1,21 @@
 import { motion } from "motion/react";
-import { ArrowLeft, Compass, Home, Magnet, Menu, SlidersHorizontal } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ThemeMenuItem } from "@/components/ThemeMenuItem";
+import { ArrowLeft } from "lucide-react";
+import { AppMenu, type Page } from "@/components/AppMenu";
 import { PATCH_NOTES } from "@/lib/patchnotes";
 
 interface PatchnotesPageProps {
   onBack: () => void;
-  onNavigate: (page: "discover" | "magnets" | "preferences") => void;
+  onNavigate: (page: Page) => void;
+  hasPendingUpdate: boolean;
+  onShowPendingUpdate: () => void;
 }
 
-export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
+export function PatchnotesPage({
+  onBack,
+  onNavigate,
+  hasPendingUpdate,
+  onShowPendingUpdate,
+}: PatchnotesPageProps) {
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
       {/* Header */}
@@ -34,37 +34,13 @@ export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
             Patch notes
           </h1>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <motion.button
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.93 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700/80 transition-colors"
-              >
-                <Menu className="h-4 w-4" />
-              </motion.button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onClick={onBack}>
-                <Home className="mr-2 h-4 w-4" />
-                Accueil
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate("discover")}>
-                <Compass className="mr-2 h-4 w-4" />
-                Découverte
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate("magnets")}>
-                <Magnet className="mr-2 h-4 w-4" />
-                Magnets
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate("preferences")}>
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Paramètres
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <ThemeMenuItem />
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AppMenu
+            currentPage="patchnotes"
+            onNavigate={onNavigate}
+            onBack={onBack}
+            hasPendingUpdate={hasPendingUpdate}
+            onShowPendingUpdate={onShowPendingUpdate}
+          />
         </div>
       </div>
 

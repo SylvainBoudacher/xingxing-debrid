@@ -1,12 +1,5 @@
 import vlcLogo from "@/assets/vlc.png";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ThemeMenuItem } from "@/components/ThemeMenuItem";
+import { AppMenu, type Page } from "@/components/AppMenu";
 import { getApiKey } from "@/lib/apiKeys";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { parseRelease } from "@/lib/parseRelease";
@@ -36,12 +29,8 @@ import {
   Copy,
   Download,
   Heart,
-  Home,
   KeyRound,
   Loader2,
-  Magnet,
-  Menu,
-  ScrollText,
   Search,
   SlidersHorizontal,
   Sparkles,
@@ -225,7 +214,9 @@ function filterTvReleases(
 
 interface DiscoverPageProps {
   onBack: () => void;
-  onNavigate: (page: "magnets" | "preferences" | "patchnotes") => void;
+  onNavigate: (page: Page) => void;
+  hasPendingUpdate: boolean;
+  onShowPendingUpdate: () => void;
   summerEnabled: boolean;
   /** Clé TMDB pré-chargée par useAppInit */
   initialTmdbKey?: string | null;
@@ -239,6 +230,8 @@ interface DiscoverPageProps {
 export function DiscoverPage({
   onBack,
   onNavigate,
+  hasPendingUpdate,
+  onShowPendingUpdate,
   summerEnabled,
   initialTmdbKey,
   initialC411Key,
@@ -676,37 +669,13 @@ export function DiscoverPage({
             Découverte
           </h1>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <motion.button
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.93 }}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700/80 transition-colors"
-              >
-                <Menu className="h-4 w-4" />
-              </motion.button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onClick={onBack}>
-                <Home className="mr-2 h-4 w-4" />
-                Accueil
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate("magnets")}>
-                <Magnet className="mr-2 h-4 w-4" />
-                Magnets
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onNavigate("preferences")}>
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Paramètres
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <ThemeMenuItem />
-              <DropdownMenuItem onClick={() => onNavigate("patchnotes")}>
-                <ScrollText className="mr-2 h-4 w-4" />
-                Patch notes
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <AppMenu
+            currentPage="discover"
+            onNavigate={onNavigate}
+            onBack={onBack}
+            hasPendingUpdate={hasPendingUpdate}
+            onShowPendingUpdate={onShowPendingUpdate}
+          />
         </div>
       </div>
 

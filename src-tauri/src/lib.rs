@@ -188,6 +188,8 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             // Migration : deplace les cles API de settings.json (clair) vers le trousseau OS
             if let Ok(store) = app.store("settings.json") {
