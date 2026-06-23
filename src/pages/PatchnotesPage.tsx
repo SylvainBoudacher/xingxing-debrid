@@ -21,7 +21,7 @@ export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
 
       {/* Header */}
       <div className="sticky top-0 z-10 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl">
-        <div className="relative mx-auto flex w-full max-w-3xl items-center justify-between px-6 py-4 sm:px-8">
+        <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
           <motion.button
             whileTap={{ scale: 0.93 }}
             onClick={onBack}
