@@ -137,7 +137,7 @@ function App() {
     <>
       <Toaster />
 
-      {pendingUpdate && (
+      {effectivePhase === "done" && pendingUpdate && (
         <UpdateDialog update={pendingUpdate} onDismiss={() => setPendingUpdate(null)} />
       )}
 
