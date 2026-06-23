@@ -340,6 +340,10 @@ export function DiscoverPage({
 
   // Releases C411 du film / de la saison selectionnee. TanStack gere la course
   // (les resultats perimes sont ignores) et le cache (re-ouverture, switch saison).
+  //
+  // Pour les series TV, le prefetch C411 est lance dans openItem() en parallele
+  // du tvDetailQuery, donc les torrents sont souvent deja en cache quand
+  // tvDetailQuery.isSuccess devient true — le waterfall est elimine.
   const releasesQuery = useQuery({
     queryKey: [
       "c411-releases",
@@ -350,27 +354,13 @@ export function DiscoverPage({
     enabled:
       !!selected && (selected.mediaType === "movie" || tvDetailQuery.isSuccess),
     staleTime: 60_000,
-    queryFn: async ({ queryKey }) => {
-      console.log("[releases] queryFn FETCH (cache miss) key=", JSON.stringify(queryKey));
+    queryFn: async () => {
       const item = selected!;
       const { torrents, nTitles } = await searchC411(item);
       return item.mediaType === "movie"
         ? sortOccupants(filterMovieReleases(torrents, nTitles, item))
         : sortOccupants(filterTvReleases(torrents, nTitles, activeSeason));
     },
-  });
-
-  console.log("[releases] render", {
-    status: releasesQuery.status,
-    fetch: releasesQuery.fetchStatus,
-    hasData: releasesQuery.data !== undefined,
-    enabled: !!selected && (selected?.mediaType === "movie" || tvDetailQuery.isSuccess),
-    key: JSON.stringify([
-      "c411-releases",
-      selected?.mediaType,
-      selected?.id,
-      selected?.mediaType === "tv" ? activeSeason : null,
-    ]),
   });
 
   const releases = releasesQuery.data ?? null;
@@ -615,11 +605,30 @@ export function DiscoverPage({
 
   // Selection d'un item : les saisons (TV) et les releases sont chargees par
   // les queries reactives ci-dessus, qui reagissent a `selected`/`activeSeason`.
+  // Pour les series TV, on lance immediatement un prefetch C411 en fire-and-forget
+  // (le titre est connu des maintenant) en parallele du tvDetailQuery TMDB.
+  // Quand tvDetailQuery revient et active releasesQuery, les torrents sont
+  // souvent deja en cache → affichage quasi-instantane.
   function openItem(item: TmdbItem) {
     setSelected(item);
     setSelectedSeason(null);
     setResFilter(null);
     setLangFilter(null);
+
+    if (item.mediaType === "tv") {
+      // Prefetch C411 : saison null = tous les torrents bruts, la saison sera
+      // filtree plus tard par releasesQuery.queryFn quand activeSeason est connu.
+      // On utilise la meme queryKey que releasesQuery avec saison null pour que
+      // le cache soit reutilise directement (la saison par defaut est la 1 et
+      // filterTvReleases sera applique dans queryFn une seule fois).
+      queryClient.prefetchQuery({
+        queryKey: ["c411-releases", item.mediaType, item.id, null],
+        queryFn: () => searchC411(item).then(({ torrents, nTitles }) =>
+          sortOccupants(filterTvReleases(torrents, nTitles, null))
+        ),
+        staleTime: 60_000,
+      });
+    }
   }
 
   function changeSeason(season: number) {
