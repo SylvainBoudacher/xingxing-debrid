@@ -25,6 +25,19 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.1.3",
+    date: "23 juin 2026",
+    intro: "Version de test du systeme de mise a jour automatique sur Windows.",
+    sections: [
+      {
+        title: "Test mise a jour automatique",
+        items: [
+          "Verification que l'installation via le systeme integre fonctionne correctement sans passer par le .exe.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.1.2",
     date: "23 juin 2026",
     intro:
