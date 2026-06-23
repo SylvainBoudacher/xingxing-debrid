@@ -10,6 +10,8 @@ import { ThemeMenuItem } from "@/components/ThemeMenuItem";
 import { getApiKey } from "@/lib/apiKeys";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { parseRelease } from "@/lib/parseRelease";
+import { flattenFiles, formatSize, type DebridModal } from "@/lib/debrid";
+import type { C411Torrent } from "@/lib/c411";
 import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -113,15 +115,6 @@ interface Occupant {
   specialVersion: string | null;
 }
 
-interface C411Torrent {
-  infoHash: string;
-  name: string;
-  size: number;
-  seeders: number;
-  category: { id: number } | null;
-  subcategory: { slug: string } | null;
-}
-
 const SERIES_SLUGS = new Set([
   "serie-tv",
   "serie-documentaire",
@@ -197,17 +190,6 @@ function toOccupant(t: C411Torrent): Occupant {
   };
 }
 
-interface DebridFile {
-  name: string;
-  size: number;
-  link: string;
-}
-
-interface DebridModal {
-  torrentName: string;
-  files: DebridFile[];
-}
-
 const RESOLUTION_RANK: Record<string, number> = {
   "4320p": 5,
   "4K": 4,
@@ -216,26 +198,6 @@ const RESOLUTION_RANK: Record<string, number> = {
   "720p": 2,
   "480p": 1,
 };
-
-function flattenFiles(entries: unknown[], prefix = ""): DebridFile[] {
-  const result: DebridFile[] = [];
-  for (const entry of entries) {
-    const e = entry as Record<string, unknown>;
-    const name = prefix ? `${prefix}/${e.n}` : String(e.n);
-    if (Array.isArray(e.e)) {
-      result.push(...flattenFiles(e.e, name));
-    } else if (e.l) {
-      result.push({ name, size: Number(e.s) || 0, link: String(e.l) });
-    }
-  }
-  return result;
-}
-
-function formatSize(bytes: number): string {
-  if (!bytes) return "-";
-  if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} Go`;
-  return `${(bytes / 1_048_576).toFixed(0)} Mo`;
-}
 
 const IMDB_ID_RE = /^tt\d{5,10}$/i;
 

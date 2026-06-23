@@ -1,14 +1,29 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { Toaster } from "@/components/ui/sonner";
-import { PixelPool } from "@/components/PixelPool";
-import { SetupPage } from "@/pages/SetupPage";
-import { MainPage } from "@/pages/MainPage";
-import { MagnetsPage } from "@/pages/MagnetsPage";
-import { DiscoverPage } from "@/pages/DiscoverPage";
-import { PreferencesPage } from "@/pages/PreferencesPage";
-import { PatchnotesPage } from "@/pages/PatchnotesPage";
+
+const PixelPool = lazy(() =>
+  import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
+);
+const SetupPage = lazy(() =>
+  import("@/pages/SetupPage").then((m) => ({ default: m.SetupPage })),
+);
+const MainPage = lazy(() =>
+  import("@/pages/MainPage").then((m) => ({ default: m.MainPage })),
+);
+const MagnetsPage = lazy(() =>
+  import("@/pages/MagnetsPage").then((m) => ({ default: m.MagnetsPage })),
+);
+const DiscoverPage = lazy(() =>
+  import("@/pages/DiscoverPage").then((m) => ({ default: m.DiscoverPage })),
+);
+const PreferencesPage = lazy(() =>
+  import("@/pages/PreferencesPage").then((m) => ({ default: m.PreferencesPage })),
+);
+const PatchnotesPage = lazy(() =>
+  import("@/pages/PatchnotesPage").then((m) => ({ default: m.PatchnotesPage })),
+);
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
@@ -88,10 +103,12 @@ function App() {
             page === "main" || page === "discover" ? "opacity-100" : "opacity-0"
           }`}
         >
-          <PixelPool
-            active={page === "main" || page === "discover"}
-            fps={summerFps}
-          />
+          <Suspense fallback={null}>
+            <PixelPool
+              active={page === "main" || page === "discover"}
+              fps={summerFps}
+            />
+          </Suspense>
         </div>
       )}
       {devMode && (
@@ -99,7 +116,8 @@ function App() {
           MODE DEV
         </div>
       )}
-      <AnimatePresence mode="wait">
+      <Suspense fallback={null}>
+        <AnimatePresence mode="wait">
         {page === "setup" && (
           <motion.div
             key="setup"
@@ -182,7 +200,8 @@ function App() {
             <PatchnotesPage onBack={() => setPage("main")} onNavigate={setPage} />
           </motion.div>
         )}
-      </AnimatePresence>
+        </AnimatePresence>
+      </Suspense>
     </>
   );
 }

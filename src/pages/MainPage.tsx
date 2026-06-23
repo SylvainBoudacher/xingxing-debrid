@@ -12,6 +12,8 @@ import { ThemeMenuItem } from "@/components/ThemeMenuItem";
 import { getApiKey } from "@/lib/apiKeys";
 import { parseRelease } from "@/lib/parseRelease";
 import { LATEST_VERSION } from "@/lib/patchnotes";
+import { flattenFiles, formatSize, type DebridModal } from "@/lib/debrid";
+import type { C411Torrent } from "@/lib/c411";
 import { invoke } from "@tauri-apps/api/core";
 import { fetch } from "@tauri-apps/plugin-http";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -97,31 +99,6 @@ interface SearchResult {
   category: number;
 }
 
-interface DebridFile {
-  name: string;
-  size: number;
-  link: string;
-}
-
-interface DebridModal {
-  torrentName: string;
-  files: DebridFile[];
-}
-
-function flattenFiles(entries: unknown[], prefix = ""): DebridFile[] {
-  const result: DebridFile[] = [];
-  for (const entry of entries) {
-    const e = entry as Record<string, unknown>;
-    const name = prefix ? `${prefix}/${e.n}` : String(e.n);
-    if (Array.isArray(e.e)) {
-      result.push(...flattenFiles(e.e, name));
-    } else if (e.l) {
-      result.push({ name, size: Number(e.s) || 0, link: String(e.l) });
-    }
-  }
-  return result;
-}
-
 function getCategoryIcon(id: number): { icon: LucideIcon; color: string } {
   if (id === 2060 || id === 5070)
     return { icon: Sparkles, color: "text-pink-600 dark:text-pink-400" };
@@ -181,16 +158,6 @@ const API_SORT: Record<SortKey, string> = {
   date: "createdAt",
 };
 
-interface C411Torrent {
-  infoHash: string;
-  name: string;
-  size: number;
-  seeders: number;
-  leechers: number;
-  category: { id: number } | null;
-  subcategory: { slug: string } | null;
-}
-
 interface C411Response {
   data: C411Torrent[];
   meta: { total: number; page: number; totalPages: number };
@@ -222,7 +189,7 @@ function mapTorrents(data: C411Torrent[]): SearchResult[] {
     title: t.name,
     size: t.size,
     seeders: t.seeders,
-    leechers: t.leechers,
+    leechers: t.leechers ?? 0,
     guid: t.infoHash,
     category: mapCategory(t.category?.id ?? 0, t.subcategory?.slug ?? ""),
   }));
@@ -242,12 +209,6 @@ function pageNumbers(current: number, totalPages: number): (number | "...")[] {
   if (current < totalPages - 2) pages.push("...");
   pages.push(totalPages);
   return pages;
-}
-
-function formatSize(bytes: number): string {
-  if (!bytes) return "-";
-  if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} Go`;
-  return `${(bytes / 1_048_576).toFixed(0)} Mo`;
 }
 
 interface MainPageProps {
