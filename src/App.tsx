@@ -9,12 +9,8 @@ import { useAppInit } from "@/lib/useAppInit";
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
 );
-const SetupPage = lazy(() =>
-  import("@/pages/SetupPage").then((m) => ({ default: m.SetupPage })),
-);
-const MainPage = lazy(() =>
-  import("@/pages/MainPage").then((m) => ({ default: m.MainPage })),
-);
+const SetupPage = lazy(() => import("@/pages/SetupPage").then((m) => ({ default: m.SetupPage })));
+const MainPage = lazy(() => import("@/pages/MainPage").then((m) => ({ default: m.MainPage })));
 import { MagnetsPage } from "@/pages/MagnetsPage";
 import { DiscoverPage } from "@/pages/DiscoverPage";
 const PreferencesPage = lazy(() =>
@@ -26,13 +22,7 @@ const PatchnotesPage = lazy(() =>
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
-type Page =
-  | "setup"
-  | "main"
-  | "magnets"
-  | "preferences"
-  | "patchnotes"
-  | "discover";
+type Page = "setup" | "main" | "magnets" | "preferences" | "patchnotes" | "discover";
 
 /**
  * Phases de démarrage :
@@ -43,15 +33,20 @@ type Page =
 type StartPhase = "splash" | "transition" | "done";
 
 function App() {
-  const { loading: appInitLoading, tmdbKey: initTmdbKey, likes: initLikes, c411Key: initC411Key, allDebridKey: initAllDebridKey, prefs: initPrefs } = useAppInit();
+  const {
+    loading: appInitLoading,
+    tmdbKey: initTmdbKey,
+    likes: initLikes,
+    c411Key: initC411Key,
+    allDebridKey: initAllDebridKey,
+    prefs: initPrefs,
+  } = useAppInit();
   const [page, setPage] = useState<Page | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [summerEnabled, setSummerEnabled] = useState(true);
   const [summerFps, setSummerFps] = useState<30 | 60>(30);
   const [startPhase, setStartPhase] = useState<StartPhase>("splash");
-  const [dark, setDark] = useState(() =>
-    document.documentElement.classList.contains("dark"),
-  );
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
 
   // Observe le thème pour passer la bonne couleur à SplashTransition
   useEffect(() => {
@@ -63,10 +58,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    Promise.all([
-      store.get<boolean>("setup_complete"),
-      store.get<boolean>("welcome_v1_seen"),
-    ])
+    Promise.all([store.get<boolean>("setup_complete"), store.get<boolean>("welcome_v1_seen")])
       .then(([done, welcomeSeen]) => {
         setPage(done && welcomeSeen ? "main" : "setup");
       })
@@ -96,9 +88,7 @@ function App() {
   // on passe en phase "transition". Derive instead of a synchronous setState
   // in an effect to avoid cascading renders.
   const effectivePhase: StartPhase =
-    startPhase === "splash" && !appInitLoading && page !== null
-      ? "transition"
-      : startPhase;
+    startPhase === "splash" && !appInitLoading && page !== null ? "transition" : startPhase;
 
   async function handleSetSummerFps(v: 30 | 60) {
     setSummerFps(v);
@@ -119,9 +109,8 @@ function App() {
     setPage("main");
   }
 
-  const showPool = summerEnabled && (
-    page === "main" || page === "discover" || effectivePhase === "transition"
-  );
+  const showPool =
+    summerEnabled && (page === "main" || page === "discover" || effectivePhase === "transition");
 
   return (
     <>
@@ -137,25 +126,17 @@ function App() {
           }`}
         >
           <Suspense fallback={null}>
-            <PixelPool
-              active={showPool}
-              fps={summerFps}
-            />
+            <PixelPool active={showPool} fps={summerFps} />
           </Suspense>
         </div>
       )}
 
       {/* ── Phase splash : écran de chargement ── */}
-      <AnimatePresence>
-        {effectivePhase === "splash" && <SplashScreen />}
-      </AnimatePresence>
+      <AnimatePresence>{effectivePhase === "splash" && <SplashScreen />}</AnimatePresence>
 
       {/* ── Phase transition : le voile se lève sur la pool ── */}
       {effectivePhase === "transition" && (
-        <SplashTransition
-          dark={dark}
-          onComplete={() => setStartPhase("done")}
-        />
+        <SplashTransition dark={dark} onComplete={() => setStartPhase("done")} />
       )}
 
       {/* ── Phase done : navigation normale ── */}

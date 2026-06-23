@@ -92,11 +92,7 @@ function makeDuckSprite(v: Variant): HTMLCanvasElement {
     c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
     c.fill();
   };
-  const tri = (
-    _c: CanvasRenderingContext2D,
-    pts: [number, number][],
-    style: string,
-  ) => {
+  const tri = (_c: CanvasRenderingContext2D, pts: [number, number][], style: string) => {
     _c.fillStyle = style;
     _c.beginPath();
     _c.moveTo(pts[0][0], pts[0][1]);
@@ -278,8 +274,24 @@ function makeDuckSprite(v: Variant): HTMLCanvasElement {
     c.fillRect(112.5, 36, 5, 5); // mouthpiece
   } else if (v.acc === "bowtie") {
     const bc = v.accColor!;
-    tri(c, [[86, 60], [78, 55], [78, 65]], bc);
-    tri(c, [[86, 60], [94, 55], [94, 65]], bc);
+    tri(
+      c,
+      [
+        [86, 60],
+        [78, 55],
+        [78, 65],
+      ],
+      bc,
+    );
+    tri(
+      c,
+      [
+        [86, 60],
+        [94, 55],
+        [94, 65],
+      ],
+      bc,
+    );
     fillEll(86, 60, 2.2, 3, "rgba(0,0,0,0.25)");
     fillEll(86, 60, 1.8, 2.5, bc);
   } else if (v.acc === "headphones") {
@@ -338,15 +350,8 @@ function spawnDuck() {
 
   // start fully off-screen on a random edge
   const edge = (Math.random() * 4) | 0;
-  const x =
-    edge === 0 ? -dw :
-    edge === 1 ? W + dw :
-    alongW;
-  const y =
-    edge === 0 ? alongH :
-    edge === 1 ? alongH :
-    edge === 2 ? -dh :
-    H + dh;
+  const x = edge === 0 ? -dw : edge === 1 ? W + dw : alongW;
+  const y = edge === 0 ? alongH : edge === 1 ? alongH : edge === 2 ? -dh : H + dh;
 
   // head toward a random point inside the pool so it always swims in
   const b = inner();
@@ -389,13 +394,7 @@ function stopSpawning() {
   spawnTimer = null;
 }
 
-export function PixelPool({
-  active = true,
-  fps = 30,
-}: {
-  active?: boolean;
-  fps?: number;
-}) {
+export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const activeRef = useRef(active);
   const fpsRef = useRef(fps);
@@ -442,9 +441,7 @@ export function PixelPool({
 
     function overUI(e: PointerEvent): boolean {
       const t = e.target as HTMLElement | null;
-      return !!t?.closest(
-        "button, a, input, textarea, select, [role='button'], [role='menuitem']",
-      );
+      return !!t?.closest("button, a, input, textarea, select, [role='button'], [role='menuitem']");
     }
 
     function updateHoverCursor(e: PointerEvent) {
@@ -458,12 +455,7 @@ export function PixelPool({
         const d = pool[i];
         const dh = DUCK_BASE * d.scale;
         const dw = dh * (SW / SH);
-        if (
-          px >= d.x - dw / 2 &&
-          px <= d.x + dw / 2 &&
-          py >= d.y - dh / 2 &&
-          py <= d.y + dh / 2
-        )
+        if (px >= d.x - dw / 2 && px <= d.x + dw / 2 && py >= d.y - dh / 2 && py <= d.y + dh / 2)
           return d;
       }
       return null;
@@ -579,8 +571,7 @@ export function PixelPool({
       const tile = 40;
       for (let yy = 0; yy < h; yy += tile) {
         for (let xx = 0; xx < w; xx += tile) {
-          if (((xx / tile) | 0) % 2 === ((yy / tile) | 0) % 2)
-            x.fillRect(xx, yy, tile, tile);
+          if (((xx / tile) | 0) % 2 === ((yy / tile) | 0) % 2) x.fillRect(xx, yy, tile, tile);
         }
       }
 
@@ -647,7 +638,11 @@ export function PixelPool({
           const ang = a + rot + (i * Math.PI * 2) / 3;
           const px = d.x + Math.cos(ang) * rr;
           const py = d.y + Math.sin(ang) * rr;
-          if (a === 0) { ctx.moveTo(px, py); } else { ctx.lineTo(px, py); }
+          if (a === 0) {
+            ctx.moveTo(px, py);
+          } else {
+            ctx.lineTo(px, py);
+          }
         }
         ctx.stroke();
       }
@@ -717,25 +712,34 @@ export function PixelPool({
         d.y += d.vy * dt;
         if (d.entering) {
           // let it swim in freely until it's fully inside the pool
-          if (
-            d.x >= b.minX &&
-            d.x <= b.maxX &&
-            d.y >= b.minY &&
-            d.y <= b.maxY
-          )
-            d.entering = false;
+          if (d.x >= b.minX && d.x <= b.maxX && d.y >= b.minY && d.y <= b.maxY) d.entering = false;
           continue;
         }
-        if (d.x < b.minX) { d.x = b.minX; d.vx = Math.abs(d.vx); }
-        if (d.x > b.maxX) { d.x = b.maxX; d.vx = -Math.abs(d.vx); }
-        if (d.y < b.minY) { d.y = b.minY; d.vy = Math.abs(d.vy); }
-        if (d.y > b.maxY) { d.y = b.maxY; d.vy = -Math.abs(d.vy); }
+        if (d.x < b.minX) {
+          d.x = b.minX;
+          d.vx = Math.abs(d.vx);
+        }
+        if (d.x > b.maxX) {
+          d.x = b.maxX;
+          d.vx = -Math.abs(d.vx);
+        }
+        if (d.y < b.minY) {
+          d.y = b.minY;
+          d.vy = Math.abs(d.vy);
+        }
+        if (d.y > b.maxY) {
+          d.y = b.maxY;
+          d.vy = -Math.abs(d.vy);
+        }
         if (Math.random() < 0.01) {
           d.vx += (Math.random() - 0.5) * 6;
           d.vy += (Math.random() - 0.5) * 6;
           const sp = Math.hypot(d.vx, d.vy);
           const max = 26;
-          if (sp > max) { d.vx *= max / sp; d.vy *= max / sp; }
+          if (sp > max) {
+            d.vx *= max / sp;
+            d.vy *= max / sp;
+          }
         }
       }
       pool.sort((a, c) => a.y - c.y);
