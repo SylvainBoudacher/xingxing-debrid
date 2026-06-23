@@ -414,9 +414,22 @@ function Pagination({
 interface MagnetsPageProps {
   onBack: () => void;
   onNavigate: (page: "preferences" | "patchnotes") => void;
+  /** Clé AllDebrid pré-lue par useAppInit */
+  initialAllDebridKey?: string | null;
+  /** Préférences UI pré-lues par useAppInit */
+  initialViewMode?: ViewMode;
+  initialHideNfoFiles?: boolean;
+  initialSkipNfoDownload?: boolean;
 }
 
-export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
+export function MagnetsPage({
+  onBack,
+  onNavigate,
+  initialAllDebridKey,
+  initialViewMode,
+  initialHideNfoFiles,
+  initialSkipNfoDownload,
+}: MagnetsPageProps) {
   const [magnets, setMagnets] = useState<MagnetEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [confirmDelete, setConfirmDelete] = useState<{ ids: number[]; label: string } | null>(null);
@@ -424,14 +437,14 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkDownloading, setBulkDownloading] = useState<{ done: number; total: number } | null>(null);
-  const [simpleView, setSimpleView] = useState(true);
-  const [hideNfo, setHideNfo] = useState(true);
-  const [skipNfoDownload, setSkipNfoDownload] = useState(true);
+  const [simpleView, setSimpleView] = useState((initialViewMode ?? "simple") === "simple");
+  const [hideNfo, setHideNfo] = useState(initialHideNfoFiles ?? true);
+  const [skipNfoDownload, setSkipNfoDownload] = useState(initialSkipNfoDownload ?? true);
   const [filesModal, setFilesModal] = useState<{ id: number; name: string } | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
-  const apiKeyRef = useRef("");
+  const apiKeyRef = useRef(initialAllDebridKey ?? "");
 
   const loadMagnets = useCallback(async () => {
     if (!apiKeyRef.current) return;
@@ -472,13 +485,24 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
   }, []);
 
   useEffect(() => {
-    getApiKey("alldebrid_api_key").then((v) => {
-      if (v) apiKeyRef.current = v;
+    if (initialAllDebridKey !== undefined) {
+      // Clé déjà dispo — on charge directement les magnets depuis le cache
       loadMagnets();
-    });
-    store.get<ViewMode>("view_mode").then((v) => setSimpleView((v ?? "simple") === "simple"));
-    store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));
-    store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
+    } else {
+      getApiKey("alldebrid_api_key").then((v) => {
+        if (v) apiKeyRef.current = v;
+        loadMagnets();
+      });
+    }
+    if (initialViewMode === undefined) {
+      store.get<ViewMode>("view_mode").then((v) => setSimpleView((v ?? "simple") === "simple"));
+    }
+    if (initialHideNfoFiles === undefined) {
+      store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));
+    }
+    if (initialSkipNfoDownload === undefined) {
+      store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
+    }
   }, [loadMagnets]);
 
   async function handleDelete(ids: number[]) {
