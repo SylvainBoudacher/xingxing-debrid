@@ -93,12 +93,12 @@ function App() {
   }, []);
 
   // Dès que le chargement est terminé ET que la destination est connue,
-  // on passe en phase "transition".
-  useEffect(() => {
-    if (!appInitLoading && page !== null && startPhase === "splash") {
-      setStartPhase("transition");
-    }
-  }, [appInitLoading, page, startPhase]);
+  // on passe en phase "transition". Derive instead of a synchronous setState
+  // in an effect to avoid cascading renders.
+  const effectivePhase: StartPhase =
+    startPhase === "splash" && !appInitLoading && page !== null
+      ? "transition"
+      : startPhase;
 
   async function handleSetSummerFps(v: 30 | 60) {
     setSummerFps(v);
@@ -120,7 +120,7 @@ function App() {
   }
 
   const showPool = summerEnabled && (
-    page === "main" || page === "discover" || startPhase === "transition"
+    page === "main" || page === "discover" || effectivePhase === "transition"
   );
 
   return (
@@ -147,11 +147,11 @@ function App() {
 
       {/* ── Phase splash : écran de chargement ── */}
       <AnimatePresence>
-        {startPhase === "splash" && <SplashScreen />}
+        {effectivePhase === "splash" && <SplashScreen />}
       </AnimatePresence>
 
       {/* ── Phase transition : le voile se lève sur la pool ── */}
-      {startPhase === "transition" && (
+      {effectivePhase === "transition" && (
         <SplashTransition
           dark={dark}
           onComplete={() => setStartPhase("done")}
@@ -167,7 +167,7 @@ function App() {
 
       <Suspense fallback={null}>
         <AnimatePresence mode="wait">
-          {startPhase === "done" && page === "setup" && (
+          {effectivePhase === "done" && page === "setup" && (
             <motion.div
               key="setup"
               initial={{ opacity: 0, y: 12 }}
@@ -178,7 +178,7 @@ function App() {
               <SetupPage onComplete={handleSetupComplete} />
             </motion.div>
           )}
-          {startPhase === "done" && page === "main" && (
+          {effectivePhase === "done" && page === "main" && (
             <motion.div
               key="main"
               initial={{ opacity: 0 }}
@@ -198,7 +198,7 @@ function App() {
               />
             </motion.div>
           )}
-          {startPhase === "done" && page === "magnets" && (
+          {effectivePhase === "done" && page === "magnets" && (
             <motion.div
               key="magnets"
               initial={{ opacity: 0, y: 12 }}
@@ -216,7 +216,7 @@ function App() {
               />
             </motion.div>
           )}
-          {startPhase === "done" && page === "preferences" && (
+          {effectivePhase === "done" && page === "preferences" && (
             <motion.div
               key="preferences"
               initial={{ opacity: 0, y: 12 }}
@@ -234,7 +234,7 @@ function App() {
               />
             </motion.div>
           )}
-          {startPhase === "done" && page === "discover" && (
+          {effectivePhase === "done" && page === "discover" && (
             <motion.div
               key="discover"
               initial={{ opacity: 0, y: 12 }}
@@ -253,7 +253,7 @@ function App() {
               />
             </motion.div>
           )}
-          {startPhase === "done" && page === "patchnotes" && (
+          {effectivePhase === "done" && page === "patchnotes" && (
             <motion.div
               key="patchnotes"
               initial={{ opacity: 0, y: 12 }}

@@ -453,6 +453,8 @@ export function MagnetsPage({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
   const apiKeyRef = useRef(initialAllDebridKey ?? "");
+  // apiKey state mirrors apiKeyRef for safe use during render (JSX prop)
+  const [apiKey, setApiKey] = useState(initialAllDebridKey ?? "");
 
   const loadMagnets = useCallback(async () => {
     if (!apiKeyRef.current) return;
@@ -498,7 +500,7 @@ export function MagnetsPage({
       loadMagnets();
     } else {
       getApiKey("alldebrid_api_key").then((v) => {
-        if (v) apiKeyRef.current = v;
+        if (v) { apiKeyRef.current = v; setApiKey(v); }
         loadMagnets();
       });
     }
@@ -511,6 +513,8 @@ export function MagnetsPage({
     if (initialSkipNfoDownload === undefined) {
       store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
     }
+  // initialXxx props are intentional initial-value-only inputs — not reactive deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadMagnets]);
 
   async function handleDelete(ids: number[]) {
@@ -577,7 +581,7 @@ export function MagnetsPage({
     }
   }
 
-  useEffect(() => { setPage(1); }, [search, statusFilter]);
+  useEffect(() => { void Promise.resolve().then(() => setPage(1)); }, [search, statusFilter]);
 
   const counts = useMemo(() => {
     const c = { all: magnets.length, active: 0, ready: 0, error: 0 };
@@ -919,7 +923,7 @@ export function MagnetsPage({
           <FilesModal
             magnetId={filesModal.id}
             magnetName={filesModal.name}
-            apiKey={apiKeyRef.current}
+            apiKey={apiKey}
             simpleView={simpleView}
             hideNfo={hideNfo}
             skipNfoDownload={skipNfoDownload}

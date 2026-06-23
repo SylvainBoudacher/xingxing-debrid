@@ -337,21 +337,16 @@ function spawnDuck() {
   const alongH = BORDER + Math.random() * Math.max(1, H - 2 * BORDER);
 
   // start fully off-screen on a random edge
-  let x = 0;
-  let y = 0;
-  switch ((Math.random() * 4) | 0) {
-    case 0: // from left
-      (x = -dw), (y = alongH);
-      break;
-    case 1: // from right
-      (x = W + dw), (y = alongH);
-      break;
-    case 2: // from top
-      (x = alongW), (y = -dh);
-      break;
-    default: // from bottom
-      (x = alongW), (y = H + dh);
-  }
+  const edge = (Math.random() * 4) | 0;
+  const x =
+    edge === 0 ? -dw :
+    edge === 1 ? W + dw :
+    alongW;
+  const y =
+    edge === 0 ? alongH :
+    edge === 1 ? alongH :
+    edge === 2 ? -dh :
+    H + dh;
 
   // head toward a random point inside the pool so it always swims in
   const b = inner();
@@ -403,9 +398,15 @@ export function PixelPool({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const activeRef = useRef(active);
-  activeRef.current = active;
   const fpsRef = useRef(fps);
-  fpsRef.current = fps;
+
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
+
+  useEffect(() => {
+    fpsRef.current = fps;
+  }, [fps]);
 
   useEffect(() => {
     const canvas = canvasRef.current!;
@@ -518,9 +519,11 @@ export function PixelPool({
       if (sp < 4) {
         // released without a flick: drift off gently
         const a = Math.random() * Math.PI * 2;
-        (vx = Math.cos(a) * 12), (vy = Math.sin(a) * 12);
+        vx = Math.cos(a) * 12;
+        vy = Math.sin(a) * 12;
       } else if (sp > 60) {
-        (vx *= 60 / sp), (vy *= 60 / sp);
+        vx *= 60 / sp;
+        vy *= 60 / sp;
       }
       dragging.vx = vx;
       dragging.vy = vy;
@@ -644,7 +647,7 @@ export function PixelPool({
           const ang = a + rot + (i * Math.PI * 2) / 3;
           const px = d.x + Math.cos(ang) * rr;
           const py = d.y + Math.sin(ang) * rr;
-          a === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+          if (a === 0) { ctx.moveTo(px, py); } else { ctx.lineTo(px, py); }
         }
         ctx.stroke();
       }
@@ -723,16 +726,16 @@ export function PixelPool({
             d.entering = false;
           continue;
         }
-        if (d.x < b.minX) (d.x = b.minX), (d.vx = Math.abs(d.vx));
-        if (d.x > b.maxX) (d.x = b.maxX), (d.vx = -Math.abs(d.vx));
-        if (d.y < b.minY) (d.y = b.minY), (d.vy = Math.abs(d.vy));
-        if (d.y > b.maxY) (d.y = b.maxY), (d.vy = -Math.abs(d.vy));
+        if (d.x < b.minX) { d.x = b.minX; d.vx = Math.abs(d.vx); }
+        if (d.x > b.maxX) { d.x = b.maxX; d.vx = -Math.abs(d.vx); }
+        if (d.y < b.minY) { d.y = b.minY; d.vy = Math.abs(d.vy); }
+        if (d.y > b.maxY) { d.y = b.maxY; d.vy = -Math.abs(d.vy); }
         if (Math.random() < 0.01) {
           d.vx += (Math.random() - 0.5) * 6;
           d.vy += (Math.random() - 0.5) * 6;
           const sp = Math.hypot(d.vx, d.vy);
           const max = 26;
-          if (sp > max) (d.vx *= max / sp), (d.vy *= max / sp);
+          if (sp > max) { d.vx *= max / sp; d.vy *= max / sp; }
         }
       }
       pool.sort((a, c) => a.y - c.y);
