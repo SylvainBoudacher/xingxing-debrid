@@ -16,11 +16,7 @@ export function ThemeMenuItem() {
 
   return (
     <DropdownMenuItem onClick={toggleTheme}>
-      {theme === "dark" ? (
-        <Sun className="mr-2 h-4 w-4" />
-      ) : (
-        <Moon className="mr-2 h-4 w-4" />
-      )}
+      {theme === "dark" ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
       {theme === "dark" ? "Mode clair" : "Mode sombre"}
     </DropdownMenuItem>
   );

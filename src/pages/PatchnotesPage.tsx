@@ -18,7 +18,6 @@ interface PatchnotesPageProps {
 export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
-
       {/* Header */}
       <div className="sticky top-0 z-10 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl">
         <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
@@ -31,7 +30,9 @@ export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
             <span className="text-sm font-medium">Retour</span>
           </motion.button>
 
-          <h1 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight absolute left-1/2 -translate-x-1/2">Patch notes</h1>
+          <h1 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight absolute left-1/2 -translate-x-1/2">
+            Patch notes
+          </h1>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -111,10 +112,15 @@ export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
             <div className="space-y-8">
               {note.sections.map((section) => (
                 <section key={section.title}>
-                  <h2 className="text-base font-semibold text-zinc-900 dark:text-white mb-3">{section.title}</h2>
+                  <h2 className="text-base font-semibold text-zinc-900 dark:text-white mb-3">
+                    {section.title}
+                  </h2>
                   <ul className="space-y-2">
                     {section.items.map((item, i) => (
-                      <li key={i} className="flex gap-3 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                      <li
+                        key={i}
+                        className="flex gap-3 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed"
+                      >
                         <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-400" />
                         {item}
                       </li>

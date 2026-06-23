@@ -85,7 +85,8 @@ export const PATCH_NOTES: PatchNote[] = [
         images: [
           {
             src: discoverImg,
-            caption: "Le catalogue TMDB : films, séries et animations les mieux notés, avec leur note",
+            caption:
+              "Le catalogue TMDB : films, séries et animations les mieux notés, avec leur note",
           },
         ],
       },
@@ -93,7 +94,7 @@ export const PATCH_NOTES: PatchNote[] = [
         title: "Ma liste",
         items: [
           "Ajoutez vos films et séries en favoris d'un simple clic sur le cœur.",
-          "Retrouvez-les à tout moment dans l'onglet \"Ma liste\" de la page Découvrir, avec leur résumé.",
+          'Retrouvez-les à tout moment dans l\'onglet "Ma liste" de la page Découvrir, avec leur résumé.',
         ],
       },
       {
@@ -102,9 +103,7 @@ export const PATCH_NOTES: PatchNote[] = [
           "Passez du mode clair au mode sombre depuis le menu, sur toutes les pages de l'application.",
           "L'ensemble de l'interface a été harmonisé pour être agréable dans les deux modes.",
         ],
-        images: [
-          { src: themeImg, caption: "Le changement de thème, accessible depuis le menu" },
-        ],
+        images: [{ src: themeImg, caption: "Le changement de thème, accessible depuis le menu" }],
       },
       {
         title: "Recherche plus lisible",
@@ -113,7 +112,10 @@ export const PATCH_NOTES: PatchNote[] = [
           "Les filtres par catégorie, qualité et format se combinent avec le tri par pertinence, taille ou date.",
         ],
         images: [
-          { src: torrentFilterImg, caption: "Les résultats de recherche avec leurs filtres de qualité et de format" },
+          {
+            src: torrentFilterImg,
+            caption: "Les résultats de recherche avec leurs filtres de qualité et de format",
+          },
         ],
       },
       {
@@ -124,7 +126,10 @@ export const PATCH_NOTES: PatchNote[] = [
           "Un sommaire suit votre lecture pour naviguer entre les sections.",
         ],
         images: [
-          { src: paramsImg, caption: "La page Paramètres : affichage des résultats et gestion des fichiers .nfo" },
+          {
+            src: paramsImg,
+            caption: "La page Paramètres : affichage des résultats et gestion des fichiers .nfo",
+          },
         ],
       },
       {
@@ -144,7 +149,7 @@ export const PATCH_NOTES: PatchNote[] = [
       {
         title: "Recherche complète",
         items: [
-          "La recherche affiche désormais tous les résultats disponibles, pas seulement les premiers : un bouton \"Charger plus\" permet de voir la suite, avec un compteur pour savoir où vous en êtes (ex. 50 résultats affichés sur 230).",
+          'La recherche affiche désormais tous les résultats disponibles, pas seulement les premiers : un bouton "Charger plus" permet de voir la suite, avec un compteur pour savoir où vous en êtes (ex. 50 résultats affichés sur 230).',
         ],
       },
       {
@@ -188,8 +193,8 @@ export const PATCH_NOTES: PatchNote[] = [
         items: [
           "L'application demande confirmation avant de supprimer un téléchargement, et un bouton permet de nettoyer d'un coup tous ceux qui ont échoué.",
           "Sélectionnez plusieurs éléments à la fois pour les télécharger ensemble.",
-          "Un bouton \"Tout télécharger\" permet de récupérer une série entière en un seul clic.",
-          "Le bouton \"Lire avec VLC\" n'apparaît plus que pour les vidéos.",
+          'Un bouton "Tout télécharger" permet de récupérer une série entière en un seul clic.',
+          'Le bouton "Lire avec VLC" n\'apparaît plus que pour les vidéos.',
           "Présentation améliorée : contenu centré, barre du haut toujours visible, recherche et filtres par état (en cours, terminé, en erreur).",
         ],
       },

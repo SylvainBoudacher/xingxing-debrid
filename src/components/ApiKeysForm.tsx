@@ -96,9 +96,15 @@ export function ApiKeysForm() {
   const [tmdbKey, setTmdbKey] = useState("");
 
   useEffect(() => {
-    getApiKey("c411_api_key").then((v) => { if (v) setC411Key(v); });
-    getApiKey("alldebrid_api_key").then((v) => { if (v) setAllDebridKey(v); });
-    getApiKey("tmdb_api_key").then((v) => { if (v) setTmdbKey(v); });
+    getApiKey("c411_api_key").then((v) => {
+      if (v) setC411Key(v);
+    });
+    getApiKey("alldebrid_api_key").then((v) => {
+      if (v) setAllDebridKey(v);
+    });
+    getApiKey("tmdb_api_key").then((v) => {
+      if (v) setTmdbKey(v);
+    });
   }, []);
 
   const bothFilled = c411Key.trim() !== "" && allDebridKey.trim() !== "";
