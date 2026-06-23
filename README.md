@@ -2,9 +2,9 @@
 
 # XingXing Debrid
 
-**Recherche de torrents, debrid et streaming dans une seule application de bureau.**
+**Torrent search, debrid, and streaming in a single desktop app.**
 
-De la recherche C411 au lien debride AllDebrid, sans quitter l'app.
+From C411 search to AllDebrid link, without leaving the app.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![Tauri](https://img.shields.io/badge/Tauri-2-FFC131?logo=tauri&logoColor=white)
@@ -12,98 +12,98 @@ De la recherche C411 au lien debride AllDebrid, sans quitter l'app.
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
 ![Rust](https://img.shields.io/badge/Rust-backend-DEA584?logo=rust&logoColor=white)
 
-<!-- Capture d'ecran principale ici -->
-<!-- ![Apercu de XingXing Debrid](docs/screenshot-main.png) -->
+<!-- Main screenshot here -->
+<!-- ![XingXing Debrid preview](docs/screenshot-main.png) -->
 
 </div>
 
 ---
 
-## Presentation
+## Overview
 
-XingXing Debrid connecte trois services en un seul flux : vous cherchez un contenu sur **C411**, l'app recupere le lien magnet et l'envoie a **AllDebrid**, qui vous fournit un lien de telechargement direct ou un flux a lire dans VLC. Plus besoin de jongler entre un tracker, un client torrent et un debrideur.
+XingXing Debrid connects three services in a single flow: search for content on **C411**, the app fetches the magnet link and sends it to **AllDebrid**, which gives you a direct download link or a stream you can open in VLC. No more juggling between a tracker, a torrent client, and a debrid service.
 
-## Fonctionnalites
+## Features
 
-### Recherche
+### Search
 
-Recherchez directement dans le catalogue C411 et envoyez un magnet vers AllDebrid en un clic.
+Search the C411 catalogue directly and send a magnet to AllDebrid in one click.
 
-<!-- ![Page de recherche](docs/screenshot-search.png) -->
+<!-- ![Search page](docs/screenshot-search.png) -->
 
-### Decouverte
+### Discover
 
-Parcourez les films et series populaires via **TMDB**, avec correspondance automatique vers les releases disponibles (qualite, langues, saisons detectees depuis le nom de la release).
+Browse popular movies and series via **TMDB**, with automatic matching to available releases (quality, languages, seasons detected from the release name).
 
-<!-- ![Page Decouverte](docs/screenshot-discover.png) -->
+<!-- ![Discover page](docs/screenshot-discover.png) -->
 
 ### Magnets
 
-Suivez vos magnets AllDebrid en temps reel : statut, progression, vitesse, seeders. Telechargez les fichiers, copiez les liens debrides ou lancez la lecture directement dans **VLC**.
+Track your AllDebrid magnets in real time: status, progress, speed, seeders. Download files, copy debrid links, or open playback directly in **VLC**.
 
-<!-- ![Page Magnets](docs/screenshot-magnets.png) -->
+<!-- ![Magnets page](docs/screenshot-magnets.png) -->
 
-### Et aussi
+### Also
 
-- **Configuration guidee** : un assistant de premier lancement pour renseigner vos cles API (C411, AllDebrid, TMDB)
-- **Stockage securise** : les cles sont gerees cote Rust, jamais exposees au front
-- **Theme clair / sombre** avec animations fluides
-- **Preferences** : personnalisez l'affichage selon vos habitudes
-- **Notes de version** integrees a l'app
+- **Guided setup**: a first-launch wizard to enter your API keys (C411, AllDebrid, TMDB)
+- **Secure storage**: keys are managed on the Rust side, never exposed to the frontend
+- **Light / dark theme** with smooth animations
+- **Preferences**: customize the display to your habits
+- **Release notes** built into the app
 
-## Stack technique
+## Tech stack
 
-| Couche      | Technologie                                            |
-| ----------- | ------------------------------------------------------ |
-| Interface   | React 19, TypeScript, Tailwind CSS 4, Motion, Radix UI |
-| Shell natif | Tauri 2 (Rust)                                         |
-| Build       | Vite 7, Bun                                            |
-| Persistance | tauri-plugin-store                                     |
+| Layer        | Technology                                             |
+| ------------ | ------------------------------------------------------ |
+| UI           | React 19, TypeScript, Tailwind CSS 4, Motion, Radix UI |
+| Native shell | Tauri 2 (Rust)                                         |
+| Build        | Vite 7, Bun                                            |
+| Persistence  | tauri-plugin-store                                     |
 
-## Prerequis
+## Prerequisites
 
 - [Bun](https://bun.sh)
-- [Rust](https://rustup.rs) (toolchain stable)
-- Une cle API [AllDebrid](https://alldebrid.com)
-- Un compte C411 et sa cle API
-- Une cle API [TMDB](https://www.themoviedb.org/settings/api) (pour la page Decouverte)
+- [Rust](https://rustup.rs) (stable toolchain)
+- An [AllDebrid](https://alldebrid.com) API key
+- A C411 account and its API key
+- A [TMDB](https://www.themoviedb.org/settings/api) API key (for the Discover page)
 
 ## Installation
 
 ```bash
-# Cloner le depot
+# Clone the repo
 git clone <repo-url>
 cd c411-debrid-app
 
-# Installer les dependances
+# Install dependencies
 bun install
 
-# Lancer en developpement (Tauri + Vite avec HMR)
+# Run in development (Tauri + Vite with HMR)
 bun run tauri dev
 ```
 
-Au premier lancement, l'assistant de configuration vous demande vos cles API. Elles sont stockees localement et ne quittent jamais votre machine (hors appels aux APIs concernees).
+On first launch, the setup wizard will ask for your API keys. They are stored locally and never leave your machine (outside of calls to the relevant APIs).
 
-## Build de production
+## Production build
 
 ```bash
 bun run tauri build
 ```
 
-Les binaires sont generes dans `src-tauri/target/release/bundle/`.
+Binaries are generated in `src-tauri/target/release/bundle/`.
 
-## Structure du projet
+## Project structure
 
 ```
-src/                  # Frontend React
-  pages/              # Recherche, Decouverte, Magnets, Preferences, Setup
-  components/         # Composants partages (UI, formulaires)
-  lib/                # Cles API, parsing de releases, themes
+src/                  # React frontend
+  pages/              # Search, Discover, Magnets, Preferences, Setup
+  components/         # Shared components (UI, forms)
+  lib/                # API keys, release parsing, themes
 src-tauri/
-  src/lib.rs          # Commandes Tauri (backend Rust)
-  tauri.conf.json     # Configuration de l'app
+  src/lib.rs          # Tauri commands (Rust backend)
+  tauri.conf.json     # App configuration
 ```
 
-## Avertissement
+## Disclaimer
 
-Cette application est un client pour des services tiers. Vous etes responsable de l'usage que vous en faites et du respect de la legislation en vigueur dans votre pays.
+This application is a client for third-party services. You are responsible for how you use it and for complying with the laws in your country.
