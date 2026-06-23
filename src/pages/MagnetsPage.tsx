@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "motion/react";
 import { fetch } from "@tauri-apps/plugin-http";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -9,7 +10,7 @@ import {
 } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey } from "@/lib/apiKeys";
-import { flattenFiles, formatSize, type DebridFile } from "@/lib/debrid";
+import { flattenFiles, formatSize } from "@/lib/debrid";
 import type { ViewMode } from "@/pages/PreferencesPage";
 import {
   DropdownMenu,
@@ -147,8 +148,6 @@ interface FilesModalProps {
 }
 
 function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfoDownload, onClose }: FilesModalProps) {
-  const [files, setFiles] = useState<DebridFile[] | null>(null);
-  const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [copying, setCopying] = useState<string | null>(null);
   const [vlcing, setVlcing] = useState<string | null>(null);
@@ -156,30 +155,39 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfo
 
   const busy = downloading !== null || copying !== null || vlcing !== null || downloadingAll !== null;
 
+  // Fetch mis en cache par TanStack Query — rouvrir le même magnet est instantané.
+  const { data: allFiles, isLoading: loading, isError } = useQuery({
+    queryKey: ["magnet-files", magnetId],
+    queryFn: async () => {
+      const res = await fetch(`${AD_BASE}/magnet/files?agent=c411&id[]=${magnetId}`, {
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+      const json = await res.json() as { status: string; data?: { magnets?: Array<{ files?: unknown[] }> } };
+      const rawFiles = json.data?.magnets?.[0]?.files ?? [];
+      return flattenFiles(rawFiles);
+    },
+    staleTime: 5 * 60 * 1000, // 5 min — les fichiers d'un magnet ne changent pas
+    retry: 1,
+  });
+
+  // hideNfo est appliqué côté client, sans déclencher un nouveau fetch
+  const files = useMemo(
+    () => hideNfo ? (allFiles ?? []).filter((f) => !isNfoFile(f.name)) : (allFiles ?? []),
+    [allFiles, hideNfo],
+  );
+
+  useEffect(() => {
+    if (isError) {
+      toast.error("Impossible de charger les fichiers");
+      onClose();
+    }
+  }, [isError, onClose]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch(`${AD_BASE}/magnet/files?agent=c411&id[]=${magnetId}`, {
-          headers: { Authorization: `Bearer ${apiKey}` },
-        });
-        const json = await res.json() as { status: string; data?: { magnets?: Array<{ files?: unknown[] }> } };
-        const rawFiles = json.data?.magnets?.[0]?.files ?? [];
-        const flat = flattenFiles(rawFiles);
-        setFiles(hideNfo ? flat.filter((f) => !isNfoFile(f.name)) : flat);
-      } catch (err) {
-        toast.error(String(err));
-        onClose();
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [magnetId, apiKey, hideNfo, onClose]);
 
   async function handleOpenVlc(link: string) {
     setVlcing(link);
