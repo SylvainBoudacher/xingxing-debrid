@@ -28,21 +28,15 @@ jobs:
       - name: Install frontend deps
         run: bun install
 
-      - name: Build Tauri app
-        run: bun run tauri build
+      - name: Build and release
+        uses: tauri-apps/tauri-action@v0
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
         with:
-          files: |
-            src-tauri/target/release/bundle/msi/*.msi
-            src-tauri/target/release/bundle/msi/*.msi.zip
-            src-tauri/target/release/bundle/msi/*.msi.zip.sig
-            src-tauri/target/release/bundle/nsis/*.exe
-            src-tauri/target/release/bundle/nsis/*.exe.zip
-            src-tauri/target/release/bundle/nsis/*.exe.zip.sig
-            src-tauri/target/release/bundle/updater/latest.json
-          generate_release_notes: true
+          tagName: ${{ github.ref_name }}
+          releaseName: "XingXing Debrid ${{ github.ref_name }}"
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
