@@ -72,7 +72,7 @@ export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
-        className="mx-auto w-full max-w-xl px-6 pt-8 pb-12 sm:px-8 space-y-10"
+        className="mx-auto w-full max-w-3xl px-6 pt-8 pb-12 sm:px-10 space-y-12"
       >
         {PATCH_NOTES.map((note) => (
           <article key={note.version}>
@@ -89,20 +89,39 @@ export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
               </p>
             )}
 
-            <div className="space-y-6">
+            {note.introImage && (
+              <figure className="mb-8">
+                <img
+                  src={note.introImage.src}
+                  alt={note.introImage.caption ?? `Version ${note.version}`}
+                  loading="lazy"
+                  onError={(e) => {
+                    (e.currentTarget.parentElement as HTMLElement).style.display = "none";
+                  }}
+                  className="w-full rounded-xl ring-1 ring-black/10 dark:ring-white/10 shadow-sm"
+                />
+                {note.introImage.caption && (
+                  <figcaption className="mt-2 text-center text-xs text-zinc-400 dark:text-zinc-500">
+                    {note.introImage.caption}
+                  </figcaption>
+                )}
+              </figure>
+            )}
+
+            <div className="space-y-8">
               {note.sections.map((section) => (
                 <section key={section.title}>
-                  <h2 className="text-sm font-semibold text-zinc-900 dark:text-white mb-2.5">{section.title}</h2>
-                  <ul className="space-y-1.5">
+                  <h2 className="text-base font-semibold text-zinc-900 dark:text-white mb-3">{section.title}</h2>
+                  <ul className="space-y-2">
                     {section.items.map((item, i) => (
-                      <li key={i} className="flex gap-2.5 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                        <span className="mt-[5px] h-1 w-1 shrink-0 rounded-full bg-indigo-400" />
+                      <li key={i} className="flex gap-3 text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                        <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-400" />
                         {item}
                       </li>
                     ))}
                   </ul>
                   {section.images?.map((image) => (
-                    <figure key={image.src} className="mt-4">
+                    <figure key={image.src} className="mt-5">
                       <img
                         src={image.src}
                         alt={image.caption ?? section.title}
@@ -113,7 +132,7 @@ export function PatchnotesPage({ onBack, onNavigate }: PatchnotesPageProps) {
                         className="w-full rounded-xl ring-1 ring-black/10 dark:ring-white/10 shadow-sm"
                       />
                       {image.caption && (
-                        <figcaption className="mt-1.5 text-center text-[11px] text-zinc-400 dark:text-zinc-500">
+                        <figcaption className="mt-2 text-center text-xs text-zinc-400 dark:text-zinc-500">
                           {image.caption}
                         </figcaption>
                       )}

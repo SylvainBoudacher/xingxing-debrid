@@ -1,3 +1,4 @@
+import mainPageImg from "@/assets/patchnote/v1.1/mainPage.webp";
 import discoverImg from "@/assets/patchnote/v1.0/discover-with-IMDB.webp";
 import paramsImg from "@/assets/patchnote/v1.0/params.webp";
 import themeImg from "@/assets/patchnote/v1.0/theme.webp";
@@ -18,10 +19,56 @@ export interface PatchNote {
   version: string;
   date: string;
   intro?: string;
+  introImage?: PatchNoteImage;
   sections: PatchNoteSection[];
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.1",
+    date: "23 juin 2026",
+    intro:
+      "La version 1.1 arrive avec une grosse mise à jour des performances : l'application démarre plus vite, consomme moins de ressources, et s'enrichit d'un nouveau paramètre inattendu — la piscine à canard. 🦆",
+    introImage: {
+      src: mainPageImg,
+      caption: "L'interface revue en v1.1 — plus rapide, plus fluide",
+    },
+    sections: [
+      {
+        title: "Nouveau paramètre : Summer 🦆",
+        items: [
+          "Un nouveau paramètre \"Summer\" fait son apparition dans les Préférences. En l'activant, vous débloquez la superbe piscine à canard — une ambiance estivale unique intégrée directement dans l'interface.",
+          "La piscine peut tourner à 30 FPS pour économiser les ressources, ou à 60 FPS pour une fluidité maximale. À vous de choisir selon votre machine.",
+          "Cette option est bien sûr entièrement facultative et n'impacte pas les autres fonctionnalités de l'application.",
+        ],
+      },
+      {
+        title: "Loading screen & mise en cache",
+        items: [
+          "Un écran de chargement apparaît désormais au lancement de l'application. Ce n'est pas du remplissage : il sert à charger en avance les données les plus utilisées (catalogue, préférences, clés, magnets en cours) pour que tout soit instantané une fois arrivé sur l'accueil.",
+          "Les images de la page Découvrir sont pré-chargées dès le démarrage, ce qui réduit considérablement les temps d'attente lors de la navigation.",
+          "Le cache est géré intelligemment : il se renouvelle automatiquement en arrière-plan sans jamais bloquer l'interface.",
+        ],
+      },
+      {
+        title: "Optimisations de performance",
+        items: [
+          "L'application a été revue en profondeur pour consommer moins de mémoire et répondre plus rapidement, en particulier sur les pages avec beaucoup de résultats.",
+          "Les listes de magnets et de résultats de recherche sont maintenant rendues de façon optimisée : seuls les éléments visibles à l'écran sont calculés.",
+          "Les animations et transitions ont été légèrement allégées pour rester fluides même sur des configurations modestes.",
+          "Plusieurs opérations qui se faisaient les unes après les autres sont maintenant exécutées en parallèle, ce qui accélère le chargement global.",
+        ],
+      },
+      {
+        title: "Corrections et stabilité",
+        items: [
+          "Correction d'un problème où l'application pouvait parfois se figer lors d'une perte de connexion réseau temporaire.",
+          "Les messages d'erreur sont désormais plus clairs et explicatifs, surtout en cas de problème avec vos clés API.",
+          "Diverses micro-corrections sur l'affichage des badges de qualité et des titres tronqués dans les listes.",
+        ],
+      },
+    ],
+  },
   {
     version: "1.0",
     date: "11 juin 2026",
