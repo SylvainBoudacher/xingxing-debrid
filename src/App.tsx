@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { Toaster } from "@/components/ui/sonner";
+import { SplashScreen } from "@/components/SplashScreen";
+import { useAppInit } from "@/lib/useAppInit";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -36,6 +38,7 @@ type Page =
   | "discover";
 
 function App() {
+  const { loading: appInitLoading, tmdbKey: initTmdbKey, likes: initLikes } = useAppInit();
   const [page, setPage] = useState<Page | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [summerEnabled, setSummerEnabled] = useState(true);
@@ -89,7 +92,13 @@ function App() {
     setPage("main");
   }
 
-  if (page === null) return null;
+  if (page === null || appInitLoading) {
+    return (
+      <AnimatePresence>
+        {(page === null || appInitLoading) && <SplashScreen />}
+      </AnimatePresence>
+    );
+  }
 
   return (
     <>
@@ -186,6 +195,8 @@ function App() {
               onBack={() => setPage("main")}
               onNavigate={setPage}
               summerEnabled={summerEnabled}
+              initialTmdbKey={initTmdbKey}
+              initialLikes={initLikes}
             />
           </motion.div>
         )}

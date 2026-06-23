@@ -263,13 +263,19 @@ interface DiscoverPageProps {
   onBack: () => void;
   onNavigate: (page: "magnets" | "preferences" | "patchnotes") => void;
   summerEnabled: boolean;
+  /** Clé TMDB pré-chargée par useAppInit — évite un aller-retour store au montage */
+  initialTmdbKey?: string | null;
+  /** Likes pré-chargés par useAppInit */
+  initialLikes?: LikedItem[];
 }
 
-export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPageProps) {
-  const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(undefined);
+export function DiscoverPage({ onBack, onNavigate, summerEnabled, initialTmdbKey, initialLikes }: DiscoverPageProps) {
+  const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(
+    initialTmdbKey !== undefined ? initialTmdbKey : undefined,
+  );
   const [query, setQuery] = useState("");
   const [mediaType, setMediaType] = useState<DiscoverTab>("movie");
-  const [likes, setLikes] = useState<LikedItem[]>([]);
+  const [likes, setLikes] = useState<LikedItem[]>(initialLikes ?? []);
   const [items, setItems] = useState<TmdbItem[]>([]);
   const [mode, setMode] = useState<"top" | "search">("top");
   const [searchedQuery, setSearchedQuery] = useState("");
@@ -411,13 +417,30 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled }: DiscoverPage
     getApiKey("alldebrid_api_key").then((v) => {
       if (v) allDebridKeyRef.current = v;
     });
-    getApiKey("tmdb_api_key").then((v) => setTmdbKey(v || null));
-    getLikes().then(setLikes);
+    // Si la clé TMDB a déjà été chargée par useAppInit, on ne re-fetch pas
+    if (initialTmdbKey === undefined) {
+      getApiKey("tmdb_api_key").then((v) => setTmdbKey(v || null));
+    }
+    // Si les likes ont déjà été chargés, on ne re-fetch pas
+    if (!initialLikes) {
+      getLikes().then(setLikes);
+    }
   }, []);
 
   useEffect(() => {
     if (!tmdbKey) return;
-    fetchItems("top", "", 1, tmdbKey, "movie");
+    // Si les données sont déjà dans le cache (prefetchées au démarrage),
+    // on les lit directement sans passer par fetchItems (pas de spinner).
+    const cached = queryClient.getQueryData(tmdbKeys.topRated("movie", 1));
+    if (cached) {
+      const list = cached as import("@/lib/services/tmdb").TmdbListResponse;
+      setItems(list.results.map((r) => mapTmdb(r, "movie")));
+      setMode("top");
+      setTmdbPage(1);
+      setTmdbTotalPages(list.total_pages);
+    } else {
+      fetchItems("top", "", 1, tmdbKey, "movie");
+    }
   }, [tmdbKey]);
 
   useEffect(() => {
