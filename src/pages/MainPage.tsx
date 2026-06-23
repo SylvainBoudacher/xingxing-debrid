@@ -14,9 +14,10 @@ import { parseRelease } from "@/lib/parseRelease";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import { flattenFiles, formatSize, type DebridModal } from "@/lib/debrid";
 import type { C411Torrent } from "@/lib/c411";
+import { queryClient } from "@/lib/queryClient";
+import { c411Keys, searchTorrents } from "@/lib/services/c411";
+import { useDebridActions } from "@/lib/useDebridActions";
 import { invoke } from "@tauri-apps/api/core";
-import { fetch } from "@tauri-apps/plugin-http";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   ArrowDown,
@@ -244,13 +245,19 @@ export function MainPage({
   >("idle");
   const [sendingIndex, setSendingIndex] = useState<number | null>(null);
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
-  const [downloadingLink, setDownloadingLink] = useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = useState<string | null>(null);
-  const [vlcLink, setVlcLink] = useState<string | null>(null);
   const [showPatchNotif, setShowPatchNotif] = useState(false);
   const [simpleSearchView, setSimpleSearchView] = useState(true);
   const apiKeyRef = useRef<string>("");
   const allDebridKeyRef = useRef<string>("");
+
+  const {
+    downloadingLink,
+    copiedLink,
+    vlcLink,
+    copyLink: handleCopyLink,
+    openVlc: handleOpenVlc,
+    downloadFile: handleDownloadFile,
+  } = useDebridActions(() => allDebridKeyRef.current);
   const searchedQueryRef = useRef<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -342,62 +349,23 @@ export function MainPage({
     }
   }
 
-  async function handleCopyLink(link: string) {
-    setCopiedLink(link);
-    try {
-      const url = await invoke<string>("unlock_link", {
-        link,
-        alldebridKey: allDebridKeyRef.current,
-      });
-      await navigator.clipboard.writeText(url);
-      toast.success("Lien copié");
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setTimeout(() => setCopiedLink(null), 2000);
-    }
-  }
-
-  async function handleOpenVlc(link: string) {
-    setVlcLink(link);
-    try {
-      const url = await invoke<string>("unlock_link", {
-        link,
-        alldebridKey: allDebridKeyRef.current,
-      });
-      await invoke("open_with_vlc", { url });
-      toast.success("Ouvert dans VLC");
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setVlcLink(null);
-    }
-  }
-
-  async function handleDownloadFile(link: string) {
-    setDownloadingLink(link);
-    try {
-      const url = await invoke<string>("unlock_link", {
-        link,
-        alldebridKey: allDebridKeyRef.current,
-      });
-      await openUrl(url);
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setDownloadingLink(null);
-    }
-  }
-
   async function fetchPage(
     pageNum: number,
     sort: SortKey,
     dir: "desc" | "asc",
   ): Promise<C411Response> {
-    const url = `https://c411.org/api/torrents?page=${pageNum}&perPage=${PER_PAGE}&sortBy=${API_SORT[sort]}&sortOrder=${dir}&name=${encodeURIComponent(searchedQueryRef.current)}&apikey=${apiKeyRef.current}`;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`Erreur ${res.status}`);
-    return res.json();
+    const params = {
+      name: searchedQueryRef.current,
+      page: pageNum,
+      perPage: PER_PAGE,
+      sortBy: API_SORT[sort],
+      sortOrder: dir,
+    };
+    return queryClient.fetchQuery({
+      queryKey: c411Keys.search(params),
+      queryFn: () => searchTorrents(params, apiKeyRef.current),
+      staleTime: 60_000,
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
