@@ -25,6 +25,39 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.1.1",
+    date: "23 juin 2026",
+    intro:
+      "Cette mise à jour introduit le systeme de mise a jour automatique et apporte de nouvelles peaux de canard ainsi que des ameliorations de la physique dans la piscine.",
+    sections: [
+      {
+        title: "Mises a jour automatiques",
+        items: [
+          "L'application verifie desormais automatiquement si une nouvelle version est disponible a chaque demarrage.",
+          "Une notification discrete apparait en haut de l'interface lorsqu'une mise a jour est prete a etre installee - rien de force, vous choisissez quand installer.",
+          "Le telechargement et l'installation se font en arriere-plan. Une fois termine, l'application vous propose de redemarrer pour appliquer la mise a jour.",
+          "Plus besoin de telecharger manuellement le programme d'installation : tout se passe depuis l'interieur de l'application.",
+        ],
+      },
+      {
+        title: "Nouvelles peaux de canard",
+        items: [
+          "Quatre nouveaux canards font leur apparition dans la piscine : le canard pirate, le canard astronaute, le canard chef cuisinier et le canard detective.",
+          "Les peaux sont selectionnees aleatoirement a chaque lancement de la piscine, pour ne jamais avoir deux fois la meme ambiance.",
+        ],
+      },
+      {
+        title: "Physique de la piscine amelioree",
+        items: [
+          "Les canards peuvent maintenant etre lances avec de l'elan : maintenez le clic et relacher pour propulser le canard dans la direction choisie.",
+          "Les canards rebondissent desormais les uns contre les autres lors des collisions, au lieu de se traverser.",
+          "De petites eclaboussures apparaissent a chaque impact contre les bords ou lors des collisions entre canards.",
+          "La physique de flottaison a ete revue : les canards se balancent plus naturellement sur l'eau.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.1",
     date: "23 juin 2026",
     intro:
