@@ -384,6 +384,16 @@ function ensureSpawning() {
   }, firstDelay);
 }
 
+// Arrete le timer de spawn (timeout ou interval, meme espace d'ids). Le pool
+// reste au scope module, donc un remontage (summer reactive) reprend avec les
+// memes canards.
+function stopSpawning() {
+  if (spawnTimer === null) return;
+  clearTimeout(spawnTimer);
+  clearInterval(spawnTimer);
+  spawnTimer = null;
+}
+
 export function PixelPool({
   active = true,
   fps = 30,
@@ -407,6 +417,10 @@ export function PixelPool({
     // pre-rendered static water (gradient + tiles + coping); rebuilt on resize/theme
     let staticLayer: HTMLCanvasElement | null = null;
     let staticDark = false;
+
+    // ripple columns: the per-column sine term is constant across frames/rows,
+    // so precompute it on resize to halve the trig work in the hot draw loop.
+    let rippleCols: { x: number; s: number }[] = [];
 
     // drag-to-move state
     let dragging: Duck | null = null;
@@ -525,6 +539,9 @@ export function PixelPool({
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
       staticLayer = null; // size changed: rebuild static layer
+      rippleCols = [];
+      for (let xx = BORDER; xx < w - BORDER; xx += 16)
+        rippleCols.push({ x: xx, s: Math.sin(xx * 0.05) });
     }
 
     // Pre-render the non-animated water (gradient + glow + tiles + coping) once.
@@ -580,15 +597,15 @@ export function PixelPool({
     }
 
     // shimmering caustic ripples (the only animated part of the water)
-    function drawRipples(t: number) {
-      ctx.fillStyle = isDark() ? "rgba(150,215,255,0.22)" : "rgba(225,248,255,0.6)";
+    function drawRipples(t: number, dark: boolean) {
+      ctx.fillStyle = dark ? "rgba(150,215,255,0.22)" : "rgba(225,248,255,0.6)";
       for (let yy = BORDER + 14; yy < h - BORDER; yy += 26) {
         const base = Math.sin(t * 0.0012 + yy * 0.15);
-        for (let xx = BORDER; xx < w - BORDER; xx += 16) {
-          const o = Math.sin(t * 0.0016 + xx * 0.08 + yy) * 3;
-          const s = base + Math.sin(xx * 0.05);
-          if (s > 0.55) ctx.fillRect(xx, yy + o, 7, 2);
-          else if (s > 0.35) ctx.fillRect(xx, yy + o, 3, 2);
+        for (const col of rippleCols) {
+          const o = Math.sin(t * 0.0016 + col.x * 0.08 + yy) * 3;
+          const s = base + col.s;
+          if (s > 0.55) ctx.fillRect(col.x, yy + o, 7, 2);
+          else if (s > 0.35) ctx.fillRect(col.x, yy + o, 3, 2);
         }
       }
     }
@@ -603,8 +620,7 @@ export function PixelPool({
       return Math.hypot(px - d.x, py - d.y) <= d.r;
     }
 
-    function drawDrain(now: number, hot: boolean) {
-      const dark = isDark();
+    function drawDrain(now: number, hot: boolean, dark: boolean) {
       const d = drain();
 
       // coping ring
@@ -679,19 +695,26 @@ export function PixelPool({
     let raf = 0;
     function frame(now: number) {
       raf = requestAnimationFrame(frame);
+      // skip all rendering when off-screen (page != main/discover): the canvas
+      // is opacity-0 there, so painting it 30-60x/s would just waste CPU/GPU.
+      if (!activeRef.current) {
+        last = now; // avoid a large dt jump when the page becomes active again
+        return;
+      }
       // cap the ambient canvas at the configured fps (30 or 60)
       if (now - last < 1000 / fpsRef.current) return;
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now;
 
-      if (!staticLayer || staticDark !== isDark()) buildStatic();
+      const dark = isDark();
+      if (!staticLayer || staticDark !== dark) buildStatic();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(staticLayer!, 0, 0);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      drawRipples(now);
-      drawDrain(now, !!(dragging && overDrain(dragging.x, dragging.y)));
+      drawRipples(now, dark);
+      drawDrain(now, !!(dragging && overDrain(dragging.x, dragging.y)), dark);
 
       const b = inner();
       for (const d of pool) {
@@ -734,10 +757,12 @@ export function PixelPool({
     window.addEventListener("pointercancel", onPointerUp);
     raf = requestAnimationFrame(frame);
 
-    // Note: the ducks (pool) and spawn timer are intentionally kept alive on
-    // unmount so they persist across page navigation.
+    // Note: the ducks (pool) are intentionally kept alive at module scope so
+    // they persist if the component remounts. The spawn timer, however, is
+    // stopped here so it does not keep firing while unmounted (summer disabled).
     return () => {
       cancelAnimationFrame(raf);
+      stopSpawning();
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);

@@ -1,8 +1,16 @@
 use reqwest::multipart;
 use serde_json::Value;
+use std::sync::OnceLock;
 use tauri_plugin_store::StoreExt;
 
 const KEYRING_SERVICE: &str = "com.sulyk.c411-debrid-app";
+
+// Un seul client reqwest reutilise par toutes les commandes : conserve le pool
+// de connexions (keep-alive TLS) au lieu d'en recreer un a chaque appel.
+fn http_client() -> &'static reqwest::Client {
+    static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+    CLIENT.get_or_init(reqwest::Client::new)
+}
 
 #[tauri::command]
 fn get_api_key(name: String) -> Result<Option<String>, String> {
@@ -26,7 +34,7 @@ async fn upload_torrent_to_debrid(
     torrent_url: String,
     alldebrid_key: String,
 ) -> Result<Value, String> {
-    let client = reqwest::Client::new();
+    let client = http_client();
 
     // without_url: l'URL c411 contient la cle API, ne pas l'exposer dans les erreurs
     let torrent_res = client
@@ -83,7 +91,7 @@ async fn upload_torrent_to_debrid(
 
 #[tauri::command]
 async fn get_magnet_files(id: u64, alldebrid_key: String) -> Result<Value, String> {
-    let client = reqwest::Client::new();
+    let client = http_client();
 
     let res = client
         .get("https://api.alldebrid.com/v4/magnet/files")
@@ -106,7 +114,7 @@ async fn get_magnet_files(id: u64, alldebrid_key: String) -> Result<Value, Strin
 
 #[tauri::command]
 async fn unlock_link(link: String, alldebrid_key: String) -> Result<String, String> {
-    let client = reqwest::Client::new();
+    let client = http_client();
 
     let res = client
         .get("https://api.alldebrid.com/v4/link/unlock")

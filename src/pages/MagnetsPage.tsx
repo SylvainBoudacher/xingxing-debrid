@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { fetch } from "@tauri-apps/plugin-http";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -55,6 +55,35 @@ function flattenFiles(entries: unknown[], prefix = ""): DebridFile[] {
     else if (e.l) result.push({ name, size: Number(e.s) || 0, link: String(e.l) });
   }
   return result;
+}
+
+// Nombre de requetes AllDebrid menees de front (deblocage de liens, suppression).
+const CONCURRENCY = 4;
+
+// Applique `fn` a tous les items, `limit` en parallele. Attend que TOUT soit
+// termine avant de relancer la premiere erreur, pour eviter qu'un worker
+// continue en arriere-plan apres le catch de l'appelant.
+async function forEachLimit<T>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<void>,
+): Promise<void> {
+  let next = 0;
+  let firstError: unknown = null;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      try {
+        await fn(items[i], i);
+      } catch (err) {
+        if (firstError === null) firstError = err;
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, worker),
+  );
+  if (firstError !== null) throw firstError;
 }
 
 const VIDEO_EXTENSIONS = new Set([
@@ -203,11 +232,12 @@ function FilesModal({ magnetId, magnetName, apiKey, simpleView, hideNfo, skipNfo
     const toDownload = skipNfoDownload ? files.filter((f) => !isNfoFile(f.name)) : files;
     setDownloadingAll({ done: 0, total: toDownload.length });
     try {
-      for (let i = 0; i < toDownload.length; i++) {
-        const url = await invoke<string>("unlock_link", { link: toDownload[i].link, alldebridKey: apiKey });
+      let done = 0;
+      await forEachLimit(toDownload, CONCURRENCY, async (file) => {
+        const url = await invoke<string>("unlock_link", { link: file.link, alldebridKey: apiKey });
         await openUrl(url);
-        setDownloadingAll({ done: i + 1, total: toDownload.length });
-      }
+        setDownloadingAll({ done: ++done, total: toDownload.length });
+      });
       toast.success(`${toDownload.length} telechargements lances`);
     } catch (err) {
       toast.error(String(err));
@@ -465,20 +495,23 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
 
   async function handleDelete(ids: number[]) {
     setDeleting(true);
+    const deleted: number[] = [];
     try {
-      for (const id of ids) {
+      await forEachLimit(ids, CONCURRENCY, async (id) => {
         const res = await fetch(`${AD_BASE}/magnet/delete?agent=c411&id=${id}`, {
           headers: { Authorization: `Bearer ${apiKeyRef.current}` },
         });
-        const json = await res.json() as { status: string };
+        const json = (await res.json()) as { status: string };
         if (json.status !== "success") throw new Error("Suppression echouee");
-      }
-      setMagnets((prev) => prev.filter((m) => !ids.includes(m.id)));
+        deleted.push(id);
+      });
       toast.success(ids.length > 1 ? `${ids.length} magnets supprimes` : "Magnet supprime");
       setConfirmDelete(null);
     } catch (err) {
       toast.error(String(err));
     } finally {
+      if (deleted.length > 0)
+        setMagnets((prev) => prev.filter((m) => !deleted.includes(m.id)));
       setDeleting(false);
     }
   }
@@ -507,11 +540,12 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
         .filter((f) => !skipNfoDownload || !isNfoFile(f.name));
       if (files.length === 0) throw new Error("Aucun fichier trouve");
       setBulkDownloading({ done: 0, total: files.length });
-      for (let i = 0; i < files.length; i++) {
-        const url = await invoke<string>("unlock_link", { link: files[i].link, alldebridKey: apiKeyRef.current });
+      let done = 0;
+      await forEachLimit(files, CONCURRENCY, async (file) => {
+        const url = await invoke<string>("unlock_link", { link: file.link, alldebridKey: apiKeyRef.current });
         await openUrl(url);
-        setBulkDownloading({ done: i + 1, total: files.length });
-      }
+        setBulkDownloading({ done: ++done, total: files.length });
+      });
       toast.success(`${files.length} telechargement${files.length > 1 ? "s lances" : " lance"}`);
       setSelected(new Set());
     } catch (err) {
@@ -523,21 +557,26 @@ export function MagnetsPage({ onBack, onNavigate }: MagnetsPageProps) {
 
   useEffect(() => { setPage(1); }, [search, statusFilter]);
 
-  const counts = {
-    all: magnets.length,
-    active: magnets.filter((m) => getStatusFilter(m.statusCode) === "active").length,
-    ready: magnets.filter((m) => getStatusFilter(m.statusCode) === "ready").length,
-    error: magnets.filter((m) => getStatusFilter(m.statusCode) === "error").length,
-  };
+  const counts = useMemo(() => {
+    const c = { all: magnets.length, active: 0, ready: 0, error: 0 };
+    for (const m of magnets) c[getStatusFilter(m.statusCode)]++;
+    return c;
+  }, [magnets]);
 
-  const filtered = magnets.filter((m) => {
-    if (statusFilter !== "all" && getStatusFilter(m.statusCode) !== statusFilter) return false;
-    if (search.trim() && !m.filename.toLowerCase().includes(search.trim().toLowerCase())) return false;
-    return true;
-  });
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return magnets.filter((m) => {
+      if (statusFilter !== "all" && getStatusFilter(m.statusCode) !== statusFilter) return false;
+      if (q && !m.filename.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [magnets, statusFilter, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const paginated = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page],
+  );
 
   const tabs: { key: StatusFilter; label: string }[] = [
     { key: "all",    label: `Tous (${counts.all})` },
