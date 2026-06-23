@@ -219,6 +219,12 @@ interface MainPageProps {
   devMode: boolean;
   onToggleDevMode: () => void;
   summerEnabled: boolean;
+  /** Clés API pré-lues par useAppInit — zéro latence au montage */
+  initialC411Key?: string | null;
+  initialAllDebridKey?: string | null;
+  /** Préférences UI pré-lues par useAppInit */
+  initialPatchnotesSeen?: string | null;
+  initialSearchViewMode?: ViewMode;
 }
 
 export function MainPage({
@@ -226,6 +232,10 @@ export function MainPage({
   devMode,
   onToggleDevMode,
   summerEnabled,
+  initialC411Key,
+  initialAllDebridKey,
+  initialPatchnotesSeen,
+  initialSearchViewMode,
 }: MainPageProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
@@ -246,9 +256,11 @@ export function MainPage({
   const [sendingIndex, setSendingIndex] = useState<number | null>(null);
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
   const [showPatchNotif, setShowPatchNotif] = useState(false);
-  const [simpleSearchView, setSimpleSearchView] = useState(true);
-  const apiKeyRef = useRef<string>("");
-  const allDebridKeyRef = useRef<string>("");
+  const [simpleSearchView, setSimpleSearchView] = useState(
+    (initialSearchViewMode ?? "simple") === "simple",
+  );
+  const apiKeyRef = useRef<string>(initialC411Key ?? "");
+  const allDebridKeyRef = useRef<string>(initialAllDebridKey ?? "");
 
   const {
     downloadingLink,
@@ -262,17 +274,47 @@ export function MainPage({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    Promise.all([
-      getApiKey("c411_api_key"),
-      getApiKey("alldebrid_api_key"),
-      store.get<string>("patchnotes_seen"),
-      store.get<ViewMode>("search_view_mode"),
-    ]).then(([c411Key, allDebridKey, patchnotesSeen, searchViewMode]) => {
-      if (c411Key) apiKeyRef.current = c411Key;
-      if (allDebridKey) allDebridKeyRef.current = allDebridKey;
-      if (patchnotesSeen !== LATEST_VERSION) setShowPatchNotif(true);
-      setSimpleSearchView((searchViewMode ?? "simple") === "simple");
-    });
+    // Si les données ont été pré-chargées par useAppInit, on applique
+    // immédiatement le badge patchnotes sans aucun appel réseau/store.
+    if (initialPatchnotesSeen !== undefined) {
+      if (initialPatchnotesSeen !== LATEST_VERSION) setShowPatchNotif(true);
+    }
+
+    // On ne re-fetch les clés que si elles n'ont pas été injectées
+    // (ex: navigation retour vers MainPage depuis une autre page).
+    const needsKeys = !initialC411Key && !initialAllDebridKey;
+    const needsPrefs = initialSearchViewMode === undefined || initialPatchnotesSeen === undefined;
+
+    if (!needsKeys && !needsPrefs) return;
+
+    const jobs: Promise<unknown>[] = [];
+    if (needsKeys) {
+      jobs.push(
+        Promise.all([
+          getApiKey("c411_api_key"),
+          getApiKey("alldebrid_api_key"),
+        ]).then(([c411Key, allDebridKey]) => {
+          if (c411Key) apiKeyRef.current = c411Key;
+          if (allDebridKey) allDebridKeyRef.current = allDebridKey;
+        }),
+      );
+    }
+    if (needsPrefs) {
+      jobs.push(
+        Promise.all([
+          store.get<string>("patchnotes_seen"),
+          store.get<ViewMode>("search_view_mode"),
+        ]).then(([patchnotesSeen, searchViewMode]) => {
+          if (initialPatchnotesSeen === undefined && patchnotesSeen !== LATEST_VERSION) {
+            setShowPatchNotif(true);
+          }
+          if (initialSearchViewMode === undefined) {
+            setSimpleSearchView((searchViewMode ?? "simple") === "simple");
+          }
+        }),
+      );
+    }
+    Promise.allSettled(jobs);
   }, []);
 
   async function dismissPatchNotif() {

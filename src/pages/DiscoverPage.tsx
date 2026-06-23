@@ -263,13 +263,24 @@ interface DiscoverPageProps {
   onBack: () => void;
   onNavigate: (page: "magnets" | "preferences" | "patchnotes") => void;
   summerEnabled: boolean;
-  /** Clé TMDB pré-chargée par useAppInit — évite un aller-retour store au montage */
+  /** Clé TMDB pré-chargée par useAppInit */
   initialTmdbKey?: string | null;
+  /** Clés C411 et AllDebrid pré-chargées par useAppInit */
+  initialC411Key?: string | null;
+  initialAllDebridKey?: string | null;
   /** Likes pré-chargés par useAppInit */
   initialLikes?: LikedItem[];
 }
 
-export function DiscoverPage({ onBack, onNavigate, summerEnabled, initialTmdbKey, initialLikes }: DiscoverPageProps) {
+export function DiscoverPage({
+  onBack,
+  onNavigate,
+  summerEnabled,
+  initialTmdbKey,
+  initialC411Key,
+  initialAllDebridKey,
+  initialLikes,
+}: DiscoverPageProps) {
   const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(
     initialTmdbKey !== undefined ? initialTmdbKey : undefined,
   );
@@ -296,8 +307,8 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled, initialTmdbKey
   const [sendingHash, setSendingHash] = useState<string | null>(null);
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
 
-  const c411KeyRef = useRef<string>("");
-  const allDebridKeyRef = useRef<string>("");
+  const c411KeyRef = useRef<string>(initialC411Key ?? "");
+  const allDebridKeyRef = useRef<string>(initialAllDebridKey ?? "");
 
   const {
     downloadingLink,
@@ -411,17 +422,16 @@ export function DiscoverPage({ onBack, onNavigate, summerEnabled, initialTmdbKey
   );
 
   useEffect(() => {
-    getApiKey("c411_api_key").then((v) => {
-      if (v) c411KeyRef.current = v;
-    });
-    getApiKey("alldebrid_api_key").then((v) => {
-      if (v) allDebridKeyRef.current = v;
-    });
-    // Si la clé TMDB a déjà été chargée par useAppInit, on ne re-fetch pas
+    // Ne re-fetch les clés que si elles n'ont pas été injectées par useAppInit
+    if (initialC411Key === undefined) {
+      getApiKey("c411_api_key").then((v) => { if (v) c411KeyRef.current = v; });
+    }
+    if (initialAllDebridKey === undefined) {
+      getApiKey("alldebrid_api_key").then((v) => { if (v) allDebridKeyRef.current = v; });
+    }
     if (initialTmdbKey === undefined) {
       getApiKey("tmdb_api_key").then((v) => setTmdbKey(v || null));
     }
-    // Si les likes ont déjà été chargés, on ne re-fetch pas
     if (!initialLikes) {
       getLikes().then(setLikes);
     }

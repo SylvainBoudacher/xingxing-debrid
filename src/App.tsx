@@ -43,7 +43,7 @@ type Page =
 type StartPhase = "splash" | "transition" | "done";
 
 function App() {
-  const { loading: appInitLoading, tmdbKey: initTmdbKey, likes: initLikes } = useAppInit();
+  const { loading: appInitLoading, tmdbKey: initTmdbKey, likes: initLikes, c411Key: initC411Key, allDebridKey: initAllDebridKey, prefs: initPrefs } = useAppInit();
   const [page, setPage] = useState<Page | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [summerEnabled, setSummerEnabled] = useState(true);
@@ -191,6 +191,10 @@ function App() {
                 devMode={devMode}
                 onToggleDevMode={() => setDevMode((v) => !v)}
                 summerEnabled={summerEnabled}
+                initialC411Key={initC411Key}
+                initialAllDebridKey={initAllDebridKey}
+                initialPatchnotesSeen={initPrefs.patchnotesSeen}
+                initialSearchViewMode={initPrefs.searchViewMode}
               />
             </motion.div>
           )}
@@ -202,7 +206,14 @@ function App() {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.22, ease: "easeInOut" }}
             >
-              <MagnetsPage onBack={() => setPage("main")} onNavigate={setPage} />
+              <MagnetsPage
+                onBack={() => setPage("main")}
+                onNavigate={setPage}
+                initialAllDebridKey={initAllDebridKey}
+                initialViewMode={initPrefs.viewMode}
+                initialHideNfoFiles={initPrefs.hideNfoFiles}
+                initialSkipNfoDownload={initPrefs.skipNfoDownload}
+              />
             </motion.div>
           )}
           {startPhase === "done" && page === "preferences" && (
@@ -236,6 +247,8 @@ function App() {
                 onNavigate={setPage}
                 summerEnabled={summerEnabled}
                 initialTmdbKey={initTmdbKey}
+                initialC411Key={initC411Key}
+                initialAllDebridKey={initAllDebridKey}
                 initialLikes={initLikes}
               />
             </motion.div>
