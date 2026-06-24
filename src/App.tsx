@@ -7,6 +7,7 @@ import { SplashTransition } from "@/components/SplashTransition";
 import { useAppInit } from "@/lib/useAppInit";
 import { UpdateDialog } from "@/components/UpdateDialog";
 import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
+import { LATEST_VERSION } from "@/lib/patchnotes";
 import type { Page } from "@/components/AppMenu";
 
 const PixelPool = lazy(() =>
@@ -43,6 +44,7 @@ function App() {
     prefs: initPrefs,
   } = useAppInit();
   const [page, setPage] = useState<Page | null>(null);
+  const [patchnotesSeenVersion, setPatchnotesSeenVersion] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [summerEnabled, setSummerEnabled] = useState(true);
   const [summerFps, setSummerFps] = useState<30 | 60>(30);
@@ -123,6 +125,11 @@ function App() {
     await store.save();
   }
 
+  function handleNavigate(p: Page) {
+    if (p === "patchnotes") setPatchnotesSeenVersion(LATEST_VERSION);
+    setPage(p);
+  }
+
   async function handleSetupComplete() {
     await store.set("setup_complete", true);
     await store.set("welcome_v1_seen", true);
@@ -193,7 +200,7 @@ function App() {
               transition={{ duration: 0.35, ease: "easeOut" }}
             >
               <MainPage
-                onNavigate={setPage}
+                onNavigate={handleNavigate}
                 devMode={devMode}
                 onToggleDevMode={() => setDevMode((v) => !v)}
                 onShowUpdatePreview={() =>
@@ -208,7 +215,7 @@ function App() {
                 summerEnabled={summerEnabled}
                 initialC411Key={initC411Key}
                 initialAllDebridKey={initAllDebridKey}
-                initialPatchnotesSeen={initPrefs.patchnotesSeen}
+                initialPatchnotesSeen={patchnotesSeenVersion ?? initPrefs.patchnotesSeen}
                 initialSearchViewMode={initPrefs.searchViewMode}
               />
             </motion.div>

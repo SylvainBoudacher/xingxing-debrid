@@ -22,6 +22,8 @@ interface Duck {
   lean?: number; // eased pitch toward vertical travel direction
   spin?: number; // angular velocity (rad/s) from flicks / glancing hits
   spinAngle?: number; // accumulated spin rotation, unwound back to upright at rest
+  wakeTimer?: number; // seconds until next wake drop
+  boostTimer?: number; // remaining seconds of speed boost
   entering: boolean; // swimming in from off-screen; skips wall bounce until inside
   draining?: boolean; // being sucked into the drain
   drainT?: number; // timestamp when drain animation started
@@ -153,6 +155,16 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
     }
     const splashes: Splash[] = [];
 
+    interface Wake {
+      x: number;
+      y: number;
+      life: number; // 1 → 0
+      r: number;
+    }
+    const wakes: Wake[] = [];
+    const WAKE_SPEED = 28; // px/s threshold to emit wake (just above cruise)
+    const WAKE_INTERVAL = 0.06; // seconds between wake drops per duck
+
     function spawnSplash(x: number, y: number, power: number) {
       if (splashes.length > 220) return;
       const n = 5 + Math.min(12, (power / 24) | 0);
@@ -279,7 +291,6 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
       }
       dragging.vx = vx;
       dragging.vy = vy;
-      dragging.spin = (vx / 220) * 7; // fling imparts spin, direction follows the throw
       if (Math.hypot(vx, vy) > 90) spawnSplash(dragging.x, dragging.y, Math.hypot(vx, vy));
       dragging = null;
       updateHoverCursor(e);
@@ -508,6 +519,24 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
       }
     }
 
+    function updateWakes(dt: number) {
+      for (let i = wakes.length - 1; i >= 0; i--) {
+        wakes[i].life -= dt * 3.5; // ~0.28s lifetime
+        if (wakes[i].life <= 0) wakes.splice(i, 1);
+      }
+    }
+
+    function drawWakes(dark: boolean) {
+      ctx.fillStyle = dark ? "rgba(180,220,255,0.7)" : "rgba(255,255,255,0.8)";
+      for (const w of wakes) {
+        ctx.globalAlpha = Math.max(0, w.life) * 0.8;
+        ctx.beginPath();
+        ctx.arc(w.x, w.y, w.r * w.life, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
     function updateSplashes(dt: number) {
       for (let i = splashes.length - 1; i >= 0; i--) {
         const s = splashes[i];
@@ -572,6 +601,41 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
         d.x += d.vx * dt;
         d.y += d.vy * dt;
 
+        // wake trail when moving fast
+        const spd = Math.hypot(d.vx, d.vy);
+        if (spd > WAKE_SPEED && wakes.length < 400) {
+          d.wakeTimer = (d.wakeTimer ?? 0) - dt;
+          if (d.wakeTimer <= 0) {
+            d.wakeTimer = WAKE_INTERVAL;
+            const nx = -d.vx / spd;
+            const ny = -d.vy / spd;
+            const dh = DUCK_BASE * (d.scale ?? 1);
+            const waterY = d.y + dh * 0.2;
+            const tail = dh * 0.28;
+            const spread = tail * 0.5;
+            wakes.push({
+              x: d.x + nx * tail + (Math.random() - 0.5) * 6,
+              y: waterY + ny * tail + (Math.random() - 0.5) * 6,
+              life: 1,
+              r: 3 + Math.random() * 2,
+            });
+            wakes.push({
+              x: d.x + nx * tail + ny * spread + (Math.random() - 0.5) * 4,
+              y: waterY + ny * tail - nx * spread + (Math.random() - 0.5) * 4,
+              life: 1,
+              r: 2 + Math.random() * 2,
+            });
+            wakes.push({
+              x: d.x + nx * tail - ny * spread + (Math.random() - 0.5) * 4,
+              y: waterY + ny * tail + nx * spread + (Math.random() - 0.5) * 4,
+              life: 1,
+              r: 2 + Math.random() * 2,
+            });
+          }
+        } else {
+          d.wakeTimer = 0;
+        }
+
         // heading: ease a pitch toward vertical travel (left/right is the flip)
         const targetLean = Math.max(-0.4, Math.min(0.4, d.vy / 140));
         d.lean = (d.lean ?? 0) + (targetLean - (d.lean ?? 0)) * Math.min(1, dt * 5);
@@ -614,18 +678,29 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
           if (d.vy > WALL_SPLASH) spawnSplash(d.x, d.y, d.vy);
           d.vy = -Math.abs(d.vy);
         }
+        // random boost: 5% chance per second to charge at high speed for 3s
+        if (!d.boostTimer && !d.entering && Math.random() < 0.005 * dt) {
+          d.boostTimer = 3;
+          const a = Math.random() * Math.PI * 2;
+          const boostSpd = 90 + Math.random() * 40;
+          d.vx = Math.cos(a) * boostSpd;
+          d.vy = Math.sin(a) * boostSpd;
+        }
+        if (d.boostTimer) d.boostTimer = Math.max(0, d.boostTimer - dt);
+
         // thrown momentum bleeds off: any speed above the gentle cruise decays
         // back toward it, so a hard fling glides and slows like it's in water.
         const sp0 = Math.hypot(d.vx, d.vy);
-        const CRUISE = 22;
+        const CRUISE = d.boostTimer ? 95 : 22;
         if (sp0 > CRUISE) {
-          const target = CRUISE + (sp0 - CRUISE) * Math.pow(0.6, dt);
+          const decay = d.boostTimer ? 0.98 : 0.6;
+          const target = CRUISE + (sp0 - CRUISE) * Math.pow(decay, dt);
           d.vx *= target / sp0;
           d.vy *= target / sp0;
         }
         // only wander once the duck has settled to cruise speed, otherwise the
         // 26 px/s clamp would instantly kill an in-flight throw.
-        if (sp0 <= CRUISE && Math.random() < 0.01) {
+        if (!d.boostTimer && sp0 <= CRUISE && Math.random() < 0.01) {
           d.vx += (Math.random() - 0.5) * 6;
           d.vy += (Math.random() - 0.5) * 6;
           const sp = Math.hypot(d.vx, d.vy);
@@ -680,7 +755,9 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
       }
 
       updateSplashes(dt);
+      updateWakes(dt);
       pool.sort((a, c) => a.y - c.y);
+      drawWakes(dark);
       for (const d of pool) drawDuck(d, now);
       drawSplashes(dark);
     }
