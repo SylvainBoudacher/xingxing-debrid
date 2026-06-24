@@ -1,0 +1,2 @@
+- Nouvelle source de recherche Nyaa avec filtres dedies (team, qualite, codec, langue)
+- Le Coin des Canards : adoptez, nommez et collectionnez vos canards, conserves entre les sessions

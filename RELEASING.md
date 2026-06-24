@@ -8,23 +8,29 @@ The app uses Tauri auto-update (`tauri-plugin-updater`). Users receive updates a
    - `src-tauri/tauri.conf.json` -> `"version": "1.2.0"`
    - `package.json` -> `"version": "1.2.0"`
 
-2. Commit, tag, push:
+2. Write the release notes in `RELEASE_NOTES.md` (displayed in the in-app update modal):
+
+   ```markdown
+   - New feature
+   - Bug fix
+   ```
+
+   **Always keep it very short** (2-4 short lines max). These notes are shown in the
+   small in-app update modal, so anything longer gets cut off or overflows — summarize,
+   do not list every change. Put nothing but the notes in this file (the CI copies it
+   verbatim into the release body).
+
+   The CI reads this file and creates the release with it as the body — no manual
+   `gh release edit` afterwards. To fix notes after the fact, you can still run
+   `gh release edit vX.Y.Z --notes "..."`.
+
+3. Commit, tag, push:
 
    ```bash
    git add -A && git commit -m "release v1.2.0"
    git tag v1.2.0
    git push origin main --tags
    ```
-
-3. Add a short note to the release (displayed in the in-app update modal):
-
-   ```bash
-   gh release edit vX.Y.Z --notes "- New feature
-   - Bug fix"
-   ```
-
-   Keep it short (2-4 lines max) as it is displayed in a small modal.
-   Do this after the workflow has created the release (about 5-10 min after the push).
 
 4. The `.github/workflows/build-windows.yml` workflow triggers on `v*.*.*` tags:
    builds Windows -> signs -> creates the GitHub Release with `.msi`, `.exe`,
