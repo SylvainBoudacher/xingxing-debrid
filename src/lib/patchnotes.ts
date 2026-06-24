@@ -1,3 +1,5 @@
+import nyaaPatchImg from "@/assets/patchnote/v1.2/nyaa.webp";
+import shopPatchImg from "@/assets/patchnote/v1.2/shop.webp";
 import mainPageImg from "@/assets/patchnote/v1.1/mainPage.webp";
 import discoverImg from "@/assets/patchnote/v1.0/discover-with-IMDB.webp";
 import paramsImg from "@/assets/patchnote/v1.0/params.webp";
@@ -37,6 +39,7 @@ export const PATCH_NOTES: PatchNote[] = [
           "Des filtres dedies affinent vos recherches Nyaa : team, qualite (2160p, 1080p, 720p, 480p), codec (x265, x264, hevc, av1) et langue (vostfr, vost, multi, truefrench, french, vf).",
           "Vos filtres Nyaa par defaut sont configurables dans les Preferences pour les retrouver automatiquement a chaque recherche.",
         ],
+        images: [{ src: nyaaPatchImg, caption: "La recherche Nyaa et ses filtres dedies" }],
       },
       {
         title: "Le Coin des Canards",
@@ -47,6 +50,7 @@ export const PATCH_NOTES: PatchNote[] = [
           "Gerez votre collection depuis le stand : renommer, relacher dans la piscine, ou supprimer un canard.",
           "Les canards enregistres sont proteges : impossible de les jeter dans le siphon par accident.",
         ],
+        images: [{ src: shopPatchImg, caption: "Le Coin des Canards et votre collection" }],
       },
       {
         title: "Des canards uniques",
