@@ -1,5 +1,91 @@
 import { describe, it, expect } from "vitest";
-import { mapCategory, mapTorrents, pageNumbers } from "./search";
+import { mapCategory, mapNyaaResults, mapTorrents, pageNumbers } from "./search";
+import type { NyaaResult } from "./services/nyaa";
+
+function nyaaResult(overrides: Partial<NyaaResult> = {}): NyaaResult {
+  return {
+    title: "My Anime S01E01 [SubsPlease] 1080p",
+    infoHash: "abc123def456",
+    magnet: "magnet:?xt=urn:btih:abc123def456",
+    size: "1.4 GiB",
+    seeders: 100,
+    leechers: 5,
+    downloads: 1000,
+    category: "Anime - English-translated",
+    viewUrl: "https://nyaa.si/view/1234567",
+    pubDate: "Mon, 01 Jan 2024 00:00:00 +0000",
+    ...overrides,
+  };
+}
+
+describe("mapNyaaResults", () => {
+  it("returns empty array for empty input", () => {
+    expect(mapNyaaResults([])).toEqual([]);
+  });
+
+  it("maps title, seeders, leechers, infoHash", () => {
+    const r = mapNyaaResults([
+      nyaaResult({ title: "Bleach S01E01", infoHash: "ff00aa", seeders: 42, leechers: 3 }),
+    ]);
+    expect(r[0]).toMatchObject({
+      title: "Bleach S01E01",
+      guid: "ff00aa",
+      seeders: 42,
+      leechers: 3,
+    });
+  });
+
+  it("passes through the magnet link", () => {
+    const magnet = "magnet:?xt=urn:btih:deadbeef";
+    const r = mapNyaaResults([nyaaResult({ magnet })]);
+    expect(r[0].magnet).toBe(magnet);
+  });
+
+  it("always sets category to 0 (Nyaa has no category mapping)", () => {
+    const r = mapNyaaResults([nyaaResult()]);
+    expect(r[0].category).toBe(0);
+  });
+
+  it("converts GiB to bytes", () => {
+    const r = mapNyaaResults([nyaaResult({ size: "1.4 GiB" })]);
+    expect(r[0].size).toBe(Math.round(1.4 * 1024 ** 3));
+  });
+
+  it("converts MiB to bytes", () => {
+    const r = mapNyaaResults([nyaaResult({ size: "512.0 MiB" })]);
+    expect(r[0].size).toBe(512 * 1024 ** 2);
+  });
+
+  it("converts KiB to bytes", () => {
+    const r = mapNyaaResults([nyaaResult({ size: "100 KiB" })]);
+    expect(r[0].size).toBe(100 * 1024);
+  });
+
+  it("converts GB (decimal) to bytes", () => {
+    const r = mapNyaaResults([nyaaResult({ size: "2.5 GB" })]);
+    expect(r[0].size).toBe(Math.round(2.5 * 1000 ** 3));
+  });
+
+  it("returns 0 for unparseable size", () => {
+    const r = mapNyaaResults([nyaaResult({ size: "???" })]);
+    expect(r[0].size).toBe(0);
+  });
+
+  it("returns 0 for empty size string", () => {
+    const r = mapNyaaResults([nyaaResult({ size: "" })]);
+    expect(r[0].size).toBe(0);
+  });
+
+  it("maps multiple results preserving order", () => {
+    const r = mapNyaaResults([
+      nyaaResult({ title: "A", seeders: 10 }),
+      nyaaResult({ title: "B", seeders: 20 }),
+    ]);
+    expect(r).toHaveLength(2);
+    expect(r[0].title).toBe("A");
+    expect(r[1].title).toBe("B");
+  });
+});
 
 describe("mapCategory", () => {
   describe("catId 1 (video)", () => {
