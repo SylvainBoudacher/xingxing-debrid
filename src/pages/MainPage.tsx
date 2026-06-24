@@ -20,6 +20,7 @@ import { queryClient } from "@/lib/queryClient";
 import { c411Keys, searchTorrents } from "@/lib/services/c411";
 import { nyaaKeys, searchNyaa } from "@/lib/services/nyaa";
 import { buildNyaaQuery } from "@/lib/nyaaFilters";
+import { loadNyaaDefaults } from "@/lib/nyaaDefaults";
 import { NyaaSearchFilters } from "@/components/NyaaSearchFilters";
 import { useDebridActions } from "@/lib/useDebridActions";
 import { invoke } from "@tauri-apps/api/core";
@@ -403,6 +404,16 @@ export function MainPage({
     setTotal(mapped.length);
     setTotalPages(1);
   }
+
+  // Prerempli la barre de pre-request avec les valeurs par defaut (parametres).
+  useEffect(() => {
+    loadNyaaDefaults().then((d) => {
+      setNyaaTeam(d.team);
+      setNyaaQuality(d.quality);
+      setNyaaCodec(d.codec);
+      setNyaaLanguage(d.language);
+    });
+  }, []);
 
   // Relance la recherche nyaa quand un filtre de pré-request change (debounce).
   useEffect(() => {
