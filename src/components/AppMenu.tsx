@@ -98,12 +98,6 @@ export function AppMenu({
             Paramètres
           </DropdownMenuItem>
         )}
-        {import.meta.env.DEV && currentPage !== "nyaa" && (
-          <DropdownMenuItem onClick={() => onNavigate("nyaa")}>
-            <TestTube className="mr-2 h-4 w-4" />
-            Test nyaa.si
-          </DropdownMenuItem>
-        )}
         <DropdownMenuSeparator />
         <ThemeMenuItem />
         {currentPage !== "patchnotes" && (
@@ -152,6 +146,10 @@ export function AppMenu({
                 <DropdownMenuItem onClick={onShowUpdatePreview}>
                   <RefreshCw className="mr-2 h-4 w-4" />
                   Apercu mise a jour
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onNavigate("nyaa")}>
+                  <TestTube className="mr-2 h-4 w-4" />
+                  Test nyaa.si
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {

@@ -282,7 +282,7 @@ function App() {
               />
             </motion.div>
           )}
-          {effectivePhase === "done" && page === "nyaa" && (
+          {effectivePhase === "done" && page === "nyaa" && devMode && (
             <motion.div
               key="nyaa"
               initial={{ opacity: 0, y: 12 }}
