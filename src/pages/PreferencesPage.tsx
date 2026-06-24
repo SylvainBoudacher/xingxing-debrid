@@ -1,4 +1,6 @@
+import nyaaLogo from "@/assets/sources/nyaa.webp";
 import { ApiKeysForm } from "@/components/ApiKeysForm";
+import { NyaaDefaultsForm } from "@/components/NyaaDefaultsForm";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { getLikes, parseLikesJson, saveLikes } from "@/lib/likes";
 import { parseRelease } from "@/lib/parseRelease";
@@ -12,6 +14,7 @@ import {
   KeyRound,
   Magnet,
   Search,
+  Sparkles,
   Sun,
   Upload,
 } from "lucide-react";
@@ -28,6 +31,7 @@ const SEARCH_EXAMPLE = "Dune.Part.Two.2024.MULTi.2160p.WEB.H265-Slay3R";
 
 const SECTIONS = [
   { id: "section-search", label: "Recherche", icon: Search },
+  { id: "section-nyaa", label: "Nyaa", icon: Sparkles },
   { id: "section-magnets", label: "Magnets", icon: Magnet },
   { id: "section-discover", label: "Découverte", icon: Compass },
   { id: "section-summer", label: "Summer", icon: Sun },
@@ -352,6 +356,39 @@ export function PreferencesPage({
                   </div>
                 </ViewOptionCard>
               </div>
+            </div>
+          </section>
+
+          {/* Nyaa */}
+          <section
+            id="section-nyaa"
+            className="scroll-mt-24 rounded-2xl bg-white dark:bg-[#0b0c13] ring-1 ring-black/6 dark:ring-white/6 overflow-hidden"
+          >
+            <div className="flex items-center gap-3 border-b border-black/6 dark:border-white/6 bg-black/[0.02] dark:bg-white/[0.02] px-6 py-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/25 overflow-hidden">
+                <img src={nyaaLogo} alt="" className="h-5 w-5 rounded-full object-cover" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">
+                  Nyaa
+                </h2>
+                <p className="text-xs text-zinc-500">
+                  Préremplissage des filtres de recherche Nyaa.
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-5">
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">
+                Filtres par défaut
+              </h3>
+              <p className="text-xs text-zinc-500 mb-5 leading-relaxed">
+                Ces valeurs préremplissent la barre de pré-request lors d'une recherche Nyaa.
+                Pratique si vous cherchez souvent la même langue ou qualité. Vous pouvez toujours
+                les modifier au moment de la recherche.
+              </p>
+
+              <NyaaDefaultsForm />
             </div>
           </section>
 

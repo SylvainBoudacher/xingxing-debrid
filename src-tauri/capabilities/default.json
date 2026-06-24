@@ -12,6 +12,7 @@
       "identifier": "http:default",
       "allow": [
         { "url": "https://c411.org/**" },
+        { "url": "https://nyaa.si/**" },
         { "url": "https://alldebrid.fr/**" },
         { "url": "https://alldebrid.com/**" },
         { "url": "https://api.alldebrid.com/**" },

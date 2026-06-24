@@ -1,4 +1,6 @@
 import vlcLogo from "@/assets/vlc.png";
+import c411Logo from "@/assets/sources/C411.webp";
+import nyaaLogo from "@/assets/sources/nyaa.webp";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import {
   DropdownMenu,
@@ -13,9 +15,13 @@ import { parseRelease } from "@/lib/parseRelease";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import { flattenFiles, formatSize, type DebridModal } from "@/lib/debrid";
 import type { C411Torrent } from "@/lib/c411";
-import { mapTorrents, pageNumbers, type SearchResult } from "@/lib/search";
+import { mapNyaaResults, mapTorrents, pageNumbers, type SearchResult } from "@/lib/search";
 import { queryClient } from "@/lib/queryClient";
 import { c411Keys, searchTorrents } from "@/lib/services/c411";
+import { nyaaKeys, searchNyaa } from "@/lib/services/nyaa";
+import { buildNyaaQuery } from "@/lib/nyaaFilters";
+import { loadNyaaDefaults } from "@/lib/nyaaDefaults";
+import { NyaaSearchFilters } from "@/components/NyaaSearchFilters";
 import { useDebridActions } from "@/lib/useDebridActions";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -82,6 +88,22 @@ const itemVariants = {
       ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
     },
   }),
+};
+
+// Apparition en cascade des bulles de source et des filtres nyaa sous la barre.
+const pillStaggerVariants = {
+  hidden: { transition: { staggerChildren: 0.04, staggerDirection: -1 } },
+  visible: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+
+const pillItemVariants = {
+  hidden: { opacity: 0, y: -10, scale: 0.8 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: "spring" as const, stiffness: 420, damping: 24 },
+  },
 };
 
 function getCategoryIcon(id: number): { icon: LucideIcon; color: string } {
@@ -179,6 +201,13 @@ export function MainPage({
   initialSearchViewMode,
 }: MainPageProps) {
   const [query, setQuery] = useState("");
+  const [source, setSource] = useState<"c411" | "nyaa">("c411");
+  const [activeSource, setActiveSource] = useState<"c411" | "nyaa">("c411");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [nyaaTeam, setNyaaTeam] = useState("");
+  const [nyaaQuality, setNyaaQuality] = useState("");
+  const [nyaaCodec, setNyaaCodec] = useState("");
+  const [nyaaLanguage, setNyaaLanguage] = useState("");
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [total, setTotal] = useState<number | null>(null);
   const [activeCats, setActiveCats] = useState<number[]>([]);
@@ -284,31 +313,35 @@ export function MainPage({
       return;
     }
 
-    // Torznab standard download: ?t=get&id={guid}&apikey={key}
-    const guid = result.guid;
-    if (!guid) {
+    if (!result.magnet && !result.guid) {
       toast.error("GUID du torrent introuvable.");
       return;
     }
-    const torrentUrl = `https://c411.org/api?t=get&id=${encodeURIComponent(guid)}&apikey=${apiKeyRef.current}`;
 
     setSendingIndex(index);
     try {
       const json = await invoke<{
         status: string;
-        data?: { files?: Array<{ id: number; name: string }> };
+        data?: {
+          files?: Array<{ id: number; name: string; ready: boolean }>;
+          magnets?: Array<{ id: number; name: string; ready: boolean }>;
+        };
         error?: { message: string };
-      }>("upload_torrent_to_debrid", {
-        torrentUrl,
-        alldebridKey: allDebridKeyRef.current,
-      });
+      }>(
+        result.magnet ? "upload_magnet_to_debrid" : "upload_torrent_to_debrid",
+        result.magnet
+          ? { magnet: result.magnet, alldebridKey: allDebridKeyRef.current }
+          : {
+              // Torznab standard download: ?t=get&id={guid}&apikey={key}
+              torrentUrl: `https://c411.org/api?t=get&id=${encodeURIComponent(result.guid)}&apikey=${apiKeyRef.current}`,
+              alldebridKey: allDebridKeyRef.current,
+            },
+      );
 
       if (json.status !== "success")
         throw new Error(json.error?.message ?? "Erreur AllDebrid inconnue");
 
-      const uploaded = json.data?.files?.[0] as
-        | { id: number; name: string; ready: boolean }
-        | undefined;
+      const uploaded = json.data?.files?.[0] ?? json.data?.magnets?.[0];
       if (!uploaded) throw new Error("Reponse AllDebrid inattendue");
 
       if (uploaded.ready) {
@@ -353,8 +386,51 @@ export function MainPage({
     });
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function fetchNyaaResults() {
+    searchedQueryRef.current = buildNyaaQuery(
+      query.trim(),
+      nyaaTeam,
+      nyaaQuality,
+      nyaaCodec,
+      nyaaLanguage,
+    );
+    const nyaa = await queryClient.fetchQuery({
+      queryKey: nyaaKeys.search({ query: searchedQueryRef.current }),
+      queryFn: () => searchNyaa({ query: searchedQueryRef.current }),
+      staleTime: 60_000,
+    });
+    const mapped = mapNyaaResults(nyaa);
+    setResults(mapped);
+    setTotal(mapped.length);
+    setTotalPages(1);
+  }
+
+  // Prerempli la barre de pre-request avec les valeurs par defaut (parametres).
+  useEffect(() => {
+    loadNyaaDefaults().then((d) => {
+      setNyaaTeam(d.team);
+      setNyaaQuality(d.quality);
+      setNyaaCodec(d.codec);
+      setNyaaLanguage(d.language);
+    });
+  }, []);
+
+  // Relance la recherche nyaa quand un filtre de pré-request change (debounce).
+  useEffect(() => {
+    if (source !== "nyaa" || activeSource !== "nyaa" || phase !== "active") return;
+    const t = setTimeout(() => {
+      setLoading(true);
+      setError(null);
+      setSearchKey((k) => k + 1);
+      fetchNyaaResults()
+        .catch((err) => setError(String(err)))
+        .finally(() => setLoading(false));
+    }, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nyaaTeam, nyaaQuality, nyaaCodec, nyaaLanguage]);
+
+  async function performSearch(src: "c411" | "nyaa") {
     if (!query.trim()) return;
 
     setPhase((prev) => (prev === "idle" ? "title-exiting" : "active"));
@@ -362,23 +438,41 @@ export function MainPage({
     setError(null);
 
     try {
-      searchedQueryRef.current = query.trim();
-      const json = await fetchPage(1, "pertinence", "desc");
+      setActiveSource(src);
       setSearchKey((k) => k + 1);
-      setResults(mapTorrents(json.data));
-      setTotal(json.meta.total);
-      setTotalPages(json.meta.totalPages);
-      setPage(1);
       setActiveCats([]);
       setActiveQualities([]);
       setActiveCodecs([]);
       setSortBy("pertinence");
       setSortDir("desc");
+      setPage(1);
+
+      if (src === "nyaa") {
+        await fetchNyaaResults();
+      } else {
+        searchedQueryRef.current = query.trim();
+        const json = await fetchPage(1, "pertinence", "desc");
+        setResults(mapTorrents(json.data));
+        setTotal(json.meta.total);
+        setTotalPages(json.meta.totalPages);
+      }
     } catch (err) {
       setError(String(err));
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    performSearch(source);
+  }
+
+  // Bascule de source : relance la recherche avec le nouveau site si du texte est saisi.
+  function selectSource(src: "c411" | "nyaa") {
+    if (src === source) return;
+    setSource(src);
+    if (query.trim()) performSearch(src);
   }
 
   async function goToPage(pageNum: number, sort: SortKey = sortBy, dir: "desc" | "asc" = sortDir) {
@@ -417,6 +511,13 @@ export function MainPage({
       })),
     [results],
   );
+
+  const teamSuggestions = useMemo(() => {
+    if (activeSource !== "nyaa") return [];
+    return [
+      ...new Set(parsedResults.map((p) => p.parsed.team).filter((t): t is string => !!t)),
+    ].sort();
+  }, [parsedResults, activeSource]);
 
   const { groupCounts, qualityCounts, codecCounts } = useMemo(() => {
     const gc = new Map<number, number>();
@@ -552,7 +653,7 @@ export function MainPage({
                     whileHover={{ scale: 1.06 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => onNavigate("discover")}
-                    className="group relative z-10 flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 bg-[length:200%_100%] animate-[shimmer_4s_linear_infinite] px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 shadow-[0_0_30px_rgba(99,102,241,0.45)] hover:shadow-[0_0_50px_rgba(124,58,237,0.65)] transition-shadow"
+                    className="group relative z-10 flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 bg-[length:200%_100%] animate-[shimmer_4s_linear_infinite] px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 shadow-[0_0_30px_rgba(99,102,241,0.45)] hover:shadow-[0_0_50px_rgba(124,58,237,0.65)] cursor-pointer transition-shadow"
                   >
                     <Compass className="h-4 w-4" />
                     Découvrir
@@ -585,7 +686,14 @@ export function MainPage({
             )}
           </AnimatePresence>
 
-          <form onSubmit={handleSubmit} className="w-full max-w-2xl px-6">
+          <form
+            onSubmit={handleSubmit}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) setSearchFocused(false);
+            }}
+            className="relative w-full max-w-2xl px-6"
+          >
             <div className="relative flex items-center gap-3 rounded-full bg-white/90 dark:bg-zinc-800/80 px-6 py-4 shadow-[0_8px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)] transition-all">
               {loading ? (
                 <Loader2 className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400 animate-spin" />
@@ -645,7 +753,103 @@ export function MainPage({
                 )}
               </AnimatePresence>
             </div>
+            <div className="absolute left-0 right-0 top-full mt-3 flex flex-col items-center gap-3">
+              <AnimatePresence>
+                {(searchFocused || (source === "nyaa" && phase === "active")) && (
+                  <motion.div
+                    key="sources"
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    variants={pillStaggerVariants}
+                    className="flex justify-center gap-2"
+                  >
+                    {(
+                      [
+                        {
+                          id: "c411",
+                          label: "C411",
+                          logo: c411Logo,
+                          tip: "Torrent généraliste - français",
+                        },
+                        {
+                          id: "nyaa",
+                          label: "Nyaa",
+                          logo: nyaaLogo,
+                          tip: "Torrent spécialisé en animé - monde",
+                        },
+                      ] as const
+                    ).map((s) => (
+                      <motion.button
+                        key={s.id}
+                        type="button"
+                        variants={pillItemVariants}
+                        whileHover={{ scale: 1.06 }}
+                        whileTap={{ scale: 0.94 }}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => selectSource(s.id)}
+                        className={`group relative flex items-center gap-1.5 h-8 pl-1.5 pr-4 rounded-full text-xs font-medium ring-1 shadow-sm cursor-pointer transition-colors ${
+                          source === s.id
+                            ? "bg-indigo-600 text-white ring-indigo-500"
+                            : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
+                        }`}
+                      >
+                        <img
+                          src={s.logo}
+                          alt=""
+                          className="h-5 w-5 rounded-full object-cover bg-white"
+                        />
+                        {s.label}
+                        <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                          {s.tip}
+                        </span>
+                      </motion.button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {source === "nyaa" && (searchFocused || phase === "active") && (
+                  <motion.div
+                    key="nyaa-filters"
+                    initial="hidden"
+                    animate="visible"
+                    exit="hidden"
+                    variants={pillStaggerVariants}
+                    className="flex flex-wrap items-center justify-center gap-2"
+                  >
+                    <NyaaSearchFilters
+                      team={nyaaTeam}
+                      quality={nyaaQuality}
+                      codec={nyaaCodec}
+                      language={nyaaLanguage}
+                      teamSuggestions={teamSuggestions}
+                      itemVariants={pillItemVariants}
+                      onTeam={setNyaaTeam}
+                      onQuality={setNyaaQuality}
+                      onCodec={setNyaaCodec}
+                      onLanguage={setNyaaLanguage}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </form>
+          {/* Reserve l'espace du panneau flottant (bulles + filtres nyaa) pour
+              que les resultats se decalent dessous au lieu d'etre recouverts. */}
+          <motion.div
+            aria-hidden
+            initial={false}
+            animate={{
+              height:
+                phase === "active" && (searchFocused || source === "nyaa")
+                  ? source === "nyaa"
+                    ? 104
+                    : 56
+                  : 0,
+            }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          />
         </motion.div>
 
         <AnimatePresence>
@@ -693,142 +897,29 @@ export function MainPage({
                 transition: { duration: 0.2, ease: "easeIn" },
               }}
             >
-              <div className="flex flex-wrap items-center gap-2 pb-1">
-                {CATEGORY_FILTERS.map(({ key, label, icon: Icon, color }) => {
-                  const count = groupCounts.get(key);
-                  if (!count) return null;
-                  const active = activeCats.includes(key);
-                  return (
-                    <button
-                      key={key}
-                      onClick={() =>
-                        setActiveCats((prev) =>
-                          prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
-                        )
-                      }
-                      className={`flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium ring-1 transition-colors ${
-                        active
-                          ? "bg-indigo-600 text-white ring-indigo-500"
-                          : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                      }`}
-                    >
-                      <Icon className={`h-3.5 w-3.5 ${active ? "text-white" : color}`} />
-                      {label}
-                      <span
-                        className={active ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"}
-                      >
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="ml-auto flex items-center gap-1.5 h-8 px-3 rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white transition-colors">
-                      <SlidersHorizontal className="h-3.5 w-3.5" />
-                      {SORT_LABELS[sortBy]}
-                      {sortBy !== "pertinence" &&
-                        (sortDir === "desc" ? (
-                          <ArrowDown className="h-3 w-3" />
-                        ) : (
-                          <ArrowUp className="h-3 w-3" />
-                        ))}
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuLabel className="text-xs text-muted-foreground">
-                      Trier par
-                    </DropdownMenuLabel>
-                    {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
-                      <DropdownMenuCheckboxItem
-                        key={key}
-                        checked={sortBy === key}
-                        onSelect={(e) => e.preventDefault()}
-                        onCheckedChange={() => changeSort(key)}
-                      >
-                        {SORT_LABELS[key]}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                    {sortBy !== "pertinence" && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">
-                          Ordre
-                        </DropdownMenuLabel>
-                        <DropdownMenuCheckboxItem
-                          checked={sortDir === "desc"}
-                          onSelect={(e) => e.preventDefault()}
-                          onCheckedChange={() => changeSortDir("desc")}
-                        >
-                          <ArrowDown className="mr-2 h-3.5 w-3.5" />
-                          Décroissant
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                          checked={sortDir === "asc"}
-                          onSelect={(e) => e.preventDefault()}
-                          onCheckedChange={() => changeSortDir("asc")}
-                        >
-                          <ArrowUp className="mr-2 h-3.5 w-3.5" />
-                          Croissant
-                        </DropdownMenuCheckboxItem>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-              {(qualityCounts.size > 0 || codecCounts.size > 0) && (
-                <div className="flex flex-wrap items-center gap-2 pb-1">
-                  {QUALITY_ORDER.filter((q) => qualityCounts.has(q)).map((q) => {
-                    const active = activeQualities.includes(q);
-                    return (
-                      <button
-                        key={q}
-                        onClick={() =>
-                          setActiveQualities((prev) =>
-                            prev.includes(q) ? prev.filter((x) => x !== q) : [...prev, q],
-                          )
-                        }
-                        className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-semibold uppercase tracking-wide ring-1 transition-colors ${
-                          active
-                            ? "bg-indigo-600 text-white ring-indigo-500"
-                            : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                        }`}
-                      >
-                        {q}
-                        <span
-                          className={
-                            active ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"
-                          }
-                        >
-                          {qualityCounts.get(q)}
-                        </span>
-                      </button>
-                    );
-                  })}
-                  {qualityCounts.size > 0 && codecCounts.size > 0 && (
-                    <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
-                  )}
-                  {[...codecCounts.entries()]
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([codec, count]) => {
-                      const active = activeCodecs.includes(codec);
+              {source === "c411" && (
+                <>
+                  <div className="flex flex-wrap items-center gap-2 pb-1">
+                    {CATEGORY_FILTERS.map(({ key, label, icon: Icon, color }) => {
+                      const count = groupCounts.get(key);
+                      if (!count) return null;
+                      const active = activeCats.includes(key);
                       return (
                         <button
-                          key={codec}
+                          key={key}
                           onClick={() =>
-                            setActiveCodecs((prev) =>
-                              prev.includes(codec)
-                                ? prev.filter((x) => x !== codec)
-                                : [...prev, codec],
+                            setActiveCats((prev) =>
+                              prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
                             )
                           }
-                          className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-semibold uppercase tracking-wide ring-1 transition-colors ${
+                          className={`flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium ring-1 transition-colors ${
                             active
                               ? "bg-indigo-600 text-white ring-indigo-500"
                               : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
                           }`}
                         >
-                          {codec}
+                          <Icon className={`h-3.5 w-3.5 ${active ? "text-white" : color}`} />
+                          {label}
                           <span
                             className={
                               active ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"
@@ -839,7 +930,128 @@ export function MainPage({
                         </button>
                       );
                     })}
-                </div>
+                    {source === "c411" && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="ml-auto flex items-center gap-1.5 h-8 px-3 rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white transition-colors">
+                            <SlidersHorizontal className="h-3.5 w-3.5" />
+                            {SORT_LABELS[sortBy]}
+                            {sortBy !== "pertinence" &&
+                              (sortDir === "desc" ? (
+                                <ArrowDown className="h-3 w-3" />
+                              ) : (
+                                <ArrowUp className="h-3 w-3" />
+                              ))}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuLabel className="text-xs text-muted-foreground">
+                            Trier par
+                          </DropdownMenuLabel>
+                          {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
+                            <DropdownMenuCheckboxItem
+                              key={key}
+                              checked={sortBy === key}
+                              onSelect={(e) => e.preventDefault()}
+                              onCheckedChange={() => changeSort(key)}
+                            >
+                              {SORT_LABELS[key]}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                          {sortBy !== "pertinence" && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                Ordre
+                              </DropdownMenuLabel>
+                              <DropdownMenuCheckboxItem
+                                checked={sortDir === "desc"}
+                                onSelect={(e) => e.preventDefault()}
+                                onCheckedChange={() => changeSortDir("desc")}
+                              >
+                                <ArrowDown className="mr-2 h-3.5 w-3.5" />
+                                Décroissant
+                              </DropdownMenuCheckboxItem>
+                              <DropdownMenuCheckboxItem
+                                checked={sortDir === "asc"}
+                                onSelect={(e) => e.preventDefault()}
+                                onCheckedChange={() => changeSortDir("asc")}
+                              >
+                                <ArrowUp className="mr-2 h-3.5 w-3.5" />
+                                Croissant
+                              </DropdownMenuCheckboxItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                  {(qualityCounts.size > 0 || codecCounts.size > 0) && (
+                    <div className="flex flex-wrap items-center gap-2 pb-1">
+                      {QUALITY_ORDER.filter((q) => qualityCounts.has(q)).map((q) => {
+                        const active = activeQualities.includes(q);
+                        return (
+                          <button
+                            key={q}
+                            onClick={() =>
+                              setActiveQualities((prev) =>
+                                prev.includes(q) ? prev.filter((x) => x !== q) : [...prev, q],
+                              )
+                            }
+                            className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-semibold uppercase tracking-wide ring-1 transition-colors ${
+                              active
+                                ? "bg-indigo-600 text-white ring-indigo-500"
+                                : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
+                            }`}
+                          >
+                            {q}
+                            <span
+                              className={
+                                active ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"
+                              }
+                            >
+                              {qualityCounts.get(q)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                      {qualityCounts.size > 0 && codecCounts.size > 0 && (
+                        <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
+                      )}
+                      {[...codecCounts.entries()]
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([codec, count]) => {
+                          const active = activeCodecs.includes(codec);
+                          return (
+                            <button
+                              key={codec}
+                              onClick={() =>
+                                setActiveCodecs((prev) =>
+                                  prev.includes(codec)
+                                    ? prev.filter((x) => x !== codec)
+                                    : [...prev, codec],
+                                )
+                              }
+                              className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-semibold uppercase tracking-wide ring-1 transition-colors ${
+                                active
+                                  ? "bg-indigo-600 text-white ring-indigo-500"
+                                  : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
+                            >
+                              {codec}
+                              <span
+                                className={
+                                  active ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"
+                                }
+                              >
+                                {count}
+                              </span>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  )}
+                </>
               )}
               {displayed.length === 0 && results !== null && results.length > 0 && (
                 <motion.p
@@ -869,20 +1081,34 @@ export function MainPage({
                     >
                       <Icon className={`h-5 w-5 shrink-0 ${color}`} />
                       <div className="min-w-0 flex-1">
-                        {parsed && (parsed.quality || parsed.codec) && (
-                          <div className="flex items-center gap-1.5 mb-1">
-                            {parsed.quality && (
-                              <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
-                                {parsed.quality}
-                              </span>
-                            )}
-                            {parsed.codec && (
-                              <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                {parsed.codec}
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        {parsed &&
+                          (parsed.quality ||
+                            parsed.codec ||
+                            parsed.language ||
+                            (activeSource === "nyaa" && parsed.team)) && (
+                            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                              {parsed.quality && (
+                                <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                                  {parsed.quality}
+                                </span>
+                              )}
+                              {parsed.codec && (
+                                <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                                  {parsed.codec}
+                                </span>
+                              )}
+                              {parsed.language && (
+                                <span className="rounded-md bg-blue-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+                                  {parsed.language}
+                                </span>
+                              )}
+                              {activeSource === "nyaa" && parsed.team && (
+                                <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-700 dark:text-emerald-300">
+                                  {parsed.team}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         <p className="text-sm text-zinc-900 dark:text-white font-medium leading-snug line-clamp-2">
                           {parsed ? parsed.title : r.title}
                         </p>

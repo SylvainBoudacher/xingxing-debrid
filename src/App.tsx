@@ -17,6 +17,7 @@ const SetupPage = lazy(() => import("@/pages/SetupPage").then((m) => ({ default:
 const MainPage = lazy(() => import("@/pages/MainPage").then((m) => ({ default: m.MainPage })));
 import { MagnetsPage } from "@/pages/MagnetsPage";
 import { DiscoverPage } from "@/pages/DiscoverPage";
+import { NyaaTestPage } from "@/pages/NyaaTestPage";
 const PreferencesPage = lazy(() =>
   import("@/pages/PreferencesPage").then((m) => ({ default: m.PreferencesPage })),
 );
@@ -290,6 +291,17 @@ function App() {
                 initialAllDebridKey={initAllDebridKey}
                 initialLikes={initLikes}
               />
+            </motion.div>
+          )}
+          {effectivePhase === "done" && page === "nyaa" && devMode && (
+            <motion.div
+              key="nyaa"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: "easeInOut" }}
+            >
+              <NyaaTestPage onBack={() => setPage("main")} />
             </motion.div>
           )}
           {effectivePhase === "done" && page === "patchnotes" && (
