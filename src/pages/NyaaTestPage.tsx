@@ -8,17 +8,13 @@ import {
   LANG_RE,
   type ParsedRelease,
 } from "@/lib/parseRelease";
+import { ANY, CODECS, LANGUAGES, QUALITIES, buildNyaaQuery } from "@/lib/nyaaFilters";
 
 interface NyaaTestPageProps {
   onBack: () => void;
 }
 
 type Enriched = NyaaResult & { parsed: ParsedRelease };
-
-const ANY = "";
-const QUALITIES = ["2160p", "1080p", "720p", "480p"];
-const CODECS = ["x265", "x264", "hevc", "av1"];
-const LANGUAGES = ["vostfr", "vost", "multi", "truefrench", "french", "vf"];
 
 // Bord blanc : sans ca les controles sont invisibles sur fond sombre.
 const CTRL = { border: "1px solid #fff", borderRadius: 4, padding: "2px 6px" };
@@ -52,16 +48,6 @@ function highlightTitle(title: string): ReactNode[] {
   }
   if (last < title.length) out.push(title.slice(last));
   return out;
-}
-
-// Les filtres sont pousses dans la requete q (nyaa fait un ET sur les tokens du
-// titre, cote serveur), donc ils s'appliquent a TOUTES les pages, pas juste a
-// celle affichee. Limite : matching litteral (x265 != hevc dans le titre).
-function buildQuery(term: string, team: string, quality: string, codec: string, language: string) {
-  return [term, team, quality, codec, language]
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .join(" ");
 }
 
 function uniq(values: (string | null)[]): string[] {
@@ -100,56 +86,23 @@ export function NyaaTestPage({ onBack }: NyaaTestPageProps) {
   const [quality, setQuality] = useState(ANY);
   const [codec, setCodec] = useState(ANY);
   const [language, setLanguage] = useState(ANY);
-  const [page, setPage] = useState(1);
   const [query, setQuery] = useState("");
 
-  // Ligne 2 : filtres appliques aux resultats deja recus (client-side).
-  const [fTeam, setFTeam] = useState(ANY);
-  const [fQuality, setFQuality] = useState(ANY);
-  const [fCodec, setFCodec] = useState(ANY);
-  const [fLanguage, setFLanguage] = useState(ANY);
-
-  function resetResultFilters() {
-    setFTeam(ANY);
-    setFQuality(ANY);
-    setFCodec(ANY);
-    setFLanguage(ANY);
-  }
-
   function runSearch() {
-    setQuery(buildQuery(term, team, quality, codec, language));
-    setPage(1);
-    resetResultFilters();
+    setQuery(buildNyaaQuery(term, team, quality, codec, language));
   }
 
   const { data, isFetching, error } = useQuery({
-    queryKey: nyaaKeys.search({ query, page }),
-    queryFn: () => searchNyaa({ query, page }),
+    queryKey: nyaaKeys.search({ query }),
+    queryFn: () => searchNyaa({ query }),
     enabled: query.length > 0,
     placeholderData: keepPreviousData,
   });
 
   const enriched: Enriched[] = data?.map((r) => ({ ...r, parsed: parseRelease(r.title) })) ?? [];
-  // Une page nyaa = 75 items. Une page pleine sous-entend qu'il y en a d'autres.
-  const hasNext = enriched.length >= 75;
   // Teams reperees dans les resultats affiches : suggestions pour le champ team
   // (le filtre reste libre et part dans la requete, mais l'utilisateur peut piocher).
   const teamSuggestions = uniq(enriched.map((e) => e.parsed.team));
-
-  const resultOptions = {
-    team: teamSuggestions,
-    quality: uniq(enriched.map((e) => e.parsed.quality)),
-    codec: uniq(enriched.map((e) => e.parsed.codec)),
-    language: uniq(enriched.map((e) => e.parsed.language)),
-  };
-
-  const filtered = enriched.filter(
-    (e) =>
-      (fTeam === ANY || e.parsed.team === fTeam) &&
-      (fQuality === ANY || e.parsed.quality === fQuality) &&
-      (fCodec === ANY || e.parsed.codec === fCodec) &&
-      (fLanguage === ANY || e.parsed.language === fLanguage),
-  );
 
   return (
     <div style={{ padding: 16, fontFamily: "monospace", fontSize: 13 }}>
@@ -160,7 +113,7 @@ export function NyaaTestPage({ onBack }: NyaaTestPageProps) {
 
       {query && (
         <p style={{ wordBreak: "break-all", opacity: 0.6 }}>
-          request: <code>{nyaaSearchUrl({ query, page })}</code>
+          request: <code>{nyaaSearchUrl({ query })}</code>
         </p>
       )}
 
@@ -183,7 +136,10 @@ export function NyaaTestPage({ onBack }: NyaaTestPageProps) {
             <input
               list="nyaa-teams"
               value={team}
-              onChange={(e) => setTeam(e.target.value)}
+              onChange={(e) => {
+                setTeam(e.target.value);
+                setQuery(buildNyaaQuery(term, e.target.value, quality, codec, language));
+              }}
               placeholder="ex. Xspitfire911"
               style={CTRL}
             />
@@ -193,9 +149,33 @@ export function NyaaTestPage({ onBack }: NyaaTestPageProps) {
               ))}
             </datalist>
           </label>
-          <Select label="qualité" value={quality} options={QUALITIES} onChange={setQuality} />
-          <Select label="codec" value={codec} options={CODECS} onChange={setCodec} />
-          <Select label="langue" value={language} options={LANGUAGES} onChange={setLanguage} />
+          <Select
+            label="qualité"
+            value={quality}
+            options={QUALITIES}
+            onChange={(v) => {
+              setQuality(v);
+              setQuery(buildNyaaQuery(term, team, v, codec, language));
+            }}
+          />
+          <Select
+            label="codec"
+            value={codec}
+            options={CODECS}
+            onChange={(v) => {
+              setCodec(v);
+              setQuery(buildNyaaQuery(term, team, quality, v, language));
+            }}
+          />
+          <Select
+            label="langue"
+            value={language}
+            options={LANGUAGES}
+            onChange={(v) => {
+              setLanguage(v);
+              setQuery(buildNyaaQuery(term, team, quality, codec, v));
+            }}
+          />
         </div>
         <button type="submit" style={CTRL}>
           chercher
@@ -205,53 +185,10 @@ export function NyaaTestPage({ onBack }: NyaaTestPageProps) {
       {isFetching && <p>chargement...</p>}
       {error && <p style={{ color: "red" }}>{String(error)}</p>}
 
-      {enriched.length > 0 && (
-        <div style={{ margin: "8px 0" }}>
-          <hr style={{ border: "none", borderTop: "2px dashed #999", margin: "12px 0" }} />
-          <strong style={{ marginRight: 12 }}>filtre résultats:</strong>
-          <Select label="team" value={fTeam} options={resultOptions.team} onChange={setFTeam} />
-          <Select
-            label="qualité"
-            value={fQuality}
-            options={resultOptions.quality}
-            onChange={setFQuality}
-          />
-          <Select label="codec" value={fCodec} options={resultOptions.codec} onChange={setFCodec} />
-          <Select
-            label="langue"
-            value={fLanguage}
-            options={resultOptions.language}
-            onChange={setFLanguage}
-          />
-        </div>
-      )}
-
-      {data && (
-        <div style={{ margin: "8px 0" }}>
-          <hr style={{ border: "none", borderTop: "2px dashed #999", margin: "12px 0" }} />
-          <button
-            disabled={page <= 1 || isFetching}
-            onClick={() => setPage((p) => p - 1)}
-            style={CTRL}
-          >
-            ← page préc.
-          </button>{" "}
-          page {page}{" "}
-          <button
-            disabled={!hasNext || isFetching}
-            onClick={() => setPage((p) => p + 1)}
-            style={CTRL}
-          >
-            page suiv. →
-          </button>{" "}
-          <span style={{ opacity: 0.6 }}>
-            ({filtered.length} / {enriched.length} sur cette page)
-          </span>
-        </div>
-      )}
+      {data && <div style={{ margin: "8px 0", opacity: 0.6 }}>{enriched.length} résultats</div>}
 
       <ul style={{ listStyle: "none", padding: 0 }}>
-        {filtered.map((r) => (
+        {enriched.map((r) => (
           <li key={r.infoHash} style={{ borderBottom: "1px solid #ccc", padding: "8px 0" }}>
             <div>
               <strong>{highlightTitle(r.title)}</strong>

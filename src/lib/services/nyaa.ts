@@ -27,11 +27,10 @@ export interface NyaaResult {
 
 export interface NyaaSearchParams {
   query: string;
-  page: number;
 }
 
 export const nyaaKeys = {
-  search: (p: NyaaSearchParams) => ["nyaa", "search", p.query, p.page] as const,
+  search: (p: NyaaSearchParams) => ["nyaa", "search", p.query] as const,
 };
 
 function buildMagnet(infoHash: string, title: string): string {
@@ -44,7 +43,7 @@ function text(item: Element, tag: string): string {
 }
 
 export function nyaaSearchUrl(p: NyaaSearchParams): string {
-  return `${BASE}/?q=${encodeURIComponent(p.query)}&page=rss&p=${p.page}`;
+  return `${BASE}/?q=${encodeURIComponent(p.query)}&page=rss`;
 }
 
 export async function searchNyaa(p: NyaaSearchParams): Promise<NyaaResult[]> {

@@ -1,4 +1,5 @@
 import type { C411Torrent } from "@/lib/c411";
+import type { NyaaResult } from "@/lib/services/nyaa";
 
 export interface SearchResult {
   title: string;
@@ -7,6 +8,8 @@ export interface SearchResult {
   leechers: number;
   guid: string;
   category: number;
+  /** Présent pour les résultats Nyaa : envoyé en magnet à AllDebrid. */
+  magnet?: string;
 }
 
 const SERIES_SLUGS = new Set(["serie-tv", "serie-documentaire", "emission-tv"]);
@@ -36,6 +39,36 @@ export function mapTorrents(data: C411Torrent[]): SearchResult[] {
     leechers: t.leechers ?? 0,
     guid: t.infoHash,
     category: mapCategory(t.category?.id ?? 0, t.subcategory?.slug ?? ""),
+  }));
+}
+
+const SIZE_UNITS: Record<string, number> = {
+  KIB: 1024,
+  MIB: 1024 ** 2,
+  GIB: 1024 ** 3,
+  TIB: 1024 ** 4,
+  KB: 1000,
+  MB: 1000 ** 2,
+  GB: 1000 ** 3,
+  TB: 1000 ** 4,
+};
+
+// Nyaa renvoie une taille texte ("1.4 GiB") : on la convertit en octets pour formatSize.
+function parseNyaaSize(s: string): number {
+  const m = s.match(/([\d.]+)\s*([KMGT]i?B)/i);
+  if (!m) return 0;
+  return Math.round(parseFloat(m[1]) * (SIZE_UNITS[m[2].toUpperCase()] ?? 1));
+}
+
+export function mapNyaaResults(data: NyaaResult[]): SearchResult[] {
+  return data.map((r) => ({
+    title: r.title,
+    size: parseNyaaSize(r.size),
+    seeders: r.seeders,
+    leechers: r.leechers,
+    guid: r.infoHash,
+    category: 0,
+    magnet: r.magnet,
   }));
 }
 

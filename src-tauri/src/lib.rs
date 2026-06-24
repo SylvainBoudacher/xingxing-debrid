@@ -90,6 +90,29 @@ async fn upload_torrent_to_debrid(
 }
 
 #[tauri::command]
+async fn upload_magnet_to_debrid(magnet: String, alldebrid_key: String) -> Result<Value, String> {
+    let client = http_client();
+
+    let res = client
+        .post("https://api.alldebrid.com/v4/magnet/upload")
+        .bearer_auth(&alldebrid_key)
+        .query(&[("magnets[]", &magnet)])
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let status = res.status();
+    let body = res.text().await.map_err(|e| e.to_string())?;
+
+    if !status.is_success() {
+        return Err(format!("AllDebrid HTTP {} : {}", status, body));
+    }
+
+    let json: Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
+    Ok(json)
+}
+
+#[tauri::command]
 async fn get_magnet_files(id: u64, alldebrid_key: String) -> Result<Value, String> {
     let client = http_client();
 
@@ -217,6 +240,7 @@ pub fn run() {
             get_api_key,
             set_api_key,
             upload_torrent_to_debrid,
+            upload_magnet_to_debrid,
             get_magnet_files,
             unlock_link,
             open_with_vlc,
