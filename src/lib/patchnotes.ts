@@ -27,6 +27,45 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.2.1",
+    date: "24 juin 2026",
+    intro:
+      "Le Coin des Canards passe au niveau superieur : mettez vos canards en reserve, retrouvez-les grace a la recherche et aux filtres, et gardez une piscine toujours a la bonne taille.",
+    sections: [
+      {
+        title: "Mettre un canard en reserve",
+        items: [
+          "Chaque canard enregistre peut desormais etre mis a l'eau ou range en reserve directement depuis le stand, d'un seul clic.",
+          "Un canard mis en reserve quitte la piscine avec une petite animation de rangement vers le stand, et reste conserve entre les sessions.",
+          "Le compteur du stand indique en permanence combien de canards sont a l'eau.",
+        ],
+      },
+      {
+        title: "Recherche et filtres dans la collection",
+        items: [
+          "Une barre de recherche permet de retrouver un canard par son nom.",
+          "Un filtre dedie affiche tous les canards, uniquement ceux a l'eau, ou uniquement ceux en reserve.",
+        ],
+      },
+      {
+        title: "La piscine reste a la bonne taille",
+        items: [
+          "Au demarrage, si vous avez plus de canards a l'eau que la limite d'affichage, le surplus est automatiquement mis en reserve et vous etes prevenu.",
+          "Impossible de remettre un canard a l'eau quand la piscine est pleine : un message vous invite a en retirer un, ou a augmenter la limite dans les parametres.",
+          "Si vous baissez la limite d'affichage, les canards non enregistres disparaissent en premier, puis juste assez de canards enregistres passent en reserve pour respecter la nouvelle limite.",
+        ],
+      },
+      {
+        title: "Confort du stand",
+        items: [
+          "Le panneau du stand s'ouvre desormais au-dessus de son icone pour ne plus la masquer.",
+          "Cliquer en dehors du panneau le ferme automatiquement.",
+          "La liste de la collection est limitee en hauteur et devient defilante, avec un indice visuel clair lorsqu'il reste des canards a voir.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.2.0",
     date: "24 juin 2026",
     intro:

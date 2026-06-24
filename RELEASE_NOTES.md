@@ -1,2 +1,4 @@
-- Nouvelle source de recherche Nyaa avec filtres dedies (team, qualite, codec, langue)
-- Le Coin des Canards : adoptez, nommez et collectionnez vos canards, conserves entre les sessions
+- Reserve de canards : mettez vos canards a l'eau ou en stock depuis le stand, avec animation et persistance
+- Recherche par nom et filtres (tous / a l'eau / en reserve) dans la collection
+- La piscine respecte la limite d'affichage : mise en reserve automatique du surplus et gestion a la baisse de la limite
+- Confort du stand : panneau au-dessus de l'icone, fermeture au clic exterieur, liste defilante
