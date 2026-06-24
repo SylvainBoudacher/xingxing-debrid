@@ -25,6 +25,44 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.2.0",
+    date: "24 juin 2026",
+    intro:
+      "Deux grandes nouveautes : une nouvelle source de recherche Nyaa avec ses filtres dedies, et le Coin des Canards pour adopter, nommer et collectionner vos canards.",
+    sections: [
+      {
+        title: "Nouvelle source de recherche : Nyaa",
+        items: [
+          "En plus de C411, vous pouvez desormais rechercher directement sur nyaa.si. Une bascule sous la barre de recherche permet de choisir la source.",
+          "Des filtres dedies affinent vos recherches Nyaa : team, qualite (2160p, 1080p, 720p, 480p), codec (x265, x264, hevc, av1) et langue (vostfr, vost, multi, truefrench, french, vf).",
+          "Vos filtres Nyaa par defaut sont configurables dans les Preferences pour les retrouver automatiquement a chaque recherche.",
+        ],
+      },
+      {
+        title: "Le Coin des Canards",
+        items: [
+          "Un petit stand est apparu en bas a gauche de la piscine. Attrapez un canard et deposez-le dedans pour lui donner un nom et l'enregistrer.",
+          "Vos canards enregistres reviennent nager automatiquement a chaque ouverture de l'application.",
+          "Survolez un canard nomme pour afficher son nom au-dessus de lui.",
+          "Gerez votre collection depuis le stand : renommer, relacher dans la piscine, ou supprimer un canard.",
+          "Les canards enregistres sont proteges : impossible de les jeter dans le siphon par accident.",
+        ],
+      },
+      {
+        title: "Des canards uniques",
+        items: [
+          "L'apparence des canards est desormais generee aleatoirement a chaque apparition, avec de vraies raretes : couleurs, accessoires, motifs et canards legendaires.",
+        ],
+      },
+      {
+        title: "Import / Export",
+        items: [
+          "Sauvegardez ou restaurez votre collection de canards dans un fichier JSON depuis les parametres Summer.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.1.4",
     date: "23 juin 2026",
     intro:
