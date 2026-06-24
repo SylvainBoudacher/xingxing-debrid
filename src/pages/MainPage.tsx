@@ -385,6 +385,40 @@ export function MainPage({
     });
   }
 
+  async function fetchNyaaResults() {
+    searchedQueryRef.current = buildNyaaQuery(
+      query.trim(),
+      nyaaTeam,
+      nyaaQuality,
+      nyaaCodec,
+      nyaaLanguage,
+    );
+    const nyaa = await queryClient.fetchQuery({
+      queryKey: nyaaKeys.search({ query: searchedQueryRef.current }),
+      queryFn: () => searchNyaa({ query: searchedQueryRef.current }),
+      staleTime: 60_000,
+    });
+    const mapped = mapNyaaResults(nyaa);
+    setResults(mapped);
+    setTotal(mapped.length);
+    setTotalPages(1);
+  }
+
+  // Relance la recherche nyaa quand un filtre de pré-request change (debounce).
+  useEffect(() => {
+    if (source !== "nyaa" || activeSource !== "nyaa" || phase !== "active") return;
+    const t = setTimeout(() => {
+      setLoading(true);
+      setError(null);
+      setSearchKey((k) => k + 1);
+      fetchNyaaResults()
+        .catch((err) => setError(String(err)))
+        .finally(() => setLoading(false));
+    }, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nyaaTeam, nyaaQuality, nyaaCodec, nyaaLanguage]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!query.trim()) return;
@@ -404,22 +438,7 @@ export function MainPage({
       setPage(1);
 
       if (source === "nyaa") {
-        searchedQueryRef.current = buildNyaaQuery(
-          query.trim(),
-          nyaaTeam,
-          nyaaQuality,
-          nyaaCodec,
-          nyaaLanguage,
-        );
-        const nyaa = await queryClient.fetchQuery({
-          queryKey: nyaaKeys.search({ query: searchedQueryRef.current }),
-          queryFn: () => searchNyaa({ query: searchedQueryRef.current }),
-          staleTime: 60_000,
-        });
-        const mapped = mapNyaaResults(nyaa);
-        setResults(mapped);
-        setTotal(mapped.length);
-        setTotalPages(1);
+        await fetchNyaaResults();
       } else {
         searchedQueryRef.current = query.trim();
         const json = await fetchPage(1, "pertinence", "desc");
@@ -714,7 +733,7 @@ export function MainPage({
             </div>
             <div className="absolute left-0 right-0 top-full mt-3 flex flex-col items-center gap-3">
               <AnimatePresence>
-                {searchFocused && (
+                {(searchFocused || source === "nyaa") && (
                   <motion.div
                     key="sources"
                     initial="hidden"
@@ -755,7 +774,7 @@ export function MainPage({
                 )}
               </AnimatePresence>
               <AnimatePresence>
-                {searchFocused && source === "nyaa" && (
+                {source === "nyaa" && (
                   <motion.div
                     key="nyaa-filters"
                     initial="hidden"
@@ -781,6 +800,21 @@ export function MainPage({
               </AnimatePresence>
             </div>
           </form>
+          {/* Reserve l'espace du panneau flottant (bulles + filtres nyaa) pour
+              que les resultats se decalent dessous au lieu d'etre recouverts. */}
+          <motion.div
+            aria-hidden
+            initial={false}
+            animate={{
+              height:
+                phase === "active" && (searchFocused || source === "nyaa")
+                  ? source === "nyaa"
+                    ? 104
+                    : 56
+                  : 0,
+            }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+          />
         </motion.div>
 
         <AnimatePresence>
@@ -828,144 +862,29 @@ export function MainPage({
                 transition: { duration: 0.2, ease: "easeIn" },
               }}
             >
-              <div className="flex flex-wrap items-center gap-2 pb-1">
-                {CATEGORY_FILTERS.map(({ key, label, icon: Icon, color }) => {
-                  const count = groupCounts.get(key);
-                  if (!count) return null;
-                  const active = activeCats.includes(key);
-                  return (
-                    <button
-                      key={key}
-                      onClick={() =>
-                        setActiveCats((prev) =>
-                          prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
-                        )
-                      }
-                      className={`flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium ring-1 transition-colors ${
-                        active
-                          ? "bg-indigo-600 text-white ring-indigo-500"
-                          : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                      }`}
-                    >
-                      <Icon className={`h-3.5 w-3.5 ${active ? "text-white" : color}`} />
-                      {label}
-                      <span
-                        className={active ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"}
-                      >
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
-                {activeSource === "c411" && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="ml-auto flex items-center gap-1.5 h-8 px-3 rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white transition-colors">
-                        <SlidersHorizontal className="h-3.5 w-3.5" />
-                        {SORT_LABELS[sortBy]}
-                        {sortBy !== "pertinence" &&
-                          (sortDir === "desc" ? (
-                            <ArrowDown className="h-3 w-3" />
-                          ) : (
-                            <ArrowUp className="h-3 w-3" />
-                          ))}
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-44">
-                      <DropdownMenuLabel className="text-xs text-muted-foreground">
-                        Trier par
-                      </DropdownMenuLabel>
-                      {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
-                        <DropdownMenuCheckboxItem
-                          key={key}
-                          checked={sortBy === key}
-                          onSelect={(e) => e.preventDefault()}
-                          onCheckedChange={() => changeSort(key)}
-                        >
-                          {SORT_LABELS[key]}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                      {sortBy !== "pertinence" && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuLabel className="text-xs text-muted-foreground">
-                            Ordre
-                          </DropdownMenuLabel>
-                          <DropdownMenuCheckboxItem
-                            checked={sortDir === "desc"}
-                            onSelect={(e) => e.preventDefault()}
-                            onCheckedChange={() => changeSortDir("desc")}
-                          >
-                            <ArrowDown className="mr-2 h-3.5 w-3.5" />
-                            Décroissant
-                          </DropdownMenuCheckboxItem>
-                          <DropdownMenuCheckboxItem
-                            checked={sortDir === "asc"}
-                            onSelect={(e) => e.preventDefault()}
-                            onCheckedChange={() => changeSortDir("asc")}
-                          >
-                            <ArrowUp className="mr-2 h-3.5 w-3.5" />
-                            Croissant
-                          </DropdownMenuCheckboxItem>
-                        </>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-              {(qualityCounts.size > 0 || codecCounts.size > 0) && (
-                <div className="flex flex-wrap items-center gap-2 pb-1">
-                  {QUALITY_ORDER.filter((q) => qualityCounts.has(q)).map((q) => {
-                    const active = activeQualities.includes(q);
-                    return (
-                      <button
-                        key={q}
-                        onClick={() =>
-                          setActiveQualities((prev) =>
-                            prev.includes(q) ? prev.filter((x) => x !== q) : [...prev, q],
-                          )
-                        }
-                        className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-semibold uppercase tracking-wide ring-1 transition-colors ${
-                          active
-                            ? "bg-indigo-600 text-white ring-indigo-500"
-                            : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                        }`}
-                      >
-                        {q}
-                        <span
-                          className={
-                            active ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"
-                          }
-                        >
-                          {qualityCounts.get(q)}
-                        </span>
-                      </button>
-                    );
-                  })}
-                  {qualityCounts.size > 0 && codecCounts.size > 0 && (
-                    <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
-                  )}
-                  {[...codecCounts.entries()]
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([codec, count]) => {
-                      const active = activeCodecs.includes(codec);
+              {source === "c411" && (
+                <>
+                  <div className="flex flex-wrap items-center gap-2 pb-1">
+                    {CATEGORY_FILTERS.map(({ key, label, icon: Icon, color }) => {
+                      const count = groupCounts.get(key);
+                      if (!count) return null;
+                      const active = activeCats.includes(key);
                       return (
                         <button
-                          key={codec}
+                          key={key}
                           onClick={() =>
-                            setActiveCodecs((prev) =>
-                              prev.includes(codec)
-                                ? prev.filter((x) => x !== codec)
-                                : [...prev, codec],
+                            setActiveCats((prev) =>
+                              prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
                             )
                           }
-                          className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-semibold uppercase tracking-wide ring-1 transition-colors ${
+                          className={`flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-medium ring-1 transition-colors ${
                             active
                               ? "bg-indigo-600 text-white ring-indigo-500"
                               : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
                           }`}
                         >
-                          {codec}
+                          <Icon className={`h-3.5 w-3.5 ${active ? "text-white" : color}`} />
+                          {label}
                           <span
                             className={
                               active ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"
@@ -976,7 +895,128 @@ export function MainPage({
                         </button>
                       );
                     })}
-                </div>
+                    {source === "c411" && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="ml-auto flex items-center gap-1.5 h-8 px-3 rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white transition-colors">
+                            <SlidersHorizontal className="h-3.5 w-3.5" />
+                            {SORT_LABELS[sortBy]}
+                            {sortBy !== "pertinence" &&
+                              (sortDir === "desc" ? (
+                                <ArrowDown className="h-3 w-3" />
+                              ) : (
+                                <ArrowUp className="h-3 w-3" />
+                              ))}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          <DropdownMenuLabel className="text-xs text-muted-foreground">
+                            Trier par
+                          </DropdownMenuLabel>
+                          {(Object.keys(SORT_LABELS) as SortKey[]).map((key) => (
+                            <DropdownMenuCheckboxItem
+                              key={key}
+                              checked={sortBy === key}
+                              onSelect={(e) => e.preventDefault()}
+                              onCheckedChange={() => changeSort(key)}
+                            >
+                              {SORT_LABELS[key]}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                          {sortBy !== "pertinence" && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuLabel className="text-xs text-muted-foreground">
+                                Ordre
+                              </DropdownMenuLabel>
+                              <DropdownMenuCheckboxItem
+                                checked={sortDir === "desc"}
+                                onSelect={(e) => e.preventDefault()}
+                                onCheckedChange={() => changeSortDir("desc")}
+                              >
+                                <ArrowDown className="mr-2 h-3.5 w-3.5" />
+                                Décroissant
+                              </DropdownMenuCheckboxItem>
+                              <DropdownMenuCheckboxItem
+                                checked={sortDir === "asc"}
+                                onSelect={(e) => e.preventDefault()}
+                                onCheckedChange={() => changeSortDir("asc")}
+                              >
+                                <ArrowUp className="mr-2 h-3.5 w-3.5" />
+                                Croissant
+                              </DropdownMenuCheckboxItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                  {(qualityCounts.size > 0 || codecCounts.size > 0) && (
+                    <div className="flex flex-wrap items-center gap-2 pb-1">
+                      {QUALITY_ORDER.filter((q) => qualityCounts.has(q)).map((q) => {
+                        const active = activeQualities.includes(q);
+                        return (
+                          <button
+                            key={q}
+                            onClick={() =>
+                              setActiveQualities((prev) =>
+                                prev.includes(q) ? prev.filter((x) => x !== q) : [...prev, q],
+                              )
+                            }
+                            className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-semibold uppercase tracking-wide ring-1 transition-colors ${
+                              active
+                                ? "bg-indigo-600 text-white ring-indigo-500"
+                                : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
+                            }`}
+                          >
+                            {q}
+                            <span
+                              className={
+                                active ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"
+                              }
+                            >
+                              {qualityCounts.get(q)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                      {qualityCounts.size > 0 && codecCounts.size > 0 && (
+                        <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
+                      )}
+                      {[...codecCounts.entries()]
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([codec, count]) => {
+                          const active = activeCodecs.includes(codec);
+                          return (
+                            <button
+                              key={codec}
+                              onClick={() =>
+                                setActiveCodecs((prev) =>
+                                  prev.includes(codec)
+                                    ? prev.filter((x) => x !== codec)
+                                    : [...prev, codec],
+                                )
+                              }
+                              className={`flex items-center gap-1.5 h-7 px-2.5 rounded-full text-[11px] font-semibold uppercase tracking-wide ring-1 transition-colors ${
+                                active
+                                  ? "bg-indigo-600 text-white ring-indigo-500"
+                                  : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
+                              }`}
+                            >
+                              {codec}
+                              <span
+                                className={
+                                  active ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"
+                                }
+                              >
+                                {count}
+                              </span>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  )}
+                </>
               )}
               {displayed.length === 0 && results !== null && results.length > 0 && (
                 <motion.p
@@ -1006,20 +1046,34 @@ export function MainPage({
                     >
                       <Icon className={`h-5 w-5 shrink-0 ${color}`} />
                       <div className="min-w-0 flex-1">
-                        {parsed && (parsed.quality || parsed.codec) && (
-                          <div className="flex items-center gap-1.5 mb-1">
-                            {parsed.quality && (
-                              <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
-                                {parsed.quality}
-                              </span>
-                            )}
-                            {parsed.codec && (
-                              <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                                {parsed.codec}
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        {parsed &&
+                          (parsed.quality ||
+                            parsed.codec ||
+                            parsed.language ||
+                            (activeSource === "nyaa" && parsed.team)) && (
+                            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                              {parsed.quality && (
+                                <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                                  {parsed.quality}
+                                </span>
+                              )}
+                              {parsed.codec && (
+                                <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                                  {parsed.codec}
+                                </span>
+                              )}
+                              {parsed.language && (
+                                <span className="rounded-md bg-blue-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+                                  {parsed.language}
+                                </span>
+                              )}
+                              {activeSource === "nyaa" && parsed.team && (
+                                <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-700 dark:text-emerald-300">
+                                  {parsed.team}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         <p className="text-sm text-zinc-900 dark:text-white font-medium leading-snug line-clamp-2">
                           {parsed ? parsed.title : r.title}
                         </p>
