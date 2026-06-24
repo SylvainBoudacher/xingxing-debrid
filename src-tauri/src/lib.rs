@@ -166,10 +166,10 @@ async fn unlock_link(link: String, alldebrid_key: String) -> Result<String, Stri
 }
 
 #[tauri::command]
-fn export_likes(app: tauri::AppHandle, content: String) -> Result<String, String> {
+fn export_json(app: tauri::AppHandle, filename: String, content: String) -> Result<String, String> {
     use tauri::Manager;
     let dir = app.path().download_dir().map_err(|e| e.to_string())?;
-    let path = dir.join("c411-likes.json");
+    let path = dir.join(filename);
     std::fs::write(&path, content).map_err(|e| e.to_string())?;
     Ok(path.to_string_lossy().into_owned())
 }
@@ -244,7 +244,7 @@ pub fn run() {
             get_magnet_files,
             unlock_link,
             open_with_vlc,
-            export_likes,
+            export_json,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -13,6 +13,7 @@ import type { Page } from "@/components/AppMenu";
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
 );
+const DuckShop = lazy(() => import("@/components/DuckShop").then((m) => ({ default: m.DuckShop })));
 const SetupPage = lazy(() => import("@/pages/SetupPage").then((m) => ({ default: m.SetupPage })));
 const MainPage = lazy(() => import("@/pages/MainPage").then((m) => ({ default: m.MainPage })));
 import { MagnetsPage } from "@/pages/MagnetsPage";
@@ -171,6 +172,14 @@ function App() {
             <PixelPool active={showPool} fps={summerFps} maxDucks={summerMaxDucks} />
           </Suspense>
         </div>
+      )}
+
+      {/* Duck shop / collection panel — own overlay so it stays interactive
+          above the pointer-events-none pool canvas */}
+      {summerEnabled && (
+        <Suspense fallback={null}>
+          <DuckShop />
+        </Suspense>
       )}
 
       {/* ── Phase splash : écran de chargement ── */}

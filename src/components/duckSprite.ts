@@ -4,7 +4,6 @@ import { bodyFill, paintPattern } from "./duckPatterns";
 import type { Variant } from "./duckTypes";
 
 export type { Accessory, Effect, Pattern, Variant } from "./duckTypes";
-export { VARIANTS } from "./duckVariants";
 
 // Sprite canvas dimensions and the base body/head geometry. PixelPool reads
 // SW/SH to keep on-screen ducks at the sprite's aspect ratio.

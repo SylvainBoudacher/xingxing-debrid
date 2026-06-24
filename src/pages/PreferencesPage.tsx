@@ -3,6 +3,7 @@ import { ApiKeysForm } from "@/components/ApiKeysForm";
 import { NyaaDefaultsForm } from "@/components/NyaaDefaultsForm";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { getLikes, parseLikesJson, saveLikes } from "@/lib/likes";
+import { getSavedDucks, importSavedDucks, parseDucksJson } from "@/lib/savedDucks";
 import { parseRelease } from "@/lib/parseRelease";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -126,6 +127,7 @@ export function PreferencesPage({
   const [skipNfoDownload, setSkipNfoDownload] = useState(true);
   const [activeSection, setActiveSection] = useState<SectionId>("section-search");
   const importInputRef = useRef<HTMLInputElement>(null);
+  const importDucksInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     store.get<ViewMode>("view_mode").then((v) => {
@@ -188,12 +190,42 @@ export function PreferencesPage({
   async function handleExportLikes() {
     try {
       const likes = await getLikes();
-      const path = await invoke<string>("export_likes", {
+      const path = await invoke<string>("export_json", {
+        filename: "c411-likes.json",
         content: JSON.stringify(likes, null, 2),
       });
       toast.success(`Liste exportée : ${path}`);
     } catch (e) {
       toast.error(`Export impossible : ${e}`);
+    }
+  }
+
+  async function handleExportDucks() {
+    try {
+      const ducks = await getSavedDucks();
+      const path = await invoke<string>("export_json", {
+        filename: "c411-ducks.json",
+        content: JSON.stringify(ducks, null, 2),
+      });
+      toast.success(`Canards exportés : ${path}`);
+    } catch (e) {
+      toast.error(`Export impossible : ${e}`);
+    }
+  }
+
+  async function handleImportDucks(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const { added } = await importSavedDucks(parseDucksJson(await file.text()));
+      toast.success(
+        added
+          ? `${added} canard${added > 1 ? "s" : ""} importé${added > 1 ? "s" : ""} (visible${added > 1 ? "s" : ""} au prochain lancement)`
+          : "Aucun nouveau canard à importer",
+      );
+    } catch {
+      toast.error("Fichier invalide");
     }
   }
 
@@ -622,6 +654,41 @@ export function PreferencesPage({
                     }}
                     className="w-16 rounded-lg bg-black/6 dark:bg-white/6 px-2 py-1 text-center text-sm font-semibold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
                   />
+                </div>
+              )}
+
+              {summerEnabled && (
+                <div className="mt-3 rounded-xl bg-white dark:bg-zinc-900/80 ring-1 ring-black/8 dark:ring-white/8 px-4 py-3">
+                  <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                    Ma collection de canards
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-0.5 mb-3 leading-relaxed">
+                    Sauvegardez vos canards nommés dans un fichier JSON ou restaurez-les depuis un
+                    fichier. L'import fusionne avec votre collection sans créer de doublons.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={handleExportDucks}
+                      className="flex items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-xs font-medium text-white hover:bg-amber-400 transition-colors"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Exporter mes canards
+                    </button>
+                    <button
+                      onClick={() => importDucksInputRef.current?.click()}
+                      className="flex items-center gap-2 rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 px-4 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      Importer des canards
+                    </button>
+                    <input
+                      ref={importDucksInputRef}
+                      type="file"
+                      accept="application/json,.json"
+                      className="hidden"
+                      onChange={handleImportDucks}
+                    />
+                  </div>
                 </div>
               )}
             </div>

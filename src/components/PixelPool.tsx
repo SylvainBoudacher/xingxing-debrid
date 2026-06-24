@@ -1,5 +1,9 @@
 import { useEffect, useRef } from "react";
-import { makeDuckSprite, SH, SW, VARIANTS, type Effect } from "./duckSprite";
+import { toast } from "sonner";
+import { randomVariant } from "./duckRandom";
+import { makeDuckSprite, SH, SW, type Effect } from "./duckSprite";
+import type { Variant } from "./duckTypes";
+import { type DuckSpec, emitDuckDrop, emitShopOpen, registerInjector } from "./duckShopBridge";
 
 // Pixel-art pool with smoothly-shaded rubber ducks (3/4 isometric view)
 // drifting around. A new duck appears every SPAWN_MS until MAX_DUCKS.
@@ -11,6 +15,11 @@ const BORDER = 0; // no coping — water fills the full canvas
 const DUCK_BASE = 92; // on-screen height of a scale-1 duck
 
 interface Duck {
+  id: string;
+  variant: Variant; // full skin, needed to preview/persist a saved duck
+  name?: string;
+  saved?: boolean; // part of the persisted collection
+  inShop?: boolean; // dropped into the shop: frozen and hidden while the panel is open
   x: number;
   y: number;
   vx: number;
@@ -45,12 +54,11 @@ function inner() {
   };
 }
 
-function spawnDuck() {
-  if (pool.length >= MAX_DUCKS) return;
+// Push a duck of the given skin/scale, starting off-screen and swimming toward
+// a random point inside the pool. `extra` overrides defaults (id/name/saved).
+function enterPool(variant: Variant, scale: number, extra: Partial<Duck> = {}) {
   const W = bounds.w;
   const H = bounds.h;
-  const scale = 0.55 + Math.random() * 0.3;
-  const variant = VARIANTS[(Math.random() * VARIANTS.length) | 0];
   const sprite = makeDuckSprite(variant);
   const dh = DUCK_BASE * scale;
   const dw = dh * (SW / SH);
@@ -68,20 +76,33 @@ function spawnDuck() {
   const tx = b.minX + Math.random() * Math.max(1, b.maxX - b.minX);
   const ty = b.minY + Math.random() * Math.max(1, b.maxY - b.minY);
   const ang = Math.atan2(ty - y, tx - x);
-  const vx = Math.cos(ang) * speed;
-  const vy = Math.sin(ang) * speed;
 
   pool.push({
+    id: crypto.randomUUID(),
+    variant,
     x,
     y,
-    vx,
-    vy,
+    vx: Math.cos(ang) * speed,
+    vy: Math.sin(ang) * speed,
     scale,
     phase: Math.random() * Math.PI * 2,
     sprite,
     effect: variant.effect,
     entering: true,
+    ...extra,
   });
+}
+
+function spawnDuck() {
+  if (pool.length >= MAX_DUCKS) return;
+  enterPool(randomVariant(), 0.55 + Math.random() * 0.3);
+}
+
+// Saved ducks bypass MAX_DUCKS: they were collected on purpose, so they always
+// swim back in (at startup, or when released from the collection panel).
+function spawnSavedDuck(spec: DuckSpec) {
+  if (pool.some((d) => d.id === spec.id)) return; // already swimming
+  enterPool(spec.variant, spec.scale, { id: spec.id, name: spec.name, saved: true });
 }
 
 // Started once; keeps spawning (up to MAX_DUCKS) even while off the page.
@@ -156,6 +177,11 @@ export function PixelPool({
     let throwVY = 0;
     let appliedCursor = "";
 
+    // last pointer position (any move, not just drags) to find the hovered duck
+    // each frame and float its name above it
+    let pointerX = -1;
+    let pointerY = -1;
+
     // transient water droplets thrown up by impacts (throws, wall hits, collisions)
     interface Splash {
       x: number;
@@ -206,14 +232,17 @@ export function PixelPool({
     }
 
     function updateHoverCursor(e: PointerEvent) {
-      if (!activeRef.current) return setCursor("");
-      setCursor(!overUI(e) && duckAt(e.clientX, e.clientY) ? "grab" : "");
+      if (!activeRef.current || overUI(e)) return setCursor("");
+      if (duckAt(e.clientX, e.clientY)) return setCursor("grab");
+      if (overShop(e.clientX, e.clientY)) return setCursor("pointer");
+      setCursor("");
     }
 
     function duckAt(px: number, py: number): Duck | null {
       // topmost first (drawn last = highest y after the per-frame sort)
       for (let i = pool.length - 1; i >= 0; i--) {
         const d = pool[i];
+        if (d.inShop) continue;
         const dh = DUCK_BASE * d.scale;
         const dw = dh * (SW / SH);
         if (px >= d.x - dw / 2 && px <= d.x + dw / 2 && py >= d.y - dh / 2 && py <= d.y + dh / 2)
@@ -244,6 +273,12 @@ export function PixelPool({
       if (!activeRef.current || overUI(e)) return;
       const d = duckAt(e.clientX, e.clientY);
       if (!d) {
+        // clicking the shop (without a duck) opens the collection panel
+        if (overShop(e.clientX, e.clientY)) {
+          emitShopOpen();
+          e.preventDefault();
+          return;
+        }
         pokeWater(e.clientX, e.clientY);
         return;
       }
@@ -262,6 +297,8 @@ export function PixelPool({
     }
 
     function onPointerMove(e: PointerEvent) {
+      pointerX = e.clientX;
+      pointerY = e.clientY;
       if (!dragging) {
         updateHoverCursor(e);
         return;
@@ -279,13 +316,54 @@ export function PixelPool({
 
     function onPointerUp(e: PointerEvent) {
       if (!dragging) return;
-      // dropped into the drain: start the drain animation
+      // dropped into the drain: start the drain animation. Saved ducks are
+      // protected — they bounce off and keep swimming instead of being flushed.
       if (overDrain(dragging.x, dragging.y)) {
+        if (dragging.saved) {
+          const d = dragging;
+          const a = Math.random() * Math.PI * 2;
+          d.vx = Math.cos(a) * 60;
+          d.vy = Math.sin(a) * 60;
+          d.entering = false;
+          dragging = null;
+          updateHoverCursor(e);
+          toast.info(`${d.name || "Ce canard"} est enregistré et ne peut pas être jeté`);
+          return;
+        }
         dragging.draining = true;
         dragging.drainT = performance.now();
         dragging.vx = 0;
         dragging.vy = 0;
         dragging = null;
+        updateHoverCursor(e);
+        return;
+      }
+      // dropped into the shop: freeze + hide the duck and open the panel. It
+      // stays in the pool so it can swim again when the panel closes.
+      if (overShop(dragging.x, dragging.y)) {
+        const d = dragging;
+        d.inShop = true;
+        d.vx = 0;
+        d.vy = 0;
+        dragging = null;
+        emitDuckDrop({
+          id: d.id,
+          variant: d.variant,
+          scale: d.scale,
+          saved: d.saved ?? false,
+          name: d.name ?? "",
+          release: () => {
+            d.inShop = false;
+            const a = Math.random() * Math.PI * 2;
+            d.vx = Math.cos(a) * 14;
+            d.vy = Math.sin(a) * 14;
+            d.entering = false;
+          },
+          markSaved: (name: string) => {
+            d.name = name;
+            d.saved = true;
+          },
+        });
         updateHoverCursor(e);
         return;
       }
@@ -378,6 +456,95 @@ export function PixelPool({
           else if (s > 0.35) ctx.fillRect(col.x, yy + o, 3, 2);
         }
       }
+    }
+
+    // little market stall in the bottom-left corner — the duck shop / collection
+    function shopBox() {
+      const sw = 64;
+      const sh = 58;
+      return { x: BORDER + 18, y: h - BORDER - sh - 18, w: sw, h: sh };
+    }
+
+    function overShop(px: number, py: number): boolean {
+      const s = shopBox();
+      const pad = 8;
+      return px >= s.x - pad && px <= s.x + s.w + pad && py >= s.y - pad && py <= s.y + s.h + pad;
+    }
+
+    function drawShop(now: number, carrying: boolean, hot: boolean, hover: boolean, dark: boolean) {
+      const s = shopBox();
+      const cx = s.x + s.w / 2;
+      const cy = s.y + s.h / 2;
+      const roofH = 16;
+      const lit = hot || hover;
+
+      ctx.save();
+      // hover (no duck carried): gentle bounce + slight scale-up, pivoting at base
+      if (hover) {
+        const bob = Math.sin(now * 0.008) * 2;
+        ctx.translate(cx, s.y + s.h);
+        ctx.scale(1.06, 1.06);
+        ctx.translate(-cx, -(s.y + s.h) - bob);
+      }
+
+      // glow: pulsing gold while carrying a duck, soft blue on plain hover
+      if (carrying || hover) {
+        const pulse = carrying
+          ? 0.35 + Math.sin(now * 0.006) * 0.22 + (hot ? 0.3 : 0)
+          : 0.26 + Math.sin(now * 0.008) * 0.12;
+        const col = carrying ? "255,224,110" : "150,205,255";
+        const g = ctx.createRadialGradient(cx, cy, 4, cx, cy, s.w);
+        g.addColorStop(0, `rgba(${col},${Math.max(0, pulse)})`);
+        g.addColorStop(1, `rgba(${col},0)`);
+        ctx.fillStyle = g;
+        ctx.fillRect(s.x - s.w, s.y - s.h, s.w * 3, s.h * 3);
+      }
+
+      // crate body (wood)
+      ctx.fillStyle = dark ? "#5b4326" : "#caa46a";
+      ctx.beginPath();
+      ctx.roundRect(s.x, s.y + roofH, s.w, s.h - roofH, 5);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.18)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(s.x + s.w / 2, s.y + roofH + 4);
+      ctx.lineTo(s.x + s.w / 2, s.y + s.h - 4);
+      ctx.stroke();
+
+      // striped awning roof
+      const stripeW = s.w / 6;
+      for (let i = 0; i < 6; i++) {
+        ctx.fillStyle = i % 2 === 0 ? (dark ? "#c0395a" : "#E0457B") : dark ? "#e4e4ea" : "#FFF7FA";
+        ctx.beginPath();
+        ctx.moveTo(s.x + i * stripeW, s.y);
+        ctx.lineTo(s.x + (i + 1) * stripeW, s.y);
+        ctx.lineTo(s.x + (i + 1) * stripeW, s.y + roofH - 5);
+        // scalloped lower edge
+        ctx.lineTo(s.x + (i + 0.5) * stripeW, s.y + roofH);
+        ctx.lineTo(s.x + i * stripeW, s.y + roofH - 5);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // small duck silhouette on the crate front
+      ctx.fillStyle = lit ? "#FFE066" : dark ? "#f0d9a0" : "#7a5c2e";
+      const dx = cx;
+      const dy = s.y + roofH + (s.h - roofH) / 2 + 3;
+      ctx.beginPath();
+      ctx.ellipse(dx - 2, dy + 2, 9, 6, 0, 0, Math.PI * 2); // body
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(dx + 6, dy - 4, 5, 0, Math.PI * 2); // head
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(dx + 10, dy - 4); // beak
+      ctx.lineTo(dx + 15, dy - 3);
+      ctx.lineTo(dx + 10, dy - 1);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
     }
 
     function drain() {
@@ -531,6 +698,43 @@ export function PixelPool({
       }
     }
 
+    // floating name tag above a hovered, named duck
+    function drawNameLabel(d: Duck, t: number) {
+      const bob = Math.sin(t * 0.003 + d.phase) * 3;
+      const dh = DUCK_BASE * d.scale;
+      ctx.font = "600 13px ui-sans-serif, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const tw = ctx.measureText(d.name!).width;
+      const padX = 9;
+      const bw = tw + padX * 2;
+      const bh = 22;
+      const cx = d.x;
+      const by = d.y + bob - dh * 0.5 - bh - 4; // sit just above the head
+      const tip = 5;
+
+      ctx.fillStyle = "rgba(15,23,42,0.9)";
+      ctx.strokeStyle = "rgba(255,255,255,0.18)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(cx - bw / 2, by, bw, bh, 6);
+      ctx.fill();
+      ctx.stroke();
+      // little pointer toward the duck
+      ctx.beginPath();
+      ctx.moveTo(cx - tip, by + bh - 0.5);
+      ctx.lineTo(cx + tip, by + bh - 0.5);
+      ctx.lineTo(cx, by + bh + tip);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(15,23,42,0.9)";
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(d.name!, cx, by + bh / 2 + 0.5);
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    }
+
     function updateWakes(dt: number) {
       for (let i = wakes.length - 1; i >= 0; i--) {
         wakes[i].life -= dt * 3.5; // ~0.28s lifetime
@@ -597,7 +801,14 @@ export function PixelPool({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       drawRipples(now, dark);
-      drawDrain(now, !!(dragging && overDrain(dragging.x, dragging.y)), dark);
+      drawDrain(now, !!(dragging && !dragging.saved && overDrain(dragging.x, dragging.y)), dark);
+      drawShop(
+        now,
+        dragging !== null,
+        !!(dragging && overShop(dragging.x, dragging.y)),
+        !dragging && overShop(pointerX, pointerY),
+        dark,
+      );
 
       // remove ducks whose drain animation has finished
       for (let i = pool.length - 1; i >= 0; i--) {
@@ -609,7 +820,7 @@ export function PixelPool({
 
       const b = inner();
       for (const d of pool) {
-        if (d === dragging || d.draining) continue; // held by cursor or animating out
+        if (d === dragging || d.draining || d.inShop) continue; // held, draining, or in the shop
         d.x += d.vx * dt;
         d.y += d.vy * dt;
 
@@ -728,11 +939,11 @@ export function PixelPool({
       // more) and resolve the bounce with mass taken from each duck's scale.
       for (let i = 0; i < pool.length; i++) {
         const a = pool[i];
-        if (a === dragging || a.draining || a.entering) continue;
+        if (a === dragging || a.draining || a.entering || a.inShop) continue;
         const ar = DUCK_BASE * a.scale * 0.32;
         for (let j = i + 1; j < pool.length; j++) {
           const c = pool[j];
-          if (c === dragging || c.draining || c.entering) continue;
+          if (c === dragging || c.draining || c.entering || c.inShop) continue;
           const cr = DUCK_BASE * c.scale * 0.32;
           const dx = c.x - a.x;
           const dy = c.y - a.y;
@@ -770,17 +981,29 @@ export function PixelPool({
       updateWakes(dt);
       pool.sort((a, c) => a.y - c.y);
       drawWakes(dark);
-      for (const d of pool) drawDuck(d, now);
+      for (const d of pool) if (!d.inShop) drawDuck(d, now);
       drawSplashes(dark);
+
+      // name tag of the duck currently under the cursor (not while dragging)
+      if (!dragging) {
+        const hovered = duckAt(pointerX, pointerY);
+        if (hovered?.name) drawNameLabel(hovered, now);
+      }
     }
 
     resize();
     ensureSpawning();
+    registerInjector(spawnSavedDuck); // flush any saved ducks queued before mount
     window.addEventListener("resize", resize);
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointercancel", onPointerUp);
+    const clearPointer = () => {
+      pointerX = -1;
+      pointerY = -1;
+    };
+    window.addEventListener("blur", clearPointer);
     raf = requestAnimationFrame(frame);
 
     // Note: the ducks (pool) are intentionally kept alive at module scope so
@@ -789,11 +1012,13 @@ export function PixelPool({
     return () => {
       cancelAnimationFrame(raf);
       stopSpawning();
+      registerInjector(null);
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerUp);
+      window.removeEventListener("blur", clearPointer);
       document.body.style.cursor = "";
     };
   }, []);
