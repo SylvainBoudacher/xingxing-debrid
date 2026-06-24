@@ -1,6 +1,13 @@
 import { motion, type Variants } from "motion/react";
 import { ChevronDown, Cpu, Languages, MonitorPlay, Users, type LucideIcon } from "lucide-react";
 import { ANY, CODECS, LANGUAGES, QUALITIES } from "@/lib/nyaaFilters";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface NyaaSearchFiltersProps {
   team: string;
@@ -36,28 +43,33 @@ function NyaaSelect({
   itemVariants: Variants;
   onChange: (v: string) => void;
 }) {
+  const label = value === ANY ? placeholder : value;
+
   return (
-    <motion.div variants={itemVariants} whileHover={{ scale: 1.05 }} className="relative">
-      <Icon
-        className={`pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${ACCENT}`}
-      />
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${PILL_BASE} ${PILL_IDLE} appearance-none cursor-pointer pl-8 pr-7 ${
-          value === ANY ? "capitalize" : ""
-        }`}
-      >
-        <option value={ANY}>{placeholder}</option>
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
-      <ChevronDown
-        className={`pointer-events-none absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 ${ACCENT}`}
-      />
+    <motion.div variants={itemVariants} whileHover={{ scale: 1.05 }}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            className={`${PILL_BASE} ${PILL_IDLE} flex cursor-pointer items-center gap-1.5 pl-8 pr-7 relative`}
+          >
+            <Icon className={`absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 ${ACCENT}`} />
+            <span>{label}</span>
+            <ChevronDown
+              className={`absolute right-2.5 top-1/2 h-3 w-3 -translate-y-1/2 ${ACCENT}`}
+            />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[7rem]">
+          <DropdownMenuRadioGroup value={value} onValueChange={onChange}>
+            <DropdownMenuRadioItem value={ANY}>{placeholder}</DropdownMenuRadioItem>
+            {options.map((o) => (
+              <DropdownMenuRadioItem key={o} value={o}>
+                {o}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </motion.div>
   );
 }
@@ -96,7 +108,7 @@ export function NyaaSearchFilters({
       <NyaaSelect
         value={quality}
         options={QUALITIES}
-        placeholder="Qualité"
+        placeholder="Qualite"
         icon={MonitorPlay}
         itemVariants={itemVariants}
         onChange={onQuality}
