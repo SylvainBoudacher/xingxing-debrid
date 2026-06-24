@@ -755,7 +755,7 @@ export function MainPage({
             </div>
             <div className="absolute left-0 right-0 top-full mt-3 flex flex-col items-center gap-3">
               <AnimatePresence>
-                {(searchFocused || source === "nyaa") && (
+                {(searchFocused || (source === "nyaa" && phase === "active")) && (
                   <motion.div
                     key="sources"
                     initial="hidden"
@@ -809,7 +809,7 @@ export function MainPage({
                 )}
               </AnimatePresence>
               <AnimatePresence>
-                {source === "nyaa" && (
+                {source === "nyaa" && (searchFocused || phase === "active") && (
                   <motion.div
                     key="nyaa-filters"
                     initial="hidden"
