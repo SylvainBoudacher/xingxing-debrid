@@ -1,22 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { SavedDuck } from "./savedDucks";
 
-// Shared store state — vi.hoisted() runs before module imports so the mock
-// factory and the tests both close over the same object.
-const mockData = vi.hoisted(() => ({ ducks: null as unknown }));
+// The registry lives inside the factory closure — no external variables, so
+// there are no TDZ issues from Vitest's mock hoisting. clearAll() is exposed
+// as a static method so beforeEach can reset state between tests.
+vi.mock("@tauri-apps/plugin-store", () => {
+  const registry = new Map<string, Map<string, unknown>>();
 
-vi.mock("@tauri-apps/plugin-store", () => ({
-  LazyStore: class {
+  class LazyStore {
+    private filename: string;
+
+    constructor(filename: string) {
+      this.filename = filename;
+      if (!registry.has(filename)) registry.set(filename, new Map());
+    }
+
+    private get data(): Map<string, unknown> {
+      return registry.get(this.filename)!;
+    }
+
     async get<T>(key: string): Promise<T | null> {
-      return key === "ducks" ? (mockData.ducks as T) : null;
+      return (this.data.get(key) as T) ?? null;
     }
-    async set(key: string, val: unknown) {
-      if (key === "ducks") mockData.ducks = val;
-    }
-    async save() {}
-  },
-}));
 
+    async set(key: string, val: unknown): Promise<void> {
+      this.data.set(key, val);
+    }
+
+    async save(): Promise<void> {}
+
+    static clearAll(): void {
+      registry.forEach((store) => store.clear());
+    }
+  }
+
+  return { LazyStore };
+});
+
+import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   getSavedDucks,
   upsertSavedDuck,
@@ -35,7 +56,7 @@ function makeDuck(id: string, extra: Partial<SavedDuck> = {}): SavedDuck {
 }
 
 beforeEach(() => {
-  mockData.ducks = null;
+  (LazyStore as unknown as { clearAll: () => void }).clearAll();
 });
 
 // ---- parseDucksJson (pure, no store) ----------------------------------------
@@ -116,7 +137,7 @@ describe("getSavedDucks", () => {
   });
 
   it("returns saved ducks", async () => {
-    mockData.ducks = [makeDuck("a")];
+    await upsertSavedDuck(makeDuck("a"));
     const result = await getSavedDucks();
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("a");
