@@ -419,8 +419,7 @@ export function MainPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nyaaTeam, nyaaQuality, nyaaCodec, nyaaLanguage]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function performSearch(src: "c411" | "nyaa") {
     if (!query.trim()) return;
 
     setPhase((prev) => (prev === "idle" ? "title-exiting" : "active"));
@@ -428,7 +427,7 @@ export function MainPage({
     setError(null);
 
     try {
-      setActiveSource(source);
+      setActiveSource(src);
       setSearchKey((k) => k + 1);
       setActiveCats([]);
       setActiveQualities([]);
@@ -437,7 +436,7 @@ export function MainPage({
       setSortDir("desc");
       setPage(1);
 
-      if (source === "nyaa") {
+      if (src === "nyaa") {
         await fetchNyaaResults();
       } else {
         searchedQueryRef.current = query.trim();
@@ -451,6 +450,18 @@ export function MainPage({
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    performSearch(source);
+  }
+
+  // Bascule de source : relance la recherche avec le nouveau site si du texte est saisi.
+  function selectSource(src: "c411" | "nyaa") {
+    if (src === source) return;
+    setSource(src);
+    if (query.trim()) performSearch(src);
   }
 
   async function goToPage(pageNum: number, sort: SortKey = sortBy, dir: "desc" | "asc" = sortDir) {
@@ -744,8 +755,18 @@ export function MainPage({
                   >
                     {(
                       [
-                        { id: "c411", label: "C411", logo: c411Logo },
-                        { id: "nyaa", label: "Nyaa", logo: nyaaLogo },
+                        {
+                          id: "c411",
+                          label: "C411",
+                          logo: c411Logo,
+                          tip: "Torrent généraliste - français",
+                        },
+                        {
+                          id: "nyaa",
+                          label: "Nyaa",
+                          logo: nyaaLogo,
+                          tip: "Torrent spécialisé en animé - monde",
+                        },
                       ] as const
                     ).map((s) => (
                       <motion.button
@@ -755,8 +776,8 @@ export function MainPage({
                         whileHover={{ scale: 1.06 }}
                         whileTap={{ scale: 0.94 }}
                         onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => setSource(s.id)}
-                        className={`flex items-center gap-1.5 h-8 pl-1.5 pr-4 rounded-full text-xs font-medium ring-1 shadow-sm cursor-pointer transition-colors ${
+                        onClick={() => selectSource(s.id)}
+                        className={`group relative flex items-center gap-1.5 h-8 pl-1.5 pr-4 rounded-full text-xs font-medium ring-1 shadow-sm cursor-pointer transition-colors ${
                           source === s.id
                             ? "bg-indigo-600 text-white ring-indigo-500"
                             : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
@@ -768,6 +789,9 @@ export function MainPage({
                           className="h-5 w-5 rounded-full object-cover bg-white"
                         />
                         {s.label}
+                        <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                          {s.tip}
+                        </span>
                       </motion.button>
                     ))}
                   </motion.div>
