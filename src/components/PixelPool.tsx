@@ -4,7 +4,7 @@ import { makeDuckSprite, SH, SW, VARIANTS, type Effect } from "./duckSprite";
 // Pixel-art pool with smoothly-shaded rubber ducks (3/4 isometric view)
 // drifting around. A new duck appears every SPAWN_MS until MAX_DUCKS.
 
-const MAX_DUCKS = 15;
+let MAX_DUCKS = 15;
 const SPAWN_MS = 40_000;
 const FIRST_SPAWN_MS = 5_000;
 const BORDER = 0; // no coping — water fills the full canvas
@@ -105,7 +105,15 @@ function stopSpawning() {
   spawnTimer = null;
 }
 
-export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?: number }) {
+export function PixelPool({
+  active = true,
+  fps = 30,
+  maxDucks = 15,
+}: {
+  active?: boolean;
+  fps?: number;
+  maxDucks?: number;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const activeRef = useRef(active);
   const fpsRef = useRef(fps);
@@ -117,6 +125,10 @@ export function PixelPool({ active = true, fps = 30 }: { active?: boolean; fps?:
   useEffect(() => {
     fpsRef.current = fps;
   }, [fps]);
+
+  useEffect(() => {
+    MAX_DUCKS = maxDucks;
+  }, [maxDucks]);
 
   useEffect(() => {
     const canvas = canvasRef.current!;

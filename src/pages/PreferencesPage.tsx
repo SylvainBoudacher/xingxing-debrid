@@ -100,6 +100,8 @@ interface PreferencesPageProps {
   onToggleSummer: (v: boolean) => void;
   summerFps: 30 | 60;
   onSetSummerFps: (v: 30 | 60) => void;
+  summerMaxDucks: number;
+  onSetSummerMaxDucks: (v: number) => void;
 }
 
 export function PreferencesPage({
@@ -111,6 +113,8 @@ export function PreferencesPage({
   onToggleSummer,
   summerFps,
   onSetSummerFps,
+  summerMaxDucks,
+  onSetSummerMaxDucks,
 }: PreferencesPageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("simple");
   const [searchViewMode, setSearchViewMode] = useState<ViewMode>("simple");
@@ -557,6 +561,30 @@ export function PreferencesPage({
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {summerEnabled && (
+                <div className="mt-3 flex items-center justify-between gap-4 rounded-xl bg-white dark:bg-zinc-900/80 ring-1 ring-black/8 dark:ring-white/8 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                      Nombre de canards
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Jusqu'à 100 canards dans la piscine.
+                    </p>
+                  </div>
+                  <input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={summerMaxDucks}
+                    onChange={(e) => {
+                      const v = Math.min(100, Math.max(1, Number(e.target.value)));
+                      if (!isNaN(v)) onSetSummerMaxDucks(v);
+                    }}
+                    className="w-16 rounded-lg bg-black/6 dark:bg-white/6 px-2 py-1 text-center text-sm font-semibold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
+                  />
                 </div>
               )}
             </div>

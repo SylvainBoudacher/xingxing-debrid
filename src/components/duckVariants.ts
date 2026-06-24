@@ -50,7 +50,6 @@ export const VARIANTS: Variant[] = [
   { body: "#F0584E", beak: "#F5811F", acc: "devil" },
   { body: "#FFD21E", beak: "#F5811F", acc: "antlers" },
   { body: "#F4F7FB", beak: "#F5811F", acc: "monocle", accColor: "#D4AF37" },
-  { body: "#FFD21E", beak: "#F5811F", acc: "mustache" },
   { body: "#E0457B", beak: "#F5811F", acc: "scarf", accColor: "#F4F7FB" },
   // body patterns
   { body: "#F4F7FB", beak: "#F5811F", acc: "none", pattern: "spots" },

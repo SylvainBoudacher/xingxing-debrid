@@ -269,16 +269,6 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
     c.moveTo(96, 48);
     c.quadraticCurveTo(92, 60, 86, 64);
     c.stroke();
-  } else if (v.acc === "mustache") {
-    c.fillStyle = "#3a2a1a";
-    c.beginPath();
-    c.moveTo(96, 60);
-    c.quadraticCurveTo(86, 56, 78, 62);
-    c.quadraticCurveTo(86, 65, 96, 61);
-    c.quadraticCurveTo(106, 65, 114, 62);
-    c.quadraticCurveTo(106, 56, 96, 60);
-    c.closePath();
-    c.fill();
   } else if (v.acc === "scarf") {
     const sc = v.accColor!;
     c.fillStyle = sc;

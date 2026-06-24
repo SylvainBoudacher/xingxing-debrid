@@ -48,6 +48,7 @@ function App() {
   const [devMode, setDevMode] = useState(false);
   const [summerEnabled, setSummerEnabled] = useState(true);
   const [summerFps, setSummerFps] = useState<30 | 60>(30);
+  const [summerMaxDucks, setSummerMaxDucks] = useState(15);
   const [startPhase, setStartPhase] = useState<StartPhase>("splash");
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const [pendingUpdate, setPendingUpdate] = useState<UpdateInfo | null>(null);
@@ -104,6 +105,8 @@ function App() {
       }
       const savedFps = await store.get<number>("summer_pool_fps");
       if (savedFps === 60) setSummerFps(60);
+      const savedMaxDucks = await store.get<number>("summer_pool_max_ducks");
+      if (typeof savedMaxDucks === "number") setSummerMaxDucks(savedMaxDucks);
     })();
   }, []);
 
@@ -122,6 +125,12 @@ function App() {
   async function handleToggleSummer(v: boolean) {
     setSummerEnabled(v);
     await store.set("summer_pool_enabled", v);
+    await store.save();
+  }
+
+  async function handleSetSummerMaxDucks(v: number) {
+    setSummerMaxDucks(v);
+    await store.set("summer_pool_max_ducks", v);
     await store.save();
   }
 
@@ -158,7 +167,7 @@ function App() {
           }`}
         >
           <Suspense fallback={null}>
-            <PixelPool active={showPool} fps={summerFps} />
+            <PixelPool active={showPool} fps={summerFps} maxDucks={summerMaxDucks} />
           </Suspense>
         </div>
       )}
@@ -257,6 +266,8 @@ function App() {
                 onToggleSummer={handleToggleSummer}
                 summerFps={summerFps}
                 onSetSummerFps={handleSetSummerFps}
+                summerMaxDucks={summerMaxDucks}
+                onSetSummerMaxDucks={handleSetSummerMaxDucks}
               />
             </motion.div>
           )}
