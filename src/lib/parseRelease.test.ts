@@ -111,6 +111,63 @@ describe("parseRelease", () => {
     });
   });
 
+  describe("team extraction", () => {
+    it("extracts the leading bracket team", () => {
+      const r = parseRelease(
+        "[Xspitfire911] Shingeki No Kyojin Intégrale + OAV BDRIP 1080p X265 10bit VOSTFR",
+      );
+      expect(r.team).toBe("Xspitfire911");
+    });
+
+    it("skips brackets that are only quality/codec/lang markers", () => {
+      expect(parseRelease("[1080p] Some Anime [SubsPlease]").team).toBe("SubsPlease");
+    });
+
+    it("returns null when there is no bracket", () => {
+      expect(parseRelease("Inception.2010.1080p.x264.mkv").team).toBeNull();
+    });
+
+    it("strips the team bracket from the title", () => {
+      const r = parseRelease(
+        "[Xspitfire911] Shingeki No Kyojin Intégrale + OAV BDRIP 1080p X265 10bit VOSTFR",
+      );
+      expect(r.title).toBe("Shingeki No Kyojin Intégrale + OAV");
+    });
+  });
+
+  describe("language detection", () => {
+    it("detects VOSTFR", () => {
+      expect(parseRelease("[Team] Anime 1080p VOSTFR.mkv").language).toBe("VOSTFR");
+    });
+
+    it("detects MULTI", () => {
+      expect(parseRelease("Movie.2020.MULTI.1080p.mkv").language).toBe("MULTI");
+    });
+
+    it("detects VOST without FR suffix", () => {
+      expect(parseRelease("[Team] Anime 720p VOST.mkv").language).toBe("VOST");
+    });
+
+    it("returns null when no language tag", () => {
+      expect(parseRelease("Movie.1080p.x264.mkv").language).toBeNull();
+    });
+  });
+
+  describe("full nyaa example", () => {
+    it("parses team, quality, codec and language together", () => {
+      const r = parseRelease(
+        "[Xspitfire911] Shingeki No Kyojin Intégrale + OAV BDRIP 1080p X265 10bit VOSTFR",
+      );
+      expect(r).toEqual({
+        title: "Shingeki No Kyojin Intégrale + OAV",
+        quality: "1080p",
+        codec: "X265",
+        team: "Xspitfire911",
+        language: "VOSTFR",
+      });
+    });
+  });
+
   describe("french release tags", () => {
     it("cuts at VOSTFR (year also triggers cut first)", () => {
       const r = parseRelease("Interstellar.2014.VOSTFR.1080p.mkv");

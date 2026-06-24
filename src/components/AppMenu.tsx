@@ -6,6 +6,7 @@ import {
   Home,
   Magnet,
   Menu,
+  TestTube,
   RefreshCw,
   RotateCcw,
   ScrollText,
@@ -26,7 +27,14 @@ import { ThemeMenuItem } from "@/components/ThemeMenuItem";
 import { toast } from "sonner";
 import { LazyStore } from "@tauri-apps/plugin-store";
 
-export type Page = "main" | "magnets" | "preferences" | "patchnotes" | "discover" | "setup";
+export type Page =
+  | "main"
+  | "magnets"
+  | "preferences"
+  | "patchnotes"
+  | "discover"
+  | "setup"
+  | "nyaa";
 
 interface AppMenuProps {
   currentPage: Page;
@@ -88,6 +96,12 @@ export function AppMenu({
           <DropdownMenuItem onClick={() => onNavigate("preferences")}>
             <SlidersHorizontal className="mr-2 h-4 w-4" />
             Paramètres
+          </DropdownMenuItem>
+        )}
+        {import.meta.env.DEV && currentPage !== "nyaa" && (
+          <DropdownMenuItem onClick={() => onNavigate("nyaa")}>
+            <TestTube className="mr-2 h-4 w-4" />
+            Test nyaa.si
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
