@@ -1,22 +1,55 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, Pencil, Trash2, Waves, X } from "lucide-react";
+import { Archive, Check, ListFilter, Pencil, Search, Trash2, Waves, X } from "lucide-react";
 import { toast } from "sonner";
+import { LazyStore } from "@tauri-apps/plugin-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   getSavedDucks,
   removeSavedDuck,
   renameSavedDuck,
+  reserveDucks,
+  setDuckReserved,
   upsertSavedDuck,
   type SavedDuck,
 } from "@/lib/savedDucks";
 import { DuckPreview } from "./DuckPreview";
-import { injectDuck, onDuckDrop, onShopOpen, type DroppedDuck } from "./duckShopBridge";
+import {
+  injectDuck,
+  isOverShopIcon,
+  onDuckDrop,
+  onDucksReserved,
+  onShopOpen,
+  poolSize,
+  removeDuck,
+  type DroppedDuck,
+} from "./duckShopBridge";
 
 // Saved ducks are injected into the pool only once per app launch, even if this
 // component remounts (e.g. summer toggled off then on).
 let injectedOnce = false;
+
+// Same settings file as App: read the display cap directly so the launch
+// reservation isn't racing the prop that App loads asynchronously.
+const settings = new LazyStore("settings.json", { defaults: {}, autoSave: false });
+async function getMaxDucks(): Promise<number> {
+  return (await settings.get<number>("summer_pool_max_ducks")) ?? 15;
+}
+
+type Filter = "all" | "water" | "reserve";
+const FILTER_LABELS: Record<Filter, string> = {
+  all: "Tous",
+  water: "À l'eau",
+  reserve: "En réserve",
+};
 
 export function DuckShop() {
   const [saved, setSaved] = useState<SavedDuck[]>([]);
@@ -25,6 +58,8 @@ export function DuckShop() {
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<Filter>("all");
 
   // keep a ref so the event handlers always see the current dropped duck
   const droppedRef = useRef<DroppedDuck | null>(null);
@@ -32,15 +67,39 @@ export function DuckShop() {
     droppedRef.current = dropped;
   }, [dropped]);
 
+  const panelRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const [scroll, setScroll] = useState({ up: false, down: false });
+
+  function updateScroll() {
+    const el = listRef.current;
+    if (!el) return;
+    const up = el.scrollTop > 4;
+    const down = el.scrollTop + el.clientHeight < el.scrollHeight - 4;
+    setScroll((s) => (s.up === up && s.down === down ? s : { up, down }));
+  }
+  useEffect(updateScroll, [saved, open, query, filter]);
+
   useEffect(() => {
-    getSavedDucks().then((list) => {
-      setSaved(list);
+    (async () => {
+      let list = await getSavedDucks();
       if (!injectedOnce) {
         injectedOnce = true;
+        const max = await getMaxDucks();
+        const inWater = list.filter((d) => !d.reserved);
+        if (inWater.length > max) {
+          const overflow = inWater.slice(max).map((d) => d.id);
+          list = await reserveDucks(overflow);
+          toast.info(
+            `${overflow.length} canard${overflow.length > 1 ? "s" : ""} mis en réserve (limite d'affichage : ${max})`,
+          );
+        }
         for (const d of list)
-          injectDuck({ id: d.id, name: d.name, variant: d.variant, scale: d.scale });
+          if (!d.reserved)
+            injectDuck({ id: d.id, name: d.name, variant: d.variant, scale: d.scale });
       }
-    });
+      setSaved(list);
+    })();
   }, []);
 
   useEffect(() => {
@@ -51,11 +110,35 @@ export function DuckShop() {
       setOpen(true);
     });
     onShopOpen(() => setOpen(true)); // browse the collection; keep any dropped duck
+    onDucksReserved((ids) => {
+      reserveDucks(ids).then((list) => {
+        setSaved(list);
+        toast.info(
+          `${ids.length} canard${ids.length > 1 ? "s" : ""} mis en réserve (limite abaissée)`,
+        );
+      });
+    });
     return () => {
       onDuckDrop(null);
       onShopOpen(null);
+      onDucksReserved(null);
     };
   }, []);
+
+  // Close when clicking anywhere outside the panel. Clicks on the canvas shop
+  // icon are ignored here so the icon keeps owning open/close.
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: PointerEvent) {
+      const t = e.target as HTMLElement;
+      if (panelRef.current?.contains(t)) return;
+      if (t.closest("[data-radix-popper-content-wrapper]")) return; // filter dropdown (portaled)
+      if (isOverShopIcon(e.clientX, e.clientY)) return;
+      close();
+    }
+    window.addEventListener("pointerdown", onDown);
+    return () => window.removeEventListener("pointerdown", onDown);
+  }, [open]);
 
   function close() {
     droppedRef.current?.release(); // the held duck swims again
@@ -80,9 +163,23 @@ export function DuckShop() {
     toast.success(`${finalName} a rejoint ta collection`);
   }
 
-  function release(d: SavedDuck) {
+  async function putInWater(d: SavedDuck) {
+    const max = await getMaxDucks();
+    if (poolSize() >= max) {
+      toast.warning(
+        `Le bassin est plein (${max} canards). Retire un canard de l'eau, ou augmente la limite dans les paramètres.`,
+      );
+      return;
+    }
+    setSaved(await setDuckReserved(d.id, false));
     injectDuck({ id: d.id, name: d.name, variant: d.variant, scale: d.scale });
     toast.success(`${d.name} repart nager`);
+  }
+
+  async function putInReserve(d: SavedDuck) {
+    setSaved(await setDuckReserved(d.id, true));
+    removeDuck(d.id);
+    toast.success(`${d.name} est mis en réserve`);
   }
 
   async function remove(d: SavedDuck) {
@@ -96,16 +193,24 @@ export function DuckShop() {
     setEditingId(null);
   }
 
+  const q = query.trim().toLowerCase();
+  const visible = saved.filter((d) => {
+    if (filter === "water" && d.reserved) return false;
+    if (filter === "reserve" && !d.reserved) return false;
+    return d.name.toLowerCase().includes(q);
+  });
+
   return (
     <AnimatePresence>
       {open && (
         <motion.div
+          ref={panelRef}
           key="duck-shop"
           initial={{ opacity: 0, y: 24, scale: 0.96 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 24, scale: 0.96 }}
           transition={{ duration: 0.22, ease: "easeOut" }}
-          className="fixed bottom-4 left-4 z-50 flex max-h-[80vh] w-80 flex-col overflow-hidden rounded-xl border border-border bg-background/95 shadow-2xl backdrop-blur"
+          className="fixed bottom-24 left-4 z-50 flex max-h-[80vh] w-80 flex-col overflow-hidden rounded-xl border border-border bg-background/95 shadow-2xl backdrop-blur"
         >
           <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
             <h2 className="text-sm font-semibold">Le Coin des Canards</h2>
@@ -131,22 +236,69 @@ export function DuckShop() {
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto px-2 py-2">
+          <div className="px-2 py-2">
             <p className="px-2 pb-1.5 text-xs font-medium text-muted-foreground">
-              Ma collection ({saved.length})
+              Ma collection ({saved.length}) · {saved.filter((d) => !d.reserved).length} à l'eau
             </p>
+            {saved.length > 0 && (
+              <div className="mb-1.5 flex items-center gap-1.5 px-2">
+                <div className="relative flex-1">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Rechercher un canard"
+                    className="h-8 pl-8"
+                  />
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 px-2.5">
+                      <ListFilter className="h-3.5 w-3.5" />
+                      <span className="text-xs">{FILTER_LABELS[filter]}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuRadioGroup
+                      value={filter}
+                      onValueChange={(v) => setFilter(v as Filter)}
+                    >
+                      <DropdownMenuRadioItem value="all">Tous</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="water">À l'eau</DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="reserve">En réserve</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            )}
             {saved.length === 0 ? (
               <p className="px-2 py-6 text-center text-xs text-muted-foreground">
                 Dépose un canard ici pour le sauvegarder.
               </p>
+            ) : visible.length === 0 ? (
+              <p className="px-2 py-6 text-center text-xs text-muted-foreground">
+                Aucun canard ne correspond.
+              </p>
             ) : (
-              <ul className="flex flex-col gap-1">
-                {saved.map((d) => (
+              // ~7.5 ducks visible (row ≈ 52px + 4px gap) so the next one peeks,
+              // plus a fade mask top/bottom that signals there's more to scroll
+              <ul
+                ref={listRef}
+                onScroll={updateScroll}
+                className="flex max-h-[418px] flex-col gap-1 overflow-y-auto"
+                style={{
+                  maskImage: `linear-gradient(to bottom, ${scroll.up ? "transparent" : "black"}, black 24px, black calc(100% - 24px), ${scroll.down ? "transparent" : "black"})`,
+                  WebkitMaskImage: `linear-gradient(to bottom, ${scroll.up ? "transparent" : "black"}, black 24px, black calc(100% - 24px), ${scroll.down ? "transparent" : "black"})`,
+                }}
+              >
+                {visible.map((d) => (
                   <li
                     key={d.id}
                     className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/60"
                   >
-                    <DuckPreview variant={d.variant} size={40} />
+                    <span className={d.reserved ? "opacity-40" : ""}>
+                      <DuckPreview variant={d.variant} size={40} />
+                    </span>
                     {editingId === d.id ? (
                       <Input
                         value={editName}
@@ -161,7 +313,16 @@ export function DuckShop() {
                         className="h-7 flex-1"
                       />
                     ) : (
-                      <span className="flex-1 truncate text-sm">{d.name}</span>
+                      <span className="flex flex-1 items-center gap-1.5 truncate text-sm">
+                        <span className={`truncate ${d.reserved ? "text-muted-foreground" : ""}`}>
+                          {d.name}
+                        </span>
+                        {d.reserved && (
+                          <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            réserve
+                          </span>
+                        )}
+                      </span>
                     )}
                     {editingId === d.id ? (
                       <Button
@@ -175,15 +336,27 @@ export function DuckShop() {
                       </Button>
                     ) : (
                       <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => release(d)}
-                          title="Relâcher dans le bassin"
-                        >
-                          <Waves className="h-3.5 w-3.5" />
-                        </Button>
+                        {d.reserved ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => putInWater(d)}
+                            title="Mettre à l'eau"
+                          >
+                            <Waves className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => putInReserve(d)}
+                            title="Mettre en réserve"
+                          >
+                            <Archive className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"

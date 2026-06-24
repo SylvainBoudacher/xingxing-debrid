@@ -3,7 +3,16 @@ import { toast } from "sonner";
 import { randomVariant } from "./duckRandom";
 import { makeDuckSprite, SH, SW, type Effect } from "./duckSprite";
 import type { Variant } from "./duckTypes";
-import { type DuckSpec, emitDuckDrop, emitShopOpen, registerInjector } from "./duckShopBridge";
+import {
+  type DuckSpec,
+  emitDuckDrop,
+  emitDucksReserved,
+  emitShopOpen,
+  registerCounter,
+  registerInjector,
+  registerRemover,
+  registerShopHitTest,
+} from "./duckShopBridge";
 
 // Pixel-art pool with smoothly-shaded rubber ducks (3/4 isometric view)
 // drifting around. A new duck appears every SPAWN_MS until MAX_DUCKS.
@@ -36,6 +45,16 @@ interface Duck {
   entering: boolean; // swimming in from off-screen; skips wall bounce until inside
   draining?: boolean; // being sucked into the drain
   drainT?: number; // timestamp when drain animation started
+  storing?: boolean; // being filed away into the shop crate (moved to reserve)
+  storeT?: number; // timestamp when the storing animation started
+  exiting?: boolean; // random duck fading out (culled when the limit drops)
+  exitT?: number; // timestamp when the fade-out started
+}
+
+// A duck mid-exit (drain / reserve / cull) is animating out: excluded from
+// physics, hit-testing and the capacity count until the frame loop removes it.
+function leaving(d: Duck) {
+  return !!(d.draining || d.storing || d.exiting);
 }
 
 // Pool state lives at module scope so the ducks persist across page changes
@@ -105,6 +124,51 @@ function spawnSavedDuck(spec: DuckSpec) {
   enterPool(spec.variant, spec.scale, { id: spec.id, name: spec.name, saved: true });
 }
 
+// Put a saved duck in reserve from the shop panel: play the "file into the
+// crate" animation, then the frame loop removes it once it finishes.
+function removePoolDuck(id: string) {
+  const d = pool.find((x) => x.id === id);
+  if (!d || d.storing) return;
+  d.storing = true;
+  d.storeT = performance.now();
+  d.vx = 0;
+  d.vy = 0;
+}
+
+// Trim the pool down to MAX_DUCKS when the display limit drops: random ducks
+// fade out first, then saved ducks are filed into reserve until at the limit.
+// Reserved ids are emitted so the shop can persist them.
+function enforceLimit() {
+  const now = performance.now();
+  const visible = pool.filter((d) => !leaving(d) && !d.inShop);
+  let over = visible.length - MAX_DUCKS;
+  if (over <= 0) return;
+
+  for (const d of visible) {
+    if (over <= 0) break;
+    if (d.saved) continue; // saved ducks are spared in this first pass
+    d.exiting = true;
+    d.exitT = now;
+    d.vx = 0;
+    d.vy = 0;
+    over--;
+  }
+  if (over <= 0) return;
+
+  const reserved: string[] = [];
+  for (const d of visible) {
+    if (over <= 0) break;
+    if (!d.saved || d.exiting || d.storing) continue;
+    d.storing = true;
+    d.storeT = now;
+    d.vx = 0;
+    d.vy = 0;
+    reserved.push(d.id);
+    over--;
+  }
+  if (reserved.length) emitDucksReserved(reserved);
+}
+
 // Started once; keeps spawning (up to MAX_DUCKS) even while off the page.
 // The very first duck arrives after FIRST_SPAWN_MS, then one every SPAWN_MS.
 function ensureSpawning() {
@@ -149,6 +213,7 @@ export function PixelPool({
 
   useEffect(() => {
     MAX_DUCKS = maxDucks;
+    enforceLimit();
   }, [maxDucks]);
 
   useEffect(() => {
@@ -242,7 +307,7 @@ export function PixelPool({
       // topmost first (drawn last = highest y after the per-frame sort)
       for (let i = pool.length - 1; i >= 0; i--) {
         const d = pool[i];
-        if (d.inShop) continue;
+        if (d.inShop || leaving(d)) continue;
         const dh = DUCK_BASE * d.scale;
         const dw = dh * (SW / SH);
         if (px >= d.x - dw / 2 && px <= d.x + dw / 2 && py >= d.y - dh / 2 && py <= d.y + dh / 2)
@@ -610,6 +675,46 @@ export function PixelPool({
     }
 
     function drawDuck(d: Duck, t: number) {
+      if (d.exiting && d.exitT !== undefined) {
+        const progress = Math.min(1, (t - d.exitT) / EXIT_MS);
+        const bob = Math.sin(t * 0.003 + d.phase) * 3;
+        const dh = DUCK_BASE * d.scale * (1 - progress * 0.25);
+        const dw = dh * (d.sprite.width / d.sprite.height);
+        ctx.save();
+        ctx.globalAlpha = 1 - progress;
+        ctx.translate(d.x, d.y + bob);
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(d.sprite, -dw / 2, -dh / 2, dw, dh);
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        return;
+      }
+
+      if (d.storing && d.storeT !== undefined) {
+        const progress = Math.min(1, (t - d.storeT) / STORE_MS);
+        const s = shopBox();
+        const tx = s.x + s.w / 2;
+        const ty = s.y + s.h / 2;
+        // ease-in toward the crate; a small hop up at the start before diving in
+        const ease = progress * progress;
+        const hop = Math.sin(progress * Math.PI) * 18;
+        const drawX = d.x + (tx - d.x) * ease;
+        const drawY = d.y + (ty - d.y) * ease - hop;
+        const shrink = 1 - ease;
+        const dh = DUCK_BASE * d.scale * shrink;
+        const dw = dh * (d.sprite.width / d.sprite.height);
+
+        ctx.save();
+        ctx.globalAlpha = 1 - ease * ease;
+        ctx.translate(drawX, drawY);
+        ctx.rotate(progress * 0.7); // tips over as it files away
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(d.sprite, -dw / 2, -dh / 2, dw, dh);
+        ctx.restore();
+        ctx.globalAlpha = 1;
+        return;
+      }
+
       if (d.draining && d.drainT !== undefined) {
         const progress = Math.min(1, (t - d.drainT) / DRAIN_MS);
         const dr = drain();
@@ -778,6 +883,8 @@ export function PixelPool({
     }
 
     const DRAIN_MS = 900;
+    const STORE_MS = 600;
+    const EXIT_MS = 450;
     let last = performance.now();
     let raf = 0;
     function frame(now: number) {
@@ -810,17 +917,21 @@ export function PixelPool({
         dark,
       );
 
-      // remove ducks whose drain animation has finished
+      // remove ducks whose exit animation (drain / reserve / cull) has finished
       for (let i = pool.length - 1; i >= 0; i--) {
         const d = pool[i];
         if (d.draining && d.drainT !== undefined && now - d.drainT >= DRAIN_MS) {
+          pool.splice(i, 1);
+        } else if (d.storing && d.storeT !== undefined && now - d.storeT >= STORE_MS) {
+          pool.splice(i, 1);
+        } else if (d.exiting && d.exitT !== undefined && now - d.exitT >= EXIT_MS) {
           pool.splice(i, 1);
         }
       }
 
       const b = inner();
       for (const d of pool) {
-        if (d === dragging || d.draining || d.inShop) continue; // held, draining, or in the shop
+        if (d === dragging || leaving(d) || d.inShop) continue; // held, leaving, or in the shop
         d.x += d.vx * dt;
         d.y += d.vy * dt;
 
@@ -939,11 +1050,11 @@ export function PixelPool({
       // more) and resolve the bounce with mass taken from each duck's scale.
       for (let i = 0; i < pool.length; i++) {
         const a = pool[i];
-        if (a === dragging || a.draining || a.entering || a.inShop) continue;
+        if (a === dragging || leaving(a) || a.entering || a.inShop) continue;
         const ar = DUCK_BASE * a.scale * 0.32;
         for (let j = i + 1; j < pool.length; j++) {
           const c = pool[j];
-          if (c === dragging || c.draining || c.entering || c.inShop) continue;
+          if (c === dragging || leaving(c) || c.entering || c.inShop) continue;
           const cr = DUCK_BASE * c.scale * 0.32;
           const dx = c.x - a.x;
           const dy = c.y - a.y;
@@ -994,6 +1105,9 @@ export function PixelPool({
     resize();
     ensureSpawning();
     registerInjector(spawnSavedDuck); // flush any saved ducks queued before mount
+    registerRemover(removePoolDuck);
+    registerCounter(() => pool.filter((d) => !leaving(d) && !d.inShop).length);
+    registerShopHitTest((x, y) => overShop(x, y));
     window.addEventListener("resize", resize);
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove);
@@ -1013,6 +1127,9 @@ export function PixelPool({
       cancelAnimationFrame(raf);
       stopSpawning();
       registerInjector(null);
+      registerRemover(null);
+      registerCounter(null);
+      registerShopHitTest(null);
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);

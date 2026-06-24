@@ -10,6 +10,7 @@ export interface SavedDuck {
   variant: Variant;
   scale: number;
   savedAt: number;
+  reserved?: boolean; // true = en réserve (hors bassin) ; absent/false = à l'eau
 }
 
 const store = new LazyStore("ducks.json", { defaults: {}, autoSave: false });
@@ -45,6 +46,22 @@ export async function renameSavedDuck(id: string, name: string): Promise<SavedDu
   return persist(list);
 }
 
+export async function setDuckReserved(id: string, reserved: boolean): Promise<SavedDuck[]> {
+  const list = await getSavedDucks();
+  const d = list.find((x) => x.id === id);
+  if (d) d.reserved = reserved;
+  return persist(list);
+}
+
+// Mark several ducks as reserved at once (used when the saved collection
+// overflows the display limit at launch).
+export async function reserveDucks(ids: string[]): Promise<SavedDuck[]> {
+  const set = new Set(ids);
+  const list = await getSavedDucks();
+  for (const d of list) if (set.has(d.id)) d.reserved = true;
+  return persist(list);
+}
+
 // Validate an imported JSON file and keep only well-formed ducks.
 export function parseDucksJson(raw: string): SavedDuck[] {
   const data = JSON.parse(raw);
@@ -67,6 +84,7 @@ export function parseDucksJson(raw: string): SavedDuck[] {
       variant: e.variant,
       scale: e.scale,
       savedAt: typeof e.savedAt === "number" ? e.savedAt : Date.now(),
+      reserved: typeof e.reserved === "boolean" ? e.reserved : false,
     }));
 }
 

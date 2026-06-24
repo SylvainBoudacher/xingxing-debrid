@@ -26,6 +26,7 @@ export interface DroppedDuck {
 let dropCb: ((d: DroppedDuck) => void) | null = null;
 let openCb: (() => void) | null = null;
 let injectCb: ((spec: DuckSpec) => void) | null = null;
+let removeCb: ((id: string) => void) | null = null;
 let pending: DuckSpec[] = [];
 
 export function onDuckDrop(cb: ((d: DroppedDuck) => void) | null) {
@@ -42,6 +43,16 @@ export function emitShopOpen() {
   openCb?.();
 }
 
+// The pool reserved some saved ducks on its own (display limit lowered); the
+// shop persists the reserved flag and refreshes its list.
+let reservedCb: ((ids: string[]) => void) | null = null;
+export function onDucksReserved(cb: ((ids: string[]) => void) | null) {
+  reservedCb = cb;
+}
+export function emitDucksReserved(ids: string[]) {
+  reservedCb?.(ids);
+}
+
 // PixelPool registers its spawn function on mount. Specs requested before the
 // pool exists (saved ducks loaded at startup) are queued and flushed here.
 export function registerInjector(cb: ((spec: DuckSpec) => void) | null) {
@@ -54,4 +65,33 @@ export function registerInjector(cb: ((spec: DuckSpec) => void) | null) {
 export function injectDuck(spec: DuckSpec) {
   if (injectCb) injectCb(spec);
   else pending.push(spec);
+}
+
+// Pull a duck back out of the pool (moved to reserve). No queueing: a duck can
+// only be removed once it is actually swimming.
+export function registerRemover(cb: ((id: string) => void) | null) {
+  removeCb = cb;
+}
+export function removeDuck(id: string) {
+  removeCb?.(id);
+}
+
+// Live count of visible ducks in the pool (saved + random), used to enforce the
+// board cap before putting a reserved duck back in the water.
+let countCb: (() => number) | null = null;
+export function registerCounter(cb: (() => number) | null) {
+  countCb = cb;
+}
+export function poolSize(): number {
+  return countCb?.() ?? 0;
+}
+
+// Hit-test for the shop icon drawn on the canvas, so the panel's click-outside
+// handler can ignore clicks that land on the icon (which toggles the panel).
+let shopHitCb: ((x: number, y: number) => boolean) | null = null;
+export function registerShopHitTest(cb: ((x: number, y: number) => boolean) | null) {
+  shopHitCb = cb;
+}
+export function isOverShopIcon(x: number, y: number): boolean {
+  return shopHitCb?.(x, y) ?? false;
 }
