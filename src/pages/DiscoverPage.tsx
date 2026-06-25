@@ -4,6 +4,7 @@ import { getApiKey } from "@/lib/apiKeys";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { parseRelease } from "@/lib/parseRelease";
 import { flattenFiles, formatSize, type DebridModal } from "@/lib/debrid";
+import { recordDownload } from "@/lib/library";
 import type { C411Torrent } from "@/lib/c411";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -24,6 +25,7 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
+  BookmarkPlus,
   Check,
   Clapperboard,
   Copy,
@@ -260,6 +262,7 @@ export function DiscoverPage({
   const [langFilter, setLangFilter] = useState<string | null>(null);
 
   const [sendingHash, setSendingHash] = useState<string | null>(null);
+  const [libraryHash, setLibraryHash] = useState<string | null>(null);
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
 
   const c411KeyRef = useRef<string>(initialC411Key ?? "");
@@ -582,15 +585,16 @@ export function DiscoverPage({
     setLangFilter(null);
   }
 
-  async function handleSendToDebrid(occ: Occupant) {
-    if (sendingHash !== null) return;
+  async function handleSendToDebrid(occ: Occupant, addToLibrary = false) {
+    if (sendingHash !== null || libraryHash !== null) return;
     if (!allDebridKeyRef.current) {
       toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
       return;
     }
     const torrentUrl = `https://c411.org/api?t=get&id=${encodeURIComponent(occ.infoHash)}&apikey=${c411KeyRef.current}`;
 
-    setSendingHash(occ.infoHash);
+    const setBusy = addToLibrary ? setLibraryHash : setSendingHash;
+    setBusy(occ.infoHash);
     try {
       const json = await invoke<{
         status: string;
@@ -619,19 +623,50 @@ export function DiscoverPage({
         });
         const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
         const files = flattenFiles(rawFiles);
-        setDebridModal({
-          torrentName: uploaded.name ?? occ.torrentName,
+        if (addToLibrary) {
+          toast.success(`Ajoute a la bibliotheque : ${uploaded.name ?? occ.torrentName}`, {
+            action: { label: "Voir", onClick: () => onNavigate("library") },
+          });
+        } else {
+          setDebridModal({
+            torrentName: uploaded.name ?? occ.torrentName,
+            files,
+          });
+        }
+        await recordDownload({
+          infoHash: occ.infoHash,
+          title: uploaded.name ?? occ.torrentName,
+          provider: "discover",
+          category: 0,
+          size: occ.fileSize,
+          magnetId: uploaded.id,
           files,
+          enriched: true,
         });
       } else {
         toast.success(
-          `Envoye vers AllDebrid : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`,
+          addToLibrary
+            ? `Ajoute a la bibliotheque : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`
+            : `Envoye vers AllDebrid : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`,
+          addToLibrary
+            ? { action: { label: "Voir", onClick: () => onNavigate("library") } }
+            : undefined,
         );
+        await recordDownload({
+          infoHash: occ.infoHash,
+          title: uploaded.name ?? occ.torrentName,
+          provider: "discover",
+          category: 0,
+          size: occ.fileSize,
+          magnetId: uploaded.id,
+          files: [],
+          enriched: false,
+        });
       }
     } catch (err) {
       toast.error(String(err));
     } finally {
-      setSendingHash(null);
+      setBusy(null);
     }
   }
 
@@ -1192,23 +1227,43 @@ export function DiscoverPage({
                         {occ.torrentName}
                       </p>
                     </div>
-                    <div className="group relative shrink-0">
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => handleSendToDebrid(occ)}
-                        disabled={sendingHash !== null}
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {sendingHash === occ.infoHash ? (
-                          <Loader2 className="h-4 w-4 text-white animate-spin" />
-                        ) : (
-                          <Download className="h-4 w-4 text-white" />
-                        )}
-                      </motion.button>
-                      <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
-                        Télécharger
-                      </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <div className="group relative">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleSendToDebrid(occ, true)}
+                          disabled={sendingHash !== null || libraryHash !== null}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-black/8 hover:bg-black/15 dark:bg-white/10 dark:hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {libraryHash === occ.infoHash ? (
+                            <Loader2 className="h-4 w-4 text-indigo-600 dark:text-indigo-300 animate-spin" />
+                          ) : (
+                            <BookmarkPlus className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
+                          )}
+                        </motion.button>
+                        <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
+                          Ajouter à la bibliothèque
+                        </span>
+                      </div>
+                      <div className="group relative">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => handleSendToDebrid(occ)}
+                          disabled={sendingHash !== null || libraryHash !== null}
+                          className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {sendingHash === occ.infoHash ? (
+                            <Loader2 className="h-4 w-4 text-white animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4 text-white" />
+                          )}
+                        </motion.button>
+                        <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
+                          Télécharger
+                        </span>
+                      </div>
                     </div>
                   </motion.div>
                 ))}

@@ -176,11 +176,28 @@ fn export_json(app: tauri::AppHandle, filename: String, content: String) -> Resu
 
 #[tauri::command]
 fn open_with_vlc(url: String) -> Result<(), String> {
+    open_urls_with_vlc(&[url])
+}
+
+#[tauri::command]
+fn open_many_with_vlc(urls: Vec<String>) -> Result<(), String> {
+    if urls.is_empty() {
+        return Err("Aucun lien a lire".into());
+    }
+    open_urls_with_vlc(&urls)
+}
+
+// Lance VLC avec une ou plusieurs URLs (playlist quand il y en a plusieurs).
+fn open_urls_with_vlc(urls: &[String]) -> Result<(), String> {
     #[cfg(target_os = "macos")]
-    std::process::Command::new("open")
-        .args(["-a", "VLC", &url])
-        .spawn()
-        .map_err(|e| e.to_string())?;
+    {
+        let mut args = vec!["-a".to_string(), "VLC".to_string()];
+        args.extend(urls.iter().cloned());
+        std::process::Command::new("open")
+            .args(&args)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
 
     #[cfg(target_os = "windows")]
     {
@@ -191,14 +208,14 @@ fn open_with_vlc(url: String) -> Result<(), String> {
         let vlc = vlc_paths.iter().find(|p| std::path::Path::new(p).exists())
             .ok_or("VLC introuvable")?;
         std::process::Command::new(vlc)
-            .arg(&url)
+            .args(urls)
             .spawn()
             .map_err(|e| e.to_string())?;
     }
 
     #[cfg(target_os = "linux")]
     std::process::Command::new("vlc")
-        .arg(&url)
+        .args(urls)
         .spawn()
         .map_err(|e| e.to_string())?;
 
@@ -244,6 +261,7 @@ pub fn run() {
             get_magnet_files,
             unlock_link,
             open_with_vlc,
+            open_many_with_vlc,
             export_json,
         ])
         .run(tauri::generate_context!())

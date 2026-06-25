@@ -1,3 +1,7 @@
+import bibliothequeImg from "@/assets/patchnote/v1.3/bibliotheque.webp";
+import reprendreImg from "@/assets/patchnote/v1.3/reprendre.webp";
+import tailleLancementImg from "@/assets/patchnote/v1.3/taille-lancement.webp";
+import marquageAutoImg from "@/assets/patchnote/v1.3/marquage-auto.webp";
 import nyaaPatchImg from "@/assets/patchnote/v1.2/nyaa.webp";
 import shopPatchImg from "@/assets/patchnote/v1.2/shop.webp";
 import mainPageImg from "@/assets/patchnote/v1.1/mainPage.webp";
@@ -26,6 +30,67 @@ export interface PatchNote {
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.3.0",
+    date: "26 juin 2026",
+    intro:
+      "La version 1.3 apporte la page Bibliotheque : votre hub personnel pour suivre ce que vous avez vu, episode par episode, et reprendre exactement ou vous en etiez.",
+    sections: [
+      {
+        title: "Nouvelle page : Bibliotheque",
+        items: [
+          "Un hub personnel centralise tout ce que vous avez ajoute : films et series, avec leur statut de visionnage.",
+          "Pour les series, le suivi se fait episode par episode - cochez chaque episode vu au fur et a mesure.",
+          "Vous pouvez ajouter une serie entiere dans VLC en un seul clic pour l'ouvrir directement.",
+        ],
+        images: [
+          {
+            src: bibliothequeImg,
+            caption: "La page Bibliotheque - votre suivi personnel episode par episode",
+          },
+        ],
+      },
+      {
+        title: "Bouton Reprendre",
+        items: [
+          'Un nouveau bouton "Reprendre" detecte automatiquement le prochain episode non coche et le lance dans l\'application.',
+          "Plus besoin de se souvenir ou vous en etiez : un seul clic et vous continuez exactement la ou vous vous etes arrete.",
+        ],
+        images: [
+          {
+            src: reprendreImg,
+            caption: "Le bouton Reprendre - lance le prochain episode non vu automatiquement",
+          },
+        ],
+      },
+      {
+        title: "Nouveau parametre : marquage automatique a la lecture",
+        items: [
+          "Un nouveau parametre dans la section Bibliotheque des Preferences permet de choisir si un film ou un episode est automatiquement coche comme visionne lorsque vous cliquez sur le bouton VLC.",
+          "Par defaut, le marquage est actif : jouer un contenu le coche immediatement. Desactivez l'option si vous preferez cocher manuellement apres avoir regarde.",
+        ],
+        images: [
+          {
+            src: marquageAutoImg,
+            caption: "Le parametre de marquage automatique dans les preferences de la Bibliotheque",
+          },
+        ],
+      },
+      {
+        title: "Nouveau parametre : taille au lancement",
+        items: [
+          "Un nouveau parametre general permet de choisir la taille de la fenetre au demarrage de l'application : compacte, normale ou maximisee.",
+          "Le reglage est sauvegarde et applique automatiquement a chaque lancement.",
+        ],
+        images: [
+          {
+            src: tailleLancementImg,
+            caption: "Le parametre de taille au lancement dans les preferences generales",
+          },
+        ],
+      },
+    ],
+  },
   {
     version: "1.2.2",
     date: "25 juin 2026",

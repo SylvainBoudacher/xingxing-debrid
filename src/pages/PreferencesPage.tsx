@@ -14,6 +14,7 @@ import {
   Compass,
   Download,
   KeyRound,
+  Library,
   Magnet,
   Maximize2,
   Monitor,
@@ -38,6 +39,7 @@ const SECTIONS = [
   { id: "section-search", label: "Recherche", icon: Search },
   { id: "section-nyaa", label: "Nyaa", icon: Sparkles },
   { id: "section-magnets", label: "Magnets", icon: Magnet },
+  { id: "section-library", label: "Bibliothèque", icon: Library },
   { id: "section-discover", label: "Découverte", icon: Compass },
   { id: "section-summer", label: "Summer", icon: Sun },
   { id: "section-api-keys", label: "Clés API", icon: KeyRound },
@@ -130,8 +132,10 @@ export function PreferencesPage({
   const [windowMode, setWindowMode] = useState<WindowLaunchMode | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("simple");
   const [searchViewMode, setSearchViewMode] = useState<ViewMode>("simple");
+  const [libraryViewMode, setLibraryViewMode] = useState<ViewMode>("simple");
   const [hideNfo, setHideNfo] = useState(true);
   const [skipNfoDownload, setSkipNfoDownload] = useState(true);
+  const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
   const [activeSection, setActiveSection] = useState<SectionId>("section-window");
   const importInputRef = useRef<HTMLInputElement>(null);
   const importDucksInputRef = useRef<HTMLInputElement>(null);
@@ -144,8 +148,12 @@ export function PreferencesPage({
     store.get<ViewMode>("search_view_mode").then((v) => {
       if (v) setSearchViewMode(v);
     });
+    store.get<ViewMode>("library_view_mode").then((v) => {
+      if (v) setLibraryViewMode(v);
+    });
     store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));
     store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
+    store.get<boolean>("auto_watch_on_play").then((v) => setAutoWatchOnPlay(v ?? true));
   }, []);
 
   useEffect(() => {
@@ -189,6 +197,12 @@ export function PreferencesPage({
     await store.save();
   }
 
+  async function handleLibraryChange(mode: ViewMode) {
+    setLibraryViewMode(mode);
+    await store.set("library_view_mode", mode);
+    await store.save();
+  }
+
   async function handleHideNfoChange(v: boolean) {
     setHideNfo(v);
     await store.set("hide_nfo_files", v);
@@ -198,6 +212,12 @@ export function PreferencesPage({
   async function handleSkipNfoDownloadChange(v: boolean) {
     setSkipNfoDownload(v);
     await store.set("skip_nfo_download", v);
+    await store.save();
+  }
+
+  async function handleAutoWatchOnPlayChange(v: boolean) {
+    setAutoWatchOnPlay(v);
+    await store.set("auto_watch_on_play", v);
     await store.save();
   }
 
@@ -597,6 +617,89 @@ export function PreferencesPage({
                   </div>
                   <Toggle checked={skipNfoDownload} onChange={handleSkipNfoDownloadChange} />
                 </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Bibliothèque */}
+          <section
+            id="section-library"
+            className="scroll-mt-24 rounded-2xl bg-white dark:bg-[#0b0c13] ring-1 ring-black/6 dark:ring-white/6 overflow-hidden"
+          >
+            <div className="flex items-center gap-3 border-b border-black/6 dark:border-white/6 bg-black/[0.02] dark:bg-white/[0.02] px-6 py-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/25">
+                <Library className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">
+                  Bibliothèque
+                </h2>
+                <p className="text-xs text-zinc-500">Paramètres de votre bibliothèque.</p>
+              </div>
+            </div>
+
+            <div className="px-6 py-5">
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">
+                Affichage des titres
+              </h3>
+              <p className="text-xs text-zinc-500 mb-5">
+                Cliquez sur l'affichage que vous préférez pour vos films, séries et épisodes.
+              </p>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ViewOptionCard
+                  label="Simplifiée"
+                  selected={libraryViewMode === "simple"}
+                  onClick={() => handleLibraryChange("simple")}
+                >
+                  <div className="flex items-center gap-1.5 mb-1">
+                    {parsed.quality && (
+                      <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
+                        {parsed.quality}
+                      </span>
+                    )}
+                    {parsed.codec && (
+                      <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                        {parsed.codec}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug">
+                    {parsed.title}
+                  </p>
+                </ViewOptionCard>
+
+                <ViewOptionCard
+                  label="Détaillée"
+                  selected={libraryViewMode === "detailed"}
+                  onClick={() => handleLibraryChange("detailed")}
+                >
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug break-all">
+                    {EXAMPLE}
+                  </p>
+                </ViewOptionCard>
+              </div>
+
+              <div className="my-6 h-px bg-black/8 dark:bg-white/8" />
+
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">
+                Marquage automatique
+              </h3>
+              <p className="text-xs text-zinc-500 mb-5 leading-relaxed">
+                Lorsque vous lancez un film ou un épisode depuis VLC, l'entrée peut être
+                automatiquement cochée comme visionnée.
+              </p>
+
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-white dark:bg-zinc-900/80 ring-1 ring-black/8 dark:ring-white/8 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                    Marquer comme vu à la lecture
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Coche l'épisode ou le film dès que vous cliquez sur le bouton VLC.
+                  </p>
+                </div>
+                <Toggle checked={autoWatchOnPlay} onChange={handleAutoWatchOnPlayChange} />
               </div>
             </div>
           </section>

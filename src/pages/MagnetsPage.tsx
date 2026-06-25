@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey } from "@/lib/apiKeys";
-import { flattenFiles, formatSize } from "@/lib/debrid";
+import { flattenFiles, formatSize, isVideoFile } from "@/lib/debrid";
 import type { ViewMode } from "@/pages/PreferencesPage";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { toast } from "sonner";
@@ -62,29 +62,6 @@ async function forEachLimit<T>(
   };
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   if (firstError !== null) throw firstError;
-}
-
-const VIDEO_EXTENSIONS = new Set([
-  "mp4",
-  "mkv",
-  "avi",
-  "mov",
-  "wmv",
-  "flv",
-  "webm",
-  "m4v",
-  "mpg",
-  "mpeg",
-  "ts",
-  "m2ts",
-  "3gp",
-  "ogv",
-  "vob",
-]);
-
-function isVideoFile(name: string): boolean {
-  const ext = name.split(".").pop()?.toLowerCase() ?? "";
-  return VIDEO_EXTENSIONS.has(ext);
 }
 
 function isNfoFile(name: string): boolean {
