@@ -109,7 +109,7 @@ export function DuckShop() {
       setName(d.name);
       setOpen(true);
     });
-    onShopOpen(() => setOpen(true)); // browse the collection; keep any dropped duck
+    onShopOpen(() => setOpen((prev) => !prev)); // toggle the collection panel
     onDucksReserved((ids) => {
       reserveDucks(ids).then((list) => {
         setSaved(list);
