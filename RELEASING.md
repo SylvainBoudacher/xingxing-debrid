@@ -4,9 +4,10 @@ The app uses Tauri auto-update (`tauri-plugin-updater`). Users receive updates a
 
 ## Process
 
-1. Bump the version in both files (same number):
+1. Bump the version in all three files (same number):
    - `src-tauri/tauri.conf.json` -> `"version": "1.2.0"`
    - `package.json` -> `"version": "1.2.0"`
+   - `src-tauri/Cargo.toml` -> `version = "1.2.0"`
 
 2. Write the release notes in `RELEASE_NOTES.md` (displayed in the in-app update modal):
 
