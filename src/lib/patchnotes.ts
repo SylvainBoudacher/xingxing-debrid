@@ -27,6 +27,21 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.2.2",
+    date: "25 juin 2026",
+    intro: "Mise a jour de la page de configuration pour les nouveaux utilisateurs.",
+    sections: [
+      {
+        title: "Page de configuration revisitee",
+        items: [
+          "La page d'accueil pour les nouveaux utilisateurs a ete entierement mise a jour : les etapes sont plus claires, mieux organisees et plus faciles a suivre.",
+          "Une etape de verification des prerequis permet de s'assurer que tout est en ordre avant de commencer la configuration.",
+          "Une etape de personnalisation du theme a ete ajoutee pour choisir l'apparence de l'application des la premiere utilisation.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.2.1",
     date: "24 juin 2026",
     intro:
