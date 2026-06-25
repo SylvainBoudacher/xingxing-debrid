@@ -25,9 +25,7 @@ const PreferencesPage = lazy(() =>
 const PatchnotesPage = lazy(() =>
   import("@/pages/PatchnotesPage").then((m) => ({ default: m.PatchnotesPage })),
 );
-const LibraryPage = lazy(() =>
-  import("@/pages/LibraryPage").then((m) => ({ default: m.LibraryPage })),
-);
+import { LibraryPage } from "@/pages/LibraryPage";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 

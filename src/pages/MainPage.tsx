@@ -38,10 +38,12 @@ import {
   Compass,
   Copy,
   Download,
+  BookmarkPlus,
   FileText,
   Gamepad2,
   Headphones,
   HelpCircle,
+  Library,
   Loader2,
   Music,
   Package,
@@ -225,6 +227,7 @@ export function MainPage({
     "idle" | "title-exiting" | "active" | "results-exiting" | "bar-returning"
   >("idle");
   const [sendingIndex, setSendingIndex] = useState<number | null>(null);
+  const [libraryIndex, setLibraryIndex] = useState<number | null>(null);
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
   const [showPatchNotif, setShowPatchNotif] = useState(
     initialPatchnotesSeen !== undefined ? initialPatchnotesSeen !== LATEST_VERSION : false,
@@ -307,8 +310,8 @@ export function MainPage({
     return () => window.removeEventListener("keydown", onKey);
   }, [debridModal]);
 
-  async function handleSendToDebrid(result: SearchResult, index: number) {
-    if (sendingIndex !== null) return;
+  async function handleSendToDebrid(result: SearchResult, index: number, addToLibrary = false) {
+    if (sendingIndex !== null || libraryIndex !== null) return;
     if (!allDebridKeyRef.current) {
       toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
       return;
@@ -319,7 +322,8 @@ export function MainPage({
       return;
     }
 
-    setSendingIndex(index);
+    const setBusy = addToLibrary ? setLibraryIndex : setSendingIndex;
+    setBusy(index);
     try {
       const json = await invoke<{
         status: string;
@@ -355,7 +359,11 @@ export function MainPage({
         });
         const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
         const files = flattenFiles(rawFiles);
-        setDebridModal({ torrentName: uploaded.name ?? result.title, files });
+        if (addToLibrary) {
+          toast.success(`Ajoute a la bibliotheque : ${uploaded.name ?? result.title}`);
+        } else {
+          setDebridModal({ torrentName: uploaded.name ?? result.title, files });
+        }
         await recordDownload({
           infoHash: result.guid,
           title: uploaded.name ?? result.title,
@@ -368,7 +376,9 @@ export function MainPage({
         });
       } else {
         toast.success(
-          `Envoye vers AllDebrid : ${uploaded.name ?? result.title} (en cours de debridage)`,
+          addToLibrary
+            ? `Ajoute a la bibliotheque : ${uploaded.name ?? result.title} (en cours de debridage)`
+            : `Envoye vers AllDebrid : ${uploaded.name ?? result.title} (en cours de debridage)`,
         );
         await recordDownload({
           infoHash: result.guid,
@@ -384,7 +394,7 @@ export function MainPage({
     } catch (err) {
       toast.error(String(err));
     } finally {
-      setSendingIndex(null);
+      setBusy(null);
     }
   }
 
@@ -663,7 +673,7 @@ export function MainPage({
                   y: 20,
                   transition: { duration: 0.18, ease: "easeIn" },
                 }}
-                className="absolute bottom-full mb-28 flex w-full justify-center"
+                className="absolute bottom-full mb-28 flex w-full justify-center gap-3"
               >
                 <div className="relative">
                   <span
@@ -681,6 +691,16 @@ export function MainPage({
                     <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                   </motion.button>
                 </div>
+                <motion.button
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => onNavigate("library")}
+                  className="group relative z-10 flex items-center gap-2 rounded-full bg-white/90 dark:bg-zinc-800/80 px-5 py-2.5 text-sm font-semibold text-zinc-700 dark:text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-sm hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white cursor-pointer transition-colors"
+                >
+                  <Library className="h-4 w-4" />
+                  Ma bibliothèque
+                  <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </motion.button>
               </motion.div>
             )}
             {phase === "idle" && (
@@ -1139,23 +1159,43 @@ export function MainPage({
                           <span className="text-red-500">{r.leechers} Leechers</span>
                         </div>
                       </div>
-                      <div className="group relative shrink-0">
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => handleSendToDebrid(r, i)}
-                          disabled={sendingIndex !== null}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {sendingIndex === i ? (
-                            <Loader2 className="h-4 w-4 text-white animate-spin" />
-                          ) : (
-                            <Download className="h-4 w-4 text-white" />
-                          )}
-                        </motion.button>
-                        <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
-                          Télécharger
-                        </span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <div className="group relative">
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => handleSendToDebrid(r, i, true)}
+                            disabled={sendingIndex !== null || libraryIndex !== null}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/8 hover:bg-black/15 dark:bg-white/10 dark:hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {libraryIndex === i ? (
+                              <Loader2 className="h-4 w-4 text-indigo-600 dark:text-indigo-300 animate-spin" />
+                            ) : (
+                              <BookmarkPlus className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
+                            )}
+                          </motion.button>
+                          <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
+                            Ajouter à la bibliothèque
+                          </span>
+                        </div>
+                        <div className="group relative">
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            onClick={() => handleSendToDebrid(r, i)}
+                            disabled={sendingIndex !== null || libraryIndex !== null}
+                            className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {sendingIndex === i ? (
+                              <Loader2 className="h-4 w-4 text-white animate-spin" />
+                            ) : (
+                              <Download className="h-4 w-4 text-white" />
+                            )}
+                          </motion.button>
+                          <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
+                            Télécharger
+                          </span>
+                        </div>
                       </div>
                     </motion.div>
                   );
