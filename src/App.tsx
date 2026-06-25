@@ -49,7 +49,7 @@ function App() {
   const [patchnotesSeenVersion, setPatchnotesSeenVersion] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [summerEnabled, setSummerEnabled] = useState(true);
-  const [summerFps, setSummerFps] = useState<30 | 60>(30);
+  const [summerFps, setSummerFps] = useState<30 | 60>(60);
   const [summerMaxDucks, setSummerMaxDucks] = useState(15);
   const [startPhase, setStartPhase] = useState<StartPhase>("splash");
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
@@ -106,7 +106,7 @@ function App() {
         setSummerEnabled(v ?? true);
       }
       const savedFps = await store.get<number>("summer_pool_fps");
-      if (savedFps === 60) setSummerFps(60);
+      if (savedFps === 30) setSummerFps(30);
       const savedMaxDucks = await store.get<number>("summer_pool_max_ducks");
       if (typeof savedMaxDucks === "number") setSummerMaxDucks(savedMaxDucks);
     })();
