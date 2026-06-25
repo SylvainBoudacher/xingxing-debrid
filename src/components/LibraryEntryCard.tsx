@@ -31,10 +31,12 @@ function DebridActions({
   links,
   groupKey,
   debrid,
+  onVlcClick,
 }: {
   links: string[];
   groupKey: string;
   debrid: DebridControls;
+  onVlcClick?: () => void;
 }) {
   if (links.length === 0) return null;
   const downloading = debrid.bulkDownloading === groupKey;
@@ -48,7 +50,10 @@ function DebridActions({
       <motion.button
         whileTap={{ scale: 0.9 }}
         title="Lire avec VLC"
-        onClick={() => debrid.openVlcMany(links, groupKey)}
+        onClick={() => {
+          debrid.openVlcMany(links, groupKey);
+          onVlcClick?.();
+        }}
         disabled={vlcing}
         className={`${btn} hover:bg-black/5 dark:hover:bg-white/10`}
       >
@@ -122,6 +127,7 @@ interface LibraryEntryCardProps {
   onRemove: (infoHash: string) => void;
   debrid: DebridControls;
   simple: boolean;
+  autoWatchOnPlay?: boolean;
 }
 
 export function LibraryEntryCard({
@@ -130,6 +136,7 @@ export function LibraryEntryCard({
   onRemove,
   debrid,
   simple,
+  autoWatchOnPlay = false,
 }: LibraryEntryCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -208,7 +215,10 @@ export function LibraryEntryCard({
           <motion.button
             whileTap={{ scale: 0.9 }}
             title="Reprendre l'épisode suivant"
-            onClick={() => debrid.openVlcMany([next.link], resumeKey)}
+            onClick={() => {
+              debrid.openVlcMany([next.link], resumeKey);
+              if (autoWatchOnPlay) onChange(toggleFile(entry, next.name));
+            }}
             disabled={resuming}
             className="flex h-7 flex-none items-center gap-1 rounded-lg px-2 text-xs font-medium text-emerald-600 hover:bg-emerald-500/10 disabled:opacity-40 dark:text-emerald-400"
           >
@@ -221,7 +231,12 @@ export function LibraryEntryCard({
           </motion.button>
         )}
 
-        <DebridActions links={allLinks} groupKey={entry.infoHash} debrid={debrid} />
+        <DebridActions
+          links={allLinks}
+          groupKey={entry.infoHash}
+          debrid={debrid}
+          onVlcClick={autoWatchOnPlay ? () => onChange(setWholeWatched(entry, true)) : undefined}
+        />
 
         <motion.button
           whileTap={{ scale: 0.9 }}
@@ -271,7 +286,16 @@ export function LibraryEntryCard({
                         {formatSize(f.size)}
                       </span>
                     )}
-                    <DebridActions links={[f.link]} groupKey={f.link} debrid={debrid} />
+                    <DebridActions
+                      links={[f.link]}
+                      groupKey={f.link}
+                      debrid={debrid}
+                      onVlcClick={
+                        autoWatchOnPlay && !entry.watched[f.name]
+                          ? () => onChange(toggleFile(entry, f.name))
+                          : undefined
+                      }
+                    />
                   </li>
                 );
               })}

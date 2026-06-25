@@ -73,6 +73,7 @@ export function LibraryPage({
   const [sort, setSort] = useState<Sort>("recent");
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? "simple");
+  const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
   const debrid = useDebridActions(() => initialAllDebridKey ?? "");
 
   // Récupère la liste des fichiers depuis AllDebrid pour les entrées non encore
@@ -118,6 +119,9 @@ export function LibraryPage({
         if (v) setViewMode(v);
       });
     }
+    store.get<boolean>("auto_watch_on_play").then((v) => {
+      if (v !== null && v !== undefined) setAutoWatchOnPlay(v);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -267,6 +271,7 @@ export function LibraryPage({
                 onRemove={handleRemove}
                 debrid={debrid}
                 simple={viewMode === "simple"}
+                autoWatchOnPlay={autoWatchOnPlay}
               />
             ))}
           </Reorder.Group>
@@ -280,6 +285,7 @@ export function LibraryPage({
                 onRemove={handleRemove}
                 debrid={debrid}
                 simple={viewMode === "simple"}
+                autoWatchOnPlay={autoWatchOnPlay}
               />
             ))}
           </div>
@@ -295,6 +301,7 @@ interface ReorderableCardProps {
   onRemove: (infoHash: string) => void;
   debrid: DebridControls;
   simple: boolean;
+  autoWatchOnPlay?: boolean;
 }
 
 function ReorderableCard({ entry, ...props }: ReorderableCardProps) {

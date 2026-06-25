@@ -135,6 +135,7 @@ export function PreferencesPage({
   const [libraryViewMode, setLibraryViewMode] = useState<ViewMode>("simple");
   const [hideNfo, setHideNfo] = useState(true);
   const [skipNfoDownload, setSkipNfoDownload] = useState(true);
+  const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
   const [activeSection, setActiveSection] = useState<SectionId>("section-window");
   const importInputRef = useRef<HTMLInputElement>(null);
   const importDucksInputRef = useRef<HTMLInputElement>(null);
@@ -152,6 +153,7 @@ export function PreferencesPage({
     });
     store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));
     store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
+    store.get<boolean>("auto_watch_on_play").then((v) => setAutoWatchOnPlay(v ?? true));
   }, []);
 
   useEffect(() => {
@@ -210,6 +212,12 @@ export function PreferencesPage({
   async function handleSkipNfoDownloadChange(v: boolean) {
     setSkipNfoDownload(v);
     await store.set("skip_nfo_download", v);
+    await store.save();
+  }
+
+  async function handleAutoWatchOnPlayChange(v: boolean) {
+    setAutoWatchOnPlay(v);
+    await store.set("auto_watch_on_play", v);
     await store.save();
   }
 
@@ -670,6 +678,28 @@ export function PreferencesPage({
                     {EXAMPLE}
                   </p>
                 </ViewOptionCard>
+              </div>
+
+              <div className="my-6 h-px bg-black/8 dark:bg-white/8" />
+
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">
+                Marquage automatique
+              </h3>
+              <p className="text-xs text-zinc-500 mb-5 leading-relaxed">
+                Lorsque vous lancez un film ou un épisode depuis VLC, l'entrée peut être
+                automatiquement cochée comme visionnée.
+              </p>
+
+              <div className="flex items-center justify-between gap-4 rounded-xl bg-white dark:bg-zinc-900/80 ring-1 ring-black/8 dark:ring-white/8 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                    Marquer comme vu à la lecture
+                  </p>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Coche l'épisode ou le film dès que vous cliquez sur le bouton VLC.
+                  </p>
+                </div>
+                <Toggle checked={autoWatchOnPlay} onChange={handleAutoWatchOnPlayChange} />
               </div>
             </div>
           </section>
