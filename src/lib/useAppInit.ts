@@ -3,6 +3,8 @@ import { getApiKey } from "@/lib/apiKeys";
 import { getLikes, type LikedItem } from "@/lib/likes";
 import { queryClient } from "@/lib/queryClient";
 import { LazyStore } from "@tauri-apps/plugin-store";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { LogicalSize } from "@tauri-apps/api/dpi";
 import {
   tmdbKeys,
   topRated as tmdbTopRated,
@@ -10,6 +12,8 @@ import {
 } from "@/lib/services/tmdb";
 import { allDebridKeys, fetchMagnets } from "@/lib/services/allDebrid";
 import type { ViewMode } from "@/pages/PreferencesPage";
+
+export type WindowLaunchMode = "small" | "large" | "maximized";
 
 const TMDB_STALE_MS = 10 * 60_000;
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
@@ -79,6 +83,19 @@ export function useAppInit(): AppInitResult {
     let cancelled = false;
 
     async function init() {
+      // ── Taille de fenêtre au lancement ────────────────────────────────────
+      const windowMode = await store.get<WindowLaunchMode>("window_launch_mode");
+      if (windowMode) {
+        const win = getCurrentWindow();
+        if (windowMode === "maximized") {
+          await win.maximize();
+        } else {
+          const [w, h] = windowMode === "small" ? [1100, 720] : [1720, 1052];
+          await win.setSize(new LogicalSize(w, h));
+          await win.center();
+        }
+      }
+
       // ── Vérification du setup ──────────────────────────────────────────────
       const [setupComplete, welcomeSeen] = await Promise.all([
         store.get<boolean>("setup_complete"),

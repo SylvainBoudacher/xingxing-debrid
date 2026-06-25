@@ -19,6 +19,9 @@
         { "url": "https://api.themoviedb.org/**" }
       ]
     },
+    "core:window:allow-set-size",
+    "core:window:allow-maximize",
+    "core:window:allow-center",
     "store:default",
     "updater:default",
     "process:default"

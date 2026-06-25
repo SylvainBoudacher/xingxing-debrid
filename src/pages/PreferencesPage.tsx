@@ -5,6 +5,7 @@ import { AppMenu, type Page } from "@/components/AppMenu";
 import { getLikes, parseLikesJson, saveLikes } from "@/lib/likes";
 import { getSavedDucks, importSavedDucks, parseDucksJson } from "@/lib/savedDucks";
 import { parseRelease } from "@/lib/parseRelease";
+import type { WindowLaunchMode } from "@/lib/useAppInit";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import {
@@ -14,6 +15,8 @@ import {
   Download,
   KeyRound,
   Magnet,
+  Maximize2,
+  Monitor,
   Search,
   Sparkles,
   Sun,
@@ -31,6 +34,7 @@ const EXAMPLE = "Apple.Cider.Vinegar.S01E01.MULTi.1080p.WEB.H265-CHiLL.mkv";
 const SEARCH_EXAMPLE = "Dune.Part.Two.2024.MULTi.2160p.WEB.H265-Slay3R";
 
 const SECTIONS = [
+  { id: "section-window", label: "Fenetre", icon: Monitor },
   { id: "section-search", label: "Recherche", icon: Search },
   { id: "section-nyaa", label: "Nyaa", icon: Sparkles },
   { id: "section-magnets", label: "Magnets", icon: Magnet },
@@ -121,15 +125,17 @@ export function PreferencesPage({
   summerMaxDucks,
   onSetSummerMaxDucks,
 }: PreferencesPageProps) {
+  const [windowMode, setWindowMode] = useState<WindowLaunchMode | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("simple");
   const [searchViewMode, setSearchViewMode] = useState<ViewMode>("simple");
   const [hideNfo, setHideNfo] = useState(true);
   const [skipNfoDownload, setSkipNfoDownload] = useState(true);
-  const [activeSection, setActiveSection] = useState<SectionId>("section-search");
+  const [activeSection, setActiveSection] = useState<SectionId>("section-window");
   const importInputRef = useRef<HTMLInputElement>(null);
   const importDucksInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    store.get<WindowLaunchMode>("window_launch_mode").then((v) => setWindowMode(v ?? null));
     store.get<ViewMode>("view_mode").then((v) => {
       if (v) setViewMode(v);
     });
@@ -161,6 +167,12 @@ export function PreferencesPage({
 
   function scrollToSection(id: SectionId) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  async function handleWindowModeChange(mode: WindowLaunchMode) {
+    setWindowMode(mode);
+    await store.set("window_launch_mode", mode);
+    await store.save();
   }
 
   async function handleChange(mode: ViewMode) {
@@ -320,6 +332,69 @@ export function PreferencesPage({
           transition={{ duration: 0.25, ease: "easeOut" }}
           className="min-w-0 max-w-xl flex-1 space-y-8"
         >
+          {/* Fenetre */}
+          <section
+            id="section-window"
+            className="scroll-mt-24 rounded-2xl bg-white dark:bg-[#0b0c13] ring-1 ring-black/6 dark:ring-white/6 overflow-hidden"
+          >
+            <div className="flex items-center gap-3 border-b border-black/6 dark:border-white/6 bg-black/[0.02] dark:bg-white/[0.02] px-6 py-4">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/25">
+                <Monitor className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">
+                  Fenetre
+                </h2>
+                <p className="text-xs text-zinc-500">Taille de la fenetre au lancement.</p>
+              </div>
+            </div>
+
+            <div className="px-6 py-5">
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">
+                Taille au lancement
+              </h3>
+              <p className="text-xs text-zinc-500 mb-5">
+                Choisissez comment l'application s'ouvre au demarrage. Prend effet au prochain
+                lancement.
+              </p>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <ViewOptionCard
+                  label="Compacte"
+                  selected={windowMode === "small"}
+                  onClick={() => handleWindowModeChange("small")}
+                >
+                  <div className="flex items-end justify-center h-10">
+                    <div className="w-10 h-7 rounded border-2 border-current opacity-60" />
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-2">1100 x 720</p>
+                </ViewOptionCard>
+
+                <ViewOptionCard
+                  label="Standard"
+                  selected={windowMode === "large" || windowMode === null}
+                  onClick={() => handleWindowModeChange("large")}
+                >
+                  <div className="flex items-end justify-center h-10">
+                    <div className="w-14 h-9 rounded border-2 border-current opacity-60" />
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-2">1280 x 800</p>
+                </ViewOptionCard>
+
+                <ViewOptionCard
+                  label="Plein ecran"
+                  selected={windowMode === "maximized"}
+                  onClick={() => handleWindowModeChange("maximized")}
+                >
+                  <div className="flex items-end justify-center h-10">
+                    <Maximize2 className="h-8 w-8 opacity-60" />
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-2">Fenetre maximisee</p>
+                </ViewOptionCard>
+              </div>
+            </div>
+          </section>
+
           {/* Recherche */}
           <section
             id="section-search"
