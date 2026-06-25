@@ -4,6 +4,7 @@ import { getApiKey } from "@/lib/apiKeys";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { parseRelease } from "@/lib/parseRelease";
 import { flattenFiles, formatSize, type DebridModal } from "@/lib/debrid";
+import { recordDownload } from "@/lib/library";
 import type { C411Torrent } from "@/lib/c411";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -623,10 +624,30 @@ export function DiscoverPage({
           torrentName: uploaded.name ?? occ.torrentName,
           files,
         });
+        await recordDownload({
+          infoHash: occ.infoHash,
+          title: uploaded.name ?? occ.torrentName,
+          provider: "discover",
+          category: 0,
+          size: occ.fileSize,
+          magnetId: uploaded.id,
+          files,
+          enriched: true,
+        });
       } else {
         toast.success(
           `Envoye vers AllDebrid : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`,
         );
+        await recordDownload({
+          infoHash: occ.infoHash,
+          title: uploaded.name ?? occ.torrentName,
+          provider: "discover",
+          category: 0,
+          size: occ.fileSize,
+          magnetId: uploaded.id,
+          files: [],
+          enriched: false,
+        });
       }
     } catch (err) {
       toast.error(String(err));

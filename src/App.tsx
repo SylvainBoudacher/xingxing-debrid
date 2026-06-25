@@ -25,6 +25,9 @@ const PreferencesPage = lazy(() =>
 const PatchnotesPage = lazy(() =>
   import("@/pages/PatchnotesPage").then((m) => ({ default: m.PatchnotesPage })),
 );
+const LibraryPage = lazy(() =>
+  import("@/pages/LibraryPage").then((m) => ({ default: m.LibraryPage })),
+);
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
@@ -257,6 +260,24 @@ function App() {
                 initialViewMode={initPrefs.viewMode}
                 initialHideNfoFiles={initPrefs.hideNfoFiles}
                 initialSkipNfoDownload={initPrefs.skipNfoDownload}
+              />
+            </motion.div>
+          )}
+          {effectivePhase === "done" && page === "library" && (
+            <motion.div
+              key="library"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: "easeInOut" }}
+            >
+              <LibraryPage
+                onBack={() => setPage("main")}
+                onNavigate={setPage}
+                hasPendingUpdate={availableUpdate !== null}
+                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+                initialAllDebridKey={initAllDebridKey}
+                initialViewMode={initPrefs.libraryViewMode}
               />
             </motion.div>
           )}

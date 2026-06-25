@@ -23,6 +23,8 @@ export interface AppPrefs {
   searchViewMode: ViewMode;
   /** Mode d'affichage de la liste de magnets */
   viewMode: ViewMode;
+  /** Mode d'affichage de la bibliothèque */
+  libraryViewMode: ViewMode;
   /** Dernière version de patch notes vue — pour le badge de notification */
   patchnotesSeen: string | null;
   /** Masquer les fichiers .nfo dans la liste des fichiers */
@@ -47,6 +49,7 @@ export interface AppInitResult {
 const DEFAULT_PREFS: AppPrefs = {
   searchViewMode: "simple",
   viewMode: "simple",
+  libraryViewMode: "simple",
   patchnotesSeen: null,
   hideNfoFiles: true,
   skipNfoDownload: true,
@@ -123,6 +126,7 @@ export function useAppInit(): AppInitResult {
         likesData,
         searchViewMode,
         viewMode,
+        libraryViewMode,
         patchnotesSeen,
         hideNfoFiles,
         skipNfoDownload,
@@ -133,6 +137,7 @@ export function useAppInit(): AppInitResult {
         getLikes(),
         store.get<ViewMode>("search_view_mode"),
         store.get<ViewMode>("view_mode"),
+        store.get<ViewMode>("library_view_mode"),
         store.get<string>("patchnotes_seen"),
         store.get<boolean>("hide_nfo_files"),
         store.get<boolean>("skip_nfo_download"),
@@ -149,6 +154,7 @@ export function useAppInit(): AppInitResult {
       setPrefs({
         searchViewMode: searchViewMode ?? "simple",
         viewMode: viewMode ?? "simple",
+        libraryViewMode: libraryViewMode ?? "simple",
         patchnotesSeen: patchnotesSeen ?? null,
         hideNfoFiles: hideNfoFiles ?? true,
         skipNfoDownload: skipNfoDownload ?? true,

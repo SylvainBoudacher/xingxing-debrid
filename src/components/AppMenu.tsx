@@ -4,6 +4,7 @@ import {
   Compass,
   FlaskConical,
   Home,
+  Library,
   Magnet,
   Menu,
   TestTube,
@@ -30,6 +31,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 export type Page =
   | "main"
   | "magnets"
+  | "library"
   | "preferences"
   | "patchnotes"
   | "discover"
@@ -90,6 +92,12 @@ export function AppMenu({
           <DropdownMenuItem onClick={() => onNavigate("magnets")}>
             <Magnet className="mr-2 h-4 w-4" />
             Magnets
+          </DropdownMenuItem>
+        )}
+        {currentPage !== "library" && (
+          <DropdownMenuItem onClick={() => onNavigate("library")}>
+            <Library className="mr-2 h-4 w-4" />
+            Ma bibliothèque
           </DropdownMenuItem>
         )}
         {currentPage !== "preferences" && (

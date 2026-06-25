@@ -14,6 +14,7 @@ import { getApiKey } from "@/lib/apiKeys";
 import { parseRelease } from "@/lib/parseRelease";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import { flattenFiles, formatSize, type DebridModal } from "@/lib/debrid";
+import { recordDownload } from "@/lib/library";
 import type { C411Torrent } from "@/lib/c411";
 import { mapNyaaResults, mapTorrents, pageNumbers, type SearchResult } from "@/lib/search";
 import { queryClient } from "@/lib/queryClient";
@@ -355,10 +356,30 @@ export function MainPage({
         const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
         const files = flattenFiles(rawFiles);
         setDebridModal({ torrentName: uploaded.name ?? result.title, files });
+        await recordDownload({
+          infoHash: result.guid,
+          title: uploaded.name ?? result.title,
+          provider: result.magnet ? "nyaa" : "c411",
+          category: result.category,
+          size: result.size,
+          magnetId: uploaded.id,
+          files,
+          enriched: true,
+        });
       } else {
         toast.success(
           `Envoye vers AllDebrid : ${uploaded.name ?? result.title} (en cours de debridage)`,
         );
+        await recordDownload({
+          infoHash: result.guid,
+          title: uploaded.name ?? result.title,
+          provider: result.magnet ? "nyaa" : "c411",
+          category: result.category,
+          size: result.size,
+          magnetId: uploaded.id,
+          files: [],
+          enriched: false,
+        });
       }
     } catch (err) {
       toast.error(String(err));
