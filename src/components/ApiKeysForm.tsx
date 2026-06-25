@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getApiKey, setApiKey } from "@/lib/apiKeys";
+import { getApiKey, setApiKey, type ApiKeyName } from "@/lib/apiKeys";
 
 const C411_STEPS = [
   "Connectez-vous a votre compte C411.",
@@ -40,6 +39,7 @@ function TutorialBlock({
   value,
   placeholder,
   onChange,
+  onBlur,
 }: {
   number: number;
   title: string;
@@ -49,6 +49,7 @@ function TutorialBlock({
   value: string;
   placeholder: string;
   onChange: (v: string) => void;
+  onBlur: () => void;
 }) {
   return (
     <Card>
@@ -83,6 +84,7 @@ function TutorialBlock({
             placeholder={placeholder}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            onBlur={onBlur}
           />
         </div>
       </CardContent>
@@ -90,39 +92,62 @@ function TutorialBlock({
   );
 }
 
-export function ApiKeysForm() {
+export interface ApiKeys {
+  c411Key: string;
+  allDebridKey: string;
+  tmdbKey: string;
+}
+
+const KEY_STORE_NAMES: Record<keyof ApiKeys, ApiKeyName> = {
+  c411Key: "c411_api_key",
+  allDebridKey: "alldebrid_api_key",
+  tmdbKey: "tmdb_api_key",
+};
+
+export function ApiKeysForm({ onSaved }: { onSaved?: (keys: ApiKeys) => void }) {
   const [c411Key, setC411Key] = useState("");
   const [allDebridKey, setAllDebridKey] = useState("");
   const [tmdbKey, setTmdbKey] = useState("");
+  // Dernières valeurs persistées : évite de réécrire le keyring (et de
+  // re-notifier) quand le champ perd le focus sans avoir changé.
+  const savedRef = useRef<ApiKeys>({ c411Key: "", allDebridKey: "", tmdbKey: "" });
 
   useEffect(() => {
     getApiKey("c411_api_key").then((v) => {
-      if (v) setC411Key(v);
+      if (v) {
+        setC411Key(v);
+        savedRef.current.c411Key = v;
+      }
     });
     getApiKey("alldebrid_api_key").then((v) => {
-      if (v) setAllDebridKey(v);
+      if (v) {
+        setAllDebridKey(v);
+        savedRef.current.allDebridKey = v;
+      }
     });
     getApiKey("tmdb_api_key").then((v) => {
-      if (v) setTmdbKey(v);
+      if (v) {
+        setTmdbKey(v);
+        savedRef.current.tmdbKey = v;
+      }
     });
   }, []);
 
-  const bothFilled = c411Key.trim() !== "" && allDebridKey.trim() !== "";
-
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function saveField(field: keyof ApiKeys, raw: string) {
+    const value = raw.trim();
+    if (value === savedRef.current[field]) return;
     try {
-      await setApiKey("c411_api_key", c411Key.trim());
-      await setApiKey("alldebrid_api_key", allDebridKey.trim());
-      await setApiKey("tmdb_api_key", tmdbKey.trim());
-      toast.success("Cles sauvegardees avec succes.");
+      await setApiKey(KEY_STORE_NAMES[field], value);
+      savedRef.current = { ...savedRef.current, [field]: value };
+      onSaved?.(savedRef.current);
+      toast.success("Cle sauvegardee.");
     } catch (err) {
       toast.error(String(err));
     }
   }
 
   return (
-    <form onSubmit={handleSave} className="w-full max-w-lg space-y-4">
+    <div className="w-full max-w-lg space-y-4">
       <TutorialBlock
         number={1}
         title="Cle API C411"
@@ -132,6 +157,7 @@ export function ApiKeysForm() {
         value={c411Key}
         placeholder="Collez votre cle C411"
         onChange={setC411Key}
+        onBlur={() => saveField("c411Key", c411Key)}
       />
       <TutorialBlock
         number={2}
@@ -142,6 +168,7 @@ export function ApiKeysForm() {
         value={allDebridKey}
         placeholder="Collez votre cle AllDebrid"
         onChange={setAllDebridKey}
+        onBlur={() => saveField("allDebridKey", allDebridKey)}
       />
       <TutorialBlock
         number={3}
@@ -152,10 +179,8 @@ export function ApiKeysForm() {
         value={tmdbKey}
         placeholder="Collez votre cle TMDB"
         onChange={setTmdbKey}
+        onBlur={() => saveField("tmdbKey", tmdbKey)}
       />
-      <Button type="submit" className="w-full" disabled={!bothFilled}>
-        Sauvegarder
-      </Button>
-    </form>
+    </div>
   );
 }

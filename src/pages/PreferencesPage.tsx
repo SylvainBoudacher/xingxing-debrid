@@ -1,5 +1,5 @@
 import nyaaLogo from "@/assets/sources/nyaa.webp";
-import { ApiKeysForm } from "@/components/ApiKeysForm";
+import { ApiKeysForm, type ApiKeys } from "@/components/ApiKeysForm";
 import { NyaaDefaultsForm } from "@/components/NyaaDefaultsForm";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { getLikes, parseLikesJson, saveLikes } from "@/lib/likes";
@@ -111,6 +111,7 @@ interface PreferencesPageProps {
   onSetSummerFps: (v: 30 | 60) => void;
   summerMaxDucks: number;
   onSetSummerMaxDucks: (v: number) => void;
+  onKeysSaved: (keys: ApiKeys) => void;
 }
 
 export function PreferencesPage({
@@ -124,6 +125,7 @@ export function PreferencesPage({
   onSetSummerFps,
   summerMaxDucks,
   onSetSummerMaxDucks,
+  onKeysSaved,
 }: PreferencesPageProps) {
   const [windowMode, setWindowMode] = useState<WindowLaunchMode | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("simple");
@@ -789,7 +791,7 @@ export function PreferencesPage({
             </div>
 
             <div className="px-6 py-5">
-              <ApiKeysForm />
+              <ApiKeysForm onSaved={onKeysSaved} />
             </div>
           </section>
         </motion.div>

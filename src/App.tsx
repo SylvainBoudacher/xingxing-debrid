@@ -44,6 +44,7 @@ function App() {
     c411Key: initC411Key,
     allDebridKey: initAllDebridKey,
     prefs: initPrefs,
+    applyKeys,
   } = useAppInit();
   const [page, setPage] = useState<Page | null>(null);
   const [patchnotesSeenVersion, setPatchnotesSeenVersion] = useState<string | null>(null);
@@ -278,6 +279,7 @@ function App() {
                 onSetSummerFps={handleSetSummerFps}
                 summerMaxDucks={summerMaxDucks}
                 onSetSummerMaxDucks={handleSetSummerMaxDucks}
+                onKeysSaved={applyKeys}
               />
             </motion.div>
           )}
