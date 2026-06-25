@@ -255,6 +255,7 @@ export function MainPage({
   } = useDebridActions(() => allDebridKeyRef.current);
   const searchedQueryRef = useRef<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const { c411Key, allDebridKey, patchnotesSeen, searchViewMode } = initialPropsRef.current;
@@ -360,7 +361,9 @@ export function MainPage({
         const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
         const files = flattenFiles(rawFiles);
         if (addToLibrary) {
-          toast.success(`Ajoute a la bibliotheque : ${uploaded.name ?? result.title}`);
+          toast.success(`Ajoute a la bibliotheque : ${uploaded.name ?? result.title}`, {
+            action: { label: "Voir", onClick: () => onNavigate("library") },
+          });
         } else {
           setDebridModal({ torrentName: uploaded.name ?? result.title, files });
         }
@@ -379,6 +382,9 @@ export function MainPage({
           addToLibrary
             ? `Ajoute a la bibliotheque : ${uploaded.name ?? result.title} (en cours de debridage)`
             : `Envoye vers AllDebrid : ${uploaded.name ?? result.title} (en cours de debridage)`,
+          addToLibrary
+            ? { action: { label: "Voir", onClick: () => onNavigate("library") } }
+            : undefined,
         );
         await recordDownload({
           infoHash: result.guid,
@@ -496,6 +502,10 @@ export function MainPage({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (source === "c411") {
+      searchInputRef.current?.blur();
+      setSearchFocused(false);
+    }
     performSearch(source);
   }
 
@@ -742,6 +752,7 @@ export function MainPage({
                 <Search className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
               )}
               <input
+                ref={searchInputRef}
                 autoFocus
                 type="text"
                 value={query}

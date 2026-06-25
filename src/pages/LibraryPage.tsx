@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
-import { motion } from "motion/react";
+import { motion, Reorder, useDragControls } from "motion/react";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
-import { ArrowLeft, Library as LibraryIcon } from "lucide-react";
+import { ArrowLeft, Compass, GripVertical, Library as LibraryIcon, Search } from "lucide-react";
 import { AppMenu, type Page } from "@/components/AppMenu";
-import { LibraryEntryCard } from "@/components/LibraryEntryCard";
+import { LibraryEntryCard, type DebridControls } from "@/components/LibraryEntryCard";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useDebridActions } from "@/lib/useDebridActions";
 import { flattenFiles } from "@/lib/debrid";
 import type { ViewMode } from "@/pages/PreferencesPage";
@@ -12,6 +19,7 @@ import {
   applyEnrichment,
   isWholeWatched,
   loadLibrary,
+  progressRatio,
   saveLibrary,
   type LibraryEntry,
 } from "@/lib/library";
@@ -35,6 +43,23 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "done", label: "Vu" },
 ];
 
+type Sort = "manual" | "recent" | "title" | "size" | "progress";
+
+const SORTS: { id: Sort; label: string }[] = [
+  { id: "manual", label: "Manuel" },
+  { id: "recent", label: "Plus récents" },
+  { id: "title", label: "Titre (A-Z)" },
+  { id: "size", label: "Taille" },
+  { id: "progress", label: "À finir" },
+];
+
+const SORTERS: Record<Exclude<Sort, "manual">, (a: LibraryEntry, b: LibraryEntry) => number> = {
+  recent: (a, b) => b.addedAt - a.addedAt,
+  title: (a, b) => a.title.localeCompare(b.title),
+  size: (a, b) => b.size - a.size,
+  progress: (a, b) => progressRatio(a) - progressRatio(b),
+};
+
 export function LibraryPage({
   onBack,
   onNavigate,
@@ -45,6 +70,8 @@ export function LibraryPage({
 }: LibraryPageProps) {
   const [entries, setEntries] = useState<LibraryEntry[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
+  const [sort, setSort] = useState<Sort>("recent");
+  const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? "simple");
   const debrid = useDebridActions(() => initialAllDebridKey ?? "");
 
@@ -76,14 +103,14 @@ export function LibraryPage({
       }
     }
     if (!changed) return;
-    const next = [...byHash.values()].sort((a, b) => b.addedAt - a.addedAt);
+    const next = [...byHash.values()];
     setEntries(next);
     await saveLibrary(next);
   }
 
   useEffect(() => {
     loadLibrary().then((loaded) => {
-      setEntries([...loaded].sort((a, b) => b.addedAt - a.addedAt));
+      setEntries(loaded);
       enrichMissing(loaded);
     });
     if (initialViewMode === undefined) {
@@ -107,11 +134,23 @@ export function LibraryPage({
     persist(entries.filter((e) => e.infoHash !== infoHash));
   }
 
-  const visible = entries.filter((e) => {
-    if (filter === "all") return true;
-    const done = isWholeWatched(e);
-    return filter === "done" ? done : !done;
+  const counts: Record<Filter, number> = {
+    all: entries.length,
+    todo: entries.filter((e) => !isWholeWatched(e)).length,
+    done: entries.filter((e) => isWholeWatched(e)).length,
+  };
+
+  const q = query.trim().toLowerCase();
+  const filtered = entries.filter((e) => {
+    if (filter !== "all") {
+      const done = isWholeWatched(e);
+      if (filter === "done" ? !done : done) return false;
+    }
+    return q === "" || e.title.toLowerCase().includes(q);
   });
+  const visible = sort === "manual" ? filtered : [...filtered].sort(SORTERS[sort]);
+  // Le glisser-déposer ne réordonne que la liste complète (sans filtre ni recherche).
+  const canReorder = sort === "manual" && filter === "all" && q === "";
 
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
@@ -147,21 +186,48 @@ export function LibraryPage({
       </motion.div>
 
       <div className="mx-auto w-full max-w-3xl flex-1 px-6 pt-6 pb-10 sm:px-8">
-        {/* Filtres */}
-        <div className="mb-4 flex items-center gap-1.5">
-          {FILTERS.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                filter === f.id
-                  ? "bg-indigo-600 text-white"
-                  : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+        {/* Recherche */}
+        <div className="relative mb-3">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher un titre..."
+            className="w-full rounded-lg border border-black/10 bg-white/70 py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-zinc-900/60 dark:text-white"
+          />
+        </div>
+
+        {/* Filtres + tri */}
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            {FILTERS.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setFilter(f.id)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  filter === f.id
+                    ? "bg-indigo-600 text-white"
+                    : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                }`}
+              >
+                {f.label} ({counts[f.id]})
+              </button>
+            ))}
+          </div>
+
+          <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>
+            <SelectTrigger className="h-8 w-auto gap-1 rounded-full px-3 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SORTS.map((s) => (
+                <SelectItem key={s.id} value={s.id} className="text-xs">
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {visible.length === 0 ? (
@@ -170,9 +236,40 @@ export function LibraryPage({
             <p className="text-sm">
               {entries.length === 0
                 ? "Aucun téléchargement pour l'instant."
-                : "Rien ne correspond à ce filtre."}
+                : "Rien ne correspond à cette recherche."}
             </p>
+            {entries.length === 0 && (
+              <div className="mt-2 flex items-center gap-2">
+                <button
+                  onClick={() => onNavigate("main")}
+                  className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  Rechercher
+                </button>
+                <button
+                  onClick={() => onNavigate("discover")}
+                  className="flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                >
+                  <Compass className="h-3.5 w-3.5" />
+                  Découvrir
+                </button>
+              </div>
+            )}
           </div>
+        ) : canReorder ? (
+          <Reorder.Group axis="y" values={visible} onReorder={persist} className="space-y-2">
+            {visible.map((e) => (
+              <ReorderableCard
+                key={e.infoHash}
+                entry={e}
+                onChange={handleChange}
+                onRemove={handleRemove}
+                debrid={debrid}
+                simple={viewMode === "simple"}
+              />
+            ))}
+          </Reorder.Group>
         ) : (
           <div className="space-y-2">
             {visible.map((e) => (
@@ -189,5 +286,35 @@ export function LibraryPage({
         )}
       </div>
     </main>
+  );
+}
+
+interface ReorderableCardProps {
+  entry: LibraryEntry;
+  onChange: (entry: LibraryEntry) => void;
+  onRemove: (infoHash: string) => void;
+  debrid: DebridControls;
+  simple: boolean;
+}
+
+function ReorderableCard({ entry, ...props }: ReorderableCardProps) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item
+      value={entry}
+      dragListener={false}
+      dragControls={controls}
+      className="flex items-center gap-1.5"
+    >
+      <button
+        onPointerDown={(e) => controls.start(e)}
+        className="flex h-7 w-5 flex-none cursor-grab touch-none items-center justify-center text-zinc-400 hover:text-zinc-600 active:cursor-grabbing dark:hover:text-zinc-200"
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <div className="min-w-0 flex-1">
+        <LibraryEntryCard entry={entry} {...props} />
+      </div>
+    </Reorder.Item>
   );
 }

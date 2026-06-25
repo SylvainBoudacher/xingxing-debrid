@@ -129,3 +129,15 @@ export function watchedCount(entry: LibraryEntry): number {
 export function totalCount(entry: LibraryEntry): number {
   return videoFiles(entry).length;
 }
+
+// Premier fichier vidéo non encore vu (pour le bouton « Reprendre »).
+export function nextUnwatched(entry: LibraryEntry): DebridFile | null {
+  return videoFiles(entry).find((f) => !entry.watched[f.name]) ?? null;
+}
+
+// Ratio de visionnage entre 0 et 1.
+export function progressRatio(entry: LibraryEntry): number {
+  const total = totalCount(entry);
+  if (total === 0) return isWholeWatched(entry) ? 1 : 0;
+  return watchedCount(entry) / total;
+}

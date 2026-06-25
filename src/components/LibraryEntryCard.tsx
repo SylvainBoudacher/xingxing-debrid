@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Check, ChevronDown, Copy, Download, Loader2, Trash2 } from "lucide-react";
+import { Check, ChevronDown, Copy, Download, Loader2, Play, Trash2 } from "lucide-react";
 import vlcLogo from "@/assets/vlc.png";
 import { formatSize } from "@/lib/debrid";
 import { parseRelease } from "@/lib/parseRelease";
 import {
   isSeries,
   isWholeWatched,
+  nextUnwatched,
+  progressRatio,
   setWholeWatched,
   toggleFile,
   videoFiles,
@@ -130,12 +132,23 @@ export function LibraryEntryCard({
   simple,
 }: LibraryEntryCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const series = isSeries(entry);
   const whole = isWholeWatched(entry);
   const vids = videoFiles(entry);
   const allLinks = vids.map((f) => f.link);
   const parsed = simple ? parseRelease(entry.title) : null;
   const displayTitle = parsed ? parsed.title : entry.title;
+  const next = series && !whole ? nextUnwatched(entry) : null;
+  const ratio = progressRatio(entry);
+  const resumeKey = `resume-${entry.infoHash}`;
+  const resuming = debrid.bulkVlc === resumeKey;
+
+  useEffect(() => {
+    if (!confirmDelete) return;
+    const t = setTimeout(() => setConfirmDelete(false), 3000);
+    return () => clearTimeout(t);
+  }, [confirmDelete]);
 
   return (
     <div className="rounded-xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm overflow-hidden">
@@ -175,6 +188,14 @@ export function LibraryEntryCard({
                 </span>
               )}
             </div>
+            {series && (
+              <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all"
+                  style={{ width: `${Math.round(ratio * 100)}%` }}
+                />
+              </div>
+            )}
           </div>
           {series && (
             <ChevronDown
@@ -183,14 +204,40 @@ export function LibraryEntryCard({
           )}
         </button>
 
+        {next && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            title="Reprendre l'épisode suivant"
+            onClick={() => debrid.openVlcMany([next.link], resumeKey)}
+            disabled={resuming}
+            className="flex h-7 flex-none items-center gap-1 rounded-lg px-2 text-xs font-medium text-emerald-600 hover:bg-emerald-500/10 disabled:opacity-40 dark:text-emerald-400"
+          >
+            {resuming ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Play className="h-3.5 w-3.5" />
+            )}
+            Reprendre
+          </motion.button>
+        )}
+
         <DebridActions links={allLinks} groupKey={entry.infoHash} debrid={debrid} />
 
         <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={() => onRemove(entry.infoHash)}
-          className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+          onClick={() => {
+            if (confirmDelete) onRemove(entry.infoHash);
+            else setConfirmDelete(true);
+          }}
+          title={confirmDelete ? "Confirmer la suppression" : "Supprimer"}
+          className={`flex h-7 flex-none items-center justify-center rounded-lg transition-colors ${
+            confirmDelete
+              ? "gap-1 bg-red-500 px-2 text-xs font-medium text-white hover:bg-red-600"
+              : "w-7 text-zinc-400 hover:bg-red-500/10 hover:text-red-500"
+          }`}
         >
           <Trash2 className="h-4 w-4" />
+          {confirmDelete && "Sûr ?"}
         </motion.button>
       </div>
 

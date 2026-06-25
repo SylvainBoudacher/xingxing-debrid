@@ -624,7 +624,9 @@ export function DiscoverPage({
         const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
         const files = flattenFiles(rawFiles);
         if (addToLibrary) {
-          toast.success(`Ajoute a la bibliotheque : ${uploaded.name ?? occ.torrentName}`);
+          toast.success(`Ajoute a la bibliotheque : ${uploaded.name ?? occ.torrentName}`, {
+            action: { label: "Voir", onClick: () => onNavigate("library") },
+          });
         } else {
           setDebridModal({
             torrentName: uploaded.name ?? occ.torrentName,
@@ -646,6 +648,9 @@ export function DiscoverPage({
           addToLibrary
             ? `Ajoute a la bibliotheque : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`
             : `Envoye vers AllDebrid : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`,
+          addToLibrary
+            ? { action: { label: "Voir", onClick: () => onNavigate("library") } }
+            : undefined,
         );
         await recordDownload({
           infoHash: occ.infoHash,
