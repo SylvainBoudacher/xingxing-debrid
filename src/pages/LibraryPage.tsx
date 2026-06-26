@@ -1,10 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion, Reorder, useDragControls } from "motion/react";
+import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
-import { ArrowLeft, Compass, GripVertical, Library as LibraryIcon, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  Compass,
+  GripVertical,
+  LayoutGrid,
+  Library as LibraryIcon,
+  List,
+  Search,
+} from "lucide-react";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { LibraryEntryCard, type DebridControls } from "@/components/LibraryEntryCard";
+import { LibraryPosterCard } from "@/components/LibraryPosterCard";
+import { LibraryDetailModal } from "@/components/LibraryDetailModal";
 import {
   Select,
   SelectContent,
@@ -39,6 +49,7 @@ interface LibraryPageProps {
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
 type Filter = "all" | "todo" | "done";
+type Layout = "list" | "grid";
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "Tout" },
@@ -76,6 +87,8 @@ export function LibraryPage({
   const [sort, setSort] = useState<Sort>("recent");
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? "simple");
+  const [layout, setLayout] = useState<Layout>("list");
+  const [expandedHash, setExpandedHash] = useState<string | null>(null);
   const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
   const debrid = useDebridActions(() => initialAllDebridKey ?? "");
 
@@ -129,8 +142,16 @@ export function LibraryPage({
     store.get<boolean>("auto_watch_on_play").then((v) => {
       if (v !== null && v !== undefined) setAutoWatchOnPlay(v);
     });
+    store.get<Layout>("library_layout").then((v) => {
+      if (v) setLayout(v);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function changeLayout(next: Layout) {
+    setLayout(next);
+    void store.set("library_layout", next).then(() => store.save());
+  }
 
   // Flushe l'écriture en attente quand on quitte la page.
   useEffect(() => flushLibrary, []);
@@ -168,6 +189,10 @@ export function LibraryPage({
   // Le glisser-déposer ne réordonne que la liste complète (sans filtre ni recherche).
   const canReorder = sort === "manual" && filter === "all" && q === "";
 
+  // Entrée affichée dans le panneau latéral (vue grille). Null si l'entrée
+  // sélectionnée n'est plus visible après un changement de filtre/recherche.
+  const expandedEntry = visible.find((e) => e.infoHash === expandedHash) ?? null;
+
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
       {/* Header */}
@@ -201,7 +226,9 @@ export function LibraryPage({
         </div>
       </motion.div>
 
-      <div className="mx-auto w-full max-w-3xl flex-1 px-6 pt-6 pb-10 sm:px-8">
+      <div
+        className={`mx-auto w-full flex-1 px-6 pt-6 pb-10 sm:px-8 ${layout === "grid" ? "max-w-5xl" : "max-w-3xl"}`}
+      >
         {/* Recherche */}
         <div className="relative mb-3">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
@@ -232,18 +259,42 @@ export function LibraryPage({
             ))}
           </div>
 
-          <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>
-            <SelectTrigger className="h-8 w-auto gap-1 rounded-full px-3 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SORTS.map((s) => (
-                <SelectItem key={s.id} value={s.id} className="text-xs">
-                  {s.label}
-                </SelectItem>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
+              {(
+                [
+                  ["list", List],
+                  ["grid", LayoutGrid],
+                ] as const
+              ).map(([id, Icon]) => (
+                <button
+                  key={id}
+                  onClick={() => changeLayout(id)}
+                  title={id === "list" ? "Vue liste" : "Vue grille"}
+                  className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                    layout === id
+                      ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-700 dark:text-indigo-300"
+                      : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
               ))}
-            </SelectContent>
-          </Select>
+            </div>
+
+            <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>
+              <SelectTrigger className="h-8 w-auto gap-1 rounded-full px-3 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SORTS.map((s) => (
+                  <SelectItem key={s.id} value={s.id} className="text-xs">
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {visible.length === 0 ? (
@@ -272,6 +323,18 @@ export function LibraryPage({
                 </button>
               </div>
             )}
+          </div>
+        ) : layout === "grid" ? (
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+            {visible.map((e) => (
+              <LibraryPosterCard
+                key={e.infoHash}
+                entry={e}
+                simple={viewMode === "simple"}
+                expanded={expandedHash === e.infoHash}
+                onToggle={() => setExpandedHash(e.infoHash)}
+              />
+            ))}
           </div>
         ) : canReorder ? (
           <Reorder.Group axis="y" values={visible} onReorder={persist} className="space-y-2">
@@ -303,6 +366,20 @@ export function LibraryPage({
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {expandedEntry && (
+          <LibraryDetailModal
+            entry={expandedEntry}
+            onChange={handleChange}
+            onRemove={handleRemove}
+            onClose={() => setExpandedHash(null)}
+            debrid={debrid}
+            simple={viewMode === "simple"}
+            autoWatchOnPlay={autoWatchOnPlay}
+          />
+        )}
+      </AnimatePresence>
     </main>
   );
 }

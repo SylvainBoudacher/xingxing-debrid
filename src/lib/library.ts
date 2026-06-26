@@ -3,6 +3,18 @@ import { isVideoFile, type DebridFile } from "@/lib/debrid";
 
 export type LibraryProvider = "c411" | "nyaa" | "discover";
 
+// Métadonnées TMDB conservées pour les entrées issues de la page Découverte :
+// servent à afficher l'affiche et quelques infos dans la vue grille.
+export interface TmdbMeta {
+  id: number;
+  mediaType: "movie" | "tv";
+  title: string;
+  posterPath: string | null;
+  year: string;
+  voteAverage: number;
+  overview: string;
+}
+
 export interface LibraryEntry {
   infoHash: string;
   title: string;
@@ -15,6 +27,8 @@ export interface LibraryEntry {
   enriched: boolean;
   // Clé = nom de fichier. WHOLE sert au cas non enrichi (un seul interrupteur).
   watched: Record<string, boolean>;
+  // Présent uniquement pour les entrées provenant de Découverte.
+  tmdb?: TmdbMeta;
 }
 
 const STORE_KEY = "library";
@@ -84,6 +98,7 @@ export interface RecordDownloadInput {
   magnetId?: number;
   files: DebridFile[];
   enriched: boolean;
+  tmdb?: TmdbMeta;
 }
 
 // Upsert par infoHash. Préserve l'état de visionnage d'une entrée existante et
@@ -103,6 +118,7 @@ export async function recordDownload(input: RecordDownloadInput): Promise<void> 
     files: input.enriched ? input.files : (existing?.files ?? input.files),
     enriched: input.enriched || (existing?.enriched ?? false),
     watched: { ...(existing?.watched ?? {}) },
+    tmdb: input.tmdb ?? existing?.tmdb,
   };
 
   migrateWholeToSingle(next);

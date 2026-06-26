@@ -1,0 +1,87 @@
+import { motion } from "motion/react";
+import { Check } from "lucide-react";
+import { parseRelease } from "@/lib/parseRelease";
+import {
+  isSeries,
+  isWholeWatched,
+  progressRatio,
+  watchedCount,
+  totalCount,
+  type LibraryEntry,
+} from "@/lib/library";
+
+interface LibraryPosterCardProps {
+  entry: LibraryEntry;
+  simple: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+export function LibraryPosterCard({ entry, simple, expanded, onToggle }: LibraryPosterCardProps) {
+  const tmdb = entry.tmdb;
+  const series = isSeries(entry);
+  const whole = isWholeWatched(entry);
+  const ratio = progressRatio(entry);
+  const title = tmdb?.title ?? (simple ? parseRelease(entry.title).title : entry.title);
+  const year = tmdb?.year ?? "";
+
+  return (
+    <motion.button
+      layout
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onToggle}
+      className={`group relative block aspect-[2/3] overflow-hidden rounded-xl text-left ring-1 transition-shadow ${
+        expanded
+          ? "ring-2 ring-indigo-500"
+          : "ring-black/8 dark:ring-white/10 hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.45)]"
+      }`}
+    >
+      {tmdb?.posterPath ? (
+        <img
+          src={`https://image.tmdb.org/t/p/w342${tmdb.posterPath}`}
+          alt={title}
+          loading="lazy"
+          className={`h-full w-full object-cover transition-[filter] duration-300 ${whole ? "brightness-50" : "group-hover:brightness-105"}`}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-500/25 via-zinc-200 to-zinc-300 px-3 text-center dark:from-indigo-500/20 dark:via-zinc-800 dark:to-zinc-900">
+          <span className="line-clamp-4 text-xs font-medium text-zinc-700 dark:text-zinc-200">
+            {title}
+          </span>
+        </div>
+      )}
+
+      {/* Pastille « vu » */}
+      {whole && (
+        <span className="absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow">
+          <Check className="h-3.5 w-3.5" strokeWidth={3} />
+        </span>
+      )}
+
+      {/* Dégradé + flou derrière le texte pour la lisibilité */}
+      <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-8 backdrop-blur-md [mask-image:linear-gradient(to_top,black_55%,transparent)]">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
+        <p className="relative truncate text-xs font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
+          {title}
+        </p>
+        <div className="relative mt-0.5 flex items-center gap-2 text-[10px] text-zinc-200 [text-shadow:0_1px_2px_rgba(0,0,0,0.8)]">
+          {year && <span>{year}</span>}
+          {series && (
+            <span>
+              {watchedCount(entry)}/{totalCount(entry)}
+            </span>
+          )}
+        </div>
+        {series && (
+          <div className="relative mt-1 h-1 w-full overflow-hidden rounded-full bg-white/25">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all"
+              style={{ width: `${Math.round(ratio * 100)}%` }}
+            />
+          </div>
+        )}
+      </div>
+    </motion.button>
+  );
+}

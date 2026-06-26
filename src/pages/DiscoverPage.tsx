@@ -593,6 +593,18 @@ export function DiscoverPage({
     }
     const torrentUrl = `https://c411.org/api?t=get&id=${encodeURIComponent(occ.infoHash)}&apikey=${c411KeyRef.current}`;
 
+    const tmdbMeta = selected
+      ? {
+          id: selected.id,
+          mediaType: selected.mediaType,
+          title: selected.title,
+          posterPath: selected.posterPath,
+          year: selected.year,
+          voteAverage: selected.voteAverage,
+          overview: selected.overview,
+        }
+      : undefined;
+
     const setBusy = addToLibrary ? setLibraryHash : setSendingHash;
     setBusy(occ.infoHash);
     try {
@@ -644,6 +656,7 @@ export function DiscoverPage({
             magnetId: uploaded.id,
             files,
             enriched: true,
+            tmdb: tmdbMeta,
           });
         }
       } else {
@@ -664,6 +677,7 @@ export function DiscoverPage({
           magnetId: uploaded.id,
           files: [],
           enriched: false,
+          tmdb: tmdbMeta,
         });
       }
     } catch (err) {
