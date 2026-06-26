@@ -18,7 +18,7 @@ export interface LilyPad {
 }
 
 const LAYOUT: { fx: number; fy: number; r: number; flower: boolean }[] = [
-  { fx: 0.34, fy: 0.46, r: 40, flower: true },
+  { fx: 0.2, fy: 0.8, r: 40, flower: true },
   { fx: 0.66, fy: 0.3, r: 32, flower: false },
 ];
 

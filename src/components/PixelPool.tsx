@@ -24,6 +24,14 @@ import {
   updateLilyPads,
 } from "./lilyPad";
 import {
+  drawParade,
+  makeParade,
+  overParade,
+  PARADE_MS,
+  type ParadeState,
+  paradeSlot,
+} from "./parade";
+import {
   type DuckSpec,
   emitDuckDrop,
   emitDucksReserved,
@@ -65,6 +73,8 @@ interface Duck {
   wakeTimer?: number; // seconds until next wake drop
   boostTimer?: number; // remaining seconds of speed boost
   entering: boolean; // swimming in from off-screen; skips wall bounce until inside
+  parade?: boolean; // marching in the current parade formation
+  paradeSlot?: number; // index of this duck's slot in the formation
   draining?: boolean; // being sucked into the drain
   drainT?: number; // timestamp when drain animation started
   storing?: boolean; // being filed away into the shop crate (moved to reserve)
@@ -90,6 +100,36 @@ let spawnTimer: number | null = null;
 const pads: LilyPad[] = makeLilyPads();
 const cannon: CannonState = makeCannon();
 const balls: TennisBall[] = [];
+const parade: ParadeState = makeParade();
+
+// Arrange every present duck in a ring that rotates around the pool centre for
+// PARADE_MS.
+function startParade() {
+  if (parade.active) return;
+  const marchers = pool.filter((d) => !leaving(d) && !d.inShop && !d.entering);
+  if (marchers.length === 0) return;
+  parade.active = true;
+  parade.start = performance.now();
+  parade.count = marchers.length;
+  marchers.forEach((d, i) => {
+    d.parade = true;
+    d.paradeSlot = i;
+    d.boostTimer = 0;
+  });
+}
+
+// Release the marchers and scatter them gently back into free swimming.
+function endParade() {
+  parade.active = false;
+  for (const d of pool) {
+    if (!d.parade) continue;
+    d.parade = false;
+    d.paradeSlot = undefined;
+    const a = Math.random() * Math.PI * 2;
+    d.vx = Math.cos(a) * 22;
+    d.vy = Math.sin(a) * 22;
+  }
+}
 
 function inner() {
   const m = DUCK_BASE * 0.5;
@@ -337,6 +377,7 @@ export function PixelPool({
       if (!activeRef.current || overUI(e)) return setCursor("");
       if (cannon.loaded) return setCursor("crosshair");
       if (overCannon(e.clientX, e.clientY)) return setCursor("pointer");
+      if (overParade(e.clientX, e.clientY, h)) return setCursor("pointer");
       if (duckAt(e.clientX, e.clientY)) return setCursor("grab");
       if (overShop(e.clientX, e.clientY)) return setCursor("pointer");
       setCursor("");
@@ -391,6 +432,12 @@ export function PixelPool({
           balls.push(ball);
           spawnSplash(ball.x, ball.y, 80);
         }
+        e.preventDefault();
+        return;
+      }
+      // clicking the pennant kicks off parade mode
+      if (e.button === 0 && overParade(e.clientX, e.clientY, h)) {
+        startParade();
         e.preventDefault();
         return;
       }
@@ -1104,6 +1151,7 @@ export function PixelPool({
       );
       if (cannon.loaded && pointerX >= 0) aimCannon(cannon, pointerX, pointerY);
       drawCannon(ctx, cannon, now, dark);
+      drawParade(ctx, parade, now, !dragging && overParade(pointerX, pointerY, h), h, dark);
 
       // remove ducks whose exit animation (drain / reserve / cull) has finished
       for (let i = pool.length - 1; i >= 0; i--) {
@@ -1117,9 +1165,31 @@ export function PixelPool({
         }
       }
 
+      if (parade.active && now - parade.start >= PARADE_MS) endParade();
+
       const b = inner();
       for (const d of pool) {
         if (d === dragging || leaving(d) || d.inShop) continue; // held, leaving, or in the shop
+
+        // parade marchers steer toward their formation slot and skip the normal
+        // wander / boost / wall logic below
+        if (d.parade && parade.active) {
+          const slot = paradeSlot(parade, now, d.paradeSlot ?? 0, w, h);
+          const sx = slot.x - d.x;
+          const sy = slot.y - d.y;
+          const sd = Math.hypot(sx, sy) || 0.001;
+          const sp = Math.min(150, sd * 4 + 30);
+          d.vx = (sx / sd) * sp;
+          d.vy = (sy / sd) * sp;
+          d.x += d.vx * dt;
+          d.y += d.vy * dt;
+          const targetLean = Math.max(-0.4, Math.min(0.4, d.vy / 140));
+          d.lean = (d.lean ?? 0) + (targetLean - (d.lean ?? 0)) * Math.min(1, dt * 5);
+          d.spin = 0;
+          if (d.spinAngle) d.spinAngle *= Math.pow(0.05, dt);
+          continue;
+        }
+
         d.x += d.vx * dt;
         d.y += d.vy * dt;
 
@@ -1238,11 +1308,11 @@ export function PixelPool({
       // more) and resolve the bounce with mass taken from each duck's scale.
       for (let i = 0; i < pool.length; i++) {
         const a = pool[i];
-        if (a === dragging || leaving(a) || a.entering || a.inShop) continue;
+        if (a === dragging || leaving(a) || a.entering || a.inShop || a.parade) continue;
         const ar = DUCK_BASE * a.scale * 0.32;
         for (let j = i + 1; j < pool.length; j++) {
           const c = pool[j];
-          if (c === dragging || leaving(c) || c.entering || c.inShop) continue;
+          if (c === dragging || leaving(c) || c.entering || c.inShop || c.parade) continue;
           const cr = DUCK_BASE * c.scale * 0.32;
           const dx = c.x - a.x;
           const dy = c.y - a.y;
