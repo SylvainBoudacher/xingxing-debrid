@@ -21,6 +21,7 @@ import {
   upsertSavedDuck,
   type SavedDuck,
 } from "@/lib/savedDucks";
+import { getRarity, type Rarity } from "./duckRandom";
 import { DuckPreview } from "./DuckPreview";
 import {
   injectDuck,
@@ -29,6 +30,7 @@ import {
   onDucksReserved,
   onShopOpen,
   poolSize,
+  releaseDuck,
   removeDuck,
   type DroppedDuck,
 } from "./duckShopBridge";
@@ -43,6 +45,19 @@ const settings = new LazyStore("settings.json", { defaults: {}, autoSave: false 
 async function getMaxDucks(): Promise<number> {
   return (await settings.get<number>("summer_pool_max_ducks")) ?? 15;
 }
+
+const RARITY_LABEL: Record<Rarity, string> = {
+  legendary: "légendaire",
+  rare: "rare",
+  uncommon: "peu commun",
+  common: "",
+};
+const RARITY_DOT: Record<Rarity, string> = {
+  legendary: "bg-amber-400",
+  rare: "bg-blue-400",
+  uncommon: "bg-green-400",
+  common: "",
+};
 
 type Filter = "all" | "water" | "reserve";
 const FILTER_LABELS: Record<Filter, string> = {
@@ -184,6 +199,7 @@ export function DuckShop() {
 
   async function remove(d: SavedDuck) {
     setSaved(await removeSavedDuck(d.id));
+    releaseDuck(d.id);
     toast.success(`${d.name} a été relâché pour de bon`);
   }
 
@@ -291,97 +307,106 @@ export function DuckShop() {
                   WebkitMaskImage: `linear-gradient(to bottom, ${scroll.up ? "transparent" : "black"}, black 24px, black calc(100% - 24px), ${scroll.down ? "transparent" : "black"})`,
                 }}
               >
-                {visible.map((d) => (
-                  <li
-                    key={d.id}
-                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/60"
-                  >
-                    <span className={d.reserved ? "opacity-40" : ""}>
-                      <DuckPreview variant={d.variant} size={40} />
-                    </span>
-                    {editingId === d.id ? (
-                      <Input
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        onBlur={() => commitRename(d.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") commitRename(d.id);
-                          if (e.key === "Escape") setEditingId(null);
-                        }}
-                        maxLength={40}
-                        autoFocus
-                        className="h-7 flex-1"
-                      />
-                    ) : (
-                      <span className="flex flex-1 items-center gap-1.5 truncate text-sm">
-                        <span className={`truncate ${d.reserved ? "text-muted-foreground" : ""}`}>
-                          {d.name}
-                        </span>
-                        {d.reserved && (
-                          <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                            réserve
-                          </span>
-                        )}
+                {visible.map((d) => {
+                  const rarity = getRarity(d.variant);
+                  return (
+                    <li
+                      key={d.id}
+                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/60"
+                    >
+                      <span className={d.reserved ? "opacity-40" : ""}>
+                        <DuckPreview variant={d.variant} size={40} />
                       </span>
-                    )}
-                    {editingId === d.id ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        onClick={() => commitRename(d.id)}
-                        title="Valider"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                      </Button>
-                    ) : (
-                      <>
-                        {d.reserved ? (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => putInWater(d)}
-                            title="Mettre à l'eau"
-                          >
-                            <Waves className="h-3.5 w-3.5" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => putInReserve(d)}
-                            title="Mettre en réserve"
-                          >
-                            <Archive className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
+                      {editingId === d.id ? (
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onBlur={() => commitRename(d.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") commitRename(d.id);
+                            if (e.key === "Escape") setEditingId(null);
+                          }}
+                          maxLength={40}
+                          autoFocus
+                          className="h-7 flex-1"
+                        />
+                      ) : (
+                        <span className="flex flex-1 items-center gap-1.5 truncate text-sm">
+                          <span className={`truncate ${d.reserved ? "text-muted-foreground" : ""}`}>
+                            {d.name}
+                          </span>
+                          {rarity !== "common" && (
+                            <span
+                              title={RARITY_LABEL[rarity]}
+                              className={`inline-block h-2 w-2 shrink-0 rounded-sm ${RARITY_DOT[rarity]}`}
+                            />
+                          )}
+                          {d.reserved && (
+                            <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              réserve
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {editingId === d.id ? (
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => {
-                            setEditingId(d.id);
-                            setEditName(d.name);
-                          }}
-                          title="Renommer"
+                          onClick={() => commitRename(d.id)}
+                          title="Valider"
                         >
-                          <Pencil className="h-3.5 w-3.5" />
+                          <Check className="h-3.5 w-3.5" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-destructive hover:text-destructive"
-                          onClick={() => remove(d)}
-                          title="Supprimer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </>
-                    )}
-                  </li>
-                ))}
+                      ) : (
+                        <>
+                          {d.reserved ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => putInWater(d)}
+                              title="Mettre à l'eau"
+                            >
+                              <Waves className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => putInReserve(d)}
+                              title="Mettre en réserve"
+                            >
+                              <Archive className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => {
+                              setEditingId(d.id);
+                              setEditName(d.name);
+                            }}
+                            title="Renommer"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            onClick={() => remove(d)}
+                            title="Supprimer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>

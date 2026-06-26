@@ -10,8 +10,10 @@ import {
   emitShopOpen,
   registerCounter,
   registerInjector,
+  registerReleaser,
   registerRemover,
   registerShopHitTest,
+  registerVariantSpawner,
 } from "./duckShopBridge";
 
 // Pixel-art pool with smoothly-shaded rubber ducks (3/4 isometric view)
@@ -122,6 +124,15 @@ function spawnDuck() {
 function spawnSavedDuck(spec: DuckSpec) {
   if (pool.some((d) => d.id === spec.id)) return; // already swimming
   enterPool(spec.variant, spec.scale, { id: spec.id, name: spec.name, saved: true });
+}
+
+// Strip saved/name from a pool duck when released from the collection so it
+// swims as an anonymous duck (no name tag, drainable by the syphon).
+function unmarkSavedDuck(id: string) {
+  const d = pool.find((x) => x.id === id);
+  if (!d) return;
+  d.saved = false;
+  d.name = undefined;
 }
 
 // Put a saved duck in reserve from the shop panel: play the "file into the
@@ -752,15 +763,25 @@ export function PixelPool({
       ctx.ellipse(d.x, d.y + dh * 0.42, dw * 0.36, dh * 0.1, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // glowing aura behind the duck (neon / halo ducks)
-      if (d.effect === "glow") {
-        const pulse = 0.35 + Math.sin(t * 0.004 + d.phase) * 0.1;
-        const gr = ctx.createRadialGradient(d.x, d.y + bob, dw * 0.2, d.x, d.y + bob, dw * 0.85);
-        gr.addColorStop(0, `rgba(140,235,255,${pulse})`);
-        gr.addColorStop(1, "rgba(140,235,255,0)");
+      // glowing aura behind the duck — cyan for glow, amber for golden, cold blue for ghost
+      if (d.effect === "glow" || d.effect === "golden" || d.effect === "ghost") {
+        const pulse =
+          d.effect === "ghost"
+            ? 0.18 + Math.sin(t * 0.0022 + d.phase) * 0.1
+            : 0.35 + Math.sin(t * 0.004 + d.phase) * 0.1;
+        const col =
+          d.effect === "golden"
+            ? "255,210,50"
+            : d.effect === "ghost"
+              ? "190,215,255"
+              : "140,235,255";
+        const radius = d.effect === "ghost" ? dw * 1.1 : dw * 0.9;
+        const gr = ctx.createRadialGradient(d.x, d.y + bob, dw * 0.1, d.x, d.y + bob, radius);
+        gr.addColorStop(0, `rgba(${col},${pulse})`);
+        gr.addColorStop(1, `rgba(${col},0)`);
         ctx.fillStyle = gr;
         ctx.beginPath();
-        ctx.arc(d.x, d.y + bob, dw * 0.85, 0, Math.PI * 2);
+        ctx.arc(d.x, d.y + bob, radius, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -774,21 +795,26 @@ export function PixelPool({
       ctx.drawImage(d.sprite, -dw / 2, -dh / 2, dw, dh);
       ctx.restore();
 
-      // twinkling sparkles orbiting the duck (galaxy / magic ducks)
-      if (d.effect === "sparkle") {
-        for (let i = 0; i < 4; i++) {
-          const a = t * 0.001 + i * 1.7 + d.phase;
+      // sparkles orbiting: gold for galaxy/magic, rainbow-cycling for prismatic (rainbow duck)
+      if (d.effect === "sparkle" || d.effect === "prismatic") {
+        const count = d.effect === "prismatic" ? 6 : 4;
+        for (let i = 0; i < count; i++) {
+          const a = t * 0.001 + i * ((Math.PI * 2) / count) + d.phase;
           const tw = (Math.sin(t * 0.006 + i * 2) + 1) / 2;
-          const sx = d.x + Math.cos(a) * dw * 0.5;
-          const sy = d.y + bob + Math.sin(a) * dh * 0.45;
+          const sx = d.x + Math.cos(a) * dw * 0.52;
+          const sy = d.y + bob + Math.sin(a) * dh * 0.47;
           const r = 1 + tw * 2.5;
-          ctx.fillStyle = `rgba(255,240,150,${0.3 + tw * 0.6})`;
+          const color =
+            d.effect === "prismatic"
+              ? `hsla(${(t * 0.08 + i * 60) % 360},100%,70%,${0.35 + tw * 0.6})`
+              : `rgba(255,240,150,${0.3 + tw * 0.6})`;
+          ctx.fillStyle = color;
           ctx.fillRect(sx - r, sy - 0.6, r * 2, 1.2);
           ctx.fillRect(sx - 0.6, sy - r, 1.2, r * 2);
         }
       }
 
-      // bubbles rising off the duck (snorkel / underwater vibe)
+      // bubbles rising off the duck (snorkel)
       if (d.effect === "bubbles") {
         ctx.strokeStyle = "rgba(255,255,255,0.5)";
         ctx.lineWidth = 1;
@@ -798,6 +824,49 @@ export function PixelPool({
           const by = d.y + bob - dh * 0.15 - p * dh * 0.9;
           ctx.beginPath();
           ctx.arc(bx, by, (1.4 + i * 0.7) * (1 - p * 0.4), 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+
+      // green ooze dripping downward (zombie duck)
+      if (d.effect === "ooze") {
+        for (let i = 0; i < 3; i++) {
+          const p = (t * 0.0005 + d.phase + i * 0.38) % 1;
+          const bx = d.x - dw * 0.12 + Math.sin(t * 0.0015 + i * 1.9 + d.phase) * 9;
+          const by = d.y + bob + dh * 0.25 + p * dh * 0.65;
+          const r = (2.2 + i * 0.9) * (1 - p * 0.25);
+          ctx.beginPath();
+          ctx.arc(bx, by, r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(80,190,55,${0.18 * (1 - p * 0.7)})`;
+          ctx.fill();
+          ctx.strokeStyle = `rgba(60,160,40,${0.55 * (1 - p)})`;
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+        }
+      }
+
+      // electric arcs around the metal duck — deterministic hash, no Math.random()
+      if (d.effect === "electric") {
+        const tick = (t * 0.007 + d.phase * 10) | 0;
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 4; i++) {
+          const h0 = Math.sin(tick * 127.1 + i * 43.7);
+          if (h0 < 0) continue; // ~50% of arcs visible per tick
+          const h1 = Math.sin(tick * 311.7 + i * 89.3);
+          const h2 = Math.sin(tick * 157.3 + i * 61.1);
+          const h3 = Math.sin(tick * 293.9 + i * 37.7);
+          const a1 = h1 * Math.PI * 2;
+          const sx = d.x + Math.cos(a1) * dw * 0.46;
+          const sy = d.y + bob + Math.sin(a1) * dh * 0.42;
+          const ex = sx + h2 * 13;
+          const ey = sy + h3 * 13;
+          const mx = (sx + ex) / 2 + h3 * 5;
+          const my = (sy + ey) / 2 + h2 * 5;
+          const alpha = 0.55 + Math.abs(h0) * 0.4;
+          ctx.strokeStyle = `rgba(190,230,255,${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.quadraticCurveTo(mx, my, ex, ey);
           ctx.stroke();
         }
       }
@@ -1106,8 +1175,10 @@ export function PixelPool({
     ensureSpawning();
     registerInjector(spawnSavedDuck); // flush any saved ducks queued before mount
     registerRemover(removePoolDuck);
+    registerReleaser(unmarkSavedDuck);
     registerCounter(() => pool.filter((d) => !leaving(d) && !d.inShop).length);
     registerShopHitTest((x, y) => overShop(x, y));
+    registerVariantSpawner((v) => enterPool(v, 0.55 + Math.random() * 0.3));
     window.addEventListener("resize", resize);
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove);
@@ -1128,8 +1199,10 @@ export function PixelPool({
       stopSpawning();
       registerInjector(null);
       registerRemover(null);
+      registerReleaser(null);
       registerCounter(null);
       registerShopHitTest(null);
+      registerVariantSpawner(null);
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);

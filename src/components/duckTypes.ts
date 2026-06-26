@@ -38,7 +38,15 @@ export type Pattern =
   | "zombie"
   | "metal";
 
-export type Effect = "glow" | "ghost" | "sparkle" | "bubbles";
+export type Effect =
+  | "glow"
+  | "ghost"
+  | "sparkle"
+  | "bubbles"
+  | "prismatic"
+  | "golden"
+  | "ooze"
+  | "electric";
 
 export interface Variant {
   body: string;

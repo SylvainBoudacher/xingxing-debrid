@@ -1,4 +1,4 @@
-import type { Accessory, Pattern, Variant } from "./duckTypes";
+import type { Accessory, Effect, Pattern, Variant } from "./duckTypes";
 
 // Procedural duck skins: instead of picking from a fixed catalog, each spawn
 // rolls a rarity tier and then composes a body color + accessory + pattern +
@@ -105,18 +105,31 @@ function withAcc(acc: Accessory): Variant {
 
 // flashy one-of-a-kind looks; their body/beak are fixed by the pattern/effect
 const LEGENDARY: (() => Variant)[] = [
-  () => ({ body: "#FFD21E", beak: ORANGE_BEAK, acc: "none", pattern: "rainbow" }),
+  () => ({
+    body: "#FFD21E",
+    beak: ORANGE_BEAK,
+    acc: "none",
+    pattern: "rainbow",
+    effect: "prismatic",
+  }),
   () => ({
     body: "#F5C518",
     beak: ORANGE_BEAK,
     acc: "crown",
     accColor: "#FFF0A0",
     pattern: "gold",
+    effect: "golden",
   }),
   () => ({ body: "#2A2150", beak: "#C9A8FF", acc: "none", pattern: "galaxy", effect: "sparkle" }),
   () => ({ body: "#A7C7FF", beak: "#E8A0C0", acc: "none", effect: "ghost" }),
-  () => ({ body: "#7BB85A", beak: "#5A7A3A", acc: "none", pattern: "zombie" }),
-  () => ({ body: "#AEB6BF", beak: "#7A828B", acc: "antenna", pattern: "metal" }),
+  () => ({ body: "#7BB85A", beak: "#5A7A3A", acc: "none", pattern: "zombie", effect: "ooze" }),
+  () => ({
+    body: "#AEB6BF",
+    beak: "#7A828B",
+    acc: "antenna",
+    pattern: "metal",
+    effect: "electric",
+  }),
 ];
 
 const RARE: (() => Variant)[] = [
@@ -128,6 +141,47 @@ const RARE: (() => Variant)[] = [
   () => ({ body: "#F0584E", beak: ORANGE_BEAK, acc: "devil" }),
   () => ({ body: bodyColor(), beak: ORANGE_BEAK, acc: "none", effect: "glow" }),
 ];
+
+export type Rarity = "legendary" | "rare" | "uncommon" | "common";
+
+const LEGENDARY_EFFECTS = new Set<Effect>([
+  "ghost",
+  "sparkle",
+  "prismatic",
+  "golden",
+  "ooze",
+  "electric",
+]);
+const LEGENDARY_PATTERNS = new Set<Pattern>(["rainbow", "gold", "galaxy", "zombie", "metal"]);
+const RARE_EFFECTS = new Set<Effect>(["glow", "bubbles"]);
+const RARE_ACC = new Set<Accessory>(["wizard", "viking", "pirate", "devil", "halo", "snorkel"]);
+const UNCOMMON_PATTERNS = new Set<Pattern>(["spots", "stripes", "polka"]);
+const UNCOMMON_ACC_SET = new Set<Accessory>([
+  "crown",
+  "party",
+  "tophat",
+  "beanie",
+  "cowboy",
+  "chef",
+  "antlers",
+  "propeller",
+]);
+
+export function getRarity(v: Variant): Rarity {
+  if (
+    (v.pattern && LEGENDARY_PATTERNS.has(v.pattern)) ||
+    (v.effect && LEGENDARY_EFFECTS.has(v.effect))
+  )
+    return "legendary";
+  if ((v.effect && RARE_EFFECTS.has(v.effect)) || RARE_ACC.has(v.acc)) return "rare";
+  if ((v.pattern && UNCOMMON_PATTERNS.has(v.pattern)) || UNCOMMON_ACC_SET.has(v.acc))
+    return "uncommon";
+  return "common";
+}
+
+export function randomLegendaryVariant(): Variant {
+  return randOf(LEGENDARY)();
+}
 
 export function randomVariant(): Variant {
   const roll = Math.random();

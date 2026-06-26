@@ -10,6 +10,8 @@ import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import type { Page } from "@/components/AppMenu";
 import { prefetchLibrary } from "@/lib/library";
+import { randomLegendaryVariant } from "@/components/duckRandom";
+import { spawnVariant } from "@/components/duckShopBridge";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -198,8 +200,18 @@ function App() {
 
       {/* ── Phase done : navigation normale ── */}
       {devMode && (
-        <div className="fixed bottom-3 left-3 z-50 rounded-md bg-amber-500/15 ring-1 ring-amber-500/30 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-600 dark:text-amber-400">
-          MODE DEV
+        <div className="fixed bottom-28 left-3 z-50 flex items-center gap-1.5">
+          <div className="rounded-md bg-amber-500/15 ring-1 ring-amber-500/30 px-2 py-0.5 text-[10px] font-bold tracking-wider text-amber-600 dark:text-amber-400">
+            MODE DEV
+          </div>
+          {summerEnabled && (
+            <button
+              onClick={() => spawnVariant(randomLegendaryVariant())}
+              className="rounded-md bg-amber-500/15 ring-1 ring-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 transition-colors"
+            >
+              + legendaire
+            </button>
+          )}
         </div>
       )}
 

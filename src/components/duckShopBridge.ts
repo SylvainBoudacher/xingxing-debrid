@@ -86,6 +86,25 @@ export function poolSize(): number {
   return countCb?.() ?? 0;
 }
 
+// Spawn an arbitrary variant directly into the pool (dev tool). Bypasses the
+// MAX_DUCKS cap like saved ducks do, so it always produces a duck.
+let variantSpawnerCb: ((v: Variant) => void) | null = null;
+export function registerVariantSpawner(cb: ((v: Variant) => void) | null) {
+  variantSpawnerCb = cb;
+}
+export function spawnVariant(v: Variant) {
+  variantSpawnerCb?.(v);
+}
+
+// Clear saved/name on a live pool duck when it's released from the collection.
+let releaserCb: ((id: string) => void) | null = null;
+export function registerReleaser(cb: ((id: string) => void) | null) {
+  releaserCb = cb;
+}
+export function releaseDuck(id: string) {
+  releaserCb?.(id);
+}
+
 // Hit-test for the shop icon drawn on the canvas, so the panel's click-outside
 // handler can ignore clicks that land on the icon (which toggles the panel).
 let shopHitCb: ((x: number, y: number) => boolean) | null = null;
