@@ -1,1 +1,2 @@
-Performance et bug mineur evite
+- Un canon a balle ?
+- Des canards legendaires ?

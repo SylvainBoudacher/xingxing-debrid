@@ -32,6 +32,55 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.3.3",
+    date: "27 juin 2026",
+    intro:
+      "La piscine s'enrichit d'un canon a balles de tennis, d'un drapeau de parade et d'une belle refonte de l'affichage des raretes.",
+    sections: [
+      {
+        title: "Rarete visible avec des etoiles",
+        items: [
+          "La rarete de chaque canard s'affiche desormais sous forme d'etoiles directement dans le stand, pour identifier d'un coup d'oeil vos canards les plus rares.",
+          "Les effets visuels des canards legendaires ont ete ameliores : les animations sont plus intenses et plus fideles a leur statut exceptionnel.",
+        ],
+      },
+      {
+        title: "Canon a balles de tennis",
+        items: [
+          "Un canon a balles de tennis fait son apparition dans la piscine. Ajustez la trajectoire et faites-en partir pour perturber (gentiment) vos canards.",
+          "Les canards reagissent aux impacts et sont propulses dans la direction du tir. La chasse est ouverte.",
+          "Des nenuphars flottent egalement sur l'eau : les canards peuvent y prendre appui et les balles ricochent dessus.",
+        ],
+      },
+      {
+        title: "Mode parade",
+        items: [
+          "Un drapeau de parade est disponible dans la piscine. Il ne sert a rien. Mais il est la.",
+        ],
+      },
+      {
+        title: "Corrections",
+        items: [
+          "Correction d'un bug qui empechait de relacher un canard depuis le stand - le bouton fonctionne correctement desormais.",
+        ],
+      },
+    ],
+  },
+  {
+    version: "1.3.2",
+    date: "27 juin 2026",
+    intro: "Ameliorations de performances sur la page Ma bibliotheque.",
+    sections: [
+      {
+        title: "Performances de la bibliotheque",
+        items: [
+          "La page Ma bibliotheque a ete optimisee pour rester fluide meme avec un grand nombre d'elements.",
+          "Des tests de scalabilite ont ete realises pour valider le comportement avec des collections importantes.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.3.1",
     date: "26 juin 2026",
     intro:
