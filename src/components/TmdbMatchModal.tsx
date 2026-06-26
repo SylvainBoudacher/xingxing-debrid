@@ -185,6 +185,8 @@ export function TmdbMatchModal({ entry, tmdbKey, onPick, onClose }: TmdbMatchMod
                       <img
                         src={`https://image.tmdb.org/t/p/w92${meta.posterPath}`}
                         alt=""
+                        loading="lazy"
+                        decoding="async"
                         className="h-full w-full object-cover"
                       />
                     ) : (

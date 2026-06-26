@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebridActions } from "@/lib/useDebridActions";
-import { flattenFiles, isVideoFile } from "@/lib/debrid";
+import { flattenFiles, isVideoFile, type DebridFile } from "@/lib/debrid";
 import type { ViewMode } from "@/pages/PreferencesPage";
 import {
   applyEnrichment,
@@ -39,7 +39,6 @@ import {
   isWholeWatched,
   loadLibrary,
   progressRatio,
-  saveLibrary,
   saveLibraryDebounced,
   type DisplayItem,
   type LibraryEntry,
@@ -113,33 +112,39 @@ export function LibraryPage({
     const pending = loaded.filter((e) => !e.enriched && e.magnetId != null);
     if (pending.length === 0) return;
 
-    let changed = false;
-    const byHash = new Map(loaded.map((e) => [e.infoHash, { ...e }]));
-    for (const e of pending) {
-      try {
-        const filesJson = await invoke<{
-          status: string;
-          data?: { magnets?: Array<{ files?: unknown[] }> };
-        }>("get_magnet_files", { id: e.magnetId, alldebridKey: key });
-        const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
-        if (filesJson.status !== "success" || rawFiles.length === 0) continue;
-        const files = flattenFiles(rawFiles);
-        const target = byHash.get(e.infoHash);
-        if (!target) continue;
-        if (!files.some((f) => isVideoFile(f.name))) {
-          byHash.delete(e.infoHash);
-        } else {
-          byHash.set(e.infoHash, applyEnrichment(target, files));
+    // Appels en parallèle (best-effort, échec silencieux par entrée).
+    const results = await Promise.all(
+      pending.map(async (e) => {
+        try {
+          const filesJson = await invoke<{
+            status: string;
+            data?: { magnets?: Array<{ files?: unknown[] }> };
+          }>("get_magnet_files", { id: e.magnetId, alldebridKey: key });
+          const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
+          if (filesJson.status !== "success" || rawFiles.length === 0) return null;
+          return { infoHash: e.infoHash, files: flattenFiles(rawFiles) };
+        } catch {
+          // magnet retiré du compte partagé ou réseau : on garde la coche unique
+          return null;
         }
-        changed = true;
-      } catch {
-        // magnet retiré du compte partagé ou réseau : on garde la coche unique
-      }
-    }
-    if (!changed) return;
-    const next = [...byHash.values()];
-    setEntries(next);
-    await saveLibrary(next);
+      }),
+    );
+
+    const byHash = new Map<string, DebridFile[]>();
+    for (const r of results) if (r) byHash.set(r.infoHash, r.files);
+    if (byHash.size === 0) return;
+
+    // Fusion avec l'état COURANT (l'utilisateur a pu cocher pendant le fetch) :
+    // applyEnrichment préserve `watched`. On retire les entrées sans vidéo.
+    setEntries((prev) => {
+      const next = prev.flatMap((e) => {
+        const files = byHash.get(e.infoHash);
+        if (!files) return [e];
+        return files.some((f) => isVideoFile(f.name)) ? [applyEnrichment(e, files)] : [];
+      });
+      saveLibraryDebounced(next);
+      return next;
+    });
   }
 
   useEffect(() => {
@@ -175,24 +180,58 @@ export function LibraryPage({
   // Flushe l'écriture en attente quand on quitte la page.
   useEffect(() => flushLibrary, []);
 
-  function persist(next: LibraryEntry[]) {
+  // Updaters fonctionnels : identité stable (deps vides) pour ne pas casser le
+  // React.memo des cartes, tout en lisant le dernier état via `prev`.
+  const persist = useCallback((next: LibraryEntry[]) => {
     setEntries(next);
     saveLibraryDebounced(next);
-  }
+  }, []);
 
-  function handleChange(updated: LibraryEntry) {
-    persist(entries.map((e) => (e.infoHash === updated.infoHash ? updated : e)));
-  }
+  const handleChange = useCallback((updated: LibraryEntry) => {
+    setEntries((prev) => {
+      const next = prev.map((e) => (e.infoHash === updated.infoHash ? updated : e));
+      saveLibraryDebounced(next);
+      return next;
+    });
+  }, []);
 
-  function handleRemove(infoHash: string) {
-    persist(entries.filter((e) => e.infoHash !== infoHash));
-  }
+  const handleRemove = useCallback((infoHash: string) => {
+    setEntries((prev) => {
+      const next = prev.filter((e) => e.infoHash !== infoHash);
+      saveLibraryDebounced(next);
+      return next;
+    });
+  }, []);
 
+  // Compte les éléments affichés (séries regroupées) par filtre en une seule
+  // passe. Un élément = un film/entrée hors-série, ou un id TMDB de série
+  // distinct (le regroupement collapse toutes les entrées d'une même série en
+  // un seul item). Une série avec des saisons vues et d'autres à voir compte
+  // dans « done » ET « todo », d'où les Set séparés.
   const counts = useMemo<Record<Filter, number>>(() => {
-    const all = groupLibraryEntries(entries);
-    const doneCount = groupLibraryEntries(entries.filter((e) => isWholeWatched(e))).length;
-    const todoCount = groupLibraryEntries(entries.filter((e) => !isWholeWatched(e))).length;
-    return { all: all.length, done: doneCount, todo: todoCount };
+    let allSingles = 0;
+    let doneSingles = 0;
+    let todoSingles = 0;
+    const allTv = new Set<number>();
+    const doneTv = new Set<number>();
+    const todoTv = new Set<number>();
+    for (const e of entries) {
+      const tvId = e.tmdb?.mediaType === "tv" ? e.tmdb.id : null;
+      const done = isWholeWatched(e);
+      if (tvId !== null) {
+        allTv.add(tvId);
+        (done ? doneTv : todoTv).add(tvId);
+      } else {
+        allSingles++;
+        if (done) doneSingles++;
+        else todoSingles++;
+      }
+    }
+    return {
+      all: allSingles + allTv.size,
+      done: doneSingles + doneTv.size,
+      todo: todoSingles + todoTv.size,
+    };
   }, [entries]);
 
   const q = query.trim().toLowerCase();

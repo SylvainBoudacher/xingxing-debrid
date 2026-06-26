@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown, Trash2 } from "lucide-react";
 import { formatSize } from "@/lib/debrid";
@@ -37,7 +37,7 @@ interface SeriesGroupCardProps {
   autoWatchOnPlay?: boolean;
 }
 
-export function SeriesGroupCard({
+export const SeriesGroupCard = memo(function SeriesGroupCard({
   group,
   onChange,
   onRemove,
@@ -176,7 +176,7 @@ export function SeriesGroupCard({
       </AnimatePresence>
     </div>
   );
-}
+});
 
 function EntrySeasonSection({
   entry,

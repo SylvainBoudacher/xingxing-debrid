@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { motion } from "motion/react";
 import { Check } from "lucide-react";
 import {
@@ -14,7 +15,11 @@ interface SeriesGroupPosterCardProps {
   onToggle: () => void;
 }
 
-export function SeriesGroupPosterCard({ group, expanded, onToggle }: SeriesGroupPosterCardProps) {
+export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
+  group,
+  expanded,
+  onToggle,
+}: SeriesGroupPosterCardProps) {
   const whole = groupIsWholeWatched(group);
   const ratio = groupProgressRatio(group);
   const watched = groupWatchedCount(group);
@@ -38,7 +43,10 @@ export function SeriesGroupPosterCard({ group, expanded, onToggle }: SeriesGroup
         <img
           src={`https://image.tmdb.org/t/p/w342${group.tmdb.posterPath}`}
           alt={title}
+          width={342}
+          height={513}
           loading="lazy"
+          decoding="async"
           className={`block h-full w-full object-cover transition-[filter] duration-300 ${whole ? "brightness-50" : "group-hover:brightness-105"}`}
         />
       ) : (
@@ -79,4 +87,4 @@ export function SeriesGroupPosterCard({ group, expanded, onToggle }: SeriesGroup
       </div>
     </motion.button>
   );
-}
+});

@@ -101,6 +101,7 @@ export function LibraryDetailModal({
               <img
                 src={`https://image.tmdb.org/t/p/w154${tmdb.posterPath}`}
                 alt={title}
+                decoding="async"
                 className="h-full w-full object-cover"
               />
             ) : (

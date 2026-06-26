@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
@@ -15,20 +15,28 @@ export function useDebridActions(getKey: () => string) {
   const [bulkCopying, setBulkCopying] = useState<string | null>(null);
   const [bulkVlc, setBulkVlc] = useState<string | null>(null);
 
-  async function unlockAll(links: string[]): Promise<string[]> {
+  // `getKey` est une closure recréée à chaque render par l'appelant : on la
+  // garde dans un ref pour que les callbacks ci-dessous restent stables et que
+  // les cartes mémoïsées ne re-render pas à chaque rendu de la page.
+  const getKeyRef = useRef(getKey);
+  useEffect(() => {
+    getKeyRef.current = getKey;
+  });
+
+  const unlockAll = useCallback(async (links: string[]): Promise<string[]> => {
     const urls: string[] = [];
     for (const link of links) {
-      urls.push(await invoke<string>("unlock_link", { link, alldebridKey: getKey() }));
+      urls.push(await invoke<string>("unlock_link", { link, alldebridKey: getKeyRef.current() }));
     }
     return urls;
-  }
+  }, []);
 
-  async function copyLink(link: string) {
+  const copyLink = useCallback(async (link: string) => {
     setCopiedLink(link);
     try {
       const url = await invoke<string>("unlock_link", {
         link,
-        alldebridKey: getKey(),
+        alldebridKey: getKeyRef.current(),
       });
       await navigator.clipboard.writeText(url);
       toast.success("Lien copié");
@@ -37,14 +45,14 @@ export function useDebridActions(getKey: () => string) {
     } finally {
       setTimeout(() => setCopiedLink(null), 2000);
     }
-  }
+  }, []);
 
-  async function openVlc(link: string) {
+  const openVlc = useCallback(async (link: string) => {
     setVlcLink(link);
     try {
       const url = await invoke<string>("unlock_link", {
         link,
-        alldebridKey: getKey(),
+        alldebridKey: getKeyRef.current(),
       });
       await invoke("open_with_vlc", { url });
       toast.success("Ouvert dans VLC");
@@ -53,14 +61,14 @@ export function useDebridActions(getKey: () => string) {
     } finally {
       setVlcLink(null);
     }
-  }
+  }, []);
 
-  async function downloadFile(link: string) {
+  const downloadFile = useCallback(async (link: string) => {
     setDownloadingLink(link);
     try {
       const url = await invoke<string>("unlock_link", {
         link,
-        alldebridKey: getKey(),
+        alldebridKey: getKeyRef.current(),
       });
       await openUrl(url);
     } catch (err) {
@@ -68,62 +76,87 @@ export function useDebridActions(getKey: () => string) {
     } finally {
       setDownloadingLink(null);
     }
-  }
+  }, []);
 
-  async function downloadMany(links: string[], groupKey: string) {
-    if (links.length === 0) return;
-    setBulkDownloading(groupKey);
-    try {
-      const urls = await unlockAll(links);
-      for (const url of urls) await openUrl(url);
-      toast.success(`${urls.length} téléchargements lancés`);
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setBulkDownloading(null);
-    }
-  }
+  const downloadMany = useCallback(
+    async (links: string[], groupKey: string) => {
+      if (links.length === 0) return;
+      setBulkDownloading(groupKey);
+      try {
+        const urls = await unlockAll(links);
+        for (const url of urls) await openUrl(url);
+        toast.success(`${urls.length} téléchargements lancés`);
+      } catch (err) {
+        toast.error(String(err));
+      } finally {
+        setBulkDownloading(null);
+      }
+    },
+    [unlockAll],
+  );
 
-  async function copyMany(links: string[], groupKey: string) {
-    if (links.length === 0) return;
-    setBulkCopying(groupKey);
-    try {
-      const urls = await unlockAll(links);
-      await navigator.clipboard.writeText(urls.join("\n"));
-      toast.success(`${urls.length} liens copiés`);
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setTimeout(() => setBulkCopying(null), 2000);
-    }
-  }
+  const copyMany = useCallback(
+    async (links: string[], groupKey: string) => {
+      if (links.length === 0) return;
+      setBulkCopying(groupKey);
+      try {
+        const urls = await unlockAll(links);
+        await navigator.clipboard.writeText(urls.join("\n"));
+        toast.success(`${urls.length} liens copiés`);
+      } catch (err) {
+        toast.error(String(err));
+      } finally {
+        setTimeout(() => setBulkCopying(null), 2000);
+      }
+    },
+    [unlockAll],
+  );
 
-  async function openVlcMany(links: string[], groupKey: string) {
-    if (links.length === 0) return;
-    setBulkVlc(groupKey);
-    try {
-      const urls = await unlockAll(links);
-      await invoke("open_many_with_vlc", { urls });
-      toast.success("Playlist ouverte dans VLC");
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setBulkVlc(null);
-    }
-  }
+  const openVlcMany = useCallback(
+    async (links: string[], groupKey: string) => {
+      if (links.length === 0) return;
+      setBulkVlc(groupKey);
+      try {
+        const urls = await unlockAll(links);
+        await invoke("open_many_with_vlc", { urls });
+        toast.success("Playlist ouverte dans VLC");
+      } catch (err) {
+        toast.error(String(err));
+      } finally {
+        setBulkVlc(null);
+      }
+    },
+    [unlockAll],
+  );
 
-  return {
-    downloadingLink,
-    copiedLink,
-    vlcLink,
-    copyLink,
-    openVlc,
-    downloadFile,
-    bulkDownloading,
-    bulkCopying,
-    bulkVlc,
-    downloadMany,
-    copyMany,
-    openVlcMany,
-  };
+  return useMemo(
+    () => ({
+      downloadingLink,
+      copiedLink,
+      vlcLink,
+      copyLink,
+      openVlc,
+      downloadFile,
+      bulkDownloading,
+      bulkCopying,
+      bulkVlc,
+      downloadMany,
+      copyMany,
+      openVlcMany,
+    }),
+    [
+      downloadingLink,
+      copiedLink,
+      vlcLink,
+      copyLink,
+      openVlc,
+      downloadFile,
+      bulkDownloading,
+      bulkCopying,
+      bulkVlc,
+      downloadMany,
+      copyMany,
+      openVlcMany,
+    ],
+  );
 }

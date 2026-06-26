@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { motion } from "motion/react";
 import { Check, Clapperboard } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
@@ -19,7 +20,7 @@ interface LibraryPosterCardProps {
   onEnrichTmdb?: () => void;
 }
 
-export function LibraryPosterCard({
+export const LibraryPosterCard = memo(function LibraryPosterCard({
   entry,
   simple,
   expanded,
@@ -49,7 +50,10 @@ export function LibraryPosterCard({
         <img
           src={`https://image.tmdb.org/t/p/w342${tmdb.posterPath}`}
           alt={title}
+          width={342}
+          height={513}
           loading="lazy"
+          decoding="async"
           className={`block h-full w-full object-cover transition-[filter] duration-300 ${whole ? "brightness-50" : "group-hover:brightness-105"}`}
         />
       ) : (
@@ -106,4 +110,4 @@ export function LibraryPosterCard({
       </div>
     </motion.button>
   );
-}
+});

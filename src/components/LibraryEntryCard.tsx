@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown, Trash2 } from "lucide-react";
 import { formatSize } from "@/lib/debrid";
@@ -39,7 +39,7 @@ interface LibraryEntryCardProps {
   defaultExpanded?: boolean;
 }
 
-export function LibraryEntryCard({
+export const LibraryEntryCard = memo(function LibraryEntryCard({
   entry,
   onChange,
   onRemove,
@@ -185,4 +185,4 @@ export function LibraryEntryCard({
       </AnimatePresence>
     </div>
   );
-}
+});

@@ -103,6 +103,7 @@ export function SeriesGroupDetailModal({
               <img
                 src={`https://image.tmdb.org/t/p/w154${group.tmdb.posterPath}`}
                 alt={title}
+                decoding="async"
                 className="h-full w-full object-cover"
               />
             ) : (
