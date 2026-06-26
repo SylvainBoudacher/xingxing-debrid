@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, Reorder, useDragControls } from "motion/react";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useDebridActions } from "@/lib/useDebridActions";
-import { flattenFiles } from "@/lib/debrid";
+import { flattenFiles, isVideoFile } from "@/lib/debrid";
 import type { ViewMode } from "@/pages/PreferencesPage";
 import {
   applyEnrichment,
@@ -97,7 +97,11 @@ export function LibraryPage({
         const files = flattenFiles(rawFiles);
         const target = byHash.get(e.infoHash);
         if (!target) continue;
-        byHash.set(e.infoHash, applyEnrichment(target, files));
+        if (!files.some((f) => isVideoFile(f.name))) {
+          byHash.delete(e.infoHash);
+        } else {
+          byHash.set(e.infoHash, applyEnrichment(target, files));
+        }
         changed = true;
       } catch {
         // magnet retiré du compte partagé ou réseau : on garde la coche unique
@@ -138,21 +142,23 @@ export function LibraryPage({
     persist(entries.filter((e) => e.infoHash !== infoHash));
   }
 
-  const counts: Record<Filter, number> = {
-    all: entries.length,
-    todo: entries.filter((e) => !isWholeWatched(e)).length,
-    done: entries.filter((e) => isWholeWatched(e)).length,
-  };
+  const counts = useMemo<Record<Filter, number>>(() => {
+    const done = entries.filter((e) => isWholeWatched(e)).length;
+    return { all: entries.length, todo: entries.length - done, done };
+  }, [entries]);
 
   const q = query.trim().toLowerCase();
-  const filtered = entries.filter((e) => {
-    if (filter !== "all") {
-      const done = isWholeWatched(e);
-      if (filter === "done" ? !done : done) return false;
-    }
-    return q === "" || e.title.toLowerCase().includes(q);
-  });
-  const visible = sort === "manual" ? filtered : [...filtered].sort(SORTERS[sort]);
+  const visible = useMemo(() => {
+    const filtered = entries.filter((e) => {
+      if (filter !== "all") {
+        const done = isWholeWatched(e);
+        if (filter === "done" ? !done : done) return false;
+      }
+      return q === "" || e.title.toLowerCase().includes(q);
+    });
+    return sort === "manual" ? filtered : [...filtered].sort(SORTERS[sort]);
+  }, [entries, filter, sort, q]);
+
   // Le glisser-déposer ne réordonne que la liste complète (sans filtre ni recherche).
   const canReorder = sort === "manual" && filter === "all" && q === "";
 

@@ -3,7 +3,7 @@ import { AppMenu, type Page } from "@/components/AppMenu";
 import { getApiKey } from "@/lib/apiKeys";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { parseRelease } from "@/lib/parseRelease";
-import { flattenFiles, formatSize, type DebridModal } from "@/lib/debrid";
+import { flattenFiles, formatSize, isVideoFile, type DebridModal } from "@/lib/debrid";
 import { recordDownload } from "@/lib/library";
 import type { C411Torrent } from "@/lib/c411";
 import { useQuery } from "@tanstack/react-query";
@@ -623,6 +623,7 @@ export function DiscoverPage({
         });
         const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
         const files = flattenFiles(rawFiles);
+        const hasVideo = files.some((f) => isVideoFile(f.name));
         if (addToLibrary) {
           toast.success(`Ajoute a la bibliotheque : ${uploaded.name ?? occ.torrentName}`, {
             action: { label: "Voir", onClick: () => onNavigate("library") },
@@ -633,16 +634,18 @@ export function DiscoverPage({
             files,
           });
         }
-        await recordDownload({
-          infoHash: occ.infoHash,
-          title: uploaded.name ?? occ.torrentName,
-          provider: "discover",
-          category: 0,
-          size: occ.fileSize,
-          magnetId: uploaded.id,
-          files,
-          enriched: true,
-        });
+        if (hasVideo) {
+          await recordDownload({
+            infoHash: occ.infoHash,
+            title: uploaded.name ?? occ.torrentName,
+            provider: "discover",
+            category: 0,
+            size: occ.fileSize,
+            magnetId: uploaded.id,
+            files,
+            enriched: true,
+          });
+        }
       } else {
         toast.success(
           addToLibrary

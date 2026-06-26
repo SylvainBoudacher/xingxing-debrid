@@ -13,7 +13,7 @@ import {
 import { getApiKey } from "@/lib/apiKeys";
 import { parseRelease } from "@/lib/parseRelease";
 import { LATEST_VERSION } from "@/lib/patchnotes";
-import { flattenFiles, formatSize, type DebridModal } from "@/lib/debrid";
+import { flattenFiles, formatSize, isVideoFile, type DebridModal } from "@/lib/debrid";
 import { recordDownload } from "@/lib/library";
 import type { C411Torrent } from "@/lib/c411";
 import { mapNyaaResults, mapTorrents, pageNumbers, type SearchResult } from "@/lib/search";
@@ -148,6 +148,11 @@ const CATEGORY_FILTERS: Array<{
 function getCategoryGroup(id: number): number {
   const g = Math.floor(id / 1000) * 1000;
   return CATEGORY_FILTERS.some((c) => c.key === g) ? g : 0;
+}
+
+function isVideoCategory(id: number): boolean {
+  const g = Math.floor(id / 1000) * 1000;
+  return g === 2000 || g === 5000;
 }
 
 const QUALITY_ORDER = ["4K", "2160p", "1080p", "720p", "480p"];
@@ -360,6 +365,7 @@ export function MainPage({
         });
         const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
         const files = flattenFiles(rawFiles);
+        const hasVideo = files.some((f) => isVideoFile(f.name));
         if (addToLibrary) {
           toast.success(`Ajoute a la bibliotheque : ${uploaded.name ?? result.title}`, {
             action: { label: "Voir", onClick: () => onNavigate("library") },
@@ -367,16 +373,18 @@ export function MainPage({
         } else {
           setDebridModal({ torrentName: uploaded.name ?? result.title, files });
         }
-        await recordDownload({
-          infoHash: result.guid,
-          title: uploaded.name ?? result.title,
-          provider: result.magnet ? "nyaa" : "c411",
-          category: result.category,
-          size: result.size,
-          magnetId: uploaded.id,
-          files,
-          enriched: true,
-        });
+        if (hasVideo) {
+          await recordDownload({
+            infoHash: result.guid,
+            title: uploaded.name ?? result.title,
+            provider: result.magnet ? "nyaa" : "c411",
+            category: result.category,
+            size: result.size,
+            magnetId: uploaded.id,
+            files,
+            enriched: true,
+          });
+        }
       } else {
         toast.success(
           addToLibrary
@@ -1171,24 +1179,26 @@ export function MainPage({
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        <div className="group relative">
-                          <motion.button
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => handleSendToDebrid(r, i, true)}
-                            disabled={sendingIndex !== null || libraryIndex !== null}
-                            className="flex h-8 w-8 items-center justify-center rounded-full bg-black/8 hover:bg-black/15 dark:bg-white/10 dark:hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                          >
-                            {libraryIndex === i ? (
-                              <Loader2 className="h-4 w-4 text-indigo-600 dark:text-indigo-300 animate-spin" />
-                            ) : (
-                              <BookmarkPlus className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
-                            )}
-                          </motion.button>
-                          <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
-                            Ajouter à la bibliothèque
-                          </span>
-                        </div>
+                        {isVideoCategory(r.category) && (
+                          <div className="group relative">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleSendToDebrid(r, i, true)}
+                              disabled={sendingIndex !== null || libraryIndex !== null}
+                              className="flex h-8 w-8 items-center justify-center rounded-full bg-black/8 hover:bg-black/15 dark:bg-white/10 dark:hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {libraryIndex === i ? (
+                                <Loader2 className="h-4 w-4 text-indigo-600 dark:text-indigo-300 animate-spin" />
+                              ) : (
+                                <BookmarkPlus className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
+                              )}
+                            </motion.button>
+                            <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
+                              Ajouter à la bibliothèque
+                            </span>
+                          </div>
+                        )}
                         <div className="group relative">
                           <motion.button
                             whileHover={{ scale: 1.1 }}
