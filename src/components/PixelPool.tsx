@@ -1,8 +1,28 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
+import {
+  aimCannon,
+  type CannonState,
+  drawBalls,
+  drawCannon,
+  fireCannon,
+  makeCannon,
+  overCannon,
+  type TennisBall,
+  updateBalls,
+  updateCannon,
+} from "./cannon";
 import { getRarity, randomVariant } from "./duckRandom";
 import { makeDuckSprite, SH, SW, type Effect } from "./duckSprite";
 import type { Variant } from "./duckTypes";
+import {
+  bumpLilyPad,
+  drawLilyPad,
+  layoutLilyPads,
+  type LilyPad,
+  makeLilyPads,
+  updateLilyPads,
+} from "./lilyPad";
 import {
   type DuckSpec,
   emitDuckDrop,
@@ -64,6 +84,12 @@ function leaving(d: Duck) {
 const pool: Duck[] = [];
 const bounds = { w: 0, h: 0 };
 let spawnTimer: number | null = null;
+
+// Passive props that live alongside the ducks at module scope so they persist
+// across remounts: lily pads (bumped around) and the tennis-ball cannon.
+const pads: LilyPad[] = makeLilyPads();
+const cannon: CannonState = makeCannon();
+const balls: TennisBall[] = [];
 
 function inner() {
   const m = DUCK_BASE * 0.5;
@@ -309,6 +335,8 @@ export function PixelPool({
 
     function updateHoverCursor(e: PointerEvent) {
       if (!activeRef.current || overUI(e)) return setCursor("");
+      if (cannon.loaded) return setCursor("crosshair");
+      if (overCannon(e.clientX, e.clientY)) return setCursor("pointer");
       if (duckAt(e.clientX, e.clientY)) return setCursor("grab");
       if (overShop(e.clientX, e.clientY)) return setCursor("pointer");
       setCursor("");
@@ -347,6 +375,25 @@ export function PixelPool({
 
     function onPointerDown(e: PointerEvent) {
       if (!activeRef.current || overUI(e)) return;
+      // clicking the cannon hub climbs in/out (loaded toggles the aim mode)
+      if (e.button === 0 && overCannon(e.clientX, e.clientY)) {
+        cannon.loaded = !cannon.loaded;
+        if (cannon.loaded) aimCannon(cannon, e.clientX, e.clientY);
+        updateHoverCursor(e);
+        e.preventDefault();
+        return;
+      }
+      // while loaded, a left-click fires a ball — no water/duck interaction
+      if (e.button === 0 && cannon.loaded) {
+        if (cannon.cooldown <= 0) {
+          aimCannon(cannon, e.clientX, e.clientY);
+          const ball = fireCannon(cannon);
+          balls.push(ball);
+          spawnSplash(ball.x, ball.y, 80);
+        }
+        e.preventDefault();
+        return;
+      }
       const d = duckAt(e.clientX, e.clientY);
       if (!d) {
         // clicking the shop (without a duck) opens the collection panel
@@ -462,6 +509,14 @@ export function PixelPool({
       updateHoverCursor(e);
     }
 
+    // Escape climbs back out of the cannon
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && cannon.loaded) {
+        cannon.loaded = false;
+        setCursor("");
+      }
+    }
+
     const isDark = () => document.documentElement.classList.contains("dark");
 
     function resize() {
@@ -470,6 +525,7 @@ export function PixelPool({
       h = canvas.clientHeight;
       bounds.w = w;
       bounds.h = h;
+      layoutLilyPads(pads, w, h);
       canvas.width = Math.floor(w * dpr);
       canvas.height = Math.floor(h * dpr);
       staticLayer = null; // size changed: rebuild static layer
@@ -1046,6 +1102,8 @@ export function PixelPool({
         !dragging && overShop(pointerX, pointerY),
         dark,
       );
+      if (cannon.loaded && pointerX >= 0) aimCannon(cannon, pointerX, pointerY);
+      drawCannon(ctx, cannon, now, dark);
 
       // remove ducks whose exit animation (drain / reserve / cull) has finished
       for (let i = pool.length - 1; i >= 0; i--) {
@@ -1218,11 +1276,57 @@ export function PixelPool({
         }
       }
 
+      // tennis balls in flight: move them, then shove any duck they strike
+      updateCannon(cannon, dt);
+      updateBalls(balls, dt, w, h);
+      for (const ball of balls) {
+        for (const d of pool) {
+          if (d === dragging || leaving(d) || d.inShop) continue;
+          const dr = DUCK_BASE * d.scale * 0.32;
+          const dx = d.x - ball.x;
+          const dy = d.y - ball.y;
+          const dist = Math.hypot(dx, dy) || 0.001;
+          if (dist >= dr + ball.r) continue;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const bs = Math.hypot(ball.vx, ball.vy);
+          d.vx += nx * (70 + bs * 0.5);
+          d.vy += ny * (70 + bs * 0.5);
+          d.spin = Math.max(-12, Math.min(12, (d.spin ?? 0) + (Math.random() - 0.5) * 9));
+          d.entering = false;
+          const vn = ball.vx * nx + ball.vy * ny;
+          if (vn > 0) {
+            ball.vx -= 2 * vn * nx;
+            ball.vy -= 2 * vn * ny;
+          }
+          ball.vx *= 0.45;
+          ball.vy *= 0.45;
+          spawnSplash(ball.x, ball.y, 130);
+        }
+      }
+
+      // lily pads: bumped by ducks and balls, then spring back to rest
+      for (const p of pads) {
+        for (const d of pool) {
+          if (d === dragging || leaving(d) || d.inShop || d.entering) continue;
+          const dr = DUCK_BASE * d.scale * 0.32;
+          const hit = bumpLilyPad(p, d.x, d.y, d.vx, d.vy, dr);
+          if (hit) {
+            d.vx -= hit.nx * 9;
+            d.vy -= hit.ny * 9;
+          }
+        }
+        for (const ball of balls) bumpLilyPad(p, ball.x, ball.y, ball.vx, ball.vy, ball.r);
+      }
+      updateLilyPads(pads, dt);
+
       updateSplashes(dt);
       updateWakes(dt);
       pool.sort((a, c) => a.y - c.y);
       drawWakes(dark);
+      for (const p of pads) drawLilyPad(ctx, p, now, dark);
       for (const d of pool) if (!d.inShop) drawDuck(d, now);
+      drawBalls(ctx, balls);
       drawSplashes(dark);
 
       // name tag and rarity stars of the duck currently under the cursor (not while dragging)
@@ -1248,6 +1352,7 @@ export function PixelPool({
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointercancel", onPointerUp);
+    window.addEventListener("keydown", onKeyDown);
     const clearPointer = () => {
       pointerX = -1;
       pointerY = -1;
@@ -1272,6 +1377,7 @@ export function PixelPool({
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerUp);
+      window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("blur", clearPointer);
       document.body.style.cursor = "";
     };
