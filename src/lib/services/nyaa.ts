@@ -66,7 +66,7 @@ export async function searchNyaa(p: NyaaSearchParams): Promise<NyaaResult[]> {
       seeders: Number(text(item, "nyaa:seeders")) || 0,
       leechers: Number(text(item, "nyaa:leechers")) || 0,
       downloads: Number(text(item, "nyaa:downloads")) || 0,
-      category: text(item, "nyaa:category"),
+      category: text(item, "nyaa:categoryId"),
       viewUrl: text(item, "guid"),
       pubDate: text(item, "pubDate"),
     };

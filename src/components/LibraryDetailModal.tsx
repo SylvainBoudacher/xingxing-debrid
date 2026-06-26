@@ -23,7 +23,7 @@ import {
   type LibraryEntry,
 } from "@/lib/library";
 import { parseRelease } from "@/lib/parseRelease";
-import { Clapperboard, Star, Trash2, X } from "lucide-react";
+import { Clapperboard, Pencil, Star, Trash2, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 
@@ -140,7 +140,7 @@ export function LibraryDetailModal({
                 {tmdb.overview}
               </p>
             )}
-            {onEnrichTmdb && (
+            {onEnrichTmdb && !tmdb && (
               <button
                 onClick={onEnrichTmdb}
                 className="mt-2 flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-500/20 dark:text-indigo-300"
@@ -160,6 +160,16 @@ export function LibraryDetailModal({
           </div>
 
           <div className="flex flex-none items-center gap-1.5">
+            {onEnrichTmdb && tmdb && (
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={onEnrichTmdb}
+                title="Changer les informations TMDB"
+                className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 text-zinc-500 transition-colors hover:bg-indigo-500/15 hover:text-indigo-500 dark:bg-zinc-800 dark:text-zinc-400"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </motion.button>
+            )}
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => {

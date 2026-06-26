@@ -389,7 +389,9 @@ export function LibraryPage({
             debrid={debrid}
             simple={viewMode === "simple"}
             autoWatchOnPlay={autoWatchOnPlay}
-            onEnrichTmdb={enrichHandler(expandedEntry)}
+            onEnrichTmdb={
+              initialTmdbKey ? () => setMatchingHash(expandedEntry.infoHash) : undefined
+            }
             enrichOpen={matchingHash !== null}
           />
         )}
