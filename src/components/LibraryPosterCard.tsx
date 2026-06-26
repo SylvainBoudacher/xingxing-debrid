@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { Check } from "lucide-react";
+import { Check, Clapperboard } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
 import {
   isSeries,
@@ -15,9 +15,17 @@ interface LibraryPosterCardProps {
   simple: boolean;
   expanded: boolean;
   onToggle: () => void;
+  // Présent uniquement si l'entrée peut être complétée via TMDB.
+  onEnrichTmdb?: () => void;
 }
 
-export function LibraryPosterCard({ entry, simple, expanded, onToggle }: LibraryPosterCardProps) {
+export function LibraryPosterCard({
+  entry,
+  simple,
+  expanded,
+  onToggle,
+  onEnrichTmdb,
+}: LibraryPosterCardProps) {
   const tmdb = entry.tmdb;
   const series = isSeries(entry);
   const whole = isWholeWatched(entry);
@@ -45,10 +53,24 @@ export function LibraryPosterCard({ entry, simple, expanded, onToggle }: Library
           className={`h-full w-full object-cover transition-[filter] duration-300 ${whole ? "brightness-50" : "group-hover:brightness-105"}`}
         />
       ) : (
-        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-500/25 via-zinc-200 to-zinc-300 px-3 text-center dark:from-indigo-500/20 dark:via-zinc-800 dark:to-zinc-900">
+        <div className="flex h-full w-full flex-col items-center justify-center gap-2.5 bg-gradient-to-br from-indigo-500/25 via-zinc-200 to-zinc-300 px-3 text-center dark:from-indigo-500/20 dark:via-zinc-800 dark:to-zinc-900">
           <span className="line-clamp-4 text-xs font-medium text-zinc-700 dark:text-zinc-200">
             {title}
           </span>
+          {onEnrichTmdb && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEnrichTmdb();
+              }}
+              className="flex items-center gap-1 rounded-full bg-indigo-500/15 px-2.5 py-1 text-[11px] font-medium text-indigo-700 transition-colors hover:bg-indigo-500/25 dark:bg-indigo-500/20 dark:text-indigo-200"
+            >
+              <Clapperboard className="h-3 w-3" />
+              Compléter via TMDB
+            </span>
+          )}
         </div>
       )}
 

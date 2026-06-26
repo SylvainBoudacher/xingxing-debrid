@@ -15,6 +15,7 @@ import { AppMenu, type Page } from "@/components/AppMenu";
 import { LibraryEntryCard, type DebridControls } from "@/components/LibraryEntryCard";
 import { LibraryPosterCard } from "@/components/LibraryPosterCard";
 import { LibraryDetailModal } from "@/components/LibraryDetailModal";
+import { TmdbMatchModal } from "@/components/TmdbMatchModal";
 import {
   Select,
   SelectContent,
@@ -27,6 +28,7 @@ import { flattenFiles, isVideoFile } from "@/lib/debrid";
 import type { ViewMode } from "@/pages/PreferencesPage";
 import {
   applyEnrichment,
+  canEnrichTmdb,
   flushLibrary,
   getCachedLibrary,
   isWholeWatched,
@@ -43,6 +45,7 @@ interface LibraryPageProps {
   hasPendingUpdate: boolean;
   onShowPendingUpdate: () => void;
   initialAllDebridKey?: string | null;
+  initialTmdbKey?: string | null;
   initialViewMode?: ViewMode;
 }
 
@@ -80,6 +83,7 @@ export function LibraryPage({
   hasPendingUpdate,
   onShowPendingUpdate,
   initialAllDebridKey,
+  initialTmdbKey,
   initialViewMode,
 }: LibraryPageProps) {
   const [entries, setEntries] = useState<LibraryEntry[]>(() => getCachedLibrary() ?? []);
@@ -89,6 +93,7 @@ export function LibraryPage({
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? "simple");
   const [layout, setLayout] = useState<Layout>("list");
   const [expandedHash, setExpandedHash] = useState<string | null>(null);
+  const [matchingHash, setMatchingHash] = useState<string | null>(null);
   const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
   const debrid = useDebridActions(() => initialAllDebridKey ?? "");
 
@@ -192,6 +197,12 @@ export function LibraryPage({
   // Entrée affichée dans le panneau latéral (vue grille). Null si l'entrée
   // sélectionnée n'est plus visible après un changement de filtre/recherche.
   const expandedEntry = visible.find((e) => e.infoHash === expandedHash) ?? null;
+  const matchingEntry = entries.find((e) => e.infoHash === matchingHash) ?? null;
+
+  // Bouton « Compléter via TMDB » : seulement si une clé est configurée et que
+  // l'entrée (C411 / Nyaa) n'a pas encore de métadonnées.
+  const enrichHandler = (e: LibraryEntry) =>
+    initialTmdbKey && canEnrichTmdb(e) ? () => setMatchingHash(e.infoHash) : undefined;
 
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
@@ -333,6 +344,7 @@ export function LibraryPage({
                 simple={viewMode === "simple"}
                 expanded={expandedHash === e.infoHash}
                 onToggle={() => setExpandedHash(e.infoHash)}
+                onEnrichTmdb={enrichHandler(e)}
               />
             ))}
           </div>
@@ -377,6 +389,22 @@ export function LibraryPage({
             debrid={debrid}
             simple={viewMode === "simple"}
             autoWatchOnPlay={autoWatchOnPlay}
+            onEnrichTmdb={enrichHandler(expandedEntry)}
+            enrichOpen={matchingHash !== null}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {matchingEntry && initialTmdbKey && (
+          <TmdbMatchModal
+            entry={matchingEntry}
+            tmdbKey={initialTmdbKey}
+            onPick={(meta) => {
+              handleChange({ ...matchingEntry, tmdb: meta });
+              setMatchingHash(null);
+            }}
+            onClose={() => setMatchingHash(null)}
           />
         )}
       </AnimatePresence>

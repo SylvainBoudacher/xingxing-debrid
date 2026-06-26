@@ -23,7 +23,7 @@ import {
   type LibraryEntry,
 } from "@/lib/library";
 import { parseRelease } from "@/lib/parseRelease";
-import { Star, Trash2, X } from "lucide-react";
+import { Clapperboard, Star, Trash2, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 
@@ -35,6 +35,10 @@ interface LibraryDetailModalProps {
   debrid: DebridControls;
   simple: boolean;
   autoWatchOnPlay: boolean;
+  // Présent uniquement si l'entrée peut être complétée et qu'une clé TMDB existe.
+  onEnrichTmdb?: () => void;
+  // Vrai quand la recherche TMDB est ouverte par-dessus : neutralise Escape ici.
+  enrichOpen?: boolean;
 }
 
 export function LibraryDetailModal({
@@ -45,6 +49,8 @@ export function LibraryDetailModal({
   debrid,
   simple,
   autoWatchOnPlay,
+  onEnrichTmdb,
+  enrichOpen,
 }: LibraryDetailModalProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const tmdb = entry.tmdb;
@@ -61,10 +67,10 @@ export function LibraryDetailModal({
   const resumeKey = `resume-${entry.infoHash}`;
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !enrichOpen && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, enrichOpen]);
 
   useEffect(() => {
     if (!confirmDelete) return;
@@ -133,6 +139,15 @@ export function LibraryDetailModal({
               <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
                 {tmdb.overview}
               </p>
+            )}
+            {onEnrichTmdb && (
+              <button
+                onClick={onEnrichTmdb}
+                className="mt-2 flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-500/20 dark:text-indigo-300"
+              >
+                <Clapperboard className="h-3.5 w-3.5" />
+                Compléter via TMDB
+              </button>
             )}
             {series && (
               <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">

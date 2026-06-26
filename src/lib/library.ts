@@ -170,6 +170,12 @@ export function isSeries(entry: LibraryEntry): boolean {
   return entry.enriched && videoFiles(entry).length > 1;
 }
 
+// Les entrées C411 / Nyaa n'ont pas de métadonnées TMDB (contrairement à
+// Découverte) : on propose de les compléter manuellement.
+export function canEnrichTmdb(entry: LibraryEntry): boolean {
+  return !entry.tmdb && (entry.provider === "c411" || entry.provider === "nyaa");
+}
+
 // Numéro de saison déduit du nom de fichier (S01E02, Saison 1, Season 1...).
 // Retourne null si aucun marqueur de saison n'est trouvé.
 export function seasonOf(name: string): number | null {
