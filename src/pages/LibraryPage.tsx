@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Compass,
   GripVertical,
+  Layers,
   LayoutGrid,
   Library as LibraryIcon,
   List,
@@ -97,6 +98,7 @@ export function LibraryPage({
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? "simple");
   const [layout, setLayout] = useState<Layout>("grid");
+  const [split, setSplit] = useState(true);
   const [expandedHash, setExpandedHash] = useState<string | null>(null);
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
@@ -156,6 +158,9 @@ export function LibraryPage({
     store.get<Layout>("library_layout").then((v) => {
       if (v) setLayout(v);
     });
+    store.get<boolean>("library_split").then((v) => {
+      if (v !== null && v !== undefined) setSplit(v);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -207,12 +212,35 @@ export function LibraryPage({
   }, [entries, filter, sort, q]);
 
   // Le glisser-déposer ne réordonne que la liste complète (sans filtre ni recherche).
-  const canReorder = sort === "manual" && filter === "all" && q === "";
+  const canReorder = !split && sort === "manual" && filter === "all" && q === "";
 
   const displayItems = useMemo<DisplayItem[]>(
     () => (canReorder ? [] : groupLibraryEntries(visible)),
     [canReorder, visible],
   );
+
+  const splitSections = useMemo<{ label: string; items: DisplayItem[] }[] | null>(() => {
+    if (!split) return null;
+    const noInfo: DisplayItem[] = [];
+    const movies: DisplayItem[] = [];
+    const series: DisplayItem[] = [];
+    for (const item of displayItems) {
+      if (item.type === "group") {
+        series.push(item);
+      } else if (!item.entry.tmdb) {
+        noInfo.push(item);
+      } else if (item.entry.tmdb.mediaType === "movie") {
+        movies.push(item);
+      } else {
+        series.push(item);
+      }
+    }
+    const sections: { label: string; items: DisplayItem[] }[] = [];
+    if (noInfo.length > 0) sections.push({ label: "Sans info TMDB", items: noInfo });
+    if (movies.length > 0) sections.push({ label: "Films", items: movies });
+    if (series.length > 0) sections.push({ label: "Séries", items: series });
+    return sections;
+  }, [split, displayItems]);
 
   // Entrée affichée dans le panneau latéral (vue grille). Null si l'entrée
   // sélectionnée n'est plus visible après un changement de filtre/recherche.
@@ -297,6 +325,23 @@ export function LibraryPage({
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const next = !split;
+                setSplit(next);
+                void store.set("library_split", next).then(() => store.save());
+              }}
+              title="Séparer films / séries"
+              className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
+                split
+                  ? "bg-indigo-600 text-white"
+                  : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+              }`}
+            >
+              <Layers className="h-3.5 w-3.5" />
+              Trier
+            </button>
+
             <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
               {(
                 [
@@ -362,27 +407,58 @@ export function LibraryPage({
             )}
           </div>
         ) : layout === "grid" ? (
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-            {displayItems.map((item) =>
-              item.type === "single" ? (
-                <LibraryPosterCard
-                  key={item.entry.infoHash}
-                  entry={item.entry}
-                  simple={viewMode === "simple"}
-                  expanded={expandedHash === item.entry.infoHash}
-                  onToggle={() => setExpandedHash(item.entry.infoHash)}
-                  onEnrichTmdb={enrichHandler(item.entry)}
-                />
-              ) : (
-                <SeriesGroupPosterCard
-                  key={item.group.tmdbId}
-                  group={item.group}
-                  expanded={expandedGroupId === item.group.tmdbId}
-                  onToggle={() => setExpandedGroupId(item.group.tmdbId)}
-                />
-              ),
-            )}
-          </div>
+          splitSections ? (
+            <div className="space-y-6">
+              {splitSections.map((section) => (
+                <div key={section.label}>
+                  <SectionHeader label={section.label} count={section.items.length} />
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+                    {section.items.map((item) =>
+                      item.type === "single" ? (
+                        <LibraryPosterCard
+                          key={item.entry.infoHash}
+                          entry={item.entry}
+                          simple={viewMode === "simple"}
+                          expanded={expandedHash === item.entry.infoHash}
+                          onToggle={() => setExpandedHash(item.entry.infoHash)}
+                          onEnrichTmdb={enrichHandler(item.entry)}
+                        />
+                      ) : (
+                        <SeriesGroupPosterCard
+                          key={item.group.tmdbId}
+                          group={item.group}
+                          expanded={expandedGroupId === item.group.tmdbId}
+                          onToggle={() => setExpandedGroupId(item.group.tmdbId)}
+                        />
+                      ),
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+              {displayItems.map((item) =>
+                item.type === "single" ? (
+                  <LibraryPosterCard
+                    key={item.entry.infoHash}
+                    entry={item.entry}
+                    simple={viewMode === "simple"}
+                    expanded={expandedHash === item.entry.infoHash}
+                    onToggle={() => setExpandedHash(item.entry.infoHash)}
+                    onEnrichTmdb={enrichHandler(item.entry)}
+                  />
+                ) : (
+                  <SeriesGroupPosterCard
+                    key={item.group.tmdbId}
+                    group={item.group}
+                    expanded={expandedGroupId === item.group.tmdbId}
+                    onToggle={() => setExpandedGroupId(item.group.tmdbId)}
+                  />
+                ),
+              )}
+            </div>
+          )
         ) : canReorder ? (
           <Reorder.Group axis="y" values={visible} onReorder={persist} className="space-y-2">
             {visible.map((e) => (
@@ -397,6 +473,39 @@ export function LibraryPage({
               />
             ))}
           </Reorder.Group>
+        ) : splitSections ? (
+          <div className="space-y-6">
+            {splitSections.map((section) => (
+              <div key={section.label}>
+                <SectionHeader label={section.label} count={section.items.length} />
+                <div className="space-y-2">
+                  {section.items.map((item) =>
+                    item.type === "single" ? (
+                      <LibraryEntryCard
+                        key={item.entry.infoHash}
+                        entry={item.entry}
+                        onChange={handleChange}
+                        onRemove={handleRemove}
+                        debrid={debrid}
+                        simple={viewMode === "simple"}
+                        autoWatchOnPlay={autoWatchOnPlay}
+                      />
+                    ) : (
+                      <SeriesGroupCard
+                        key={item.group.tmdbId}
+                        group={item.group}
+                        onChange={handleChange}
+                        onRemove={handleRemove}
+                        debrid={debrid}
+                        simple={viewMode === "simple"}
+                        autoWatchOnPlay={autoWatchOnPlay}
+                      />
+                    ),
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
           <div className="space-y-2">
             {displayItems.map((item) =>
@@ -482,6 +591,18 @@ interface ReorderableCardProps {
   debrid: DebridControls;
   simple: boolean;
   autoWatchOnPlay?: boolean;
+}
+
+function SectionHeader({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">{label}</span>
+      <span className="rounded-full bg-black/8 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-white/10 dark:text-zinc-400">
+        {count}
+      </span>
+      <div className="h-px flex-1 bg-black/8 dark:bg-white/10" />
+    </div>
+  );
 }
 
 function ReorderableCard({ entry, ...props }: ReorderableCardProps) {
