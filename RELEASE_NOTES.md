@@ -1,2 +1,1 @@
-- Nouvelle page : ma bibliotheque!
-- Nouveaux parametres
+Mise a jour de la page Ma bibliotheque

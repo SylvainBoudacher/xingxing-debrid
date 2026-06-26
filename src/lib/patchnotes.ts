@@ -1,3 +1,4 @@
+import bibliothequeV131Img from "@/assets/patchnote/v1.3.1/bibliotheque.webp";
 import bibliothequeImg from "@/assets/patchnote/v1.3/bibliotheque.webp";
 import reprendreImg from "@/assets/patchnote/v1.3/reprendre.webp";
 import tailleLancementImg from "@/assets/patchnote/v1.3/taille-lancement.webp";
@@ -30,6 +31,46 @@ export interface PatchNote {
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.3.1",
+    date: "26 juin 2026",
+    intro:
+      "La page Ma bibliotheque est entierement revue : nouvelle vue en jaquettes, enrichissement TMDB, tri par type de contenu, et regroupement automatique des saisons.",
+    introImage: {
+      src: bibliothequeV131Img,
+      caption: "La page Ma bibliotheque revisitee - jaquettes, TMDB et tri par type",
+    },
+    sections: [
+      {
+        title: "Nouvelle interface : vue en jaquettes",
+        items: [
+          "La bibliotheque affiche desormais les jaquettes de vos films et series, pour une navigation plus visuelle et agreable.",
+          "De nouveaux boutons permettent d'agir rapidement sur chaque element sans avoir a ouvrir sa fiche.",
+          "L'avancement est visible en un coup d'oeil directement sur chaque carte.",
+        ],
+      },
+      {
+        title: "Enrichissement TMDB",
+        items: [
+          "Chaque element de la bibliotheque peut etre relie aux donnees TMDB : affiche officielle, titre, synopsis, note.",
+          "Le lien se fait automatiquement lors de l'ajout, ou manuellement depuis la fiche de l'element.",
+        ],
+      },
+      {
+        title: "Tri par films et series",
+        items: [
+          "Un nouveau filtre permet d'afficher uniquement les films, uniquement les series, ou tout le contenu en une seule vue.",
+        ],
+      },
+      {
+        title: "Regroupement automatique des saisons",
+        items: [
+          "Si deux saisons d'une meme serie sont detectees dans votre bibliotheque, elles sont automatiquement regroupees en une seule carte.",
+          "Toutes les saisons restent accessibles depuis cette carte unifiee, sans encombrer la vue principale.",
+        ],
+      },
+    ],
+  },
   {
     version: "1.3.0",
     date: "26 juin 2026",
