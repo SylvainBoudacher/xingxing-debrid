@@ -279,6 +279,7 @@ function App() {
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 initialAllDebridKey={initAllDebridKey}
+                initialTmdbKey={initTmdbKey}
                 initialViewMode={initPrefs.libraryViewMode}
               />
             </motion.div>

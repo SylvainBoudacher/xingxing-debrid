@@ -11,7 +11,7 @@ function nyaaResult(overrides: Partial<NyaaResult> = {}): NyaaResult {
     seeders: 100,
     leechers: 5,
     downloads: 1000,
-    category: "Anime - English-translated",
+    category: "1_2",
     viewUrl: "https://nyaa.si/view/1234567",
     pubDate: "Mon, 01 Jan 2024 00:00:00 +0000",
     ...overrides,
@@ -41,8 +41,18 @@ describe("mapNyaaResults", () => {
     expect(r[0].magnet).toBe(magnet);
   });
 
-  it("always sets category to 0 (Nyaa has no category mapping)", () => {
-    const r = mapNyaaResults([nyaaResult()]);
+  it("maps Anime category to 2060", () => {
+    const r = mapNyaaResults([nyaaResult({ category: "1_2" })]);
+    expect(r[0].category).toBe(2060);
+  });
+
+  it("maps Live Action category to 2000", () => {
+    const r = mapNyaaResults([nyaaResult({ category: "4_4" })]);
+    expect(r[0].category).toBe(2000);
+  });
+
+  it("maps unknown category to 0", () => {
+    const r = mapNyaaResults([nyaaResult({ category: "6_1" })]);
     expect(r[0].category).toBe(0);
   });
 

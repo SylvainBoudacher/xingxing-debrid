@@ -60,6 +60,13 @@ function parseNyaaSize(s: string): number {
   return Math.round(parseFloat(m[1]) * (SIZE_UNITS[m[2].toUpperCase()] ?? 1));
 }
 
+function mapNyaaCategory(cat: string): number {
+  const main = cat.split("_")[0];
+  if (main === "1") return 2060; // Anime
+  if (main === "4") return 2000; // Live Action
+  return 0;
+}
+
 export function mapNyaaResults(data: NyaaResult[]): SearchResult[] {
   return data.map((r) => ({
     title: r.title,
@@ -67,7 +74,7 @@ export function mapNyaaResults(data: NyaaResult[]): SearchResult[] {
     seeders: r.seeders,
     leechers: r.leechers,
     guid: r.infoHash,
-    category: 0,
+    category: mapNyaaCategory(r.category),
     magnet: r.magnet,
   }));
 }
