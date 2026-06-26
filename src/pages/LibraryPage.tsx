@@ -15,6 +15,9 @@ import { AppMenu, type Page } from "@/components/AppMenu";
 import { LibraryEntryCard, type DebridControls } from "@/components/LibraryEntryCard";
 import { LibraryPosterCard } from "@/components/LibraryPosterCard";
 import { LibraryDetailModal } from "@/components/LibraryDetailModal";
+import { SeriesGroupCard } from "@/components/SeriesGroupCard";
+import { SeriesGroupPosterCard } from "@/components/SeriesGroupPosterCard";
+import { SeriesGroupDetailModal } from "@/components/SeriesGroupDetailModal";
 import { TmdbMatchModal } from "@/components/TmdbMatchModal";
 import {
   Select,
@@ -31,11 +34,13 @@ import {
   canEnrichTmdb,
   flushLibrary,
   getCachedLibrary,
+  groupLibraryEntries,
   isWholeWatched,
   loadLibrary,
   progressRatio,
   saveLibrary,
   saveLibraryDebounced,
+  type DisplayItem,
   type LibraryEntry,
 } from "@/lib/library";
 
@@ -93,6 +98,7 @@ export function LibraryPage({
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? "simple");
   const [layout, setLayout] = useState<Layout>("list");
   const [expandedHash, setExpandedHash] = useState<string | null>(null);
+  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
   const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
   const debrid = useDebridActions(() => initialAllDebridKey ?? "");
@@ -155,6 +161,9 @@ export function LibraryPage({
 
   function changeLayout(next: Layout) {
     setLayout(next);
+    // Le tri manuel (glisser-déposer) n'existe qu'en vue liste : on bascule sur
+    // « Plus récents » en passant en grille.
+    if (next === "grid" && sort === "manual") setSort("recent");
     void store.set("library_layout", next).then(() => store.save());
   }
 
@@ -175,8 +184,10 @@ export function LibraryPage({
   }
 
   const counts = useMemo<Record<Filter, number>>(() => {
-    const done = entries.filter((e) => isWholeWatched(e)).length;
-    return { all: entries.length, todo: entries.length - done, done };
+    const all = groupLibraryEntries(entries);
+    const doneCount = groupLibraryEntries(entries.filter((e) => isWholeWatched(e))).length;
+    const todoCount = groupLibraryEntries(entries.filter((e) => !isWholeWatched(e))).length;
+    return { all: all.length, done: doneCount, todo: todoCount };
   }, [entries]);
 
   const q = query.trim().toLowerCase();
@@ -186,7 +197,11 @@ export function LibraryPage({
         const done = isWholeWatched(e);
         if (filter === "done" ? !done : done) return false;
       }
-      return q === "" || e.title.toLowerCase().includes(q);
+      return (
+        q === "" ||
+        e.title.toLowerCase().includes(q) ||
+        (e.tmdb?.title.toLowerCase().includes(q) ?? false)
+      );
     });
     return sort === "manual" ? filtered : [...filtered].sort(SORTERS[sort]);
   }, [entries, filter, sort, q]);
@@ -194,9 +209,20 @@ export function LibraryPage({
   // Le glisser-déposer ne réordonne que la liste complète (sans filtre ni recherche).
   const canReorder = sort === "manual" && filter === "all" && q === "";
 
+  const displayItems = useMemo<DisplayItem[]>(
+    () => (canReorder ? [] : groupLibraryEntries(visible)),
+    [canReorder, visible],
+  );
+
   // Entrée affichée dans le panneau latéral (vue grille). Null si l'entrée
   // sélectionnée n'est plus visible après un changement de filtre/recherche.
   const expandedEntry = visible.find((e) => e.infoHash === expandedHash) ?? null;
+  const expandedGroup =
+    expandedGroupId !== null
+      ? (displayItems.find(
+          (item) => item.type === "group" && item.group.tmdbId === expandedGroupId,
+        ) ?? null)
+      : null;
   const matchingEntry = entries.find((e) => e.infoHash === matchingHash) ?? null;
 
   // Bouton « Compléter via TMDB » : seulement si une clé est configurée et que
@@ -298,7 +324,7 @@ export function LibraryPage({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {SORTS.map((s) => (
+                {SORTS.filter((s) => s.id !== "manual" || layout === "list").map((s) => (
                   <SelectItem key={s.id} value={s.id} className="text-xs">
                     {s.label}
                   </SelectItem>
@@ -337,16 +363,25 @@ export function LibraryPage({
           </div>
         ) : layout === "grid" ? (
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-            {visible.map((e) => (
-              <LibraryPosterCard
-                key={e.infoHash}
-                entry={e}
-                simple={viewMode === "simple"}
-                expanded={expandedHash === e.infoHash}
-                onToggle={() => setExpandedHash(e.infoHash)}
-                onEnrichTmdb={enrichHandler(e)}
-              />
-            ))}
+            {displayItems.map((item) =>
+              item.type === "single" ? (
+                <LibraryPosterCard
+                  key={item.entry.infoHash}
+                  entry={item.entry}
+                  simple={viewMode === "simple"}
+                  expanded={expandedHash === item.entry.infoHash}
+                  onToggle={() => setExpandedHash(item.entry.infoHash)}
+                  onEnrichTmdb={enrichHandler(item.entry)}
+                />
+              ) : (
+                <SeriesGroupPosterCard
+                  key={item.group.tmdbId}
+                  group={item.group}
+                  expanded={expandedGroupId === item.group.tmdbId}
+                  onToggle={() => setExpandedGroupId(item.group.tmdbId)}
+                />
+              ),
+            )}
           </div>
         ) : canReorder ? (
           <Reorder.Group axis="y" values={visible} onReorder={persist} className="space-y-2">
@@ -364,17 +399,29 @@ export function LibraryPage({
           </Reorder.Group>
         ) : (
           <div className="space-y-2">
-            {visible.map((e) => (
-              <LibraryEntryCard
-                key={e.infoHash}
-                entry={e}
-                onChange={handleChange}
-                onRemove={handleRemove}
-                debrid={debrid}
-                simple={viewMode === "simple"}
-                autoWatchOnPlay={autoWatchOnPlay}
-              />
-            ))}
+            {displayItems.map((item) =>
+              item.type === "single" ? (
+                <LibraryEntryCard
+                  key={item.entry.infoHash}
+                  entry={item.entry}
+                  onChange={handleChange}
+                  onRemove={handleRemove}
+                  debrid={debrid}
+                  simple={viewMode === "simple"}
+                  autoWatchOnPlay={autoWatchOnPlay}
+                />
+              ) : (
+                <SeriesGroupCard
+                  key={item.group.tmdbId}
+                  group={item.group}
+                  onChange={handleChange}
+                  onRemove={handleRemove}
+                  debrid={debrid}
+                  simple={viewMode === "simple"}
+                  autoWatchOnPlay={autoWatchOnPlay}
+                />
+              ),
+            )}
           </div>
         )}
       </div>
@@ -393,6 +440,20 @@ export function LibraryPage({
               initialTmdbKey ? () => setMatchingHash(expandedEntry.infoHash) : undefined
             }
             enrichOpen={matchingHash !== null}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {expandedGroup?.type === "group" && (
+          <SeriesGroupDetailModal
+            group={expandedGroup.group}
+            onChange={handleChange}
+            onRemove={handleRemove}
+            onClose={() => setExpandedGroupId(null)}
+            debrid={debrid}
+            simple={viewMode === "simple"}
+            autoWatchOnPlay={autoWatchOnPlay}
           />
         )}
       </AnimatePresence>

@@ -176,6 +176,16 @@ export function canEnrichTmdb(entry: LibraryEntry): boolean {
   return !entry.tmdb && (entry.provider === "c411" || entry.provider === "nyaa");
 }
 
+// Label court saison+épisode pour l'UI (ex. "S2E4", "S3"). Null si rien détecté.
+export function episodeLabel(name: string): string | null {
+  const base = name.split("/").pop() ?? name;
+  const m = base.match(/\bS(\d{1,2})[ ._-]?E(\d{1,3})\b/i);
+  if (m) return `S${parseInt(m[1], 10)}E${parseInt(m[2], 10)}`;
+  const s = seasonOf(name);
+  if (s !== null) return `S${s}`;
+  return null;
+}
+
 // Numéro de saison déduit du nom de fichier (S01E02, Saison 1, Season 1...).
 // Retourne null si aucun marqueur de saison n'est trouvé.
 export function seasonOf(name: string): number | null {
@@ -262,4 +272,97 @@ export function progressRatio(entry: LibraryEntry): number {
   const total = totalCount(entry);
   if (total === 0) return isWholeWatched(entry) ? 1 : 0;
   return watchedCount(entry) / total;
+}
+
+// ---------- Series grouping ----------
+
+export interface SeriesGroup {
+  tmdbId: number;
+  tmdb: TmdbMeta;
+  entries: LibraryEntry[];
+}
+
+export type DisplayItem =
+  | { type: "single"; entry: LibraryEntry }
+  | { type: "group"; group: SeriesGroup };
+
+// Best-guess season number for an entry: the season that has the most files.
+export function dominantSeason(entry: LibraryEntry): number | null {
+  const groups = groupBySeason(videoFiles(entry));
+  const withSeason = groups.filter((g) => g.season !== null);
+  if (withSeason.length === 0) return null;
+  return withSeason.reduce(
+    (best, g) => (g.files.length >= best.files.length ? g : best),
+    withSeason[0],
+  ).season;
+}
+
+// Groups entries sharing the same TMDB TV series id. Preserves relative order
+// of first appearance; entries within each group are sorted by season.
+// Single-entry groups are collapsed back to singles.
+export function groupLibraryEntries(entries: LibraryEntry[]): DisplayItem[] {
+  const seen = new Map<number, SeriesGroup>();
+  const items: DisplayItem[] = [];
+
+  for (const entry of entries) {
+    if (entry.tmdb?.mediaType === "tv") {
+      const id = entry.tmdb.id;
+      if (seen.has(id)) {
+        seen.get(id)!.entries.push(entry);
+      } else {
+        const group: SeriesGroup = { tmdbId: id, tmdb: entry.tmdb, entries: [entry] };
+        seen.set(id, group);
+        items.push({ type: "group", group });
+      }
+    } else {
+      items.push({ type: "single", entry });
+    }
+  }
+
+  for (const item of items) {
+    if (item.type === "group" && item.group.entries.length > 1) {
+      item.group.entries.sort((a, b) => (dominantSeason(a) ?? 999) - (dominantSeason(b) ?? 999));
+    }
+  }
+
+  return items.map((item) =>
+    item.type === "group" && item.group.entries.length === 1
+      ? { type: "single" as const, entry: item.group.entries[0] }
+      : item,
+  );
+}
+
+export function groupWatchedCount(group: SeriesGroup): number {
+  return group.entries.reduce((s, e) => s + watchedCount(e), 0);
+}
+
+export function groupTotalCount(group: SeriesGroup): number {
+  return group.entries.reduce((s, e) => s + totalCount(e), 0);
+}
+
+export function groupProgressRatio(group: SeriesGroup): number {
+  const total = groupTotalCount(group);
+  return total === 0 ? 0 : groupWatchedCount(group) / total;
+}
+
+export function groupIsWholeWatched(group: SeriesGroup): boolean {
+  return group.entries.every((e) => isWholeWatched(e));
+}
+
+export function groupNextUnwatched(
+  group: SeriesGroup,
+): { entry: LibraryEntry; file: DebridFile } | null {
+  for (const entry of group.entries) {
+    const f = nextUnwatched(entry);
+    if (f) return { entry, file: f };
+  }
+  return null;
+}
+
+export function groupSize(group: SeriesGroup): number {
+  return group.entries.reduce((s, e) => s + e.size, 0);
+}
+
+export function groupAddedAt(group: SeriesGroup): number {
+  return Math.max(...group.entries.map((e) => e.addedAt));
 }

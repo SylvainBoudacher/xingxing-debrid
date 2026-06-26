@@ -5,6 +5,7 @@ import vlcLogo from "@/assets/vlc.png";
 import { formatSize } from "@/lib/debrid";
 import { parseRelease } from "@/lib/parseRelease";
 import {
+  episodeLabel,
   groupBySeason,
   hasMultipleSeasons,
   isSeries,
@@ -120,36 +121,63 @@ export function Checkbox({ checked, onClick }: { checked: boolean; onClick: () =
   );
 }
 
+function EpisodeLabel({ label, hideSeason }: { label: string; hideSeason: boolean }) {
+  const m = label.match(/^(S\d+)(E\d+)$/);
+  if (m) {
+    if (hideSeason) {
+      return (
+        <span className="font-mono tracking-tight text-amber-500 dark:text-amber-400">{m[2]}</span>
+      );
+    }
+    return (
+      <span className="font-mono tracking-tight">
+        <span className="text-indigo-400 dark:text-indigo-300">{m[1]}</span>
+        <span className="text-amber-500 dark:text-amber-400">{m[2]}</span>
+      </span>
+    );
+  }
+  if (hideSeason) return null;
+  return (
+    <span className="font-mono tracking-tight text-indigo-400 dark:text-indigo-300">{label}</span>
+  );
+}
+
 // Bouton « Reprendre » (lit le prochain épisode non vu via VLC).
 export function ResumeButton({
   next,
   groupKey,
   debrid,
   onResume,
+  started = true,
+  hideSeason = false,
 }: {
   next: DebridFile;
   groupKey: string;
   debrid: DebridControls;
   onResume: () => void;
+  started?: boolean;
+  hideSeason?: boolean;
 }) {
   const resuming = debrid.bulkVlc === groupKey;
+  const label = episodeLabel(next.name);
   return (
     <motion.button
       whileTap={{ scale: 0.9 }}
-      title="Reprendre l'épisode suivant"
+      title={started ? "Reprendre l'épisode suivant" : "Lancer le premier épisode"}
       onClick={() => {
         debrid.openVlcMany([next.link], groupKey);
         onResume();
       }}
       disabled={resuming}
-      className="flex h-7 flex-none items-center gap-1 rounded-lg px-2 text-xs font-medium text-emerald-600 hover:bg-emerald-500/10 disabled:opacity-40 dark:text-emerald-400"
+      className="flex h-7 flex-none items-center gap-1 rounded-lg px-2 text-xs font-medium text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 disabled:opacity-40 dark:text-emerald-400 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25"
     >
       {resuming ? (
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
       ) : (
         <Play className="h-3.5 w-3.5" />
       )}
-      Reprendre
+      {started ? "Reprendre" : "Lancer"}
+      {label ? <EpisodeLabel label={label} hideSeason={hideSeason} /> : null}
     </motion.button>
   );
 }
@@ -258,6 +286,8 @@ function SeasonSection({
             next={next}
             groupKey={resumeKey}
             debrid={debrid}
+            started={seenCount > 0}
+            hideSeason
             onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
           />
         )}

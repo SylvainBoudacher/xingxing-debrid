@@ -210,6 +210,7 @@ export function LibraryDetailModal({
                 next={next}
                 groupKey={resumeKey}
                 debrid={debrid}
+                started={watchedCount(entry) > 0}
                 onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
               />
             )}
