@@ -22,13 +22,57 @@ const WHOLE = "__whole__";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
+// Cache mémoire alimenté au lancement (pendant le splash) pour que la page
+// bibliothèque s'ouvre instantanément sans flash d'écran vide.
+let cache: LibraryEntry[] | null = null;
+
 export async function loadLibrary(): Promise<LibraryEntry[]> {
-  return (await store.get<LibraryEntry[]>(STORE_KEY)) ?? [];
+  cache = (await store.get<LibraryEntry[]>(STORE_KEY)) ?? [];
+  return cache;
+}
+
+// Lecture synchrone du cache : null tant que loadLibrary/prefetchLibrary
+// n'a pas résolu au moins une fois.
+export function getCachedLibrary(): LibraryEntry[] | null {
+  return cache;
+}
+
+// Réchauffe le cache au lancement. À appeler pendant le splash.
+export function prefetchLibrary(): Promise<LibraryEntry[]> {
+  return loadLibrary();
 }
 
 export async function saveLibrary(entries: LibraryEntry[]): Promise<void> {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  cache = entries;
   await store.set(STORE_KEY, entries);
   await store.save();
+}
+
+// Écriture disque différée : met le cache à jour immédiatement mais ne flushe
+// le fichier qu'après une période de silence, pour regrouper les rafales de
+// coches en une seule écriture.
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+const SAVE_DELAY = 400;
+
+export function saveLibraryDebounced(entries: LibraryEntry[]): void {
+  cache = entries;
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    void saveLibrary(entries);
+  }, SAVE_DELAY);
+}
+
+// Force l'écriture en attente (ex. à la fermeture de la page).
+export function flushLibrary(): void {
+  if (!saveTimer || cache === null) return;
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  void saveLibrary(cache);
 }
 
 export interface RecordDownloadInput {
@@ -93,8 +137,17 @@ export function applyEnrichment(entry: LibraryEntry, files: DebridFile[]): Libra
   return next;
 }
 
+// Cache indexé sur le tableau `files` : la référence reste stable tant que
+// l'entrée n'est pas ré-enrichie (cocher un épisode ne touche que `watched`),
+// donc le filtre n'est calculé qu'une fois par liste de fichiers.
+const videoFilesCache = new WeakMap<DebridFile[], DebridFile[]>();
+
 export function videoFiles(entry: LibraryEntry): DebridFile[] {
-  return entry.files.filter((f) => isVideoFile(f.name));
+  const cached = videoFilesCache.get(entry.files);
+  if (cached) return cached;
+  const vids = entry.files.filter((f) => isVideoFile(f.name));
+  videoFilesCache.set(entry.files, vids);
+  return vids;
 }
 
 export function isSeries(entry: LibraryEntry): boolean {

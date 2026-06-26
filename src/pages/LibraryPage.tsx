@@ -17,10 +17,13 @@ import { flattenFiles, isVideoFile } from "@/lib/debrid";
 import type { ViewMode } from "@/pages/PreferencesPage";
 import {
   applyEnrichment,
+  flushLibrary,
+  getCachedLibrary,
   isWholeWatched,
   loadLibrary,
   progressRatio,
   saveLibrary,
+  saveLibraryDebounced,
   type LibraryEntry,
 } from "@/lib/library";
 
@@ -68,7 +71,7 @@ export function LibraryPage({
   initialAllDebridKey,
   initialViewMode,
 }: LibraryPageProps) {
-  const [entries, setEntries] = useState<LibraryEntry[]>([]);
+  const [entries, setEntries] = useState<LibraryEntry[]>(() => getCachedLibrary() ?? []);
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("recent");
   const [query, setQuery] = useState("");
@@ -129,9 +132,12 @@ export function LibraryPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function persist(next: LibraryEntry[]) {
+  // Flushe l'écriture en attente quand on quitte la page.
+  useEffect(() => flushLibrary, []);
+
+  function persist(next: LibraryEntry[]) {
     setEntries(next);
-    await saveLibrary(next);
+    saveLibraryDebounced(next);
   }
 
   function handleChange(updated: LibraryEntry) {

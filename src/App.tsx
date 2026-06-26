@@ -9,6 +9,7 @@ import { UpdateDialog } from "@/components/UpdateDialog";
 import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import type { Page } from "@/components/AppMenu";
+import { prefetchLibrary } from "@/lib/library";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -86,6 +87,9 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // Réchauffe le cache bibliothèque pendant le splash (best-effort).
+    prefetchLibrary().catch(() => {});
+
     Promise.all([store.get<boolean>("setup_complete"), store.get<boolean>("welcome_v1_seen")])
       .then(([done, welcomeSeen]) => {
         setPage(done && welcomeSeen ? "main" : "setup");
