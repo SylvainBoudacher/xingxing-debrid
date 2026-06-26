@@ -1148,8 +1148,15 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                     detail: (
                       <>
                         Appuyez sur{" "}
-                        <kbd className="rounded bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 text-[11px] font-mono font-medium text-zinc-700 dark:text-zinc-200">
-                          Win
+                        <kbd className="inline-flex items-center rounded bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 text-[11px] font-mono font-medium text-zinc-700 dark:text-zinc-200">
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="h-3 w-3"
+                            fill="currentColor"
+                            aria-label="Windows"
+                          >
+                            <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-13.051-1.949" />
+                          </svg>
                         </kbd>{" "}
                         +{" "}
                         <kbd className="rounded bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 text-[11px] font-mono font-medium text-zinc-700 dark:text-zinc-200">
