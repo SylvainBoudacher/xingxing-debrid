@@ -324,11 +324,18 @@ export function LibraryEntryCard({
           className={`flex min-w-0 flex-1 items-center gap-2 text-left ${series ? "cursor-pointer" : "cursor-default"}`}
         >
           <div className="min-w-0 flex-1">
-            <p
-              className={`truncate text-sm font-medium ${whole ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-900 dark:text-white"}`}
-            >
-              {displayTitle}
-            </p>
+            <div className="flex items-baseline gap-2">
+              <p
+                className={`truncate text-sm font-medium ${whole ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-900 dark:text-white"}`}
+              >
+                {displayTitle}
+              </p>
+              {multiSeason && (
+                <span className="flex-none text-xs text-zinc-400 dark:text-zinc-500">
+                  {seasonCount} saisons
+                </span>
+              )}
+            </div>
             <div className="mt-0.5 flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
               <span
                 className={`rounded px-1.5 py-0.5 font-medium ring-1 ${PROVIDER_CLASS[entry.provider]}`}
@@ -346,11 +353,6 @@ export function LibraryEntryCard({
                 </span>
               )}
               {entry.size > 0 && <span>{formatSize(entry.size)}</span>}
-              {multiSeason && (
-                <span className="rounded bg-violet-500/10 px-1.5 py-0.5 font-semibold text-violet-600 dark:text-violet-300">
-                  {seasonCount} saisons
-                </span>
-              )}
               {series && (
                 <span>
                   {watchedCount(entry)}/{totalCount(entry)} vus
