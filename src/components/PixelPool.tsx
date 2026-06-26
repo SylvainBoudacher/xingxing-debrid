@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { randomVariant } from "./duckRandom";
+import { getRarity, randomVariant } from "./duckRandom";
 import { makeDuckSprite, SH, SW, type Effect } from "./duckSprite";
 import type { Variant } from "./duckTypes";
 import {
@@ -872,19 +872,72 @@ export function PixelPool({
       }
     }
 
-    // floating name tag above a hovered, named duck
+    const RARITY_STARS: Record<string, string> = {
+      legendary: "★★★",
+      rare: "★★",
+      uncommon: "★",
+      common: "☆",
+    };
+    const RARITY_COLOR: Record<string, string> = {
+      legendary: "#fbbf24",
+      rare: "#60a5fa",
+      uncommon: "#4ade80",
+      common: "rgba(140,140,160,0.85)",
+    };
+
+    // floating star pill above a hovered unnamed duck
+    function drawRarityPill(d: Duck, t: number) {
+      const bob = Math.sin(t * 0.003 + d.phase) * 3;
+      const dh = DUCK_BASE * d.scale;
+      const rarity = getRarity(d.variant);
+      const starsText = RARITY_STARS[rarity];
+      const starsColor = RARITY_COLOR[rarity];
+
+      ctx.font = "bold 12px ui-sans-serif, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const sw = ctx.measureText(starsText).width;
+      const padX = 7;
+      const bw = sw + padX * 2;
+      const bh = 20;
+      const cx = d.x;
+      const by = d.y + bob - dh * 0.5 - bh - 4;
+
+      ctx.fillStyle = "rgba(15,23,42,0.85)";
+      ctx.strokeStyle = "rgba(255,255,255,0.12)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(cx - bw / 2, by, bw, bh, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = starsColor;
+      ctx.fillText(starsText, cx, by + bh / 2 + 0.5);
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    }
+
+    // floating name tag with rarity stars above a hovered named duck
     function drawNameLabel(d: Duck, t: number) {
       const bob = Math.sin(t * 0.003 + d.phase) * 3;
       const dh = DUCK_BASE * d.scale;
-      ctx.font = "600 13px ui-sans-serif, system-ui, sans-serif";
-      ctx.textAlign = "center";
+      const rarity = getRarity(d.variant);
+      const starsText = RARITY_STARS[rarity];
+      const starsColor = RARITY_COLOR[rarity];
+
       ctx.textBaseline = "middle";
-      const tw = ctx.measureText(d.name!).width;
+      ctx.font = "600 13px ui-sans-serif, system-ui, sans-serif";
+      const nameW = ctx.measureText(d.name!).width;
+      ctx.font = "600 11px ui-sans-serif, system-ui, sans-serif";
+      const starsW = ctx.measureText(starsText).width;
+
+      const gap = 7;
+      const totalW = nameW + gap + starsW;
       const padX = 9;
-      const bw = tw + padX * 2;
+      const bw = totalW + padX * 2;
       const bh = 22;
       const cx = d.x;
-      const by = d.y + bob - dh * 0.5 - bh - 4; // sit just above the head
+      const by = d.y + bob - dh * 0.5 - bh - 4;
       const tip = 5;
 
       ctx.fillStyle = "rgba(15,23,42,0.9)";
@@ -894,7 +947,6 @@ export function PixelPool({
       ctx.roundRect(cx - bw / 2, by, bw, bh, 6);
       ctx.fill();
       ctx.stroke();
-      // little pointer toward the duck
       ctx.beginPath();
       ctx.moveTo(cx - tip, by + bh - 0.5);
       ctx.lineTo(cx + tip, by + bh - 0.5);
@@ -903,8 +955,17 @@ export function PixelPool({
       ctx.fillStyle = "rgba(15,23,42,0.9)";
       ctx.fill();
 
+      const labelMid = by + bh / 2 + 0.5;
+      const nameStartX = cx - totalW / 2;
+      ctx.font = "600 13px ui-sans-serif, system-ui, sans-serif";
+      ctx.textAlign = "left";
       ctx.fillStyle = "#ffffff";
-      ctx.fillText(d.name!, cx, by + bh / 2 + 0.5);
+      ctx.fillText(d.name!, nameStartX, labelMid);
+
+      ctx.font = "600 11px ui-sans-serif, system-ui, sans-serif";
+      ctx.fillStyle = starsColor;
+      ctx.fillText(starsText, nameStartX + nameW + gap, labelMid);
+
       ctx.textAlign = "start";
       ctx.textBaseline = "alphabetic";
     }
@@ -1164,10 +1225,13 @@ export function PixelPool({
       for (const d of pool) if (!d.inShop) drawDuck(d, now);
       drawSplashes(dark);
 
-      // name tag of the duck currently under the cursor (not while dragging)
+      // name tag and rarity stars of the duck currently under the cursor (not while dragging)
       if (!dragging) {
         const hovered = duckAt(pointerX, pointerY);
-        if (hovered?.name) drawNameLabel(hovered, now);
+        if (hovered) {
+          if (hovered.name) drawNameLabel(hovered, now);
+          else drawRarityPill(hovered, now);
+        }
       }
     }
 

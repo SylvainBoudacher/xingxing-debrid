@@ -47,15 +47,15 @@ async function getMaxDucks(): Promise<number> {
 }
 
 const RARITY_LABEL: Record<Rarity, string> = {
-  legendary: "légendaire",
-  rare: "rare",
-  uncommon: "peu commun",
+  legendary: "★★★",
+  rare: "★★",
+  uncommon: "★",
   common: "",
 };
-const RARITY_DOT: Record<Rarity, string> = {
-  legendary: "bg-amber-400",
-  rare: "bg-blue-400",
-  uncommon: "bg-green-400",
+const RARITY_BADGE: Record<Rarity, string> = {
+  legendary: "bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/30",
+  rare: "bg-blue-400/15 text-blue-400 ring-1 ring-blue-400/30",
+  uncommon: "bg-green-400/15 text-green-400 ring-1 ring-green-400/30",
   common: "",
 };
 
@@ -337,9 +337,10 @@ export function DuckShop() {
                           </span>
                           {rarity !== "common" && (
                             <span
-                              title={RARITY_LABEL[rarity]}
-                              className={`inline-block h-2 w-2 shrink-0 rounded-sm ${RARITY_DOT[rarity]}`}
-                            />
+                              className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${RARITY_BADGE[rarity]}`}
+                            >
+                              {RARITY_LABEL[rarity]}
+                            </span>
                           )}
                           {d.reserved && (
                             <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
@@ -352,57 +353,57 @@ export function DuckShop() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7"
+                          className="h-6 w-6 shrink-0"
                           onClick={() => commitRename(d.id)}
                           title="Valider"
                         >
-                          <Check className="h-3.5 w-3.5" />
+                          <Check className="h-3 w-3" />
                         </Button>
                       ) : (
-                        <>
+                        <div className="flex shrink-0 items-center [&_button]:cursor-pointer">
                           {d.reserved ? (
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7"
+                              className="h-6 w-6"
                               onClick={() => putInWater(d)}
                               title="Mettre à l'eau"
                             >
-                              <Waves className="h-3.5 w-3.5" />
+                              <Waves className="h-3 w-3" />
                             </Button>
                           ) : (
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7"
+                              className="h-6 w-6"
                               onClick={() => putInReserve(d)}
                               title="Mettre en réserve"
                             >
-                              <Archive className="h-3.5 w-3.5" />
+                              <Archive className="h-3 w-3" />
                             </Button>
                           )}
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7"
+                            className="h-6 w-6"
                             onClick={() => {
                               setEditingId(d.id);
                               setEditName(d.name);
                             }}
                             title="Renommer"
                           >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Pencil className="h-3 w-3" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            className="h-6 w-6 text-destructive hover:text-destructive"
                             onClick={() => remove(d)}
                             title="Supprimer"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3 w-3" />
                           </Button>
-                        </>
+                        </div>
                       )}
                     </li>
                   );
