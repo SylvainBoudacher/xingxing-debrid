@@ -37,6 +37,7 @@ import {
   getCachedLibrary,
   groupLibraryEntries,
   isWholeWatched,
+  libraryCounts,
   loadLibrary,
   progressRatio,
   saveLibraryDebounced,
@@ -203,36 +204,7 @@ export function LibraryPage({
     });
   }, []);
 
-  // Compte les éléments affichés (séries regroupées) par filtre en une seule
-  // passe. Un élément = un film/entrée hors-série, ou un id TMDB de série
-  // distinct (le regroupement collapse toutes les entrées d'une même série en
-  // un seul item). Une série avec des saisons vues et d'autres à voir compte
-  // dans « done » ET « todo », d'où les Set séparés.
-  const counts = useMemo<Record<Filter, number>>(() => {
-    let allSingles = 0;
-    let doneSingles = 0;
-    let todoSingles = 0;
-    const allTv = new Set<number>();
-    const doneTv = new Set<number>();
-    const todoTv = new Set<number>();
-    for (const e of entries) {
-      const tvId = e.tmdb?.mediaType === "tv" ? e.tmdb.id : null;
-      const done = isWholeWatched(e);
-      if (tvId !== null) {
-        allTv.add(tvId);
-        (done ? doneTv : todoTv).add(tvId);
-      } else {
-        allSingles++;
-        if (done) doneSingles++;
-        else todoSingles++;
-      }
-    }
-    return {
-      all: allSingles + allTv.size,
-      done: doneSingles + doneTv.size,
-      todo: todoSingles + todoTv.size,
-    };
-  }, [entries]);
+  const counts = useMemo(() => libraryCounts(entries), [entries]);
 
   const q = query.trim().toLowerCase();
   const visible = useMemo(() => {

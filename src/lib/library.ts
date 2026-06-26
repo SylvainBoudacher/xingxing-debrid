@@ -333,6 +333,43 @@ export function groupLibraryEntries(entries: LibraryEntry[]): DisplayItem[] {
   );
 }
 
+export interface LibraryCounts {
+  all: number;
+  done: number;
+  todo: number;
+}
+
+// Compte les éléments affichés (séries regroupées) par filtre, en une seule
+// passe. Un élément = une entrée hors-série, ou un id TMDB de série distinct
+// (toutes les entrées d'une même série collapse en un item, cf.
+// groupLibraryEntries). Une série dont certaines saisons sont vues et d'autres
+// non compte dans `done` ET `todo`, d'où les Set séparés.
+export function libraryCounts(entries: LibraryEntry[]): LibraryCounts {
+  let allSingles = 0;
+  let doneSingles = 0;
+  let todoSingles = 0;
+  const allTv = new Set<number>();
+  const doneTv = new Set<number>();
+  const todoTv = new Set<number>();
+  for (const e of entries) {
+    const tvId = e.tmdb?.mediaType === "tv" ? e.tmdb.id : null;
+    const done = isWholeWatched(e);
+    if (tvId !== null) {
+      allTv.add(tvId);
+      (done ? doneTv : todoTv).add(tvId);
+    } else {
+      allSingles++;
+      if (done) doneSingles++;
+      else todoSingles++;
+    }
+  }
+  return {
+    all: allSingles + allTv.size,
+    done: doneSingles + doneTv.size,
+    todo: todoSingles + todoTv.size,
+  };
+}
+
 export function groupWatchedCount(group: SeriesGroup): number {
   return group.entries.reduce((s, e) => s + watchedCount(e), 0);
 }

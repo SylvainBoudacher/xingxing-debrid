@@ -26,9 +26,11 @@ import {
   flushLibrary,
   getCachedLibrary,
   groupBySeason,
+  groupLibraryEntries,
   hasMultipleSeasons,
   isSeries,
   isWholeWatched,
+  libraryCounts,
   loadLibrary,
   nextUnwatched,
   prefetchLibrary,
@@ -285,5 +287,95 @@ describe("saveLibraryDebounced / flushLibrary", () => {
   it("flushLibrary ne fait rien sans écriture en attente", () => {
     flushLibrary();
     expect(setSpy).not.toHaveBeenCalled();
+  });
+});
+
+function tvMeta(id: number): NonNullable<LibraryEntry["tmdb"]> {
+  return {
+    id,
+    mediaType: "tv",
+    title: `Series ${id}`,
+    posterPath: null,
+    year: "2020",
+    voteAverage: 0,
+    overview: "",
+  };
+}
+
+function movieMeta(id: number): NonNullable<LibraryEntry["tmdb"]> {
+  return { ...tvMeta(id), mediaType: "movie", title: `Movie ${id}` };
+}
+
+// Entrée vue (sans fichiers : coche globale) / à voir.
+const done = { files: [] as DebridFile[], watched: { __whole__: true } };
+const todo = { files: [] as DebridFile[], watched: {} };
+
+describe("groupLibraryEntries", () => {
+  it("regroupe les entrées TV partageant le même id TMDB", () => {
+    const items = groupLibraryEntries([
+      entry({ infoHash: "a", tmdb: tvMeta(1) }),
+      entry({ infoHash: "b", tmdb: tvMeta(1) }),
+    ]);
+    expect(items).toHaveLength(1);
+    expect(items[0].type).toBe("group");
+    if (items[0].type === "group") expect(items[0].group.entries).toHaveLength(2);
+  });
+
+  it("collapse un groupe à une seule entrée en single", () => {
+    const items = groupLibraryEntries([entry({ infoHash: "a", tmdb: tvMeta(1) })]);
+    expect(items).toHaveLength(1);
+    expect(items[0].type).toBe("single");
+  });
+
+  it("garde films et entrées sans TMDB en singles, dans l'ordre d'apparition", () => {
+    const items = groupLibraryEntries([
+      entry({ infoHash: "m", tmdb: movieMeta(9) }),
+      entry({ infoHash: "x" }),
+    ]);
+    expect(items.map((i) => i.type)).toEqual(["single", "single"]);
+  });
+});
+
+describe("libraryCounts", () => {
+  it("compte films et entrées hors-série par état", () => {
+    const counts = libraryCounts([
+      entry({ infoHash: "m1", tmdb: movieMeta(1), ...done }),
+      entry({ infoHash: "m2", tmdb: movieMeta(2), ...todo }),
+      entry({ infoHash: "x", ...todo }),
+    ]);
+    expect(counts).toEqual({ all: 3, done: 1, todo: 2 });
+  });
+
+  it("compte une série multi-entrées comme un seul élément", () => {
+    const counts = libraryCounts([
+      entry({ infoHash: "a", tmdb: tvMeta(1), ...done }),
+      entry({ infoHash: "b", tmdb: tvMeta(1), ...done }),
+      entry({ infoHash: "c", tmdb: tvMeta(1), ...done }),
+    ]);
+    expect(counts).toEqual({ all: 1, done: 1, todo: 0 });
+  });
+
+  it("compte une série mixte dans done ET todo", () => {
+    const counts = libraryCounts([
+      entry({ infoHash: "a", tmdb: tvMeta(1), ...done }),
+      entry({ infoHash: "b", tmdb: tvMeta(1), ...todo }),
+    ]);
+    expect(counts).toEqual({ all: 1, done: 1, todo: 1 });
+  });
+
+  it("équivaut à groupLibraryEntries sur les sous-ensembles filtrés", () => {
+    const entries = [
+      entry({ infoHash: "m1", tmdb: movieMeta(1), ...done }),
+      entry({ infoHash: "m2", tmdb: movieMeta(2), ...todo }),
+      entry({ infoHash: "x", ...todo }),
+      entry({ infoHash: "a", tmdb: tvMeta(1), ...done }),
+      entry({ infoHash: "b", tmdb: tvMeta(1), ...done }),
+      entry({ infoHash: "c", tmdb: tvMeta(2), ...done }),
+      entry({ infoHash: "d", tmdb: tvMeta(2), ...todo }),
+    ];
+    const counts = libraryCounts(entries);
+    expect(counts.all).toBe(groupLibraryEntries(entries).length);
+    expect(counts.done).toBe(groupLibraryEntries(entries.filter((e) => isWholeWatched(e))).length);
+    expect(counts.todo).toBe(groupLibraryEntries(entries.filter((e) => !isWholeWatched(e))).length);
   });
 });
