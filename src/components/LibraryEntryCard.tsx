@@ -5,10 +5,13 @@ import vlcLogo from "@/assets/vlc.png";
 import { formatSize } from "@/lib/debrid";
 import { parseRelease } from "@/lib/parseRelease";
 import {
+  groupBySeason,
+  hasMultipleSeasons,
   isSeries,
   isWholeWatched,
   nextUnwatched,
   progressRatio,
+  setFilesWatched,
   setWholeWatched,
   toggleFile,
   videoFiles,
@@ -16,7 +19,9 @@ import {
   totalCount,
   type LibraryEntry,
   type LibraryProvider,
+  type SeasonGroup,
 } from "@/lib/library";
+import type { DebridFile } from "@/lib/debrid";
 
 export interface DebridControls {
   bulkDownloading: string | null;
@@ -121,6 +126,156 @@ function Checkbox({ checked, onClick }: { checked: boolean; onClick: () => void 
   );
 }
 
+function FileRow({
+  file,
+  entry,
+  onChange,
+  debrid,
+  simple,
+  autoWatchOnPlay,
+}: {
+  file: DebridFile;
+  entry: LibraryEntry;
+  onChange: (entry: LibraryEntry) => void;
+  debrid: DebridControls;
+  simple: boolean;
+  autoWatchOnPlay: boolean;
+}) {
+  const fileWatched = entry.watched[file.name] ?? false;
+  return (
+    <li className="flex items-center gap-3 px-4 py-2 pl-6">
+      <Checkbox checked={fileWatched} onClick={() => onChange(toggleFile(entry, file.name))} />
+      <span
+        className={`min-w-0 flex-1 truncate text-xs ${fileWatched ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-300"}`}
+      >
+        {simple
+          ? parseRelease(file.name.split("/").pop() ?? file.name).title
+          : file.name.split("/").pop()}
+      </span>
+      {file.size > 0 && (
+        <span className="flex-none text-[11px] text-zinc-400">{formatSize(file.size)}</span>
+      )}
+      <DebridActions
+        links={[file.link]}
+        groupKey={file.link}
+        debrid={debrid}
+        onVlcClick={
+          autoWatchOnPlay && !fileWatched ? () => onChange(toggleFile(entry, file.name)) : undefined
+        }
+      />
+    </li>
+  );
+}
+
+function SeasonSection({
+  group,
+  entry,
+  onChange,
+  debrid,
+  simple,
+  autoWatchOnPlay,
+}: {
+  group: SeasonGroup;
+  entry: LibraryEntry;
+  onChange: (entry: LibraryEntry) => void;
+  debrid: DebridControls;
+  simple: boolean;
+  autoWatchOnPlay: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const names = group.files.map((f) => f.name);
+  const links = group.files.map((f) => f.link);
+  const seenCount = names.filter((n) => entry.watched[n]).length;
+  const allSeen = seenCount === names.length;
+  const label = group.season === null ? "Autres" : `Saison ${group.season}`;
+  const groupKey = `${entry.infoHash}-s${group.season ?? "x"}`;
+  const next = group.files.find((f) => !entry.watched[f.name]) ?? null;
+  const resumeKey = `resume-${groupKey}`;
+  const resuming = debrid.bulkVlc === resumeKey;
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 bg-black/[0.02] px-4 py-2 dark:bg-white/[0.03]">
+        <Checkbox
+          checked={allSeen}
+          onClick={() => onChange(setFilesWatched(entry, names, !allSeen))}
+        />
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span
+                className={`truncate text-xs font-semibold ${allSeen ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}
+              >
+                {label}
+              </span>
+              <span className="flex-none text-[11px] text-zinc-400">
+                {seenCount}/{names.length}
+              </span>
+            </div>
+            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${Math.round((seenCount / names.length) * 100)}%` }}
+              />
+            </div>
+          </div>
+          <ChevronDown
+            className={`h-3.5 w-3.5 flex-none text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`}
+          />
+        </button>
+        {next && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            title="Reprendre l'épisode suivant de la saison"
+            onClick={() => {
+              debrid.openVlcMany([next.link], resumeKey);
+              if (autoWatchOnPlay) onChange(toggleFile(entry, next.name));
+            }}
+            disabled={resuming}
+            className="flex h-7 flex-none items-center gap-1 rounded-lg px-2 text-xs font-medium text-emerald-600 hover:bg-emerald-500/10 disabled:opacity-40 dark:text-emerald-400"
+          >
+            {resuming ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Play className="h-3.5 w-3.5" />
+            )}
+            Reprendre
+          </motion.button>
+        )}
+        <DebridActions links={links} groupKey={groupKey} debrid={debrid} />
+      </div>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <ul className="divide-y divide-black/5 dark:divide-white/5">
+              {group.files.map((f) => (
+                <FileRow
+                  key={f.name}
+                  file={f}
+                  entry={entry}
+                  onChange={onChange}
+                  debrid={debrid}
+                  simple={simple}
+                  autoWatchOnPlay={autoWatchOnPlay}
+                />
+              ))}
+            </ul>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 interface LibraryEntryCardProps {
   entry: LibraryEntry;
   onChange: (entry: LibraryEntry) => void;
@@ -143,6 +298,7 @@ export function LibraryEntryCard({
   const series = isSeries(entry);
   const whole = isWholeWatched(entry);
   const vids = videoFiles(entry);
+  const multiSeason = series && hasMultipleSeasons(entry);
   const allLinks = vids.map((f) => f.link);
   const parsed = simple ? parseRelease(entry.title) : null;
   const displayTitle = parsed ? parsed.title : entry.title;
@@ -265,41 +421,35 @@ export function LibraryEntryCard({
             transition={{ duration: 0.2 }}
             className="overflow-hidden border-t border-black/5 dark:border-white/10"
           >
-            <ul className="divide-y divide-black/5 dark:divide-white/5">
-              {videoFiles(entry).map((f) => {
-                const fileWatched = entry.watched[f.name] ?? false;
-                return (
-                  <li key={f.name} className="flex items-center gap-3 px-4 py-2 pl-6">
-                    <Checkbox
-                      checked={fileWatched}
-                      onClick={() => onChange(toggleFile(entry, f.name))}
-                    />
-                    <span
-                      className={`min-w-0 flex-1 truncate text-xs ${fileWatched ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-300"}`}
-                    >
-                      {simple
-                        ? parseRelease(f.name.split("/").pop() ?? f.name).title
-                        : f.name.split("/").pop()}
-                    </span>
-                    {f.size > 0 && (
-                      <span className="flex-none text-[11px] text-zinc-400">
-                        {formatSize(f.size)}
-                      </span>
-                    )}
-                    <DebridActions
-                      links={[f.link]}
-                      groupKey={f.link}
-                      debrid={debrid}
-                      onVlcClick={
-                        autoWatchOnPlay && !entry.watched[f.name]
-                          ? () => onChange(toggleFile(entry, f.name))
-                          : undefined
-                      }
-                    />
-                  </li>
-                );
-              })}
-            </ul>
+            {multiSeason ? (
+              <div className="divide-y divide-black/5 dark:divide-white/10">
+                {groupBySeason(vids).map((g) => (
+                  <SeasonSection
+                    key={g.season ?? "other"}
+                    group={g}
+                    entry={entry}
+                    onChange={onChange}
+                    debrid={debrid}
+                    simple={simple}
+                    autoWatchOnPlay={autoWatchOnPlay}
+                  />
+                ))}
+              </div>
+            ) : (
+              <ul className="divide-y divide-black/5 dark:divide-white/5">
+                {vids.map((f) => (
+                  <FileRow
+                    key={f.name}
+                    file={f}
+                    entry={entry}
+                    onChange={onChange}
+                    debrid={debrid}
+                    simple={simple}
+                    autoWatchOnPlay={autoWatchOnPlay}
+                  />
+                ))}
+              </ul>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

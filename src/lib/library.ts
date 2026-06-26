@@ -101,6 +101,53 @@ export function isSeries(entry: LibraryEntry): boolean {
   return entry.enriched && videoFiles(entry).length > 1;
 }
 
+// Numéro de saison déduit du nom de fichier (S01E02, Saison 1, Season 1...).
+// Retourne null si aucun marqueur de saison n'est trouvé.
+export function seasonOf(name: string): number | null {
+  const base = name.split("/").pop() ?? name;
+  const m =
+    base.match(/\bS(\d{1,2})[ ._-]?E\d{1,3}\b/i) ??
+    base.match(/\b(?:saison|season)[ ._-]?(\d{1,2})\b/i) ??
+    base.match(/\bS(\d{1,2})\b/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+export interface SeasonGroup {
+  season: number | null;
+  files: DebridFile[];
+}
+
+// Regroupe les fichiers vidéo par saison, triés par numéro croissant
+// (les fichiers sans saison détectée vont en dernier).
+export function groupBySeason(files: DebridFile[]): SeasonGroup[] {
+  const map = new Map<number | null, DebridFile[]>();
+  for (const f of files) {
+    const s = seasonOf(f.name);
+    if (!map.has(s)) map.set(s, []);
+    map.get(s)!.push(f);
+  }
+  return [...map.entries()]
+    .sort((a, b) => (a[0] ?? Infinity) - (b[0] ?? Infinity))
+    .map(([season, files]) => ({ season, files }));
+}
+
+// Vrai si l'entrée contient au moins deux saisons distinctes.
+export function hasMultipleSeasons(entry: LibraryEntry): boolean {
+  const groups = groupBySeason(videoFiles(entry));
+  return groups.filter((g) => g.season !== null).length > 1;
+}
+
+// Marque (ou démarque) un ensemble de fichiers comme vus.
+export function setFilesWatched(
+  entry: LibraryEntry,
+  names: string[],
+  value: boolean,
+): LibraryEntry {
+  const watched = { ...entry.watched };
+  for (const n of names) watched[n] = value;
+  return { ...entry, watched };
+}
+
 export function isWholeWatched(entry: LibraryEntry): boolean {
   const vids = videoFiles(entry);
   if (vids.length === 0) return entry.watched[WHOLE] ?? false;
