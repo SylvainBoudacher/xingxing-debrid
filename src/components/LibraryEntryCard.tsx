@@ -143,7 +143,7 @@ function FileRow({
 }) {
   const fileWatched = entry.watched[file.name] ?? false;
   return (
-    <li className="flex items-center gap-3 px-4 py-2 pl-6">
+    <li className="flex items-center gap-3 px-4 py-2 pl-6 transition-colors hover:bg-black/[0.025] dark:hover:bg-white/[0.04]">
       <Checkbox checked={fileWatched} onClick={() => onChange(toggleFile(entry, file.name))} />
       <span
         className={`min-w-0 flex-1 truncate text-xs ${fileWatched ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-300"}`}
@@ -195,7 +195,7 @@ function SeasonSection({
 
   return (
     <div>
-      <div className="flex items-center gap-3 bg-black/[0.02] px-4 py-2 dark:bg-white/[0.03]">
+      <div className="flex items-center gap-3 bg-black/[0.02] px-4 py-2 dark:bg-white/[0.03] transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]">
         <Checkbox
           checked={allSeen}
           onClick={() => onChange(setFilesWatched(entry, names, !allSeen))}
@@ -299,6 +299,7 @@ export function LibraryEntryCard({
   const whole = isWholeWatched(entry);
   const vids = videoFiles(entry);
   const multiSeason = series && hasMultipleSeasons(entry);
+  const seasonCount = multiSeason ? groupBySeason(vids).length : 0;
   const allLinks = vids.map((f) => f.link);
   const parsed = simple ? parseRelease(entry.title) : null;
   const displayTitle = parsed ? parsed.title : entry.title;
@@ -315,7 +316,7 @@ export function LibraryEntryCard({
 
   return (
     <div className="rounded-xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm overflow-hidden">
-      <div className="flex items-center gap-3 px-4 py-3">
+      <div className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-black/[0.025] dark:hover:bg-white/[0.04]">
         <Checkbox checked={whole} onClick={() => onChange(setWholeWatched(entry, !whole))} />
 
         <button
@@ -345,6 +346,11 @@ export function LibraryEntryCard({
                 </span>
               )}
               {entry.size > 0 && <span>{formatSize(entry.size)}</span>}
+              {multiSeason && (
+                <span className="rounded bg-violet-500/10 px-1.5 py-0.5 font-semibold text-violet-600 dark:text-violet-300">
+                  {seasonCount} saisons
+                </span>
+              )}
               {series && (
                 <span>
                   {watchedCount(entry)}/{totalCount(entry)} vus
