@@ -264,7 +264,8 @@ export function totalCount(entry: LibraryEntry): number {
 
 // Premier fichier vidéo non encore vu (pour le bouton « Reprendre »).
 export function nextUnwatched(entry: LibraryEntry): DebridFile | null {
-  return videoFiles(entry).find((f) => !entry.watched[f.name]) ?? null;
+  const sorted = groupBySeason(videoFiles(entry)).flatMap((g) => g.files);
+  return sorted.find((f) => !entry.watched[f.name]) ?? null;
 }
 
 // Ratio de visionnage entre 0 et 1.
