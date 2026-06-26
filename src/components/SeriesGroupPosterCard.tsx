@@ -28,10 +28,10 @@ export function SeriesGroupPosterCard({ group, expanded, onToggle }: SeriesGroup
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
       onClick={onToggle}
-      className={`group relative block aspect-[2/3] overflow-hidden rounded-xl text-left ring-1 transition-shadow ${
+      className={`group relative block aspect-[2/3] cursor-pointer overflow-hidden rounded-xl text-left ring-2 transition-[box-shadow,ring-color] duration-200 ${
         expanded
-          ? "ring-2 ring-indigo-500"
-          : "ring-black/8 dark:ring-white/10 hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.45)]"
+          ? "ring-indigo-500"
+          : "ring-black/8 dark:ring-white/10 hover:ring-indigo-400/50 dark:hover:ring-indigo-400/40 hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.45)]"
       }`}
     >
       {group.tmdb.posterPath ? (
@@ -39,7 +39,7 @@ export function SeriesGroupPosterCard({ group, expanded, onToggle }: SeriesGroup
           src={`https://image.tmdb.org/t/p/w342${group.tmdb.posterPath}`}
           alt={title}
           loading="lazy"
-          className={`h-full w-full object-cover transition-[filter] duration-300 ${whole ? "brightness-50" : "group-hover:brightness-105"}`}
+          className={`block h-full w-full object-cover transition-[filter] duration-300 ${whole ? "brightness-50" : "group-hover:brightness-105"}`}
         />
       ) : (
         <div className="flex h-full w-full flex-col items-center justify-center gap-2.5 bg-gradient-to-br from-indigo-500/25 via-zinc-200 to-zinc-300 px-3 text-center dark:from-indigo-500/20 dark:via-zinc-800 dark:to-zinc-900">

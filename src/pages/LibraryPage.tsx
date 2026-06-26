@@ -96,7 +96,7 @@ export function LibraryPage({
   const [sort, setSort] = useState<Sort>("recent");
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? "simple");
-  const [layout, setLayout] = useState<Layout>("list");
+  const [layout, setLayout] = useState<Layout>("grid");
   const [expandedHash, setExpandedHash] = useState<string | null>(null);
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
