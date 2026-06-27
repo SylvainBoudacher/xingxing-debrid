@@ -1,9 +1,65 @@
+use futures_util::StreamExt;
 use reqwest::multipart;
 use serde_json::Value;
-use std::sync::OnceLock;
+use std::collections::HashSet;
+use std::io::Write;
+use std::sync::{Mutex, OnceLock};
+use tauri::{Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 
 const KEYRING_SERVICE: &str = "com.sulyk.c411-debrid-app";
+
+// Ids des telechargements dont l'annulation a ete demandee. La boucle de
+// streaming verifie ce set a chaque chunk et s'interrompt si l'id y figure.
+#[derive(Default)]
+struct DownloadState {
+    cancelled: Mutex<HashSet<String>>,
+}
+
+#[derive(Clone, serde::Serialize)]
+struct DownloadProgress {
+    id: String,
+    downloaded: u64,
+    total: u64,
+}
+
+fn hex_val(b: u8) -> Option<u8> {
+    match b {
+        b'0'..=b'9' => Some(b - b'0'),
+        b'a'..=b'f' => Some(b - b'a' + 10),
+        b'A'..=b'F' => Some(b - b'A' + 10),
+        _ => None,
+    }
+}
+
+// Decode les sequences %XX d'un segment d'URL (ex. "Mon%20Film" -> "Mon Film").
+fn percent_decode(s: &str) -> String {
+    let bytes = s.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let (Some(h), Some(l)) = (hex_val(bytes[i + 1]), hex_val(bytes[i + 2])) {
+                out.push((h << 4) | l);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
+// Deduit un nom de fichier propre depuis l'URL debridee.
+fn filename_from_url(url: &str) -> String {
+    url.split('?')
+        .next()
+        .and_then(|p| p.rsplit('/').next())
+        .filter(|s| !s.is_empty())
+        .map(percent_decode)
+        .unwrap_or_else(|| "telechargement".to_string())
+}
 
 // Un seul client reqwest reutilise par toutes les commandes : conserve le pool
 // de connexions (keep-alive TLS) au lieu d'en recreer un a chaque appel.
@@ -174,6 +230,113 @@ fn export_json(app: tauri::AppHandle, filename: String, content: String) -> Resu
     Ok(path.to_string_lossy().into_owned())
 }
 
+// Telecharge `url` vers `dir` (ou le dossier Telechargements de l'OS si vide),
+// en streamant le corps et en emettant des evenements de progression.
+// Retourne le chemin final. Renvoie Err("cancelled") si annule.
+#[tauri::command]
+async fn download_to_dir(
+    app: tauri::AppHandle,
+    state: tauri::State<'_, DownloadState>,
+    id: String,
+    url: String,
+    dir: String,
+) -> Result<String, String> {
+    let target_dir = if dir.trim().is_empty() {
+        app.path().download_dir().map_err(|e| e.to_string())?
+    } else {
+        std::path::PathBuf::from(&dir)
+    };
+
+    let dest = target_dir.join(filename_from_url(&url));
+
+    let client = http_client();
+    let res = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| e.without_url().to_string())?;
+
+    if !res.status().is_success() {
+        return Err(format!("Telechargement HTTP {}", res.status()));
+    }
+
+    let total = res.content_length().unwrap_or(0);
+    let mut file = std::fs::File::create(&dest).map_err(|e| e.to_string())?;
+    let mut downloaded: u64 = 0;
+    let mut last_emit = std::time::Instant::now();
+    let mut stream = res.bytes_stream();
+
+    while let Some(chunk) = stream.next().await {
+        // Verifie l'annulation sans tenir le verrou au-dela de l'await suivant.
+        let is_cancelled = {
+            let mut set = state.cancelled.lock().unwrap();
+            set.remove(&id)
+        };
+        if is_cancelled {
+            drop(file);
+            let _ = std::fs::remove_file(&dest);
+            return Err("cancelled".to_string());
+        }
+
+        let chunk = chunk.map_err(|e| e.to_string())?;
+        file.write_all(&chunk).map_err(|e| e.to_string())?;
+        downloaded += chunk.len() as u64;
+
+        // Throttle les events (~10/s) pour ne pas noyer le front.
+        if last_emit.elapsed().as_millis() >= 100 {
+            let _ = app.emit(
+                "download-progress",
+                DownloadProgress {
+                    id: id.clone(),
+                    downloaded,
+                    total,
+                },
+            );
+            last_emit = std::time::Instant::now();
+        }
+    }
+
+    let _ = app.emit(
+        "download-progress",
+        DownloadProgress {
+            id: id.clone(),
+            downloaded,
+            total,
+        },
+    );
+
+    Ok(dest.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn cancel_download(state: tauri::State<'_, DownloadState>, id: String) {
+    state.cancelled.lock().unwrap().insert(id);
+}
+
+// Ouvre un fichier local avec l'application par defaut du systeme.
+#[tauri::command]
+fn open_file(path: String) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open")
+        .arg(&path)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "windows")]
+    std::process::Command::new("cmd")
+        .args(["/C", "start", "", &path])
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    #[cfg(target_os = "linux")]
+    std::process::Command::new("xdg-open")
+        .arg(&path)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 #[tauri::command]
 fn open_with_vlc(url: String) -> Result<(), String> {
     open_urls_with_vlc(&[url])
@@ -228,8 +391,10 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .manage(DownloadState::default())
         .setup(|app| {
             // Migration : deplace les cles API de settings.json (clair) vers le trousseau OS
             if let Ok(store) = app.store("settings.json") {
@@ -263,6 +428,9 @@ pub fn run() {
             open_with_vlc,
             open_many_with_vlc,
             export_json,
+            download_to_dir,
+            cancel_download,
+            open_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

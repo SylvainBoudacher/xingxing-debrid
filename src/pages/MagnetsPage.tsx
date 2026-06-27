@@ -29,7 +29,7 @@ import { AppMenu, type Page } from "@/components/AppMenu";
 import { toast } from "sonner";
 import vlcLogo from "@/assets/vlc.png";
 import { invoke } from "@tauri-apps/api/core";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { startDownload } from "@/lib/downloads";
 import { queryClient } from "@/lib/queryClient";
 import { allDebridKeys, fetchMagnets, type MagnetEntry } from "@/lib/services/allDebrid";
 
@@ -228,10 +228,9 @@ function FilesModal({
       let done = 0;
       await forEachLimit(toDownload, CONCURRENCY, async (file) => {
         const url = await invoke<string>("unlock_link", { link: file.link, alldebridKey: apiKey });
-        await openUrl(url);
+        await startDownload(url);
         setDownloadingAll({ done: ++done, total: toDownload.length });
       });
-      toast.success(`${toDownload.length} telechargements lances`);
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -243,7 +242,7 @@ function FilesModal({
     setDownloading(link);
     try {
       const url = await invoke<string>("unlock_link", { link, alldebridKey: apiKey });
-      await openUrl(url);
+      await startDownload(url);
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -515,6 +514,7 @@ export function MagnetsPage({
   const [simpleView, setSimpleView] = useState((initialViewMode ?? "simple") === "simple");
   const [hideNfo, setHideNfo] = useState(initialHideNfoFiles ?? true);
   const [skipNfoDownload, setSkipNfoDownload] = useState(initialSkipNfoDownload ?? true);
+  const [confirmBeforeDelete, setConfirmBeforeDelete] = useState(true);
   const [filesModal, setFilesModal] = useState<{ id: number; name: string } | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -583,9 +583,17 @@ export function MagnetsPage({
     if (initialSkipNfoDownload === undefined) {
       store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
     }
+    store.get<boolean>("confirm_delete").then((v) => setConfirmBeforeDelete(v ?? true));
     // initialXxx props are intentional initial-value-only inputs — not reactive deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadMagnets]);
+
+  // Déclenche la suppression : passe par la modale de confirmation, ou supprime
+  // directement si l'utilisateur a désactivé la confirmation dans les réglages.
+  function requestDelete(ids: number[], label: string) {
+    if (confirmBeforeDelete) setConfirmDelete({ ids, label });
+    else handleDelete(ids);
+  }
 
   async function handleDelete(ids: number[]) {
     setDeleting(true);
@@ -644,10 +652,9 @@ export function MagnetsPage({
           link: file.link,
           alldebridKey: apiKeyRef.current,
         });
-        await openUrl(url);
+        await startDownload(url);
         setBulkDownloading({ done: ++done, total: files.length });
       });
-      toast.success(`${files.length} telechargement${files.length > 1 ? "s lances" : " lance"}`);
       setSelected(new Set());
     } catch (err) {
       toast.error(String(err));
@@ -796,12 +803,12 @@ export function MagnetsPage({
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={() =>
-                    setConfirmDelete({
-                      ids: magnets
+                    requestDelete(
+                      magnets
                         .filter((m) => getStatusFilter(m.statusCode) === "error")
                         .map((m) => m.id),
-                      label: `${counts.error} magnet${counts.error > 1 ? "s" : ""} en erreur`,
-                    })
+                      `${counts.error} magnet${counts.error > 1 ? "s" : ""} en erreur`,
+                    )
                   }
                   className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors"
                 >
@@ -932,7 +939,7 @@ export function MagnetsPage({
                         )}
                         <motion.button
                           whileTap={{ scale: 0.97 }}
-                          onClick={() => setConfirmDelete({ ids: [m.id], label: m.filename })}
+                          onClick={() => requestDelete([m.id], m.filename)}
                           className="flex items-center justify-center h-7 w-7 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                         >
                           <Trash2 className="h-3 w-3" />

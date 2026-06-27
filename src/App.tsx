@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { Toaster } from "@/components/ui/sonner";
+import { DownloadsOverlay } from "@/components/DownloadsOverlay";
 import { SplashScreen } from "@/components/SplashScreen";
 import { SplashTransition } from "@/components/SplashTransition";
 import { useAppInit } from "@/lib/useAppInit";
@@ -162,6 +163,7 @@ function App() {
   return (
     <>
       <Toaster />
+      <DownloadsOverlay />
 
       {effectivePhase === "done" && pendingUpdate && (
         <UpdateDialog update={pendingUpdate} onDismiss={() => setPendingUpdate(null)} />
