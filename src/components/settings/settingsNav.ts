@@ -1,4 +1,14 @@
-import { Compass, KeyRound, Layers, Library, Magnet, Monitor, Sparkles, Sun } from "lucide-react";
+import {
+  Compass,
+  Download,
+  KeyRound,
+  Layers,
+  Library,
+  Magnet,
+  Monitor,
+  Sparkles,
+  Sun,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type PanelId =
@@ -6,6 +16,7 @@ export type PanelId =
   | "api-keys"
   | "display"
   | "magnets"
+  | "downloads"
   | "library"
   | "nyaa"
   | "discover"
@@ -59,8 +70,14 @@ export const SETTINGS_GROUPS: SettingsNavGroup[] = [
       {
         id: "magnets",
         label: "Magnets et fichiers",
-        subtitle: "Téléchargements et fichiers .nfo.",
+        subtitle: "Filtrage des fichiers .nfo et suppression.",
         icon: Magnet,
+      },
+      {
+        id: "downloads",
+        label: "Téléchargement",
+        subtitle: "Dossier de destination et fichiers simultanés.",
+        icon: Download,
       },
       {
         id: "library",

@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { startDownload } from "@/lib/downloads";
+import {
+  beginBulkDownload,
+  bulkTaskEnd,
+  bulkTaskStart,
+  endBulkDownload,
+  getDownloadBatchSize,
+  startDownload,
+} from "@/lib/downloads";
 import { toast } from "sonner";
 
 // Actions AllDebrid sur un lien debride (copie presse-papier, VLC, telechargement).
@@ -78,21 +85,44 @@ export function useDebridActions(getKey: () => string) {
     }
   }, []);
 
-  const downloadMany = useCallback(
-    async (links: string[], groupKey: string) => {
-      if (links.length === 0) return;
-      setBulkDownloading(groupKey);
-      try {
-        const urls = await unlockAll(links);
-        for (const url of urls) await startDownload(url);
-      } catch (err) {
-        toast.error(String(err));
-      } finally {
-        setBulkDownloading(null);
+  // Débride et télécharge les liens par lots de N en parallèle (réglage
+  // `download_batch_size`). Chaque worker débride puis télécharge un lien à la
+  // fois ; jusqu'à N workers tournent de front. La progression agrégée alimente
+  // la modal globale via le store des téléchargements.
+  const downloadMany = useCallback(async (links: string[], groupKey: string) => {
+    if (links.length === 0) return;
+    setBulkDownloading(groupKey);
+    const batchSize = await getDownloadBatchSize();
+    beginBulkDownload(links.length);
+    let next = 0;
+    let firstError: unknown = null;
+    const worker = async () => {
+      while (next < links.length) {
+        const link = links[next++];
+        bulkTaskStart();
+        try {
+          const url = await invoke<string>("unlock_link", {
+            link,
+            alldebridKey: getKeyRef.current(),
+          });
+          await startDownload(url);
+        } catch (err) {
+          if (firstError === null) firstError = err;
+        } finally {
+          bulkTaskEnd();
+        }
       }
-    },
-    [unlockAll],
-  );
+    };
+    try {
+      await Promise.all(Array.from({ length: Math.min(batchSize, links.length) }, worker));
+      if (firstError !== null) throw firstError;
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      endBulkDownload();
+      setBulkDownloading(null);
+    }
+  }, []);
 
   const copyMany = useCallback(
     async (links: string[], groupKey: string) => {

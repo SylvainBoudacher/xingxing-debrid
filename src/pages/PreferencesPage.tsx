@@ -7,6 +7,7 @@ import { ApiKeysPanel } from "@/components/settings/panels/ApiKeysPanel";
 import { DiscoverPanel } from "@/components/settings/panels/DiscoverPanel";
 import { DisplayPanel } from "@/components/settings/panels/DisplayPanel";
 import { LibraryPanel } from "@/components/settings/panels/LibraryPanel";
+import { DownloadsPanel } from "@/components/settings/panels/DownloadsPanel";
 import { MagnetsPanel } from "@/components/settings/panels/MagnetsPanel";
 import { NyaaPanel } from "@/components/settings/panels/NyaaPanel";
 import { SummerPanel } from "@/components/settings/panels/SummerPanel";
@@ -53,6 +54,8 @@ export function PreferencesPage({
         return <DisplayPanel />;
       case "magnets":
         return <MagnetsPanel />;
+      case "downloads":
+        return <DownloadsPanel />;
       case "library":
         return <LibraryPanel />;
       case "nyaa":

@@ -45,6 +45,63 @@ export function getDownloadsSnapshot(): DownloadItem[] {
   return snapshot;
 }
 
+// --- Progression d'un téléchargement groupé (lot de N en parallèle) ---------
+// État agrégé exposé à une modal globale : combien d'éléments au total, combien
+// terminés, combien en cours. `null` quand aucun lot n'est en cours.
+export interface BulkDownloadProgress {
+  total: number;
+  done: number;
+  active: number;
+}
+
+let bulk: BulkDownloadProgress | null = null;
+let bulkSnapshot: BulkDownloadProgress | null = null;
+const bulkListeners = new Set<() => void>();
+
+function emitBulk() {
+  bulkSnapshot = bulk ? { ...bulk } : null;
+  bulkListeners.forEach((l) => l());
+}
+
+export function subscribeBulkDownload(cb: () => void): () => void {
+  bulkListeners.add(cb);
+  return () => bulkListeners.delete(cb);
+}
+
+export function getBulkDownloadSnapshot(): BulkDownloadProgress | null {
+  return bulkSnapshot;
+}
+
+export function beginBulkDownload(total: number): void {
+  bulk = { total, done: 0, active: 0 };
+  emitBulk();
+}
+
+export function bulkTaskStart(): void {
+  if (!bulk) return;
+  bulk.active += 1;
+  emitBulk();
+}
+
+export function bulkTaskEnd(): void {
+  if (!bulk) return;
+  bulk.active = Math.max(0, bulk.active - 1);
+  bulk.done += 1;
+  emitBulk();
+}
+
+export function endBulkDownload(): void {
+  bulk = null;
+  emitBulk();
+}
+
+// Nombre de téléchargements menés en parallèle lors d'un téléchargement groupé.
+// Borné à [1, 8] ; 1 par défaut (comportement séquentiel historique).
+export async function getDownloadBatchSize(): Promise<number> {
+  const v = await store.get<number>("download_batch_size");
+  return Math.min(8, Math.max(1, v ?? 1));
+}
+
 let progressBound = false;
 function ensureProgressListener() {
   if (progressBound) return;

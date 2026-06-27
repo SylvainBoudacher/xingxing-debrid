@@ -2,8 +2,10 @@ import {
   cancelDownload,
   clearFinishedDownloads,
   dismissDownload,
+  getBulkDownloadSnapshot,
   getDownloadsSnapshot,
   openDownload,
+  subscribeBulkDownload,
   subscribeDownloads,
   type DownloadItem,
 } from "@/lib/downloads";
@@ -105,10 +107,57 @@ function DownloadRow({ item }: { item: DownloadItem }) {
   );
 }
 
+// En-tête récapitulatif d'un téléchargement groupé (lot de N en parallèle),
+// affiché en tête de la liste des téléchargements.
+function BulkSummaryRow() {
+  const progress = useSyncExternalStore(subscribeBulkDownload, getBulkDownloadSnapshot);
+  if (!progress) return null;
+
+  const pending = progress.total - progress.done - progress.active;
+  const pct = progress.total ? (progress.done / progress.total) * 100 : 0;
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: 24 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 24 }}
+      transition={{ type: "spring", stiffness: 400, damping: 34 }}
+      className="rounded-xl bg-white dark:bg-zinc-900 ring-1 ring-black/8 dark:ring-white/10 shadow-lg px-3.5 py-2.5"
+    >
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400">
+          <Download className="h-3.5 w-3.5" />
+        </span>
+        <div className="min-w-0 flex-1 text-left">
+          <p className="truncate text-xs font-semibold text-zinc-900 dark:text-white">
+            Téléchargement groupé
+          </p>
+          <p className="truncate text-[11px] text-zinc-500">
+            {progress.active} en cours{pending > 0 && ` · ${pending} en attente`}
+          </p>
+        </div>
+        <span className="shrink-0 text-[11px] font-medium tabular-nums text-zinc-500">
+          {progress.done}/{progress.total}
+        </span>
+      </div>
+      <div className="mt-2 h-1 overflow-hidden rounded-full bg-black/8 dark:bg-white/10">
+        <motion.div
+          className="h-full rounded-full bg-indigo-500"
+          initial={false}
+          animate={{ width: `${pct}%` }}
+          transition={{ ease: "easeOut", duration: 0.3 }}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
 export function DownloadsOverlay() {
   const downloads = useSyncExternalStore(subscribeDownloads, getDownloadsSnapshot);
+  const bulk = useSyncExternalStore(subscribeBulkDownload, getBulkDownloadSnapshot);
 
-  if (downloads.length === 0) return null;
+  if (downloads.length === 0 && !bulk) return null;
 
   const hasFinished = downloads.some((d) => d.status !== "active");
 
@@ -123,6 +172,7 @@ export function DownloadsOverlay() {
         </button>
       )}
       <AnimatePresence initial={false}>
+        {bulk && <BulkSummaryRow key="bulk-summary" />}
         {downloads.map((item) => (
           <DownloadRow key={item.id} item={item} />
         ))}
