@@ -105,6 +105,29 @@ export function DebridActions({
   );
 }
 
+// Sélection multiple pour téléchargement, pilotée par la modale de détail.
+// Quand fournie, les lignes affichent une case de sélection (indigo) au lieu de
+// la case « vu » et masquent les actions par épisode.
+export interface EpisodeSelection {
+  has: (link: string) => boolean;
+  toggle: (link: string) => void;
+  setMany: (links: string[], selected: boolean) => void;
+}
+
+function SelectionBox({ checked }: { checked: boolean }) {
+  return (
+    <span
+      className={`flex h-5 w-5 flex-none items-center justify-center rounded-md ring-1 transition-colors ${
+        checked
+          ? "bg-indigo-600 ring-indigo-500"
+          : "bg-zinc-200 ring-black/10 dark:bg-zinc-800 dark:ring-white/10"
+      }`}
+    >
+      {checked && <Check className="h-3 w-3 text-white" />}
+    </span>
+  );
+}
+
 export function Checkbox({ checked, onClick }: { checked: boolean; onClick: () => void }) {
   return (
     <motion.button
@@ -189,6 +212,7 @@ function FileRow({
   debrid,
   simple,
   autoWatchOnPlay,
+  selection,
 }: {
   file: DebridFile;
   entry: LibraryEntry;
@@ -196,17 +220,40 @@ function FileRow({
   debrid: DebridControls;
   simple: boolean;
   autoWatchOnPlay: boolean;
+  selection?: EpisodeSelection;
 }) {
   const fileWatched = entry.watched[file.name] ?? false;
+  const name = simple
+    ? parseRelease(file.name.split("/").pop() ?? file.name).title
+    : file.name.split("/").pop();
+
+  if (selection) {
+    const sel = selection.has(file.link);
+    return (
+      <li
+        onClick={() => selection.toggle(file.link)}
+        className={`flex cursor-pointer items-center gap-3 px-4 py-2 pl-6 transition-colors ${
+          sel ? "bg-indigo-500/10" : "hover:bg-black/[0.025] dark:hover:bg-white/[0.04]"
+        }`}
+      >
+        <SelectionBox checked={sel} />
+        <span className="min-w-0 flex-1 truncate text-xs text-zinc-700 dark:text-zinc-300">
+          {name}
+        </span>
+        {file.size > 0 && (
+          <span className="flex-none text-[11px] text-zinc-400">{formatSize(file.size)}</span>
+        )}
+      </li>
+    );
+  }
+
   return (
     <li className="flex items-center gap-3 px-4 py-2 pl-6 transition-colors hover:bg-black/[0.025] dark:hover:bg-white/[0.04]">
       <Checkbox checked={fileWatched} onClick={() => onChange(toggleFile(entry, file.name))} />
       <span
         className={`min-w-0 flex-1 truncate text-xs ${fileWatched ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-300"}`}
       >
-        {simple
-          ? parseRelease(file.name.split("/").pop() ?? file.name).title
-          : file.name.split("/").pop()}
+        {name}
       </span>
       {file.size > 0 && (
         <span className="flex-none text-[11px] text-zinc-400">{formatSize(file.size)}</span>
@@ -230,6 +277,7 @@ function SeasonSection({
   debrid,
   simple,
   autoWatchOnPlay,
+  selection,
 }: {
   group: SeasonGroup;
   entry: LibraryEntry;
@@ -237,12 +285,14 @@ function SeasonSection({
   debrid: DebridControls;
   simple: boolean;
   autoWatchOnPlay: boolean;
+  selection?: EpisodeSelection;
 }) {
   const [open, setOpen] = useState(false);
   const names = group.files.map((f) => f.name);
   const links = group.files.map((f) => f.link);
   const seenCount = names.filter((n) => entry.watched[n]).length;
   const allSeen = seenCount === names.length;
+  const allSelected = !!selection && links.every((l) => selection.has(l));
   const label = group.season === null ? "Autres" : `Saison ${group.season}`;
   const groupKey = `${entry.infoHash}-s${group.season ?? "x"}`;
   const next = group.files.find((f) => !entry.watched[f.name]) ?? null;
@@ -251,10 +301,16 @@ function SeasonSection({
   return (
     <div>
       <div className="flex items-center gap-3 bg-black/[0.02] px-4 py-2 dark:bg-white/[0.03] transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]">
-        <Checkbox
-          checked={allSeen}
-          onClick={() => onChange(setFilesWatched(entry, names, !allSeen))}
-        />
+        {selection ? (
+          <button onClick={() => selection.setMany(links, !allSelected)}>
+            <SelectionBox checked={allSelected} />
+          </button>
+        ) : (
+          <Checkbox
+            checked={allSeen}
+            onClick={() => onChange(setFilesWatched(entry, names, !allSeen))}
+          />
+        )}
         <button
           onClick={() => setOpen((v) => !v)}
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -281,7 +337,7 @@ function SeasonSection({
             className={`h-3.5 w-3.5 flex-none text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`}
           />
         </button>
-        {next && (
+        {!selection && next && (
           <ResumeButton
             next={next}
             groupKey={resumeKey}
@@ -291,7 +347,7 @@ function SeasonSection({
             onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
           />
         )}
-        <DebridActions links={links} groupKey={groupKey} debrid={debrid} />
+        {!selection && <DebridActions links={links} groupKey={groupKey} debrid={debrid} />}
       </div>
       <AnimatePresence initial={false}>
         {open && (
@@ -312,6 +368,7 @@ function SeasonSection({
                   debrid={debrid}
                   simple={simple}
                   autoWatchOnPlay={autoWatchOnPlay}
+                  selection={selection}
                 />
               ))}
             </ul>
@@ -330,12 +387,14 @@ export function EntryEpisodes({
   debrid,
   simple,
   autoWatchOnPlay,
+  selection,
 }: {
   entry: LibraryEntry;
   onChange: (entry: LibraryEntry) => void;
   debrid: DebridControls;
   simple: boolean;
   autoWatchOnPlay: boolean;
+  selection?: EpisodeSelection;
 }) {
   const vids = videoFiles(entry);
   const multiSeason = isSeries(entry) && hasMultipleSeasons(entry);
@@ -351,6 +410,7 @@ export function EntryEpisodes({
           debrid={debrid}
           simple={simple}
           autoWatchOnPlay={autoWatchOnPlay}
+          selection={selection}
         />
       ))}
     </div>
@@ -365,6 +425,7 @@ export function EntryEpisodes({
           debrid={debrid}
           simple={simple}
           autoWatchOnPlay={autoWatchOnPlay}
+          selection={selection}
         />
       ))}
     </ul>

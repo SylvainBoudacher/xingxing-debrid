@@ -160,9 +160,19 @@ function FilesModal({
   const [downloadingAll, setDownloadingAll] = useState<{ done: number; total: number } | null>(
     null,
   );
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [downloadingSelected, setDownloadingSelected] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   const busy =
-    downloading !== null || copying !== null || vlcing !== null || downloadingAll !== null;
+    downloading !== null ||
+    copying !== null ||
+    vlcing !== null ||
+    downloadingAll !== null ||
+    downloadingSelected !== null;
 
   // Fetch mis en cache par TanStack Query — rouvrir le même magnet est instantané.
   const {
@@ -238,6 +248,46 @@ function FilesModal({
     }
   }
 
+  function toggleSelect(link: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(link)) next.delete(link);
+      else next.add(link);
+      return next;
+    });
+  }
+
+  const allSelected = !!files && files.length > 0 && selected.size === files.length;
+
+  function toggleSelectAll() {
+    setSelected(allSelected ? new Set() : new Set((files ?? []).map((f) => f.link)));
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelected(new Set());
+  }
+
+  async function handleDownloadSelected() {
+    if (!files) return;
+    const toDownload = files.filter((f) => selected.has(f.link));
+    if (toDownload.length === 0) return;
+    setDownloadingSelected({ done: 0, total: toDownload.length });
+    try {
+      let done = 0;
+      await forEachLimit(toDownload, CONCURRENCY, async (file) => {
+        const url = await invoke<string>("unlock_link", { link: file.link, alldebridKey: apiKey });
+        await startDownload(url);
+        setDownloadingSelected({ done: ++done, total: toDownload.length });
+      });
+      exitSelectMode();
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setDownloadingSelected(null);
+    }
+  }
+
   async function handleDownload(link: string) {
     setDownloading(link);
     try {
@@ -297,32 +347,94 @@ function FilesModal({
           </button>
         </div>
 
-        {/* Barre d'actions globales : tout télécharger */}
+        {/* Barre d'actions globales : sélection / tout télécharger */}
         {!loading && files && files.length > 1 && (
-          <div className="flex items-center gap-3 border-y border-black/5 bg-black/[0.02] px-5 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
-            <span className="flex-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">
-              {files.length} fichiers
-            </span>
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={handleDownloadAll}
-              disabled={busy}
-              className="flex h-7 flex-none items-center gap-2 rounded-lg bg-indigo-600 px-3 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {downloadingAll ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
-                  <span className="text-xs font-medium text-white">
-                    {downloadingAll.done}/{downloadingAll.total}...
+          <div className="flex items-center gap-2 border-y border-black/5 bg-black/[0.02] px-5 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
+            {selectMode ? (
+              <>
+                <button
+                  onClick={toggleSelectAll}
+                  disabled={busy}
+                  className="flex items-center gap-2 text-xs font-medium text-zinc-600 transition-colors hover:text-zinc-900 disabled:opacity-40 dark:text-zinc-300 dark:hover:text-white"
+                >
+                  <span
+                    className={`flex h-4 w-4 flex-none items-center justify-center rounded ring-1 transition-colors ${
+                      allSelected
+                        ? "bg-indigo-600 ring-indigo-500"
+                        : "bg-zinc-200 ring-black/10 dark:bg-zinc-800 dark:ring-white/10"
+                    }`}
+                  >
+                    {allSelected && <Check className="h-3 w-3 text-white" />}
                   </span>
-                </>
-              ) : (
-                <>
-                  <Download className="h-3.5 w-3.5 text-white" />
-                  <span className="text-xs font-medium text-white">Tout telecharger</span>
-                </>
-              )}
-            </motion.button>
+                  Tout sélectionner
+                </button>
+                <span className="flex-1 text-right text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  {selected.size} sélectionné{selected.size > 1 ? "s" : ""}
+                </span>
+                <button
+                  onClick={exitSelectMode}
+                  disabled={busy}
+                  className="flex h-7 flex-none items-center rounded-lg px-3 text-xs font-medium text-zinc-500 transition-colors hover:bg-black/5 disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-white/10"
+                >
+                  Annuler
+                </button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleDownloadSelected}
+                  disabled={busy || selected.size === 0}
+                  className="flex h-7 flex-none items-center gap-2 rounded-lg bg-indigo-600 px-3 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {downloadingSelected ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                      <span className="text-xs font-medium text-white">
+                        {downloadingSelected.done}/{downloadingSelected.total}...
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-3.5 w-3.5 text-white" />
+                      <span className="text-xs font-medium text-white">Telecharger</span>
+                    </>
+                  )}
+                </motion.button>
+              </>
+            ) : (
+              <>
+                <span className="flex-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  {files.length} fichiers
+                </span>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setSelectMode(true)}
+                  disabled={busy}
+                  className="flex h-7 flex-none items-center gap-2 rounded-lg bg-black/5 px-3 text-zinc-500 ring-1 ring-black/10 transition-colors hover:bg-black/10 hover:text-zinc-900 disabled:opacity-40 dark:bg-white/5 dark:text-zinc-400 dark:ring-white/10 dark:hover:bg-white/10 dark:hover:text-white"
+                >
+                  <ListChecks className="h-3.5 w-3.5" />
+                  <span className="text-xs font-medium">Sélection</span>
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleDownloadAll}
+                  disabled={busy}
+                  className="flex h-7 flex-none items-center gap-2 rounded-lg bg-indigo-600 px-3 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {downloadingAll ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                      <span className="text-xs font-medium text-white">
+                        {downloadingAll.done}/{downloadingAll.total}...
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-3.5 w-3.5 text-white" />
+                      <span className="text-xs font-medium text-white">Tout telecharger</span>
+                    </>
+                  )}
+                </motion.button>
+              </>
+            )}
           </div>
         )}
 
@@ -348,11 +460,32 @@ function FilesModal({
                 const meta = [formatSize(file.size), parsed?.quality, parsed?.codec]
                   .filter(Boolean)
                   .join(" · ");
+                const isSelected = selected.has(file.link);
                 return (
                   <li
                     key={i}
-                    className="flex items-center gap-3 px-5 py-2.5 transition-colors hover:bg-black/[0.025] dark:hover:bg-white/[0.04]"
+                    onClick={selectMode ? () => toggleSelect(file.link) : undefined}
+                    className={`flex items-center gap-3 px-5 py-2.5 transition-colors ${
+                      selectMode
+                        ? `cursor-pointer ${
+                            isSelected
+                              ? "bg-indigo-500/10"
+                              : "hover:bg-black/[0.025] dark:hover:bg-white/[0.04]"
+                          }`
+                        : "hover:bg-black/[0.025] dark:hover:bg-white/[0.04]"
+                    }`}
                   >
+                    {selectMode && (
+                      <span
+                        className={`flex h-5 w-5 flex-none items-center justify-center rounded-md ring-1 transition-colors ${
+                          isSelected
+                            ? "bg-indigo-600 ring-indigo-500"
+                            : "bg-zinc-200 ring-black/10 dark:bg-zinc-800 dark:ring-white/10"
+                        }`}
+                      >
+                        {isSelected && <Check className="h-3 w-3 text-white" />}
+                      </span>
+                    )}
                     <div className="min-w-0 flex-1">
                       {showName && (
                         <span className="block truncate text-xs text-zinc-700 dark:text-zinc-300">
@@ -361,7 +494,9 @@ function FilesModal({
                       )}
                       <span className="text-[11px] text-zinc-400">{meta}</span>
                     </div>
-                    <div className="flex flex-none items-center gap-1">
+                    <div
+                      className={`flex flex-none items-center gap-1 ${selectMode ? "hidden" : ""}`}
+                    >
                       {isVideoFile(file.name) && (
                         <motion.button
                           whileTap={{ scale: 0.9 }}
@@ -611,7 +746,14 @@ export function MagnetsPage({
     } catch (err) {
       toast.error(String(err));
     } finally {
-      if (deleted.length > 0) setMagnets((prev) => prev.filter((m) => !deleted.includes(m.id)));
+      if (deleted.length > 0) {
+        setMagnets((prev) => prev.filter((m) => !deleted.includes(m.id)));
+        setSelected((prev) => {
+          const next = new Set(prev);
+          deleted.forEach((id) => next.delete(id));
+          return next;
+        });
+      }
       setDeleting(false);
     }
   }
@@ -998,6 +1140,20 @@ export function MagnetsPage({
                   <span className="text-xs font-medium text-white">Tout telecharger</span>
                 </>
               )}
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() =>
+                requestDelete(
+                  [...selected],
+                  `${selected.size} magnet${selected.size > 1 ? "s" : ""} selectionne${selected.size > 1 ? "s" : ""}`,
+                )
+              }
+              disabled={bulkDownloading !== null || deleting}
+              className="flex items-center gap-2 h-8 px-3 rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium">Tout supprimer</span>
             </motion.button>
             <button
               onClick={() => {
