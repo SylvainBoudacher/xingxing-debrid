@@ -14,7 +14,9 @@ import {
   ANIMATION_GENRE_ID,
   tmdbKeys,
   type TmdbRawResult,
-  topRated as tmdbTopRated,
+  type TmdbListResponse,
+  type TmdbFeed,
+  feed as tmdbFeed,
   search as tmdbSearch,
   discoverAnimation as tmdbDiscoverAnimation,
   findByImdb as tmdbFindByImdb,
@@ -48,6 +50,15 @@ type MediaType = "movie" | "tv";
 type BrowseType = MediaType | "animation";
 type DiscoverTab = BrowseType | "likes";
 
+// Sources proposées sous les onglets Films / Séries, dans l'ordre d'affichage.
+const FEED_LABELS: Record<TmdbFeed, string> = {
+  top_rated: "Mieux notés",
+  trending: "Tendances",
+  popular: "Populaires",
+  now_playing: "Sorties récentes",
+};
+const FEEDS = Object.keys(FEED_LABELS) as TmdbFeed[];
+
 // Les listes TMDB bougent peu : cache 10 min pour couper les refetch au
 // changement d'onglet / retour sur une recherche deja vue.
 const TMDB_STALE_MS = 10 * 60_000;
@@ -76,6 +87,35 @@ function mapTmdb(r: TmdbRawResult, mediaType: MediaType): TmdbItem {
     year: (mediaType === "movie" ? r.release_date : r.first_air_date)?.slice(0, 4) ?? "",
     voteAverage: r.vote_average,
     overview: r.overview ?? "",
+  };
+}
+
+// Lecture synchrone du cache TanStack pour une source "top" (préchauffée au
+// démarrage par useAppInit). Renvoie null si froid → l'appelant retombe sur un
+// fetch réseau. Évite le flash de spinner et le re-render asynchrone au switch.
+function readTopFromCache(
+  type: BrowseType,
+  f: TmdbFeed,
+): { items: TmdbItem[]; totalPages: number } | null {
+  if (type === "animation") {
+    const movies = queryClient.getQueryData<TmdbListResponse>(
+      tmdbKeys.discoverAnimation("movie", 1),
+    );
+    const tvs = queryClient.getQueryData<TmdbListResponse>(tmdbKeys.discoverAnimation("tv", 1));
+    if (!movies || !tvs) return null;
+    return {
+      items: [
+        ...movies.results.map((r) => mapTmdb(r, "movie")),
+        ...tvs.results.map((r) => mapTmdb(r, "tv")),
+      ].sort((a, b) => b.voteAverage - a.voteAverage),
+      totalPages: Math.max(movies.total_pages, tvs.total_pages),
+    };
+  }
+  const cached = queryClient.getQueryData<TmdbListResponse>(tmdbKeys.feed(f, type, 1));
+  if (!cached) return null;
+  return {
+    items: cached.results.map((r) => mapTmdb(r, type)),
+    totalPages: cached.total_pages,
   };
 }
 
@@ -245,6 +285,7 @@ export function DiscoverPage({
   );
   const [query, setQuery] = useState("");
   const [mediaType, setMediaType] = useState<DiscoverTab>("movie");
+  const [feed, setFeed] = useState<TmdbFeed>("top_rated");
   const [likes, setLikes] = useState<LikedItem[]>(initialLikes ?? []);
   const [items, setItems] = useState<TmdbItem[]>([]);
   const [mode, setMode] = useState<"top" | "search">("top");
@@ -267,6 +308,7 @@ export function DiscoverPage({
 
   const c411KeyRef = useRef<string>(initialC411Key ?? "");
   const allDebridKeyRef = useRef<string>(initialAllDebridKey ?? "");
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const {
     downloadingLink,
@@ -389,20 +431,9 @@ export function DiscoverPage({
 
   useEffect(() => {
     if (!tmdbKey) return;
-    // Si les données sont déjà dans le cache (prefetchées au démarrage),
-    // on les lit directement sans passer par fetchItems (pas de spinner).
-    const cached = queryClient.getQueryData(tmdbKeys.topRated("movie", 1));
-    void Promise.resolve(cached).then((data) => {
-      if (data) {
-        const list = data as import("@/lib/services/tmdb").TmdbListResponse;
-        setItems(list.results.map((r) => mapTmdb(r, "movie")));
-        setMode("top");
-        setTmdbPage(1);
-        setTmdbTotalPages(list.total_pages);
-      } else {
-        fetchItems("top", "", 1, tmdbKey, "movie");
-      }
-    });
+    // Données préchauffées au démarrage : lecture directe du cache, sans spinner.
+    showTopFromCacheOrFetch("movie", "top_rated");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tmdbKey]);
 
   useEffect(() => {
@@ -415,12 +446,58 @@ export function DiscoverPage({
     return () => window.removeEventListener("keydown", onKey);
   }, [debridModal, selected]);
 
+  // Scroll infini : charge la page suivante quand la sentinelle entre dans le
+  // viewport. Le garde `loadingMovies` évite les déclenchements multiples (la
+  // requête en cours coupe l'observer, qui se reconnecte une fois finie).
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el || !tmdbKey || mediaType === "likes") return;
+    if (loadingMovies || items.length === 0 || tmdbPage >= tmdbTotalPages) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          fetchItems(mode, searchedQuery, tmdbPage + 1, tmdbKey, mediaType, feed);
+        }
+      },
+      { rootMargin: "400px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [
+    tmdbKey,
+    mediaType,
+    feed,
+    mode,
+    searchedQuery,
+    loadingMovies,
+    tmdbPage,
+    tmdbTotalPages,
+    items.length,
+  ]);
+
+  // Affiche une source "top" depuis le cache si elle est chaude (cas normal,
+  // préchauffé au démarrage) — sans spinner ni round-trip async. Sinon fetch.
+  function showTopFromCacheOrFetch(type: BrowseType, f: TmdbFeed) {
+    const cached = readTopFromCache(type, f);
+    if (!cached) {
+      fetchItems("top", "", 1, tmdbKey!, type, f);
+      return;
+    }
+    setItems(cached.items);
+    setMode("top");
+    setSearchedQuery("");
+    setTmdbPage(1);
+    setTmdbTotalPages(cached.totalPages);
+    setMoviesError(null);
+  }
+
   async function fetchItems(
     m: "top" | "search",
     q: string,
     page: number,
     key: string,
     type: BrowseType,
+    f: TmdbFeed,
   ) {
     setLoadingMovies(true);
     setMoviesError(null);
@@ -458,7 +535,7 @@ export function DiscoverPage({
         const list =
           m === "search"
             ? await cachedTmdb(tmdbKeys.search(type, q, page), () => tmdbSearch(type, q, page, key))
-            : await cachedTmdb(tmdbKeys.topRated(type, page), () => tmdbTopRated(type, page, key));
+            : await cachedTmdb(tmdbKeys.feed(f, type, page), () => tmdbFeed(f, type, page, key));
         mapped = list.results.map((r) => mapTmdb(r, type));
         totalPages = list.total_pages;
       }
@@ -479,10 +556,10 @@ export function DiscoverPage({
     if (!tmdbKey || mediaType === "likes") return;
     const q = query.trim();
     if (!q) {
-      fetchItems("top", "", 1, tmdbKey, mediaType);
+      fetchItems("top", "", 1, tmdbKey, mediaType, feed);
       return;
     }
-    fetchItems("search", q, 1, tmdbKey, mediaType);
+    fetchItems("search", q, 1, tmdbKey, mediaType, feed);
   }
 
   function switchType(type: DiscoverTab) {
@@ -490,10 +567,18 @@ export function DiscoverPage({
     setMediaType(type);
     if (type === "likes") return;
     if (mode === "search" && searchedQuery) {
-      fetchItems("search", searchedQuery, 1, tmdbKey, type);
+      fetchItems("search", searchedQuery, 1, tmdbKey, type, feed);
     } else {
-      fetchItems("top", "", 1, tmdbKey, type);
+      showTopFromCacheOrFetch(type, feed);
     }
+  }
+
+  // Change la source (Tendances, Populaires…) — onglets Films / Séries uniquement.
+  function switchFeed(f: TmdbFeed) {
+    if (f === feed || !tmdbKey || mediaType === "likes" || mediaType === "animation") return;
+    setFeed(f);
+    setQuery("");
+    showTopFromCacheOrFetch(mediaType, f);
   }
 
   const likedKeys = useMemo(() => new Set(likes.map((l) => `${l.mediaType}-${l.id}`)), [likes]);
@@ -801,7 +886,7 @@ export function DiscoverPage({
                   onClick={() => {
                     setQuery("");
                     if (mode === "search" && mediaType !== "likes")
-                      fetchItems("top", "", 1, tmdbKey, mediaType);
+                      fetchItems("top", "", 1, tmdbKey, mediaType, feed);
                   }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200/90 dark:bg-zinc-700/80 hover:bg-zinc-300 dark:hover:bg-zinc-600/80 transition-colors"
                 >
@@ -817,7 +902,7 @@ export function DiscoverPage({
                 <button
                   key={t}
                   onClick={() => switchType(t)}
-                  className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
                     mediaType === t
                       ? "bg-indigo-600 text-white"
                       : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
@@ -844,16 +929,34 @@ export function DiscoverPage({
             </div>
           </div>
 
+          {(mediaType === "movie" || mediaType === "tv") && mode === "top" && (
+            <div className="mb-6 flex justify-center">
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {FEEDS.map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => switchFeed(f)}
+                    className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium ring-1 transition-colors ${
+                      feed === f
+                        ? "bg-indigo-600 text-white ring-indigo-500"
+                        : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
+                    }`}
+                  >
+                    {FEED_LABELS[f]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <h2 className="mb-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
             {mediaType === "likes"
               ? `Ma liste (${likes.length})`
-              : mode === "top"
-                ? mediaType === "movie"
-                  ? "Films les mieux notés"
-                  : mediaType === "tv"
-                    ? "Séries les mieux notées"
-                    : "Animations les mieux notées"
-                : `Résultats pour "${searchedQuery}"`}
+              : mode === "search"
+                ? `Résultats pour "${searchedQuery}"`
+                : mediaType === "animation"
+                  ? "Animations les mieux notées"
+                  : `${mediaType === "movie" ? "Films" : "Séries"} - ${FEED_LABELS[feed]}`}
           </h2>
 
           {mediaType !== "likes" && moviesError && (
@@ -892,7 +995,7 @@ export function DiscoverPage({
                 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => openItem(m)}
-                className="group text-left"
+                className="group cursor-pointer text-left"
               >
                 <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-200 dark:bg-zinc-900 ring-1 ring-black/8 dark:ring-white/8 transition-all duration-500 ease-out group-hover:ring-black/20 dark:group-hover:ring-white/25 group-hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.25)] dark:group-hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.7)]">
                   {m.posterPath ? (
@@ -942,15 +1045,8 @@ export function DiscoverPage({
           </div>
 
           {mediaType !== "likes" && tmdbPage < tmdbTotalPages && items.length > 0 && (
-            <div className="mt-8 flex justify-center">
-              <button
-                onClick={() => fetchItems(mode, searchedQuery, tmdbPage + 1, tmdbKey, mediaType)}
-                disabled={loadingMovies}
-                className="flex items-center gap-2 rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 px-5 py-2.5 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white disabled:opacity-40 transition-colors"
-              >
-                {loadingMovies && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                Charger plus
-              </button>
+            <div ref={loadMoreRef} className="mt-8 flex h-8 justify-center">
+              {loadingMovies && <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />}
             </div>
           )}
         </div>

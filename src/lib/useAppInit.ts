@@ -7,8 +7,10 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import {
   tmdbKeys,
-  topRated as tmdbTopRated,
+  feed as tmdbFeed,
   discoverAnimation as tmdbDiscoverAnimation,
+  TMDB_FEEDS,
+  type TmdbMediaType,
 } from "@/lib/services/tmdb";
 import { allDebridKeys, fetchMagnets } from "@/lib/services/allDebrid";
 import { type ViewMode, resolveAllViewModes } from "@/lib/viewMode";
@@ -16,6 +18,7 @@ import { type ViewMode, resolveAllViewModes } from "@/lib/viewMode";
 export type WindowLaunchMode = "small" | "large" | "maximized";
 
 const TMDB_STALE_MS = 10 * 60_000;
+const MEDIA: TmdbMediaType[] = ["movie", "tv"];
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
 export interface AppPrefs {
@@ -64,13 +67,14 @@ const DEFAULT_PREFS: AppPrefs = {
  * - Utilisateur connu :
  *   Phase 1 — bloquante (nécessaire avant d'afficher quoi que ce soit) :
  *     · Lecture des 3 clés API + likes + préférences UI
- *     · Prefetch TMDB page 1 (top_rated movies/tv + animations)
+ *     · Prefetch TMDB page 1 des 4 sources (mieux notés, tendances, populaires,
+ *       sorties) × films/séries + animations
  *     · Prefetch magnets AllDebrid
  *
  *   Phase 2 — fire-and-forget (remplit le cache pendant que le splash
  *   tourne encore, sans rallonger le délai minimum) :
- *     · TMDB page 2 de chaque section (top_rated + animations × movie/tv)
- *     → Quand l'utilisateur scrolle sur DiscoverPage, les données sont déjà là.
+ *     · TMDB page 2 des mêmes sections
+ *     → Changement de source/onglet et scroll instantanés, sans chargement.
  *
  *   Délai minimum de 2 s garanti sur la phase 1 uniquement.
  *
@@ -156,32 +160,32 @@ export function useAppInit(): AppInitResult {
         skipNfoDownload: skipNfoDownload ?? true,
       });
 
+      // Prefetch d'une page complète de la Découverte : les 4 sources × films/séries
+      // + les animations. Page 1 en bloquant, page 2 en fire-and-forget (scroll).
+      const prefetchTmdbPage = (key: string, page: number) => [
+        ...TMDB_FEEDS.flatMap((f) =>
+          MEDIA.map((mt) =>
+            queryClient.prefetchQuery({
+              queryKey: tmdbKeys.feed(f, mt, page),
+              queryFn: () => tmdbFeed(f, mt, page, key),
+              staleTime: TMDB_STALE_MS,
+            }),
+          ),
+        ),
+        ...MEDIA.map((mt) =>
+          queryClient.prefetchQuery({
+            queryKey: tmdbKeys.discoverAnimation(mt, page),
+            queryFn: () => tmdbDiscoverAnimation(mt, page, key),
+            staleTime: TMDB_STALE_MS,
+          }),
+        ),
+      ];
+
       // ── Phase 1 : prefetch page 1 (bloquant) ──────────────────────────────
       const prefetchPage1: Promise<unknown>[] = [];
 
       if (tmdbKeyValue) {
-        prefetchPage1.push(
-          queryClient.prefetchQuery({
-            queryKey: tmdbKeys.topRated("movie", 1),
-            queryFn: () => tmdbTopRated("movie", 1, tmdbKeyValue),
-            staleTime: TMDB_STALE_MS,
-          }),
-          queryClient.prefetchQuery({
-            queryKey: tmdbKeys.topRated("tv", 1),
-            queryFn: () => tmdbTopRated("tv", 1, tmdbKeyValue),
-            staleTime: TMDB_STALE_MS,
-          }),
-          queryClient.prefetchQuery({
-            queryKey: tmdbKeys.discoverAnimation("movie", 1),
-            queryFn: () => tmdbDiscoverAnimation("movie", 1, tmdbKeyValue),
-            staleTime: TMDB_STALE_MS,
-          }),
-          queryClient.prefetchQuery({
-            queryKey: tmdbKeys.discoverAnimation("tv", 1),
-            queryFn: () => tmdbDiscoverAnimation("tv", 1, tmdbKeyValue),
-            staleTime: TMDB_STALE_MS,
-          }),
-        );
+        prefetchPage1.push(...prefetchTmdbPage(tmdbKeyValue, 1));
       }
 
       if (allDebridKeyValue) {
@@ -204,28 +208,7 @@ export function useAppInit(): AppInitResult {
       // Lancé sans await : remplit le cache pendant le reste du splash
       // (délai minimum restant) sans jamais le rallonger.
       if (tmdbKeyValue) {
-        Promise.allSettled([
-          queryClient.prefetchQuery({
-            queryKey: tmdbKeys.topRated("movie", 2),
-            queryFn: () => tmdbTopRated("movie", 2, tmdbKeyValue),
-            staleTime: TMDB_STALE_MS,
-          }),
-          queryClient.prefetchQuery({
-            queryKey: tmdbKeys.topRated("tv", 2),
-            queryFn: () => tmdbTopRated("tv", 2, tmdbKeyValue),
-            staleTime: TMDB_STALE_MS,
-          }),
-          queryClient.prefetchQuery({
-            queryKey: tmdbKeys.discoverAnimation("movie", 2),
-            queryFn: () => tmdbDiscoverAnimation("movie", 2, tmdbKeyValue),
-            staleTime: TMDB_STALE_MS,
-          }),
-          queryClient.prefetchQuery({
-            queryKey: tmdbKeys.discoverAnimation("tv", 2),
-            queryFn: () => tmdbDiscoverAnimation("tv", 2, tmdbKeyValue),
-            staleTime: TMDB_STALE_MS,
-          }),
-        ]);
+        Promise.allSettled(prefetchTmdbPage(tmdbKeyValue, 2));
       }
 
       // ── Délai minimum du splash ────────────────────────────────────────────

@@ -1,3 +1,6 @@
+import parametresV134Img from "@/assets/patchnote/v1.3.4/parametres.webp";
+import multiSelectionV134Img from "@/assets/patchnote/v1.3.4/multi-selection.webp";
+import modaleV134Img from "@/assets/patchnote/v1.3.4/modale-magnet.webp";
 import bibliothequeV131Img from "@/assets/patchnote/v1.3.1/bibliotheque.webp";
 import bibliothequeImg from "@/assets/patchnote/v1.3/bibliotheque.webp";
 import reprendreImg from "@/assets/patchnote/v1.3/reprendre.webp";
@@ -31,6 +34,59 @@ export interface PatchNote {
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.3.4",
+    date: "27 juin 2026",
+    intro:
+      "La 1.3.4 apporte le telechargement natif directement dans l'application, une selection multiple revue, des modales plus lisibles et une page Parametres entierement reorganisee.",
+    sections: [
+      {
+        title: "Page Parametres reorganisee",
+        items: [
+          "La page Parametres a ete revisee pour accueillir toutes les nouvelles options : les sections sont mieux decoupees et plus faciles a parcourir.",
+        ],
+        images: [
+          {
+            src: parametresV134Img,
+            caption: "La page Parametres reorganisee avec les nouvelles sections",
+          },
+        ],
+      },
+      {
+        title: "Telechargement depuis l'application",
+        items: [
+          "Il est desormais possible de telecharger vos fichiers directement depuis l'application, sans passer par un navigateur ou un gestionnaire externe.",
+          "Un dossier de destination peut etre configure dans les Parametres pour choisir ou vos telechargements atterrissent.",
+          "Un parametre permet egalement de definir combien de fichiers sont telecharges en parallele lors d'une selection multiple.",
+        ],
+        images: [
+          {
+            src: modaleV134Img,
+            caption: "Le telechargement natif depuis l'application",
+          },
+        ],
+      },
+      {
+        title: "Selection multiple",
+        items: [
+          "La selection de plusieurs fichiers est desormais disponible sur la page Magnets et dans la Bibliotheque.",
+          "Selectionnez plusieurs elements d'un coup pour les telecharger ou les supprimer en une seule action.",
+        ],
+        images: [
+          {
+            src: multiSelectionV134Img,
+            caption: "La selection multiple sur la page Magnets et dans la Bibliotheque",
+          },
+        ],
+      },
+      {
+        title: "Modales de fichier revisitees",
+        items: [
+          "Les modales de detail de fichier sur la page Magnets ont ete entierement refaites pour etre plus claires et plus lisibles.",
+        ],
+      },
+    ],
+  },
   {
     version: "1.3.3",
     date: "27 juin 2026",

@@ -5,6 +5,18 @@ export const ANIMATION_GENRE_ID = 16;
 
 export type TmdbMediaType = "movie" | "tv";
 
+// Sources de la page Découverte (onglets Films / Séries).
+export type TmdbFeed = "trending" | "popular" | "now_playing" | "top_rated";
+export const TMDB_FEEDS: TmdbFeed[] = ["top_rated", "trending", "popular", "now_playing"];
+
+// Endpoint TMDB par source : "now_playing" n'existe que pour les films, son
+// équivalent séries est "on_the_air".
+const FEED_ENDPOINT: Record<Exclude<TmdbFeed, "trending">, Record<TmdbMediaType, string>> = {
+  popular: { movie: "popular", tv: "popular" },
+  now_playing: { movie: "now_playing", tv: "on_the_air" },
+  top_rated: { movie: "top_rated", tv: "top_rated" },
+};
+
 export interface TmdbRawResult {
   id: number;
   title?: string;
@@ -36,7 +48,7 @@ export interface TmdbTvDetail {
 
 // queryKeys sans la cle API : rotation sans invalidation, secret hors du cache.
 export const tmdbKeys = {
-  topRated: (mt: TmdbMediaType, page: number) => ["tmdb", "top_rated", mt, page] as const,
+  feed: (f: TmdbFeed, mt: TmdbMediaType, page: number) => ["tmdb", "feed", f, mt, page] as const,
   search: (mt: TmdbMediaType, query: string, page: number) =>
     ["tmdb", "search", mt, query, page] as const,
   discoverAnimation: (mt: TmdbMediaType, page: number) =>
@@ -52,9 +64,13 @@ async function get<T>(url: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export function topRated(mt: TmdbMediaType, page: number, apiKey: string) {
+export function feed(f: TmdbFeed, mt: TmdbMediaType, page: number, apiKey: string) {
+  if (f === "trending")
+    return get<TmdbListResponse>(
+      `${BASE}/trending/${mt}/week?api_key=${apiKey}&language=fr-FR&page=${page}`,
+    );
   return get<TmdbListResponse>(
-    `${BASE}/${mt}/top_rated?api_key=${apiKey}&language=fr-FR&page=${page}`,
+    `${BASE}/${mt}/${FEED_ENDPOINT[f][mt]}?api_key=${apiKey}&language=fr-FR&page=${page}`,
   );
 }
 

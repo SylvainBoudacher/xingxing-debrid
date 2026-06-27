@@ -14,6 +14,7 @@ import {
   Globe,
   KeyRound,
   Loader2,
+  FolderOpen,
   Magnet,
   Moon,
   Search,
@@ -30,6 +31,7 @@ import {
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
@@ -318,7 +320,9 @@ interface SetupPageProps {
 }
 
 export function SetupPage({ onComplete }: SetupPageProps) {
-  const [step, setStep] = useState<"intro" | "prereqs" | "keys" | "display" | "theme">("intro");
+  const [step, setStep] = useState<
+    "intro" | "prereqs" | "keys" | "display" | "downloads" | "theme"
+  >("intro");
   const [dnsStatus, setDnsStatus] = useState<"idle" | "checking" | "ok" | "fail">("idle");
   const [showDnsGuide, setShowDnsGuide] = useState(false);
   const [c411Key, setC411Key] = useState("");
@@ -328,6 +332,8 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   const [viewMode, setViewMode] = useState<ViewMode>("simple");
   const [hideNfo, setHideNfo] = useState(true);
   const [skipNfoDownload, setSkipNfoDownload] = useState(true);
+  const [downloadDir, setDownloadDir] = useState("");
+  const [batchSize, setBatchSize] = useState(2);
   const [theme, setThemeState] = useState<Theme>("dark");
   const [summerEnabled, setSummerEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -350,6 +356,8 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     });
     store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));
     store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
+    store.get<string>("download_dir").then((v) => setDownloadDir(v ?? ""));
+    store.get<number>("download_batch_size").then((v) => setBatchSize(v ?? 2));
     store.get<Theme>("theme").then((v) => setThemeState(v === "light" ? "light" : "dark"));
     store.get<boolean>("summer_pool_enabled").then((v) => setSummerEnabled(v ?? false));
   }, []);
@@ -393,6 +401,20 @@ export function SetupPage({ onComplete }: SetupPageProps) {
       await store.set("view_mode", viewMode);
       await store.set("hide_nfo_files", hideNfo);
       await store.set("skip_nfo_download", skipNfoDownload);
+      await store.save();
+      setStep("downloads");
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDownloadsNext() {
+    setSaving(true);
+    try {
+      await store.set("download_dir", downloadDir);
+      await store.set("download_batch_size", batchSize);
       await store.save();
       setStep("theme");
     } catch (err) {
@@ -967,6 +989,147 @@ export function SetupPage({ onComplete }: SetupPageProps) {
             </motion.div>
           )}
 
+          {step === "downloads" && (
+            <motion.div
+              key="downloads"
+              initial="hidden"
+              animate="visible"
+              exit={{ opacity: 0, x: 24, transition: { duration: 0.2 } }}
+              variants={stagger}
+              className="relative mx-auto w-full max-w-xl px-6 pt-10 pb-12 sm:px-8 space-y-4"
+            >
+              <motion.div variants={item}>
+                <motion.button
+                  whileTap={{ scale: 0.93 }}
+                  onClick={() => setStep("display")}
+                  className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="text-sm font-medium">Retour</span>
+                </motion.button>
+
+                <div className="text-center mb-2">
+                  <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
+                    Telechargement
+                  </h1>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
+                    Definissez ou seront enregistres vos fichiers et combien peuvent etre
+                    telecharges en meme temps.
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* Download folder */}
+              <motion.div
+                variants={item}
+                className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-5"
+              >
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
+                    <Download className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                    Dossier de telechargement
+                  </p>
+                </div>
+                <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+                  Ou les fichiers debrides sont enregistres. Par defaut, le dossier Telechargements
+                  de votre systeme.
+                </p>
+
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 px-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
+                      {downloadDir || "Dossier Telechargements (par defaut)"}
+                    </p>
+                    {downloadDir && (
+                      <button
+                        onClick={() => setDownloadDir("")}
+                        className="mt-0.5 text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                      >
+                        Reinitialiser
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const picked = await openDialog({ directory: true, multiple: false });
+                      if (typeof picked === "string") setDownloadDir(picked);
+                    }}
+                    className="flex shrink-0 items-center gap-2 rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 px-4 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                  >
+                    <FolderOpen className="h-3.5 w-3.5" />
+                    Choisir
+                  </button>
+                </div>
+              </motion.div>
+
+              {/* Batch size */}
+              <motion.div
+                variants={item}
+                className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-5"
+              >
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
+                    <Zap className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                    Telechargements simultanes
+                  </p>
+                </div>
+                <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+                  Lors d'un telechargement groupe (plusieurs episodes), nombre de fichiers
+                  telecharges en meme temps. Une valeur plus elevee peut mieux saturer votre
+                  connexion.
+                </p>
+
+                <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium text-zinc-900 dark:text-white">
+                      Fichiers en parallele
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-0.5">
+                      Taille des lots telecharges simultanement.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 p-1">
+                    {[1, 2, 3, 4].map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => setBatchSize(n)}
+                        className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-all ${
+                          batchSize === n
+                            ? "bg-indigo-600 text-white shadow"
+                            : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                        }`}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div variants={item} className="pt-2">
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleDownloadsNext}
+                  disabled={saving}
+                  className="flex w-full items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold text-white transition-colors"
+                >
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      Continuer
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          )}
+
           {step === "theme" && (
             <motion.div
               key="theme"
@@ -979,7 +1142,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               <motion.div variants={item}>
                 <motion.button
                   whileTap={{ scale: 0.93 }}
-                  onClick={() => setStep("display")}
+                  onClick={() => setStep("downloads")}
                   className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
                 >
                   <ArrowLeft className="h-4 w-4" />
