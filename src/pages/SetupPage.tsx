@@ -40,7 +40,7 @@ import { applyTheme, type Theme } from "@/lib/theme";
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
 );
-import type { ViewMode } from "./PreferencesPage";
+import type { ViewMode } from "@/lib/viewMode";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 

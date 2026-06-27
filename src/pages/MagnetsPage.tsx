@@ -24,7 +24,7 @@ import {
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey } from "@/lib/apiKeys";
 import { flattenFiles, formatSize, isVideoFile } from "@/lib/debrid";
-import type { ViewMode } from "@/pages/PreferencesPage";
+import { type ViewMode, resolvePageViewMode } from "@/lib/viewMode";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { toast } from "sonner";
 import vlcLogo from "@/assets/vlc.png";
@@ -575,7 +575,7 @@ export function MagnetsPage({
       });
     }
     if (initialViewMode === undefined) {
-      store.get<ViewMode>("view_mode").then((v) => setSimpleView((v ?? "simple") === "simple"));
+      resolvePageViewMode(store, "magnets").then((v) => setSimpleView(v === "simple"));
     }
     if (initialHideNfoFiles === undefined) {
       store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));

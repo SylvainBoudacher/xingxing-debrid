@@ -11,7 +11,7 @@ import {
   discoverAnimation as tmdbDiscoverAnimation,
 } from "@/lib/services/tmdb";
 import { allDebridKeys, fetchMagnets } from "@/lib/services/allDebrid";
-import type { ViewMode } from "@/pages/PreferencesPage";
+import { type ViewMode, resolveAllViewModes } from "@/lib/viewMode";
 
 export type WindowLaunchMode = "small" | "large" | "maximized";
 
@@ -124,9 +124,7 @@ export function useAppInit(): AppInitResult {
         allDebridKeyValue,
         c411KeyValue,
         likesData,
-        searchViewMode,
-        viewMode,
-        libraryViewMode,
+        viewModes,
         patchnotesSeen,
         hideNfoFiles,
         skipNfoDownload,
@@ -135,9 +133,7 @@ export function useAppInit(): AppInitResult {
         getApiKey("alldebrid_api_key"),
         getApiKey("c411_api_key"),
         getLikes(),
-        store.get<ViewMode>("search_view_mode"),
-        store.get<ViewMode>("view_mode"),
-        store.get<ViewMode>("library_view_mode"),
+        resolveAllViewModes(store),
         store.get<string>("patchnotes_seen"),
         store.get<boolean>("hide_nfo_files"),
         store.get<boolean>("skip_nfo_download"),
@@ -152,9 +148,9 @@ export function useAppInit(): AppInitResult {
       if (tmdbKeyValue) setTmdbKey(tmdbKeyValue);
 
       setPrefs({
-        searchViewMode: searchViewMode ?? "simple",
-        viewMode: viewMode ?? "simple",
-        libraryViewMode: libraryViewMode ?? "simple",
+        searchViewMode: viewModes.search,
+        viewMode: viewModes.magnets,
+        libraryViewMode: viewModes.library,
         patchnotesSeen: patchnotesSeen ?? null,
         hideNfoFiles: hideNfoFiles ?? true,
         skipNfoDownload: skipNfoDownload ?? true,
