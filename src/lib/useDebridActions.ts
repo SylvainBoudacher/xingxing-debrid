@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { startDownload } from "@/lib/downloads";
 import { toast } from "sonner";
 
 // Actions AllDebrid sur un lien debride (copie presse-papier, VLC, telechargement).
@@ -70,7 +70,7 @@ export function useDebridActions(getKey: () => string) {
         link,
         alldebridKey: getKeyRef.current(),
       });
-      await openUrl(url);
+      await startDownload(url);
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -84,8 +84,7 @@ export function useDebridActions(getKey: () => string) {
       setBulkDownloading(groupKey);
       try {
         const urls = await unlockAll(links);
-        for (const url of urls) await openUrl(url);
-        toast.success(`${urls.length} téléchargements lancés`);
+        for (const url of urls) await startDownload(url);
       } catch (err) {
         toast.error(String(err));
       } finally {

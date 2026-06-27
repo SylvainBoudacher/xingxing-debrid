@@ -57,7 +57,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import type { ViewMode } from "./PreferencesPage";
+import { type ViewMode, resolvePageViewMode } from "@/lib/viewMode";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
@@ -287,13 +287,13 @@ export function MainPage({
       jobs.push(
         Promise.all([
           store.get<string>("patchnotes_seen"),
-          store.get<ViewMode>("search_view_mode"),
+          resolvePageViewMode(store, "search"),
         ]).then(([fetchedPatchnotesSeen, fetchedSearchViewMode]) => {
           if (patchnotesSeen === undefined && fetchedPatchnotesSeen !== LATEST_VERSION) {
             setShowPatchNotif(true);
           }
           if (searchViewMode === undefined) {
-            setSimpleSearchView((fetchedSearchViewMode ?? "simple") === "simple");
+            setSimpleSearchView(fetchedSearchViewMode === "simple");
           }
         }),
       );

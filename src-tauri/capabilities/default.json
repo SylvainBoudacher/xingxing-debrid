@@ -24,6 +24,7 @@
     "core:window:allow-center",
     "store:default",
     "updater:default",
-    "process:default"
+    "process:default",
+    "dialog:default"
   ]
 }

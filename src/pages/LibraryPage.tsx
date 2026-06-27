@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { useDebridActions } from "@/lib/useDebridActions";
 import { flattenFiles, isVideoFile, type DebridFile } from "@/lib/debrid";
-import type { ViewMode } from "@/pages/PreferencesPage";
+import { type ViewMode, resolvePageViewMode } from "@/lib/viewMode";
 import {
   applyEnrichment,
   canEnrichTmdb,
@@ -154,9 +154,7 @@ export function LibraryPage({
       enrichMissing(loaded);
     });
     if (initialViewMode === undefined) {
-      store.get<ViewMode>("library_view_mode").then((v) => {
-        if (v) setViewMode(v);
-      });
+      resolvePageViewMode(store, "library").then(setViewMode);
     }
     store.get<boolean>("auto_watch_on_play").then((v) => {
       if (v !== null && v !== undefined) setAutoWatchOnPlay(v);

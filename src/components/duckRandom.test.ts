@@ -29,7 +29,16 @@ const VALID_PATTERNS = new Set<Pattern>([
   "zombie",
   "metal",
 ]);
-const VALID_EFFECTS = new Set<Effect>(["glow", "ghost", "sparkle", "bubbles"]);
+const VALID_EFFECTS = new Set<Effect>([
+  "glow",
+  "ghost",
+  "sparkle",
+  "bubbles",
+  "prismatic",
+  "golden",
+  "ooze",
+  "electric",
+]);
 const HEX_RE = /^#[0-9a-fA-F]{3,8}$/;
 
 // Patterns that can only come from the LEGENDARY tier

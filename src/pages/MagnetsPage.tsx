@@ -24,12 +24,12 @@ import {
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey } from "@/lib/apiKeys";
 import { flattenFiles, formatSize, isVideoFile } from "@/lib/debrid";
-import type { ViewMode } from "@/pages/PreferencesPage";
+import { type ViewMode, resolvePageViewMode } from "@/lib/viewMode";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { toast } from "sonner";
 import vlcLogo from "@/assets/vlc.png";
 import { invoke } from "@tauri-apps/api/core";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { startDownload } from "@/lib/downloads";
 import { queryClient } from "@/lib/queryClient";
 import { allDebridKeys, fetchMagnets, type MagnetEntry } from "@/lib/services/allDebrid";
 
@@ -160,9 +160,19 @@ function FilesModal({
   const [downloadingAll, setDownloadingAll] = useState<{ done: number; total: number } | null>(
     null,
   );
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [downloadingSelected, setDownloadingSelected] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
 
   const busy =
-    downloading !== null || copying !== null || vlcing !== null || downloadingAll !== null;
+    downloading !== null ||
+    copying !== null ||
+    vlcing !== null ||
+    downloadingAll !== null ||
+    downloadingSelected !== null;
 
   // Fetch mis en cache par TanStack Query — rouvrir le même magnet est instantané.
   const {
@@ -228,10 +238,9 @@ function FilesModal({
       let done = 0;
       await forEachLimit(toDownload, CONCURRENCY, async (file) => {
         const url = await invoke<string>("unlock_link", { link: file.link, alldebridKey: apiKey });
-        await openUrl(url);
+        await startDownload(url);
         setDownloadingAll({ done: ++done, total: toDownload.length });
       });
-      toast.success(`${toDownload.length} telechargements lances`);
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -239,11 +248,51 @@ function FilesModal({
     }
   }
 
+  function toggleSelect(link: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(link)) next.delete(link);
+      else next.add(link);
+      return next;
+    });
+  }
+
+  const allSelected = !!files && files.length > 0 && selected.size === files.length;
+
+  function toggleSelectAll() {
+    setSelected(allSelected ? new Set() : new Set((files ?? []).map((f) => f.link)));
+  }
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelected(new Set());
+  }
+
+  async function handleDownloadSelected() {
+    if (!files) return;
+    const toDownload = files.filter((f) => selected.has(f.link));
+    if (toDownload.length === 0) return;
+    setDownloadingSelected({ done: 0, total: toDownload.length });
+    try {
+      let done = 0;
+      await forEachLimit(toDownload, CONCURRENCY, async (file) => {
+        const url = await invoke<string>("unlock_link", { link: file.link, alldebridKey: apiKey });
+        await startDownload(url);
+        setDownloadingSelected({ done: ++done, total: toDownload.length });
+      });
+      exitSelectMode();
+    } catch (err) {
+      toast.error(String(err));
+    } finally {
+      setDownloadingSelected(null);
+    }
+  }
+
   async function handleDownload(link: string) {
     setDownloading(link);
     try {
       const url = await invoke<string>("unlock_link", { link, alldebridKey: apiKey });
-      await openUrl(url);
+      await startDownload(url);
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -278,141 +327,223 @@ function FilesModal({
         exit={{ opacity: 0, scale: 0.95, y: 8 }}
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
+        className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white/95 shadow-2xl ring-1 ring-black/10 backdrop-blur-xl dark:bg-zinc-900/95 dark:ring-white/10"
       >
-        {/* Header */}
-        <div className="px-5 pt-5 pb-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">
-                Fichiers disponibles
-              </p>
-              <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">
-                {simpleView ? parseRelease(magnetName).title : magnetName}
-              </p>
-            </div>
-            <button
-              onClick={onClose}
-              className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-            >
-              <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
-            </button>
+        {/* En-tête */}
+        <div className="flex items-start justify-between gap-4 px-5 pb-4 pt-5">
+          <div className="min-w-0">
+            <p className="mb-1 text-[11px] font-medium uppercase tracking-wider text-zinc-500">
+              Fichiers disponibles
+            </p>
+            <p className="text-base font-semibold leading-snug text-zinc-900 dark:text-white">
+              {simpleView ? parseRelease(magnetName).title : magnetName}
+            </p>
           </div>
-
-          {!loading && files && files.length > 1 && (
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={handleDownloadAll}
-              disabled={busy}
-              className="mt-3 flex w-full items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            >
-              {downloadingAll ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
-                  <span className="text-xs font-medium text-white">
-                    {downloadingAll.done}/{downloadingAll.total}...
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Download className="h-3.5 w-3.5 text-white" />
-                  <span className="text-xs font-medium text-white">
-                    Tout telecharger ({files.length})
-                  </span>
-                </>
-              )}
-            </motion.button>
-          )}
+          <button
+            onClick={onClose}
+            className="mt-0.5 flex h-6 w-6 flex-none items-center justify-center rounded-md bg-zinc-200 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+          >
+            <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+          </button>
         </div>
 
-        {/* File list */}
-        <div className="max-h-80 overflow-y-auto px-3 pb-3 space-y-1.5">
+        {/* Barre d'actions globales : sélection / tout télécharger */}
+        {!loading && files && files.length > 1 && (
+          <div className="flex items-center gap-2 border-y border-black/5 bg-black/[0.02] px-5 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
+            {selectMode ? (
+              <>
+                <button
+                  onClick={toggleSelectAll}
+                  disabled={busy}
+                  className="flex items-center gap-2 text-xs font-medium text-zinc-600 transition-colors hover:text-zinc-900 disabled:opacity-40 dark:text-zinc-300 dark:hover:text-white"
+                >
+                  <span
+                    className={`flex h-4 w-4 flex-none items-center justify-center rounded ring-1 transition-colors ${
+                      allSelected
+                        ? "bg-indigo-600 ring-indigo-500"
+                        : "bg-zinc-200 ring-black/10 dark:bg-zinc-800 dark:ring-white/10"
+                    }`}
+                  >
+                    {allSelected && <Check className="h-3 w-3 text-white" />}
+                  </span>
+                  Tout sélectionner
+                </button>
+                <span className="flex-1 text-right text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  {selected.size} sélectionné{selected.size > 1 ? "s" : ""}
+                </span>
+                <button
+                  onClick={exitSelectMode}
+                  disabled={busy}
+                  className="flex h-7 flex-none items-center rounded-lg px-3 text-xs font-medium text-zinc-500 transition-colors hover:bg-black/5 disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-white/10"
+                >
+                  Annuler
+                </button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleDownloadSelected}
+                  disabled={busy || selected.size === 0}
+                  className="flex h-7 flex-none items-center gap-2 rounded-lg bg-indigo-600 px-3 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {downloadingSelected ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                      <span className="text-xs font-medium text-white">
+                        {downloadingSelected.done}/{downloadingSelected.total}...
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-3.5 w-3.5 text-white" />
+                      <span className="text-xs font-medium text-white">Telecharger</span>
+                    </>
+                  )}
+                </motion.button>
+              </>
+            ) : (
+              <>
+                <span className="flex-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  {files.length} fichiers
+                </span>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setSelectMode(true)}
+                  disabled={busy}
+                  className="flex h-7 flex-none items-center gap-2 rounded-lg bg-black/5 px-3 text-zinc-500 ring-1 ring-black/10 transition-colors hover:bg-black/10 hover:text-zinc-900 disabled:opacity-40 dark:bg-white/5 dark:text-zinc-400 dark:ring-white/10 dark:hover:bg-white/10 dark:hover:text-white"
+                >
+                  <ListChecks className="h-3.5 w-3.5" />
+                  <span className="text-xs font-medium">Sélection</span>
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleDownloadAll}
+                  disabled={busy}
+                  className="flex h-7 flex-none items-center gap-2 rounded-lg bg-indigo-600 px-3 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {downloadingAll ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                      <span className="text-xs font-medium text-white">
+                        {downloadingAll.done}/{downloadingAll.total}...
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-3.5 w-3.5 text-white" />
+                      <span className="text-xs font-medium text-white">Tout telecharger</span>
+                    </>
+                  )}
+                </motion.button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Liste des fichiers */}
+        <div
+          className={`min-h-0 flex-1 overflow-y-auto ${
+            !loading && files && files.length > 1
+              ? ""
+              : "border-t border-black/5 dark:border-white/10"
+          }`}
+        >
           {loading && (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-5 w-5 text-zinc-500 dark:text-zinc-400 animate-spin" />
+            <div className="flex justify-center py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-zinc-500 dark:text-zinc-400" />
             </div>
           )}
-          {!loading &&
-            files?.map((file, i) => {
-              const fileName = file.name.split("/").pop() ?? file.name;
-              const showName = fileName !== magnetName;
-              const parsed = simpleView ? parseRelease(fileName) : null;
-              return (
-                <div key={i} className="rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3">
-                  <div className="mb-3">
-                    {showName && (
-                      <p className="text-sm font-medium text-zinc-900 dark:text-white leading-snug line-clamp-2 mb-0.5">
-                        {parsed ? parsed.title : fileName}
-                      </p>
-                    )}
-                    <p className="text-xs text-zinc-500">
-                      {formatSize(file.size)}
-                      {parsed?.quality ? ` · ${parsed.quality}` : ""}
-                      {parsed?.codec ? ` · ${parsed.codec}` : ""}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isVideoFile(file.name) && (
-                      <motion.button
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => handleOpenVlc(file.link)}
-                        disabled={busy}
-                        className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          {!loading && (
+            <ul className="divide-y divide-black/5 dark:divide-white/5">
+              {files?.map((file, i) => {
+                const fileName = file.name.split("/").pop() ?? file.name;
+                const showName = fileName !== magnetName;
+                const parsed = simpleView ? parseRelease(fileName) : null;
+                const meta = [formatSize(file.size), parsed?.quality, parsed?.codec]
+                  .filter(Boolean)
+                  .join(" · ");
+                const isSelected = selected.has(file.link);
+                return (
+                  <li
+                    key={i}
+                    onClick={selectMode ? () => toggleSelect(file.link) : undefined}
+                    className={`flex items-center gap-3 px-5 py-2.5 transition-colors ${
+                      selectMode
+                        ? `cursor-pointer ${
+                            isSelected
+                              ? "bg-indigo-500/10"
+                              : "hover:bg-black/[0.025] dark:hover:bg-white/[0.04]"
+                          }`
+                        : "hover:bg-black/[0.025] dark:hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    {selectMode && (
+                      <span
+                        className={`flex h-5 w-5 flex-none items-center justify-center rounded-md ring-1 transition-colors ${
+                          isSelected
+                            ? "bg-indigo-600 ring-indigo-500"
+                            : "bg-zinc-200 ring-black/10 dark:bg-zinc-800 dark:ring-white/10"
+                        }`}
                       >
-                        {vlcing === file.link ? (
-                          <Loader2 className="h-3.5 w-3.5 text-zinc-900 dark:text-white animate-spin" />
-                        ) : (
-                          <img src={vlcLogo} className="h-4 w-4" />
-                        )}
-                        <span className="text-xs font-medium text-zinc-900 dark:text-white">
-                          Lire avec VLC
-                        </span>
-                      </motion.button>
+                        {isSelected && <Check className="h-3 w-3 text-white" />}
+                      </span>
                     )}
-                    <motion.button
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => handleCopy(file.link)}
-                      disabled={busy}
-                      className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {copying === file.link ? (
-                        <>
-                          <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-                          <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                            Copie !
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-300" />
-                          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                            Copier le lien
-                          </span>
-                        </>
+                    <div className="min-w-0 flex-1">
+                      {showName && (
+                        <span className="block truncate text-xs text-zinc-700 dark:text-zinc-300">
+                          {parsed ? parsed.title : fileName}
+                        </span>
                       )}
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => handleDownload(file.link)}
-                      disabled={busy}
-                      className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                      <span className="text-[11px] text-zinc-400">{meta}</span>
+                    </div>
+                    <div
+                      className={`flex flex-none items-center gap-1 ${selectMode ? "hidden" : ""}`}
                     >
-                      {downloading === file.link ? (
-                        <>
-                          <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
-                          <span className="text-xs font-medium text-white">Ouverture...</span>
-                        </>
-                      ) : (
-                        <>
+                      {isVideoFile(file.name) && (
+                        <motion.button
+                          whileTap={{ scale: 0.9 }}
+                          title="Lire avec VLC"
+                          onClick={() => handleOpenVlc(file.link)}
+                          disabled={busy}
+                          className="flex h-7 w-7 flex-none items-center justify-center rounded-lg transition-colors hover:bg-black/5 disabled:opacity-40 dark:hover:bg-white/10"
+                        >
+                          {vlcing === file.link ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" />
+                          ) : (
+                            <img src={vlcLogo} className="h-4 w-4" alt="VLC" />
+                          )}
+                        </motion.button>
+                      )}
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        title="Copier le lien"
+                        onClick={() => handleCopy(file.link)}
+                        disabled={busy}
+                        className="flex h-7 w-7 flex-none items-center justify-center rounded-lg transition-colors hover:bg-black/5 disabled:opacity-40 dark:hover:bg-white/10"
+                      >
+                        {copying === file.link ? (
+                          <Check className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : (
+                          <Copy className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-300" />
+                        )}
+                      </motion.button>
+                      <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        title="Telecharger"
+                        onClick={() => handleDownload(file.link)}
+                        disabled={busy}
+                        className="flex h-7 w-7 flex-none items-center justify-center rounded-lg bg-indigo-600 transition-colors hover:bg-indigo-500 disabled:opacity-40"
+                      >
+                        {downloading === file.link ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                        ) : (
                           <Download className="h-3.5 w-3.5 text-white" />
-                          <span className="text-xs font-medium text-white">Telecharger</span>
-                        </>
-                      )}
-                    </motion.button>
-                  </div>
-                </div>
-              );
-            })}
+                        )}
+                      </motion.button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </div>
       </motion.div>
     </motion.div>
@@ -515,6 +646,7 @@ export function MagnetsPage({
   const [simpleView, setSimpleView] = useState((initialViewMode ?? "simple") === "simple");
   const [hideNfo, setHideNfo] = useState(initialHideNfoFiles ?? true);
   const [skipNfoDownload, setSkipNfoDownload] = useState(initialSkipNfoDownload ?? true);
+  const [confirmBeforeDelete, setConfirmBeforeDelete] = useState(true);
   const [filesModal, setFilesModal] = useState<{ id: number; name: string } | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -575,7 +707,7 @@ export function MagnetsPage({
       });
     }
     if (initialViewMode === undefined) {
-      store.get<ViewMode>("view_mode").then((v) => setSimpleView((v ?? "simple") === "simple"));
+      resolvePageViewMode(store, "magnets").then((v) => setSimpleView(v === "simple"));
     }
     if (initialHideNfoFiles === undefined) {
       store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));
@@ -583,9 +715,17 @@ export function MagnetsPage({
     if (initialSkipNfoDownload === undefined) {
       store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
     }
+    store.get<boolean>("confirm_delete").then((v) => setConfirmBeforeDelete(v ?? true));
     // initialXxx props are intentional initial-value-only inputs — not reactive deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadMagnets]);
+
+  // Déclenche la suppression : passe par la modale de confirmation, ou supprime
+  // directement si l'utilisateur a désactivé la confirmation dans les réglages.
+  function requestDelete(ids: number[], label: string) {
+    if (confirmBeforeDelete) setConfirmDelete({ ids, label });
+    else handleDelete(ids);
+  }
 
   async function handleDelete(ids: number[]) {
     setDeleting(true);
@@ -606,7 +746,14 @@ export function MagnetsPage({
     } catch (err) {
       toast.error(String(err));
     } finally {
-      if (deleted.length > 0) setMagnets((prev) => prev.filter((m) => !deleted.includes(m.id)));
+      if (deleted.length > 0) {
+        setMagnets((prev) => prev.filter((m) => !deleted.includes(m.id)));
+        setSelected((prev) => {
+          const next = new Set(prev);
+          deleted.forEach((id) => next.delete(id));
+          return next;
+        });
+      }
       setDeleting(false);
     }
   }
@@ -644,10 +791,9 @@ export function MagnetsPage({
           link: file.link,
           alldebridKey: apiKeyRef.current,
         });
-        await openUrl(url);
+        await startDownload(url);
         setBulkDownloading({ done: ++done, total: files.length });
       });
-      toast.success(`${files.length} telechargement${files.length > 1 ? "s lances" : " lance"}`);
       setSelected(new Set());
     } catch (err) {
       toast.error(String(err));
@@ -796,12 +942,12 @@ export function MagnetsPage({
                 <motion.button
                   whileTap={{ scale: 0.97 }}
                   onClick={() =>
-                    setConfirmDelete({
-                      ids: magnets
+                    requestDelete(
+                      magnets
                         .filter((m) => getStatusFilter(m.statusCode) === "error")
                         .map((m) => m.id),
-                      label: `${counts.error} magnet${counts.error > 1 ? "s" : ""} en erreur`,
-                    })
+                      `${counts.error} magnet${counts.error > 1 ? "s" : ""} en erreur`,
+                    )
                   }
                   className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors"
                 >
@@ -916,28 +1062,6 @@ export function MagnetsPage({
                           {formatDate(m.uploadDate)}
                         </span>
                       )}
-
-                      <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                        {isReady && (
-                          <motion.button
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => setFilesModal({ id: m.id, name: m.filename })}
-                            className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition-colors"
-                          >
-                            <Download className="h-3 w-3 text-white" />
-                            <span className="text-[11px] font-medium text-white">
-                              Voir les fichiers
-                            </span>
-                          </motion.button>
-                        )}
-                        <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => setConfirmDelete({ ids: [m.id], label: m.filename })}
-                          className="flex items-center justify-center h-7 w-7 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </motion.button>
-                      </div>
                     </div>
 
                     {isActive && (
@@ -953,6 +1077,28 @@ export function MagnetsPage({
                         </div>
                       </div>
                     )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 self-end shrink-0">
+                    {isReady && (
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => setFilesModal({ id: m.id, name: m.filename })}
+                        className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition-colors"
+                      >
+                        <Download className="h-3 w-3 text-white" />
+                        <span className="text-[11px] font-medium text-white">
+                          Voir les fichiers
+                        </span>
+                      </motion.button>
+                    )}
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => requestDelete([m.id], m.filename)}
+                      className="flex items-center justify-center h-7 w-7 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </motion.button>
                   </div>
                 </div>
               </motion.div>
@@ -994,6 +1140,20 @@ export function MagnetsPage({
                   <span className="text-xs font-medium text-white">Tout telecharger</span>
                 </>
               )}
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() =>
+                requestDelete(
+                  [...selected],
+                  `${selected.size} magnet${selected.size > 1 ? "s" : ""} selectionne${selected.size > 1 ? "s" : ""}`,
+                )
+              }
+              disabled={bulkDownloading !== null || deleting}
+              className="flex items-center gap-2 h-8 px-3 rounded-lg bg-red-500/10 ring-1 ring-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span className="text-xs font-medium">Tout supprimer</span>
             </motion.button>
             <button
               onClick={() => {

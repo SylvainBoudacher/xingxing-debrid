@@ -6,6 +6,7 @@ import {
   PROVIDER_LABEL,
   ResumeButton,
   type DebridControls,
+  type EpisodeSelection,
 } from "@/components/libraryParts";
 import { formatSize } from "@/lib/debrid";
 import {
@@ -23,7 +24,17 @@ import {
   type LibraryEntry,
 } from "@/lib/library";
 import { parseRelease } from "@/lib/parseRelease";
-import { Clapperboard, Pencil, Star, Trash2, X } from "lucide-react";
+import {
+  Check,
+  Clapperboard,
+  Download,
+  ListChecks,
+  Loader2,
+  Pencil,
+  Star,
+  Trash2,
+  X,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 
@@ -53,6 +64,8 @@ export function LibraryDetailModal({
   enrichOpen,
 }: LibraryDetailModalProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const tmdb = entry.tmdb;
   const series = isSeries(entry);
   const whole = isWholeWatched(entry);
@@ -65,6 +78,31 @@ export function LibraryDetailModal({
   const next = series && !whole ? nextUnwatched(entry) : null;
   const ratio = progressRatio(entry);
   const resumeKey = `resume-${entry.infoHash}`;
+  const selectionKey = `${entry.infoHash}-selection`;
+  const downloadingSelection = debrid.bulkDownloading === selectionKey;
+  const allSelected = allLinks.length > 0 && selected.size === allLinks.length;
+
+  const selection: EpisodeSelection = {
+    has: (link) => selected.has(link),
+    toggle: (link) =>
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(link)) next.delete(link);
+        else next.add(link);
+        return next;
+      }),
+    setMany: (links, on) =>
+      setSelected((prev) => {
+        const next = new Set(prev);
+        links.forEach((l) => (on ? next.add(l) : next.delete(l)));
+        return next;
+      }),
+  };
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelected(new Set());
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !enrichOpen && onClose();
@@ -200,7 +238,7 @@ export function LibraryDetailModal({
 
         {/* Barre d'actions globales : seulement pour les séries (plusieurs fichiers).
             Pour un film, la ligne du fichier unique suffit. */}
-        {vids.length > 1 && (
+        {vids.length > 1 && !selectMode && (
           <div className="flex items-center gap-3 border-y border-black/5 bg-black/[0.02] px-5 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
             <Checkbox checked={whole} onClick={() => onChange(setWholeWatched(entry, !whole))} />
             <span className="flex-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">
@@ -215,6 +253,14 @@ export function LibraryDetailModal({
                 onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
               />
             )}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setSelectMode(true)}
+              title="Sélectionner des épisodes à télécharger"
+              className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-black/5 dark:text-zinc-400 dark:hover:bg-white/10"
+            >
+              <ListChecks className="h-4 w-4" />
+            </motion.button>
             <DebridActions
               links={allLinks}
               groupKey={entry.infoHash}
@@ -223,6 +269,50 @@ export function LibraryDetailModal({
                 autoWatchOnPlay ? () => onChange(setWholeWatched(entry, true)) : undefined
               }
             />
+          </div>
+        )}
+
+        {vids.length > 1 && selectMode && (
+          <div className="flex items-center gap-2 border-y border-black/5 bg-black/[0.02] px-5 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
+            <button
+              onClick={() => selection.setMany(allLinks, !allSelected)}
+              disabled={downloadingSelection}
+              className="flex items-center gap-2 text-xs font-medium text-zinc-600 transition-colors hover:text-zinc-900 disabled:opacity-40 dark:text-zinc-300 dark:hover:text-white"
+            >
+              <span
+                className={`flex h-4 w-4 flex-none items-center justify-center rounded ring-1 transition-colors ${
+                  allSelected
+                    ? "bg-indigo-600 ring-indigo-500"
+                    : "bg-zinc-200 ring-black/10 dark:bg-zinc-800 dark:ring-white/10"
+                }`}
+              >
+                {allSelected && <Check className="h-3 w-3 text-white" />}
+              </span>
+              Tout sélectionner
+            </button>
+            <span className="flex-1 text-right text-xs font-medium text-zinc-600 dark:text-zinc-300">
+              {selected.size} sélectionné{selected.size > 1 ? "s" : ""}
+            </span>
+            <button
+              onClick={exitSelectMode}
+              disabled={downloadingSelection}
+              className="flex h-7 flex-none items-center rounded-lg px-3 text-xs font-medium text-zinc-500 transition-colors hover:bg-black/5 disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-white/10"
+            >
+              Annuler
+            </button>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => debrid.downloadMany([...selected], selectionKey)}
+              disabled={selected.size === 0 || downloadingSelection}
+              className="flex h-7 flex-none items-center gap-2 rounded-lg bg-indigo-600 px-3 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {downloadingSelection ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+              ) : (
+                <Download className="h-3.5 w-3.5 text-white" />
+              )}
+              <span className="text-xs font-medium text-white">Telecharger</span>
+            </motion.button>
           </div>
         )}
 
@@ -236,6 +326,7 @@ export function LibraryDetailModal({
             debrid={debrid}
             simple={simple}
             autoWatchOnPlay={autoWatchOnPlay}
+            selection={selectMode ? selection : undefined}
           />
         </div>
       </motion.div>
