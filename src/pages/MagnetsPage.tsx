@@ -29,7 +29,15 @@ import { AppMenu, type Page } from "@/components/AppMenu";
 import { toast } from "sonner";
 import vlcLogo from "@/assets/vlc.png";
 import { invoke } from "@tauri-apps/api/core";
-import { startDownload } from "@/lib/downloads";
+import {
+  startDownload,
+  beginBulkDownload,
+  bulkTaskStart,
+  bulkTaskEnd,
+  endBulkDownload,
+  getDownloadBatchSize,
+  isBulkCancelled,
+} from "@/lib/downloads";
 import { queryClient } from "@/lib/queryClient";
 import { allDebridKeys, fetchMagnets, type MagnetEntry } from "@/lib/services/allDebrid";
 
@@ -234,16 +242,22 @@ function FilesModal({
     if (!files) return;
     const toDownload = skipNfoDownload ? files.filter((f) => !isNfoFile(f.name)) : files;
     setDownloadingAll({ done: 0, total: toDownload.length });
+    beginBulkDownload(toDownload.length);
     try {
+      const batchSize = await getDownloadBatchSize();
       let done = 0;
-      await forEachLimit(toDownload, CONCURRENCY, async (file) => {
+      await forEachLimit(toDownload, batchSize, async (file) => {
+        if (isBulkCancelled()) return;
+        bulkTaskStart();
         const url = await invoke<string>("unlock_link", { link: file.link, alldebridKey: apiKey });
         await startDownload(url);
+        bulkTaskEnd();
         setDownloadingAll({ done: ++done, total: toDownload.length });
       });
     } catch (err) {
       toast.error(String(err));
     } finally {
+      endBulkDownload();
       setDownloadingAll(null);
     }
   }
@@ -273,17 +287,23 @@ function FilesModal({
     const toDownload = files.filter((f) => selected.has(f.link));
     if (toDownload.length === 0) return;
     setDownloadingSelected({ done: 0, total: toDownload.length });
+    beginBulkDownload(toDownload.length);
     try {
+      const batchSize = await getDownloadBatchSize();
       let done = 0;
-      await forEachLimit(toDownload, CONCURRENCY, async (file) => {
+      await forEachLimit(toDownload, batchSize, async (file) => {
+        if (isBulkCancelled()) return;
+        bulkTaskStart();
         const url = await invoke<string>("unlock_link", { link: file.link, alldebridKey: apiKey });
         await startDownload(url);
+        bulkTaskEnd();
         setDownloadingSelected({ done: ++done, total: toDownload.length });
       });
       exitSelectMode();
     } catch (err) {
       toast.error(String(err));
     } finally {
+      endBulkDownload();
       setDownloadingSelected(null);
     }
   }
@@ -785,19 +805,25 @@ export function MagnetsPage({
         .filter((f) => !skipNfoDownload || !isNfoFile(f.name));
       if (files.length === 0) throw new Error("Aucun fichier trouve");
       setBulkDownloading({ done: 0, total: files.length });
+      beginBulkDownload(files.length);
+      const batchSize = await getDownloadBatchSize();
       let done = 0;
-      await forEachLimit(files, CONCURRENCY, async (file) => {
+      await forEachLimit(files, batchSize, async (file) => {
+        if (isBulkCancelled()) return;
+        bulkTaskStart();
         const url = await invoke<string>("unlock_link", {
           link: file.link,
           alldebridKey: apiKeyRef.current,
         });
         await startDownload(url);
+        bulkTaskEnd();
         setBulkDownloading({ done: ++done, total: files.length });
       });
       setSelected(new Set());
     } catch (err) {
       toast.error(String(err));
     } finally {
+      endBulkDownload();
       setBulkDownloading(null);
     }
   }

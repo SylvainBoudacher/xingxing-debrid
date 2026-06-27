@@ -6,6 +6,7 @@ import {
   bulkTaskStart,
   endBulkDownload,
   getDownloadBatchSize,
+  isBulkCancelled,
   startDownload,
 } from "@/lib/downloads";
 import { toast } from "sonner";
@@ -98,6 +99,7 @@ export function useDebridActions(getKey: () => string) {
     let firstError: unknown = null;
     const worker = async () => {
       while (next < links.length) {
+        if (isBulkCancelled()) break;
         const link = links[next++];
         bulkTaskStart();
         try {

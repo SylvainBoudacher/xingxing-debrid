@@ -72,8 +72,11 @@ export function getBulkDownloadSnapshot(): BulkDownloadProgress | null {
   return bulkSnapshot;
 }
 
+let bulkCancelled = false;
+
 export function beginBulkDownload(total: number): void {
   bulk = { total, done: 0, active: 0 };
+  bulkCancelled = false;
   emitBulk();
 }
 
@@ -92,7 +95,12 @@ export function bulkTaskEnd(): void {
 
 export function endBulkDownload(): void {
   bulk = null;
+  bulkCancelled = false;
   emitBulk();
+}
+
+export function isBulkCancelled(): boolean {
+  return bulkCancelled;
 }
 
 // Nombre de téléchargements menés en parallèle lors d'un téléchargement groupé.
@@ -181,6 +189,12 @@ export async function startDownload(url: string): Promise<void> {
 
 export async function cancelDownload(id: string): Promise<void> {
   await invoke("cancel_download", { id });
+}
+
+export async function cancelAllActiveDownloads(): Promise<void> {
+  bulkCancelled = true;
+  const active = [...items.values()].filter((i) => i.status === "active");
+  await Promise.allSettled(active.map((i) => invoke("cancel_download", { id: i.id })));
 }
 
 export async function openDownload(id: string): Promise<void> {

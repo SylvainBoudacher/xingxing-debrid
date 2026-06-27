@@ -1,4 +1,5 @@
 import {
+  cancelAllActiveDownloads,
   cancelDownload,
   clearFinishedDownloads,
   dismissDownload,
@@ -149,6 +150,12 @@ function BulkSummaryRow() {
           transition={{ ease: "easeOut", duration: 0.3 }}
         />
       </div>
+      <button
+        onClick={cancelAllActiveDownloads}
+        className="mt-2 w-full cursor-pointer text-center text-[11px] font-medium text-zinc-400 transition-colors duration-150 hover:text-red-500"
+      >
+        Annuler tous les téléchargements
+      </button>
     </motion.div>
   );
 }
