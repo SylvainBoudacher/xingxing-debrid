@@ -920,28 +920,6 @@ export function MagnetsPage({
                           {formatDate(m.uploadDate)}
                         </span>
                       )}
-
-                      <div className="flex items-center gap-1.5 ml-auto shrink-0">
-                        {isReady && (
-                          <motion.button
-                            whileTap={{ scale: 0.97 }}
-                            onClick={() => setFilesModal({ id: m.id, name: m.filename })}
-                            className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition-colors"
-                          >
-                            <Download className="h-3 w-3 text-white" />
-                            <span className="text-[11px] font-medium text-white">
-                              Voir les fichiers
-                            </span>
-                          </motion.button>
-                        )}
-                        <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => requestDelete([m.id], m.filename)}
-                          className="flex items-center justify-center h-7 w-7 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </motion.button>
-                      </div>
                     </div>
 
                     {isActive && (
@@ -957,6 +935,28 @@ export function MagnetsPage({
                         </div>
                       </div>
                     )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 self-end shrink-0">
+                    {isReady && (
+                      <motion.button
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => setFilesModal({ id: m.id, name: m.filename })}
+                        className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 transition-colors"
+                      >
+                        <Download className="h-3 w-3 text-white" />
+                        <span className="text-[11px] font-medium text-white">
+                          Voir les fichiers
+                        </span>
+                      </motion.button>
+                    )}
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => requestDelete([m.id], m.filename)}
+                      className="flex items-center justify-center h-7 w-7 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-red-500/20 text-zinc-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </motion.button>
                   </div>
                 </div>
               </motion.div>
