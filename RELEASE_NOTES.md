@@ -1,2 +1,3 @@
-- Un canon a balle ?
-- Des canards legendaires ?
+- Téléchargement dans l'app dispo !
+- Refonte page paramètre
+- Nouveau paramètres !
