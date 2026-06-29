@@ -1,6 +1,3 @@
-import { memo } from "react";
-import { motion } from "motion/react";
-import { Check } from "lucide-react";
 import {
   groupIsWholeWatched,
   groupProgressRatio,
@@ -8,6 +5,8 @@ import {
   groupWatchedCount,
   type SeriesGroup,
 } from "@/lib/library";
+import { Check } from "lucide-react";
+import { memo } from "react";
 
 interface SeriesGroupPosterCardProps {
   group: SeriesGroup;
@@ -28,12 +27,9 @@ export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
   const year = group.tmdb.year;
 
   return (
-    <motion.button
-      layout
-      whileHover={{ y: -4 }}
-      whileTap={{ scale: 0.98 }}
+    <button
       onClick={onToggle}
-      className={`group relative block aspect-[2/3] cursor-pointer overflow-hidden rounded-xl text-left ring-2 transition-[box-shadow,ring-color] duration-200 ${
+      className={`group relative block aspect-[2/3] cursor-pointer overflow-hidden rounded-xl text-left ring-2 transition-[box-shadow,ring-color,transform] duration-200 hover:-translate-y-1 active:scale-[0.98] ${
         expanded
           ? "ring-indigo-500"
           : "ring-black/8 dark:ring-white/10 hover:ring-indigo-400/50 dark:hover:ring-indigo-400/40 hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.45)]"
@@ -67,7 +63,13 @@ export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
         {group.entries.length} S
       </span>
 
-      <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-8 backdrop-blur-md [mask-image:linear-gradient(to_top,black_55%,transparent)]">
+      <div
+        className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-8"
+        style={{
+          WebkitMaskImage: "linear-gradient(to top, black 60%, transparent)",
+          maskImage: "linear-gradient(to top, black 60%, transparent)",
+        }}
+      >
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
         <p className="relative truncate text-xs font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
           {title}
@@ -85,6 +87,6 @@ export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
           />
         </div>
       </div>
-    </motion.button>
+    </button>
   );
 });

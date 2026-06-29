@@ -86,7 +86,7 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
       )}
 
       {/* Dégradé + flou derrière le texte pour la lisibilité */}
-      <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-8 backdrop-blur-md [mask-image:linear-gradient(to_top,black_55%,transparent)]">
+      <div className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-8">
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-transparent" />
         <p className="relative truncate text-xs font-semibold text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">
           {title}
