@@ -8,6 +8,12 @@ import {
   type DebridControls,
   type EpisodeSelection,
 } from "@/components/libraryParts";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatSize } from "@/lib/debrid";
 import {
   groupBySeason,
@@ -26,7 +32,9 @@ import {
 import { parseRelease } from "@/lib/parseRelease";
 import {
   Check,
+  ChevronDown,
   Clapperboard,
+  Copy,
   Download,
   ListChecks,
   Loader2,
@@ -80,6 +88,8 @@ export function LibraryDetailModal({
   const resumeKey = `resume-${entry.infoHash}`;
   const selectionKey = `${entry.infoHash}-selection`;
   const downloadingSelection = debrid.bulkDownloading === selectionKey;
+  const copyingSelection = debrid.bulkCopying === selectionKey;
+  const busySelection = downloadingSelection || copyingSelection;
   const allSelected = allLinks.length > 0 && selected.size === allLinks.length;
 
   const selection: EpisodeSelection = {
@@ -254,12 +264,12 @@ export function LibraryDetailModal({
               />
             )}
             <motion.button
-              whileTap={{ scale: 0.9 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => setSelectMode(true)}
-              title="Sélectionner des épisodes à télécharger"
-              className="flex h-7 w-7 flex-none items-center justify-center rounded-lg text-zinc-500 transition-colors hover:bg-black/5 dark:text-zinc-400 dark:hover:bg-white/10"
+              className="flex h-7 flex-none items-center gap-1.5 rounded-lg bg-black/5 px-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
             >
-              <ListChecks className="h-4 w-4" />
+              <ListChecks className="h-3.5 w-3.5" />
+              Choisir des épisodes
             </motion.button>
             <DebridActions
               links={allLinks}
@@ -276,7 +286,7 @@ export function LibraryDetailModal({
           <div className="flex items-center gap-2 border-y border-black/5 bg-black/[0.02] px-5 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
             <button
               onClick={() => selection.setMany(allLinks, !allSelected)}
-              disabled={downloadingSelection}
+              disabled={busySelection}
               className="flex items-center gap-2 text-xs font-medium text-zinc-600 transition-colors hover:text-zinc-900 disabled:opacity-40 dark:text-zinc-300 dark:hover:text-white"
             >
               <span
@@ -295,24 +305,50 @@ export function LibraryDetailModal({
             </span>
             <button
               onClick={exitSelectMode}
-              disabled={downloadingSelection}
+              disabled={busySelection}
               className="flex h-7 flex-none items-center rounded-lg px-3 text-xs font-medium text-zinc-500 transition-colors hover:bg-black/5 disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-white/10"
             >
               Annuler
             </button>
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={() => debrid.downloadMany([...selected], selectionKey)}
-              disabled={selected.size === 0 || downloadingSelection}
-              className="flex h-7 flex-none items-center gap-2 rounded-lg bg-indigo-600 px-3 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {downloadingSelection ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
-              ) : (
-                <Download className="h-3.5 w-3.5 text-white" />
-              )}
-              <span className="text-xs font-medium text-white">Telecharger</span>
-            </motion.button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  disabled={selected.size === 0 || busySelection}
+                  className="flex h-7 flex-none items-center gap-1.5 rounded-lg bg-indigo-600 pl-3 pr-2 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {busySelection ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5 text-white" />
+                  )}
+                  <span className="text-xs font-medium text-white">
+                    Télécharger ({selected.size})
+                  </span>
+                  <ChevronDown className="h-3 w-3 text-white/70" />
+                </motion.button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => debrid.downloadMany([...selected], selectionKey)}
+                  disabled={busySelection}
+                >
+                  <Download className="h-4 w-4" />
+                  Télécharger
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => debrid.copyMany([...selected], selectionKey)}
+                  disabled={busySelection}
+                >
+                  {copyingSelection ? (
+                    <Check className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                  Copier les liens
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         )}
 

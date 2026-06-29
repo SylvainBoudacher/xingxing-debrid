@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Check, ChevronDown, Copy, Download, Loader2, Play } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import vlcLogo from "@/assets/vlc.png";
 import { formatSize } from "@/lib/debrid";
 import { parseRelease } from "@/lib/parseRelease";
@@ -54,6 +60,7 @@ export function DebridActions({
   const downloading = debrid.bulkDownloading === groupKey;
   const copying = debrid.bulkCopying === groupKey;
   const vlcing = debrid.bulkVlc === groupKey;
+  const multi = links.length > 1;
   const btn =
     "flex h-7 w-7 flex-none items-center justify-center rounded-lg transition-colors disabled:opacity-40";
 
@@ -75,32 +82,40 @@ export function DebridActions({
           <img src={vlcLogo} className="h-4 w-4" alt="VLC" />
         )}
       </motion.button>
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        title="Copier le(s) lien(s)"
-        onClick={() => debrid.copyMany(links, groupKey)}
-        disabled={copying}
-        className={`${btn} hover:bg-black/5 dark:hover:bg-white/10`}
-      >
-        {copying ? (
-          <Check className="h-3.5 w-3.5 text-emerald-500" />
-        ) : (
-          <Copy className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-300" />
-        )}
-      </motion.button>
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        title="Télécharger"
-        onClick={() => debrid.downloadMany(links, groupKey)}
-        disabled={downloading}
-        className={`${btn} bg-indigo-600 hover:bg-indigo-500`}
-      >
-        {downloading ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
-        ) : (
-          <Download className="h-3.5 w-3.5 text-white" />
-        )}
-      </motion.button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            title="Télécharger ou copier"
+            disabled={downloading}
+            className="flex h-7 flex-none items-center gap-0.5 rounded-lg bg-indigo-600 pl-2 pr-1.5 transition-colors hover:bg-indigo-500 disabled:opacity-40"
+          >
+            {downloading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+            ) : (
+              <Download className="h-3.5 w-3.5 text-white" />
+            )}
+            <ChevronDown className="h-3 w-3 text-white/70" />
+          </motion.button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={() => debrid.downloadMany(links, groupKey)}
+            disabled={downloading}
+          >
+            <Download className="h-4 w-4" />
+            {multi ? "Tout télécharger" : "Télécharger"}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => debrid.copyMany(links, groupKey)} disabled={copying}>
+            {copying ? (
+              <Check className="h-4 w-4 text-emerald-500" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+            {multi ? "Copier les liens" : "Copier le lien"}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -300,54 +315,59 @@ function SeasonSection({
 
   return (
     <div>
-      <div className="flex items-center gap-3 bg-black/[0.02] px-4 py-2 dark:bg-white/[0.03] transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]">
-        {selection ? (
-          <button onClick={() => selection.setMany(links, !allSelected)}>
-            <SelectionBox checked={allSelected} />
+      <div className="bg-black/[0.02] dark:bg-white/[0.03] transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]">
+        <div className="flex items-center gap-3 px-4 pt-2">
+          {selection ? (
+            <button onClick={() => selection.setMany(links, !allSelected)}>
+              <SelectionBox checked={allSelected} />
+            </button>
+          ) : (
+            <Checkbox
+              checked={allSeen}
+              onClick={() => onChange(setFilesWatched(entry, names, !allSeen))}
+            />
+          )}
+          <button
+            onClick={() => setOpen((v) => !v)}
+            title={open ? "Masquer les épisodes" : "Voir les épisodes"}
+            className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          >
+            <span
+              className={`truncate text-xs font-semibold ${allSeen ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}
+            >
+              {label}
+            </span>
+            <span
+              className={`flex h-5 flex-none items-center gap-1 rounded-md px-1.5 text-[11px] font-medium transition-colors ${
+                open
+                  ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300"
+                  : "bg-black/5 text-zinc-500 dark:bg-white/10 dark:text-zinc-400"
+              }`}
+            >
+              {seenCount}/{names.length}
+              <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
+            </span>
           </button>
-        ) : (
-          <Checkbox
-            checked={allSeen}
-            onClick={() => onChange(setFilesWatched(entry, names, !allSeen))}
-          />
-        )}
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
-        >
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span
-                className={`truncate text-xs font-semibold ${allSeen ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}
-              >
-                {label}
-              </span>
-              <span className="flex-none text-[11px] text-zinc-400">
-                {seenCount}/{names.length}
-              </span>
-            </div>
-            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
-              <div
-                className="h-full rounded-full bg-emerald-500 transition-all"
-                style={{ width: `${Math.round((seenCount / names.length) * 100)}%` }}
-              />
-            </div>
+          {!selection && next && (
+            <ResumeButton
+              next={next}
+              groupKey={resumeKey}
+              debrid={debrid}
+              started={seenCount > 0}
+              hideSeason
+              onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
+            />
+          )}
+          {!selection && <DebridActions links={links} groupKey={groupKey} debrid={debrid} />}
+        </div>
+        <div className="px-4 pb-2 pt-1.5">
+          <div className="h-1 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all"
+              style={{ width: `${Math.round((seenCount / names.length) * 100)}%` }}
+            />
           </div>
-          <ChevronDown
-            className={`h-3.5 w-3.5 flex-none text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`}
-          />
-        </button>
-        {!selection && next && (
-          <ResumeButton
-            next={next}
-            groupKey={resumeKey}
-            debrid={debrid}
-            started={seenCount > 0}
-            hideSeason
-            onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
-          />
-        )}
-        {!selection && <DebridActions links={links} groupKey={groupKey} debrid={debrid} />}
+        </div>
       </div>
       <AnimatePresence initial={false}>
         {open && (
