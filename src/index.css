@@ -146,4 +146,18 @@
   body {
     @apply bg-background text-foreground;
   }
+  button,
+  [role="button"],
+  [role="menuitem"],
+  [role="option"],
+  [role="tab"],
+  [role="checkbox"],
+  [role="switch"],
+  [role="combobox"],
+  [role="listbox"],
+  select,
+  label,
+  a[href] {
+    cursor: pointer;
+  }
 }
