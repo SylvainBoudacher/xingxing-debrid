@@ -1122,7 +1122,7 @@ export function DiscoverPage({
               )}
 
               {selected.mediaType === "tv" && (
-                <div className="flex gap-1.5 overflow-x-auto px-5 pb-3">
+                <div className="flex gap-1.5 overflow-x-auto px-5 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {seasons === null
                     ? Array.from({ length: 4 }, (_, i) => (
                         <div

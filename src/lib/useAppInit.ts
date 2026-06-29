@@ -15,7 +15,7 @@ import {
 import { allDebridKeys, fetchMagnets } from "@/lib/services/allDebrid";
 import { type ViewMode, resolveAllViewModes } from "@/lib/viewMode";
 
-export type WindowLaunchMode = "small" | "large" | "maximized";
+export type WindowLaunchMode = "small" | "large" | "maximized" | "custom";
 
 const TMDB_STALE_MS = 10 * 60_000;
 const MEDIA: TmdbMediaType[] = ["movie", "tv"];
@@ -98,6 +98,12 @@ export function useAppInit(): AppInitResult {
         const win = getCurrentWindow();
         if (windowMode === "maximized") {
           await win.maximize();
+        } else if (windowMode === "custom") {
+          const custom = await store.get<{ width: number; height: number }>("window_custom_size");
+          if (custom) {
+            await win.setSize(new LogicalSize(custom.width, custom.height));
+            await win.center();
+          }
         } else {
           const [w, h] = windowMode === "small" ? [1100, 720] : [1720, 1052];
           await win.setSize(new LogicalSize(w, h));
