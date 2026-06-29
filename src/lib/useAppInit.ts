@@ -9,10 +9,13 @@ import {
   tmdbKeys,
   feed as tmdbFeed,
   discoverAnimation as tmdbDiscoverAnimation,
+  recommendations as tmdbRecommendations,
   TMDB_FEEDS,
   type TmdbMediaType,
 } from "@/lib/services/tmdb";
 import { allDebridKeys, fetchMagnets } from "@/lib/services/allDebrid";
+import { loadLibrary } from "@/lib/library";
+import { pickSeeds } from "@/lib/recommendations";
 import { type ViewMode, resolveAllViewModes } from "@/lib/viewMode";
 
 export type WindowLaunchMode = "small" | "large" | "maximized" | "custom";
@@ -20,6 +23,23 @@ export type WindowLaunchMode = "small" | "large" | "maximized" | "custom";
 const TMDB_STALE_MS = 10 * 60_000;
 const MEDIA: TmdbMediaType[] = ["movie", "tv"];
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
+
+// Préchauffe l'onglet "Pour vous" : charge la bibliothèque, dérive les graines
+// (likes + bibliothèque) et prefetch un /recommendations par graine, sous les
+// mêmes clés de cache que DiscoverPage → onglet instantané. Fire-and-forget.
+async function prefetchRecommendations(key: string, likes: LikedItem[]) {
+  const library = await loadLibrary().catch(() => []);
+  const seeds = pickSeeds(likes, library);
+  await Promise.allSettled(
+    seeds.map((seed) =>
+      queryClient.prefetchQuery({
+        queryKey: tmdbKeys.recommendations(seed.mediaType, seed.id),
+        queryFn: () => tmdbRecommendations(seed.mediaType, seed.id, key),
+        staleTime: TMDB_STALE_MS,
+      }),
+    ),
+  );
+}
 
 export interface AppPrefs {
   /** Mode d'affichage de la recherche (simple / detailed) */
@@ -74,6 +94,7 @@ const DEFAULT_PREFS: AppPrefs = {
  *   Phase 2 — fire-and-forget (remplit le cache pendant que le splash
  *   tourne encore, sans rallonger le délai minimum) :
  *     · TMDB page 2 des mêmes sections
+ *     · Recommandations "Pour vous" (un /recommendations par graine)
  *     → Changement de source/onglet et scroll instantanés, sans chargement.
  *
  *   Délai minimum de 2 s garanti sur la phase 1 uniquement.
@@ -215,6 +236,7 @@ export function useAppInit(): AppInitResult {
       // (délai minimum restant) sans jamais le rallonger.
       if (tmdbKeyValue) {
         Promise.allSettled(prefetchTmdbPage(tmdbKeyValue, 2));
+        prefetchRecommendations(tmdbKeyValue, likesData);
       }
 
       // ── Délai minimum du splash ────────────────────────────────────────────

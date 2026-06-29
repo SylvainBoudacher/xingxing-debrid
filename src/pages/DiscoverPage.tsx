@@ -4,7 +4,13 @@ import { getApiKey } from "@/lib/apiKeys";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { parseRelease } from "@/lib/parseRelease";
 import { flattenFiles, formatSize, isVideoFile, type DebridModal } from "@/lib/debrid";
-import { recordDownload } from "@/lib/library";
+import { recordDownload, getCachedLibrary, loadLibrary } from "@/lib/library";
+import {
+  pickSeeds,
+  scoreRecommendations,
+  ownedTmdbKeys,
+  type SeedList,
+} from "@/lib/recommendations";
 import type { C411Torrent } from "@/lib/c411";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
@@ -21,6 +27,7 @@ import {
   discoverAnimation as tmdbDiscoverAnimation,
   findByImdb as tmdbFindByImdb,
   tvDetail as tmdbTvDetail,
+  recommendations as tmdbRecommendations,
 } from "@/lib/services/tmdb";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -40,6 +47,7 @@ import {
   Sparkles,
   Star,
   Tv,
+  Wand2,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
@@ -48,7 +56,7 @@ import { toast } from "sonner";
 
 type MediaType = "movie" | "tv";
 type BrowseType = MediaType | "animation";
-type DiscoverTab = BrowseType | "likes";
+type DiscoverTab = BrowseType | "likes" | "recos";
 
 // Sources proposées sous les onglets Films / Séries, dans l'ordre d'affichage.
 const FEED_LABELS: Record<TmdbFeed, string> = {
@@ -287,6 +295,10 @@ export function DiscoverPage({
   const [mediaType, setMediaType] = useState<DiscoverTab>("movie");
   const [feed, setFeed] = useState<TmdbFeed>("top_rated");
   const [likes, setLikes] = useState<LikedItem[]>(initialLikes ?? []);
+  const [recos, setRecos] = useState<TmdbItem[]>([]);
+  const [recosBecause, setRecosBecause] = useState<Map<string, string>>(new Map());
+  const [recosLoading, setRecosLoading] = useState(false);
+  const [recosError, setRecosError] = useState<string | null>(null);
   const [items, setItems] = useState<TmdbItem[]>([]);
   const [mode, setMode] = useState<"top" | "search">("top");
   const [searchedQuery, setSearchedQuery] = useState("");
@@ -451,7 +463,7 @@ export function DiscoverPage({
   // requête en cours coupe l'observer, qui se reconnecte une fois finie).
   useEffect(() => {
     const el = loadMoreRef.current;
-    if (!el || !tmdbKey || mediaType === "likes") return;
+    if (!el || !tmdbKey || mediaType === "likes" || mediaType === "recos") return;
     if (loadingMovies || items.length === 0 || tmdbPage >= tmdbTotalPages) return;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -551,9 +563,43 @@ export function DiscoverPage({
     }
   }
 
+  // Recommandations "Pour vous" : graines = likes + bibliotheque, un appel
+  // /recommendations par graine (mis en cache TanStack), puis scoring croise.
+  async function loadRecommendations() {
+    if (!tmdbKey) return;
+    setRecosLoading(true);
+    setRecosError(null);
+    try {
+      const library = getCachedLibrary() ?? (await loadLibrary());
+      const seeds = pickSeeds(likes, library);
+      if (seeds.length === 0) {
+        setRecos([]);
+        setRecosBecause(new Map());
+        return;
+      }
+      const lists: SeedList[] = await Promise.all(
+        seeds.map(async (seed) => ({
+          seed,
+          results: (
+            await cachedTmdb(tmdbKeys.recommendations(seed.mediaType, seed.id), () =>
+              tmdbRecommendations(seed.mediaType, seed.id, tmdbKey),
+            )
+          ).results,
+        })),
+      );
+      const scored = scoreRecommendations(lists, ownedTmdbKeys(library));
+      setRecos(scored.map((s) => mapTmdb(s.result, s.mediaType)));
+      setRecosBecause(new Map(scored.map((s) => [`${s.mediaType}-${s.result.id}`, s.becauseOf])));
+    } catch (err) {
+      setRecosError(String(err));
+    } finally {
+      setRecosLoading(false);
+    }
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!tmdbKey || mediaType === "likes") return;
+    if (!tmdbKey || mediaType === "likes" || mediaType === "recos") return;
     const q = query.trim();
     if (!q) {
       fetchItems("top", "", 1, tmdbKey, mediaType, feed);
@@ -566,6 +612,10 @@ export function DiscoverPage({
     if (type === mediaType || !tmdbKey) return;
     setMediaType(type);
     if (type === "likes") return;
+    if (type === "recos") {
+      if (!recosLoading) loadRecommendations();
+      return;
+    }
     if (mode === "search" && searchedQuery) {
       fetchItems("search", searchedQuery, 1, tmdbKey, type, feed);
     } else {
@@ -575,13 +625,25 @@ export function DiscoverPage({
 
   // Change la source (Tendances, Populaires…) — onglets Films / Séries uniquement.
   function switchFeed(f: TmdbFeed) {
-    if (f === feed || !tmdbKey || mediaType === "likes" || mediaType === "animation") return;
+    if (
+      f === feed ||
+      !tmdbKey ||
+      mediaType === "likes" ||
+      mediaType === "recos" ||
+      mediaType === "animation"
+    )
+      return;
     setFeed(f);
     setQuery("");
     showTopFromCacheOrFetch(mediaType, f);
   }
 
   const likedKeys = useMemo(() => new Set(likes.map((l) => `${l.mediaType}-${l.id}`)), [likes]);
+
+  // Onglets "feed" (recherche + scroll infini + sources) vs onglets curatifs
+  // (Ma liste, Pour vous) qui affichent une liste deja constituee.
+  const feedMode = mediaType === "movie" || mediaType === "tv" || mediaType === "animation";
+  const displayItems = mediaType === "likes" ? likes : mediaType === "recos" ? recos : items;
 
   function toggleLike(item: TmdbItem) {
     const key = `${item.mediaType}-${item.id}`;
@@ -846,9 +908,9 @@ export function DiscoverPage({
           <motion.form
             initial={false}
             animate={
-              mediaType === "likes"
-                ? { opacity: 0, y: -12, height: 0, marginBottom: 0 }
-                : { opacity: 1, y: 0, height: "auto", marginBottom: 32 }
+              feedMode
+                ? { opacity: 1, y: 0, height: "auto", marginBottom: 32 }
+                : { opacity: 0, y: -12, height: 0, marginBottom: 0 }
             }
             transition={{
               type: "spring",
@@ -857,7 +919,7 @@ export function DiscoverPage({
               opacity: { duration: 0.15 },
             }}
             onSubmit={handleSubmit}
-            className={`mx-auto max-w-2xl ${mediaType === "likes" ? "pointer-events-none" : ""}`}
+            className={`mx-auto max-w-2xl ${feedMode ? "" : "pointer-events-none"}`}
           >
             <div className="relative flex items-center gap-3 rounded-full bg-white/90 dark:bg-zinc-800/80 px-5 py-3.5 shadow-[0_8px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)]">
               <span className="relative h-5 w-5 shrink-0">
@@ -885,7 +947,7 @@ export function DiscoverPage({
                   type="button"
                   onClick={() => {
                     setQuery("");
-                    if (mode === "search" && mediaType !== "likes")
+                    if (mode === "search" && feedMode)
                       fetchItems("top", "", 1, tmdbKey, mediaType, feed);
                   }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200/90 dark:bg-zinc-700/80 hover:bg-zinc-300 dark:hover:bg-zinc-600/80 transition-colors"
@@ -898,7 +960,7 @@ export function DiscoverPage({
 
           <div className="mb-6 flex justify-center">
             <div className="flex rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 p-1">
-              {(["movie", "tv", "animation", "likes"] as const).map((t) => (
+              {(["movie", "tv", "animation", "recos", "likes"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => switchType(t)}
@@ -914,6 +976,8 @@ export function DiscoverPage({
                     <Tv className="h-3.5 w-3.5" />
                   ) : t === "animation" ? (
                     <Sparkles className="h-3.5 w-3.5" />
+                  ) : t === "recos" ? (
+                    <Wand2 className="h-3.5 w-3.5" />
                   ) : (
                     <Heart className="h-3.5 w-3.5" />
                   )}
@@ -923,7 +987,9 @@ export function DiscoverPage({
                       ? "Séries"
                       : t === "animation"
                         ? "Animations"
-                        : "Ma liste"}
+                        : t === "recos"
+                          ? "Pour vous"
+                          : "Ma liste"}
                 </button>
               ))}
             </div>
@@ -952,18 +1018,20 @@ export function DiscoverPage({
           <h2 className="mb-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
             {mediaType === "likes"
               ? `Ma liste (${likes.length})`
-              : mode === "search"
-                ? `Résultats pour "${searchedQuery}"`
-                : mediaType === "animation"
-                  ? "Animations les mieux notées"
-                  : `${mediaType === "movie" ? "Films" : "Séries"} - ${FEED_LABELS[feed]}`}
+              : mediaType === "recos"
+                ? "Pour vous"
+                : mode === "search"
+                  ? `Résultats pour "${searchedQuery}"`
+                  : mediaType === "animation"
+                    ? "Animations les mieux notées"
+                    : `${mediaType === "movie" ? "Films" : "Séries"} - ${FEED_LABELS[feed]}`}
           </h2>
 
-          {mediaType !== "likes" && moviesError && (
+          {feedMode && moviesError && (
             <p className="text-sm text-red-600 dark:text-red-400">{moviesError}</p>
           )}
 
-          {mediaType !== "likes" && !moviesError && items.length === 0 && !loadingMovies && (
+          {feedMode && !moviesError && items.length === 0 && !loadingMovies && (
             <p className="text-sm text-zinc-500">Aucun résultat trouvé.</p>
           )}
 
@@ -974,9 +1042,26 @@ export function DiscoverPage({
             </p>
           )}
 
+          {mediaType === "recos" && recosLoading && (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
+            </div>
+          )}
+
+          {mediaType === "recos" && recosError && (
+            <p className="text-sm text-red-600 dark:text-red-400">{recosError}</p>
+          )}
+
+          {mediaType === "recos" && !recosLoading && !recosError && recos.length === 0 && (
+            <p className="text-sm text-zinc-500">
+              Ajoutez des titres à votre liste ou à votre bibliothèque pour obtenir des
+              recommandations personnalisées.
+            </p>
+          )}
+
           {/* Poster grid */}
           <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-            {(mediaType === "likes" ? likes : items).map((m, i) => (
+            {displayItems.map((m, i) => (
               <motion.button
                 key={`${m.mediaType}-${m.id}-${i}`}
                 initial={{ opacity: 0, y: 8 }}
@@ -1039,12 +1124,16 @@ export function DiscoverPage({
                 <p className="mt-2 text-xs font-medium text-zinc-900 dark:text-white leading-snug line-clamp-1">
                   {m.title}
                 </p>
-                <p className="text-[11px] text-zinc-500">{m.year}</p>
+                <p className="text-[11px] text-zinc-500 line-clamp-1">
+                  {mediaType === "recos" && recosBecause.get(`${m.mediaType}-${m.id}`)
+                    ? `Car vous avez aimé ${recosBecause.get(`${m.mediaType}-${m.id}`)}`
+                    : m.year}
+                </p>
               </motion.button>
             ))}
           </div>
 
-          {mediaType !== "likes" && tmdbPage < tmdbTotalPages && items.length > 0 && (
+          {feedMode && tmdbPage < tmdbTotalPages && items.length > 0 && (
             <div ref={loadMoreRef} className="mt-8 flex h-8 justify-center">
               {loadingMovies && <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />}
             </div>

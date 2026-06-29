@@ -55,6 +55,7 @@ export const tmdbKeys = {
     ["tmdb", "discover", "animation", mt, page] as const,
   find: (imdbId: string) => ["tmdb", "find", imdbId.toLowerCase()] as const,
   tvDetail: (id: number) => ["tmdb", "tv", id] as const,
+  recommendations: (mt: TmdbMediaType, id: number) => ["tmdb", "recommendations", mt, id] as const,
 };
 
 async function get<T>(url: string): Promise<T> {
@@ -94,4 +95,12 @@ export function findByImdb(imdbId: string, apiKey: string) {
 
 export function tvDetail(id: number, apiKey: string) {
   return get<TmdbTvDetail>(`${BASE}/tv/${id}?api_key=${apiKey}&language=fr-FR`);
+}
+
+// Titres recommandes par TMDB pour un film / une serie donne (signal
+// collaboratif). Meme format que les feeds : agrege par scoreRecommendations.
+export function recommendations(mt: TmdbMediaType, id: number, apiKey: string) {
+  return get<TmdbListResponse>(
+    `${BASE}/${mt}/${id}/recommendations?api_key=${apiKey}&language=fr-FR&page=1`,
+  );
 }
