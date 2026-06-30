@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "motion/react";
-import { fetch } from "@tauri-apps/plugin-http";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   ArrowLeft,
@@ -26,6 +25,13 @@ import { getApiKey } from "@/lib/apiKeys";
 import { flattenFiles, formatSize, isVideoFile } from "@/lib/debrid";
 import { type ViewMode, resolvePageViewMode } from "@/lib/viewMode";
 import { AppMenu, type Page } from "@/components/AppMenu";
+import { NetworkErrorState } from "@/components/NetworkErrorState";
+import {
+  fetchWithTimeout,
+  NetworkError,
+  networkErrorMessage,
+  toastNetworkError,
+} from "@/lib/networkError";
 import { toast } from "sonner";
 import vlcLogo from "@/assets/vlc.png";
 import { invoke } from "@tauri-apps/api/core";
@@ -187,12 +193,16 @@ function FilesModal({
     data: allFiles,
     isLoading: loading,
     isError,
+    error,
+    refetch,
   } = useQuery({
     queryKey: ["magnet-files", magnetId],
     queryFn: async () => {
-      const res = await fetch(`${AD_BASE}/magnet/files?agent=c411&id[]=${magnetId}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
+      const res = await fetchWithTimeout(
+        "AllDebrid",
+        `${AD_BASE}/magnet/files?agent=c411&id[]=${magnetId}`,
+        { headers: { Authorization: `Bearer ${apiKey}` } },
+      );
       const json = (await res.json()) as {
         status: string;
         data?: { magnets?: Array<{ files?: unknown[] }> };
@@ -211,13 +221,6 @@ function FilesModal({
   );
 
   useEffect(() => {
-    if (isError) {
-      toast.error("Impossible de charger les fichiers");
-      onClose();
-    }
-  }, [isError, onClose]);
-
-  useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -232,7 +235,7 @@ function FilesModal({
       await invoke("open_with_vlc", { url });
       toast.success("Ouvert dans VLC");
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, () => handleOpenVlc(link));
     } finally {
       setVlcing(null);
     }
@@ -255,7 +258,7 @@ function FilesModal({
         setDownloadingAll({ done: ++done, total: toDownload.length });
       });
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, handleDownloadAll);
     } finally {
       endBulkDownload();
       setDownloadingAll(null);
@@ -301,7 +304,7 @@ function FilesModal({
       });
       exitSelectMode();
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, handleDownloadSelected);
     } finally {
       endBulkDownload();
       setDownloadingSelected(null);
@@ -314,7 +317,7 @@ function FilesModal({
       const url = await invoke<string>("unlock_link", { link, alldebridKey: apiKey });
       await startDownload(url);
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, () => handleDownload(link));
     } finally {
       setDownloading(null);
     }
@@ -327,7 +330,7 @@ function FilesModal({
       await navigator.clipboard.writeText(url);
       toast.success("Lien copie");
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, () => handleCopy(link));
     } finally {
       setTimeout(() => setCopying(null), 2000);
     }
@@ -471,7 +474,12 @@ function FilesModal({
               <Loader2 className="h-5 w-5 animate-spin text-zinc-500 dark:text-zinc-400" />
             </div>
           )}
-          {!loading && (
+          {!loading && isError && (
+            <div className="py-12">
+              <NetworkErrorState message={networkErrorMessage(error)} onRetry={() => refetch()} />
+            </div>
+          )}
+          {!loading && !isError && (
             <ul className="divide-y divide-black/5 dark:divide-white/5">
               {files?.map((file, i) => {
                 const fileName = file.name.split("/").pop() ?? file.name;
@@ -675,6 +683,25 @@ export function MagnetsPage({
   // apiKey state mirrors apiKeyRef for safe use during render (JSX prop)
   const [apiKey, setApiKey] = useState(initialAllDebridKey ?? "");
 
+  // Force un re-fetch réseau même si le cache est frais (bouton refresh).
+  const forceReloadMagnets = useCallback(async function forceReloadMagnets() {
+    if (!apiKeyRef.current) return;
+    setLoading(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: allDebridKeys.magnets() });
+      const data = await queryClient.fetchQuery({
+        queryKey: allDebridKeys.magnets(),
+        queryFn: () => fetchMagnets(apiKeyRef.current),
+        staleTime: 0,
+      });
+      setMagnets(data);
+    } catch (err) {
+      toastNetworkError(err, forceReloadMagnets);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const loadMagnets = useCallback(async () => {
     if (!apiKeyRef.current) return;
     setLoading(true);
@@ -688,30 +715,11 @@ export function MagnetsPage({
       });
       setMagnets(data);
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, forceReloadMagnets);
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  // Force un re-fetch réseau même si le cache est frais (bouton refresh).
-  const forceReloadMagnets = useCallback(async () => {
-    if (!apiKeyRef.current) return;
-    setLoading(true);
-    try {
-      await queryClient.invalidateQueries({ queryKey: allDebridKeys.magnets() });
-      const data = await queryClient.fetchQuery({
-        queryKey: allDebridKeys.magnets(),
-        queryFn: () => fetchMagnets(apiKeyRef.current),
-        staleTime: 0,
-      });
-      setMagnets(data);
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  }, [forceReloadMagnets]);
 
   useEffect(() => {
     if (initialAllDebridKey !== undefined) {
@@ -752,9 +760,11 @@ export function MagnetsPage({
     const deleted: number[] = [];
     try {
       await forEachLimit(ids, CONCURRENCY, async (id) => {
-        const res = await fetch(`${AD_BASE}/magnet/delete?agent=c411&id=${id}`, {
-          headers: { Authorization: `Bearer ${apiKeyRef.current}` },
-        });
+        const res = await fetchWithTimeout(
+          "AllDebrid",
+          `${AD_BASE}/magnet/delete?agent=c411&id=${id}`,
+          { headers: { Authorization: `Bearer ${apiKeyRef.current}` } },
+        );
         const json = (await res.json()) as { status: string };
         if (json.status !== "success") throw new Error("Suppression echouee");
         deleted.push(id);
@@ -764,7 +774,7 @@ export function MagnetsPage({
       // Invalide le cache pour que le prochain chargement soit à jour
       queryClient.invalidateQueries({ queryKey: allDebridKeys.magnets() });
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, () => handleDelete(ids));
     } finally {
       if (deleted.length > 0) {
         setMagnets((prev) => prev.filter((m) => !deleted.includes(m.id)));
@@ -792,14 +802,16 @@ export function MagnetsPage({
     setBulkDownloading({ done: 0, total: 0 });
     try {
       const idParams = ids.map((id) => `id[]=${id}`).join("&");
-      const res = await fetch(`${AD_BASE}/magnet/files?agent=c411&${idParams}`, {
-        headers: { Authorization: `Bearer ${apiKeyRef.current}` },
-      });
+      const res = await fetchWithTimeout(
+        "AllDebrid",
+        `${AD_BASE}/magnet/files?agent=c411&${idParams}`,
+        { headers: { Authorization: `Bearer ${apiKeyRef.current}` } },
+      );
       const json = (await res.json()) as {
         status: string;
         data?: { magnets?: Array<{ files?: unknown[] }> };
       };
-      if (json.status !== "success") throw new Error("Erreur AllDebrid");
+      if (json.status !== "success") throw new NetworkError("AllDebrid", "http");
       const files = (json.data?.magnets ?? [])
         .flatMap((m) => flattenFiles(m.files ?? []))
         .filter((f) => !skipNfoDownload || !isNfoFile(f.name));
@@ -821,7 +833,7 @@ export function MagnetsPage({
       });
       setSelected(new Set());
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, handleBulkDownload);
     } finally {
       endBulkDownload();
       setBulkDownloading(null);

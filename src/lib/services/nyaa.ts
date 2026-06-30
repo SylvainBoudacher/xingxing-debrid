@@ -1,4 +1,4 @@
-import { fetch } from "@tauri-apps/plugin-http";
+import { fetchWithTimeout } from "@/lib/networkError";
 
 const BASE = "https://nyaa.si";
 
@@ -48,8 +48,7 @@ export function nyaaSearchUrl(p: NyaaSearchParams): string {
 
 export async function searchNyaa(p: NyaaSearchParams): Promise<NyaaResult[]> {
   const url = nyaaSearchUrl(p);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Erreur nyaa.si ${res.status}`);
+  const res = await fetchWithTimeout("nyaa.si", url);
 
   const xml = await res.text();
   const doc = new DOMParser().parseFromString(xml, "text/xml");

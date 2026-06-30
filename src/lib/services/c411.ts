@@ -1,4 +1,4 @@
-import { fetch } from "@tauri-apps/plugin-http";
+import { fetchWithTimeout } from "@/lib/networkError";
 import type { C411Torrent } from "@/lib/c411";
 
 const BASE = "https://c411.org";
@@ -28,7 +28,6 @@ export async function searchTorrents(
   apiKey: string,
 ): Promise<C411SearchResponse> {
   const url = `${BASE}/api/torrents?page=${p.page}&perPage=${p.perPage}&sortBy=${p.sortBy}&sortOrder=${p.sortOrder}&name=${encodeURIComponent(p.name)}&apikey=${apiKey}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Erreur C411 ${res.status}`);
+  const res = await fetchWithTimeout("C411", url);
   return (await res.json()) as C411SearchResponse;
 }

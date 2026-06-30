@@ -1,5 +1,7 @@
 import vlcLogo from "@/assets/vlc.png";
 import { AppMenu, type Page } from "@/components/AppMenu";
+import { NetworkErrorState } from "@/components/NetworkErrorState";
+import { networkErrorMessage, toastNetworkError } from "@/lib/networkError";
 import { getApiKey } from "@/lib/apiKeys";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { parseRelease } from "@/lib/parseRelease";
@@ -376,10 +378,15 @@ export function DiscoverPage({
 
   const releases = releasesQuery.data ?? null;
   const releasesError = tvDetailQuery.isError
-    ? String(tvDetailQuery.error)
+    ? networkErrorMessage(tvDetailQuery.error)
     : releasesQuery.isError
-      ? String(releasesQuery.error)
+      ? networkErrorMessage(releasesQuery.error)
       : null;
+
+  function retryReleases() {
+    if (tvDetailQuery.isError) tvDetailQuery.refetch();
+    if (releasesQuery.isError) releasesQuery.refetch();
+  }
 
   const resOptions = useMemo(
     () =>
@@ -828,7 +835,7 @@ export function DiscoverPage({
         });
       }
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, () => handleSendToDebrid(occ, addToLibrary));
     } finally {
       setBusy(null);
     }
@@ -1352,10 +1359,8 @@ export function DiscoverPage({
                     </motion.div>
                   ))}
                 {releasesError && (
-                  <div className="flex h-full items-center justify-center px-6">
-                    <p className="text-center text-sm text-red-600 dark:text-red-400">
-                      {releasesError}
-                    </p>
+                  <div className="flex h-full items-center justify-center">
+                    <NetworkErrorState message={releasesError} onRetry={retryReleases} />
                   </div>
                 )}
                 {releases !== null && releases.length === 0 && (

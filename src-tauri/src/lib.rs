@@ -63,9 +63,34 @@ fn filename_from_url(url: &str) -> String {
 
 // Un seul client reqwest reutilise par toutes les commandes : conserve le pool
 // de connexions (keep-alive TLS) au lieu d'en recreer un a chaque appel.
+// Timeout total applique aux appels API (reponse courte). Volontairement absent
+// de download_to_dir, ou le corps streame peut durer plusieurs minutes.
+const API_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(20);
+
 fn http_client() -> &'static reqwest::Client {
     static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
-    CLIENT.get_or_init(reqwest::Client::new)
+    // connect_timeout uniquement (pas de timeout total global) : un serveur
+    // injoignable echoue vite, mais un gros telechargement n'est pas coupe.
+    CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(15))
+            .build()
+            .expect("client reqwest")
+    })
+}
+
+// Traduit une erreur reqwest en message francais explicite selon sa nature
+// (timeout, connexion impossible, ...). without_url evite d'exposer la cle API
+// presente dans certaines URL (c411).
+fn net_err(service: &str, e: reqwest::Error) -> String {
+    let e = e.without_url();
+    if e.is_timeout() {
+        format!("{} ne repond pas (delai depasse).", service)
+    } else if e.is_connect() {
+        format!("Impossible de joindre {}. Verifiez votre connexion.", service)
+    } else {
+        format!("Erreur reseau {} : {}", service, e)
+    }
 }
 
 #[tauri::command]
@@ -92,18 +117,14 @@ async fn upload_torrent_to_debrid(
 ) -> Result<Value, String> {
     let client = http_client();
 
-    // without_url: l'URL c411 contient la cle API, ne pas l'exposer dans les erreurs
     let torrent_res = client
         .get(&torrent_url)
         .send()
         .await
-        .map_err(|e| e.without_url().to_string())?;
+        .map_err(|e| net_err("C411", e))?;
 
     let torrent_status = torrent_res.status();
-    let torrent_bytes = torrent_res
-        .bytes()
-        .await
-        .map_err(|e| e.without_url().to_string())?;
+    let torrent_bytes = torrent_res.bytes().await.map_err(|e| net_err("C411", e))?;
 
     if !torrent_status.is_success() {
         return Err(format!(
@@ -130,12 +151,13 @@ async fn upload_torrent_to_debrid(
         .post("https://api.alldebrid.com/v4/magnet/upload/file")
         .bearer_auth(&alldebrid_key)
         .multipart(form)
+        .timeout(API_TIMEOUT)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| net_err("AllDebrid", e))?;
 
     let status = upload_res.status();
-    let body = upload_res.text().await.map_err(|e| e.to_string())?;
+    let body = upload_res.text().await.map_err(|e| net_err("AllDebrid", e))?;
 
     if !status.is_success() {
         return Err(format!("AllDebrid HTTP {} : {}", status, body));
@@ -153,12 +175,13 @@ async fn upload_magnet_to_debrid(magnet: String, alldebrid_key: String) -> Resul
         .post("https://api.alldebrid.com/v4/magnet/upload")
         .bearer_auth(&alldebrid_key)
         .query(&[("magnets[]", &magnet)])
+        .timeout(API_TIMEOUT)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| net_err("AllDebrid", e))?;
 
     let status = res.status();
-    let body = res.text().await.map_err(|e| e.to_string())?;
+    let body = res.text().await.map_err(|e| net_err("AllDebrid", e))?;
 
     if !status.is_success() {
         return Err(format!("AllDebrid HTTP {} : {}", status, body));
@@ -176,12 +199,13 @@ async fn get_magnet_files(id: u64, alldebrid_key: String) -> Result<Value, Strin
         .get("https://api.alldebrid.com/v4/magnet/files")
         .bearer_auth(&alldebrid_key)
         .query(&[("id[]", id.to_string())])
+        .timeout(API_TIMEOUT)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| net_err("AllDebrid", e))?;
 
     let status = res.status();
-    let body = res.text().await.map_err(|e| e.to_string())?;
+    let body = res.text().await.map_err(|e| net_err("AllDebrid", e))?;
 
     if !status.is_success() {
         return Err(format!("AllDebrid HTTP {} : {}", status, body));
@@ -199,12 +223,13 @@ async fn unlock_link(link: String, alldebrid_key: String) -> Result<String, Stri
         .get("https://api.alldebrid.com/v4/link/unlock")
         .bearer_auth(&alldebrid_key)
         .query(&[("link", &link)])
+        .timeout(API_TIMEOUT)
         .send()
         .await
-        .map_err(|e| e.to_string())?;
+        .map_err(|e| net_err("AllDebrid", e))?;
 
     let status = res.status();
-    let body = res.text().await.map_err(|e| e.to_string())?;
+    let body = res.text().await.map_err(|e| net_err("AllDebrid", e))?;
 
     if !status.is_success() {
         return Err(format!("AllDebrid HTTP {} : {}", status, body));
@@ -254,7 +279,7 @@ async fn download_to_dir(
         .get(&url)
         .send()
         .await
-        .map_err(|e| e.without_url().to_string())?;
+        .map_err(|e| net_err("le serveur de telechargement", e))?;
 
     if !res.status().is_success() {
         return Err(format!("Telechargement HTTP {}", res.status()));

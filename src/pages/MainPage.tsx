@@ -23,6 +23,8 @@ import { nyaaKeys, searchNyaa } from "@/lib/services/nyaa";
 import { buildNyaaQuery } from "@/lib/nyaaFilters";
 import { loadNyaaDefaults } from "@/lib/nyaaDefaults";
 import { NyaaSearchFilters } from "@/components/NyaaSearchFilters";
+import { NetworkErrorState } from "@/components/NetworkErrorState";
+import { networkErrorMessage, toastNetworkError } from "@/lib/networkError";
 import { useDebridActions } from "@/lib/useDebridActions";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -406,7 +408,7 @@ export function MainPage({
         });
       }
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, () => handleSendToDebrid(result, index, addToLibrary));
     } finally {
       setBusy(null);
     }
@@ -468,7 +470,7 @@ export function MainPage({
       setError(null);
       setSearchKey((k) => k + 1);
       fetchNyaaResults()
-        .catch((err) => setError(String(err)))
+        .catch((err) => setError(networkErrorMessage(err)))
         .finally(() => setLoading(false));
     }, 350);
     return () => clearTimeout(t);
@@ -502,7 +504,7 @@ export function MainPage({
         setTotalPages(json.meta.totalPages);
       }
     } catch (err) {
-      setError(String(err));
+      setError(networkErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -535,7 +537,7 @@ export function MainPage({
       setPage(pageNum);
       scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, () => goToPage(pageNum, sort, dir));
     } finally {
       setLoading(false);
     }
@@ -914,15 +916,14 @@ export function MainPage({
 
         <AnimatePresence>
           {error && (
-            <motion.p
+            <motion.div
               key="error"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="text-red-600 dark:text-red-400 text-sm px-6"
             >
-              {error}
-            </motion.p>
+              <NetworkErrorState message={error} onRetry={() => performSearch(activeSource)} />
+            </motion.div>
           )}
         </AnimatePresence>
 

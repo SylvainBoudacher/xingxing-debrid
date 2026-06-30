@@ -1,4 +1,4 @@
-import { fetch } from "@tauri-apps/plugin-http";
+import { fetchWithTimeout, NetworkError } from "@/lib/networkError";
 
 const BASE = "https://api.themoviedb.org/3";
 export const ANIMATION_GENRE_ID = 16;
@@ -59,10 +59,14 @@ export const tmdbKeys = {
 };
 
 async function get<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok)
-    throw new Error(res.status === 401 ? "Clé TMDB invalide" : `Erreur TMDB ${res.status}`);
-  return res.json() as Promise<T>;
+  try {
+    const res = await fetchWithTimeout("TMDB", url);
+    return res.json() as Promise<T>;
+  } catch (err) {
+    if (err instanceof NetworkError && err.status === 401)
+      throw new NetworkError("TMDB", "http", "Clé TMDB invalide", 401);
+    throw err;
+  }
 }
 
 export function feed(f: TmdbFeed, mt: TmdbMediaType, page: number, apiKey: string) {

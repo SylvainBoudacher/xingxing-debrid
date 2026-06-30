@@ -1,4 +1,4 @@
-import { fetch } from "@tauri-apps/plugin-http";
+import { fetchWithTimeout, NetworkError } from "@/lib/networkError";
 
 const AD_BASE = "https://api.alldebrid.com/v4";
 
@@ -20,13 +20,13 @@ export const allDebridKeys = {
 };
 
 export async function fetchMagnets(apiKey: string): Promise<MagnetEntry[]> {
-  const res = await fetch(`${AD_BASE}.1/magnet/status?agent=c411`, {
+  const res = await fetchWithTimeout("AllDebrid", `${AD_BASE}.1/magnet/status?agent=c411`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
   const json = (await res.json()) as {
     status: string;
     data?: { magnets?: MagnetEntry[] };
   };
-  if (json.status !== "success") throw new Error("Erreur AllDebrid");
+  if (json.status !== "success") throw new NetworkError("AllDebrid", "http");
   return json.data?.magnets ?? [];
 }

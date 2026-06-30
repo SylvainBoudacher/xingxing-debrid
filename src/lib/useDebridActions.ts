@@ -10,6 +10,7 @@ import {
   startDownload,
 } from "@/lib/downloads";
 import { toast } from "sonner";
+import { toastNetworkError } from "@/lib/networkError";
 
 // Actions AllDebrid sur un lien debride (copie presse-papier, VLC, telechargement).
 // Partage entre MainPage et DiscoverPage. `getKey` fournit la cle AllDebrid au
@@ -39,7 +40,7 @@ export function useDebridActions(getKey: () => string) {
     return urls;
   }, []);
 
-  const copyLink = useCallback(async (link: string) => {
+  const copyLink = useCallback(async function copyLink(link: string) {
     setCopiedLink(link);
     try {
       const url = await invoke<string>("unlock_link", {
@@ -49,13 +50,13 @@ export function useDebridActions(getKey: () => string) {
       await navigator.clipboard.writeText(url);
       toast.success("Lien copié");
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, () => copyLink(link));
     } finally {
       setTimeout(() => setCopiedLink(null), 2000);
     }
   }, []);
 
-  const openVlc = useCallback(async (link: string) => {
+  const openVlc = useCallback(async function openVlc(link: string) {
     setVlcLink(link);
     try {
       const url = await invoke<string>("unlock_link", {
@@ -65,13 +66,13 @@ export function useDebridActions(getKey: () => string) {
       await invoke("open_with_vlc", { url });
       toast.success("Ouvert dans VLC");
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, () => openVlc(link));
     } finally {
       setVlcLink(null);
     }
   }, []);
 
-  const downloadFile = useCallback(async (link: string) => {
+  const downloadFile = useCallback(async function downloadFile(link: string) {
     setDownloadingLink(link);
     try {
       const url = await invoke<string>("unlock_link", {
@@ -80,7 +81,7 @@ export function useDebridActions(getKey: () => string) {
       });
       await startDownload(url);
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, () => downloadFile(link));
     } finally {
       setDownloadingLink(null);
     }
@@ -90,7 +91,7 @@ export function useDebridActions(getKey: () => string) {
   // `download_batch_size`). Chaque worker débride puis télécharge un lien à la
   // fois ; jusqu'à N workers tournent de front. La progression agrégée alimente
   // la modal globale via le store des téléchargements.
-  const downloadMany = useCallback(async (links: string[], groupKey: string) => {
+  const downloadMany = useCallback(async function downloadMany(links: string[], groupKey: string) {
     if (links.length === 0) return;
     setBulkDownloading(groupKey);
     const batchSize = await getDownloadBatchSize();
@@ -119,7 +120,7 @@ export function useDebridActions(getKey: () => string) {
       await Promise.all(Array.from({ length: Math.min(batchSize, links.length) }, worker));
       if (firstError !== null) throw firstError;
     } catch (err) {
-      toast.error(String(err));
+      toastNetworkError(err, () => downloadMany(links, groupKey));
     } finally {
       endBulkDownload();
       setBulkDownloading(null);
@@ -127,7 +128,7 @@ export function useDebridActions(getKey: () => string) {
   }, []);
 
   const copyMany = useCallback(
-    async (links: string[], groupKey: string) => {
+    async function copyMany(links: string[], groupKey: string) {
       if (links.length === 0) return;
       setBulkCopying(groupKey);
       try {
@@ -135,7 +136,7 @@ export function useDebridActions(getKey: () => string) {
         await navigator.clipboard.writeText(urls.join("\n"));
         toast.success(`${urls.length} liens copiés`);
       } catch (err) {
-        toast.error(String(err));
+        toastNetworkError(err, () => copyMany(links, groupKey));
       } finally {
         setTimeout(() => setBulkCopying(null), 2000);
       }
@@ -144,7 +145,7 @@ export function useDebridActions(getKey: () => string) {
   );
 
   const openVlcMany = useCallback(
-    async (links: string[], groupKey: string) => {
+    async function openVlcMany(links: string[], groupKey: string) {
       if (links.length === 0) return;
       setBulkVlc(groupKey);
       try {
@@ -152,7 +153,7 @@ export function useDebridActions(getKey: () => string) {
         await invoke("open_many_with_vlc", { urls });
         toast.success("Playlist ouverte dans VLC");
       } catch (err) {
-        toast.error(String(err));
+        toastNetworkError(err, () => openVlcMany(links, groupKey));
       } finally {
         setBulkVlc(null);
       }
