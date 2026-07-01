@@ -18,6 +18,7 @@ import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { c411Keys, searchTorrents } from "@/lib/services/c411";
 import { useDebridActions } from "@/lib/useDebridActions";
+import { useDragScroll } from "@/lib/useDragScroll";
 import {
   ANIMATION_GENRE_ID,
   tmdbKeys,
@@ -308,6 +309,8 @@ export function DiscoverPage({
   const [tmdbTotalPages, setTmdbTotalPages] = useState(1);
   const [loadingMovies, setLoadingMovies] = useState(false);
   const [moviesError, setMoviesError] = useState<string | null>(null);
+
+  const seasonScroll = useDragScroll<HTMLDivElement>();
 
   const [selected, setSelected] = useState<TmdbItem | null>(null);
   const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
@@ -1218,7 +1221,11 @@ export function DiscoverPage({
               )}
 
               {selected.mediaType === "tv" && (
-                <div className="flex gap-1.5 overflow-x-auto px-5 pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div
+                  ref={seasonScroll.ref}
+                  {...seasonScroll.dragProps}
+                  className="flex gap-1.5 overflow-x-auto px-5 pt-0.5 pb-3 cursor-grab select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
                   {seasons === null
                     ? Array.from({ length: 4 }, (_, i) => (
                         <div
@@ -1230,7 +1237,7 @@ export function DiscoverPage({
                         <button
                           key={s.number}
                           onClick={() => changeSeason(s.number)}
-                          className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-medium ring-1 transition-colors ${
+                          className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-medium leading-normal ring-1 transition-colors ${
                             activeSeason === s.number
                               ? "bg-indigo-600 text-white ring-indigo-500"
                               : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
