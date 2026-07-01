@@ -10,6 +10,7 @@ import {
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -68,6 +69,15 @@ const FILTER_LABELS: Record<Filter, string> = {
   reserve: "En réserve",
 };
 
+type Sort = "default" | "rarity";
+const RARITY_ORDER: Record<Rarity, number> = {
+  mythic: 0,
+  legendary: 1,
+  rare: 2,
+  uncommon: 3,
+  common: 4,
+};
+
 export function DuckShop() {
   const [saved, setSaved] = useState<SavedDuck[]>([]);
   const [open, setOpen] = useState(false);
@@ -77,6 +87,7 @@ export function DuckShop() {
   const [editName, setEditName] = useState("");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [sort, setSort] = useState<Sort>("default");
 
   // keep a ref so the event handlers always see the current dropped duck
   const droppedRef = useRef<DroppedDuck | null>(null);
@@ -212,11 +223,16 @@ export function DuckShop() {
   }
 
   const q = query.trim().toLowerCase();
-  const visible = saved.filter((d) => {
-    if (filter === "water" && d.reserved) return false;
-    if (filter === "reserve" && !d.reserved) return false;
-    return d.name.toLowerCase().includes(q);
-  });
+  const visible = saved
+    .filter((d) => {
+      if (filter === "water" && d.reserved) return false;
+      if (filter === "reserve" && !d.reserved) return false;
+      return d.name.toLowerCase().includes(q);
+    })
+    .sort((a, b) => {
+      if (sort !== "rarity") return 0;
+      return RARITY_ORDER[getRarity(a.variant)] - RARITY_ORDER[getRarity(b.variant)];
+    });
 
   return (
     <AnimatePresence>
@@ -284,6 +300,13 @@ export function DuckShop() {
                       <DropdownMenuRadioItem value="all">Tous</DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="water">À l'eau</DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="reserve">En réserve</DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuRadioGroup value={sort} onValueChange={(v) => setSort(v as Sort)}>
+                      <DropdownMenuRadioItem value="default">
+                        Ordre par défaut
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="rarity">Par rareté</DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>

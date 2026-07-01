@@ -1435,10 +1435,12 @@ export function PixelPool({
           const nx = dx / dist;
           const ny = dy / dist;
           const bs = Math.hypot(ball.vx, ball.vy);
-          d.vx += nx * (70 + bs * 0.5);
-          d.vy += ny * (70 + bs * 0.5);
-          d.spin = Math.max(-12, Math.min(12, (d.spin ?? 0) + (Math.random() - 0.5) * 9));
-          d.entering = false;
+          if (d.effect !== "royal") {
+            d.vx += nx * (70 + bs * 0.5);
+            d.vy += ny * (70 + bs * 0.5);
+            d.spin = Math.max(-12, Math.min(12, (d.spin ?? 0) + (Math.random() - 0.5) * 9));
+            d.entering = false;
+          }
           const vn = ball.vx * nx + ball.vy * ny;
           if (vn > 0) {
             ball.vx -= 2 * vn * nx;
