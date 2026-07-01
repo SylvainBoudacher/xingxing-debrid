@@ -305,14 +305,15 @@ export function drawVacuum(
   t: number,
   w: number,
   dark: boolean,
+  hover: boolean,
 ) {
   const a = vacuumAnchor(w);
   const x0 = a.x - BODY_W / 2;
   const y0 = a.y - BODY_H / 2;
 
-  // soft halo while on
-  if (v.loaded) {
-    const pulse = 0.26 + Math.sin(t * 0.006) * 0.12;
+  // steady halo while on; pulsing on plain hover to invite the click
+  if (v.loaded || hover) {
+    const pulse = v.loaded ? 0.32 : 0.2 + Math.sin(t * 0.008) * 0.08;
     const g = ctx.createRadialGradient(a.x, a.y, 4, a.x, a.y, BODY_W * 1.2);
     g.addColorStop(0, `rgba(99,220,237,${pulse})`);
     g.addColorStop(1, "rgba(99,220,237,0)");
@@ -377,9 +378,15 @@ export function drawVacuum(
   ctx.fillStyle = dark ? "rgba(190,230,245,0.25)" : "rgba(255,255,255,0.35)";
   for (const tx of [a.x + 12, a.x + 17]) ctx.fillRect(tx - 0.8, a.y - 6, 1.6, 12);
 
-  // rim: gold while on
-  ctx.strokeStyle = v.loaded ? "#fbbf24" : dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.25)";
-  ctx.lineWidth = v.loaded ? 2.5 : 1.5;
+  // rim: gold while on, lit white on hover
+  ctx.strokeStyle = v.loaded
+    ? "#fbbf24"
+    : hover
+      ? "rgba(255,255,255,0.75)"
+      : dark
+        ? "rgba(255,255,255,0.15)"
+        : "rgba(0,0,0,0.25)";
+  ctx.lineWidth = v.loaded ? 2.5 : hover ? 2 : 1.5;
   ctx.beginPath();
   ctx.roundRect(x0, y0, BODY_W, BODY_H, 12);
   ctx.stroke();

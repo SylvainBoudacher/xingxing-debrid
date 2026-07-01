@@ -105,6 +105,7 @@ export function drawCannon(
   c: CannonState,
   t: number,
   dark: boolean,
+  hover: boolean,
 ) {
   const p = PIVOT;
 
@@ -124,9 +125,9 @@ export function drawCannon(
     ctx.restore();
   }
 
-  // soft halo while loaded
-  if (c.loaded) {
-    const pulse = 0.26 + Math.sin(t * 0.006) * 0.12;
+  // steady halo while loaded; pulsing on plain hover to invite the click
+  if (c.loaded || hover) {
+    const pulse = c.loaded ? 0.32 : 0.2 + Math.sin(t * 0.008) * 0.08;
     const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, BASE_R * 2.3);
     g.addColorStop(0, `rgba(99,179,237,${pulse})`);
     g.addColorStop(1, "rgba(99,179,237,0)");
@@ -221,9 +222,15 @@ export function drawCannon(
   ctx.arc(p.x, p.y, BASE_R * 0.55, 0, Math.PI * 2);
   ctx.fill();
 
-  // rim — gold while loaded
-  ctx.strokeStyle = c.loaded ? "#fbbf24" : dark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.25)";
-  ctx.lineWidth = c.loaded ? 2.5 : 1.5;
+  // rim — gold while loaded, lit white on hover
+  ctx.strokeStyle = c.loaded
+    ? "#fbbf24"
+    : hover
+      ? "rgba(255,255,255,0.75)"
+      : dark
+        ? "rgba(255,255,255,0.15)"
+        : "rgba(0,0,0,0.25)";
+  ctx.lineWidth = c.loaded ? 2.5 : hover ? 2 : 1.5;
   ctx.beginPath();
   ctx.arc(p.x, p.y, BASE_R - 0.5, 0, Math.PI * 2);
   ctx.stroke();

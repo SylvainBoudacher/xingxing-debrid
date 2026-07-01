@@ -351,6 +351,9 @@ export function PixelPool({
     let pointerX = -1;
     let pointerY = -1;
 
+    // button held with the vacuum on: keeps sucking every cooldown tick
+    let sucking = false;
+
     // transient water droplets thrown up by impacts (throws, wall hits, collisions)
     interface Splash {
       x: number;
@@ -494,8 +497,9 @@ export function PixelPool({
         e.preventDefault();
         return;
       }
-      // while the vacuum is on, a left-click sucks around the suction head
+      // while the vacuum is on, sucking runs for as long as the button is held
       if (e.button === 0 && vacuum.loaded) {
+        sucking = true;
         suckAt(vacuum.headX, vacuum.headY);
         e.preventDefault();
         return;
@@ -550,6 +554,7 @@ export function PixelPool({
     }
 
     function onPointerUp(e: PointerEvent) {
+      sucking = false;
       if (!dragging) return;
       // dropped into the drain: start the drain animation. Saved ducks are
       // protected — they bounce off and keep swimming instead of being flushed.
@@ -1280,13 +1285,14 @@ export function PixelPool({
         dark,
       );
       if (cannon.loaded && pointerX >= 0) aimCannon(cannon, pointerX, pointerY);
-      drawCannon(ctx, cannon, now, dark);
+      drawCannon(ctx, cannon, now, dark, !dragging && overCannon(pointerX, pointerY));
+      if (sucking && vacuum.loaded) suckAt(vacuum.headX, vacuum.headY);
       const swallowed = updateVacuum(vacuum, dt, w, pointerX, pointerY);
       if (swallowed) {
         const port = hosePort(w);
         spawnSplash(port.x, port.y, 60);
       }
-      drawVacuum(ctx, vacuum, now, w, dark);
+      drawVacuum(ctx, vacuum, now, w, dark, !dragging && overVacuum(pointerX, pointerY, w));
       drawParade(ctx, parade, now, !dragging && overParade(pointerX, pointerY, h), h, dark);
 
       // remove ducks whose exit animation (drain / reserve / cull) has finished
@@ -1615,6 +1621,7 @@ export function PixelPool({
     const clearPointer = () => {
       pointerX = -1;
       pointerY = -1;
+      sucking = false;
     };
     window.addEventListener("blur", clearPointer);
     raf = requestAnimationFrame(frame);
