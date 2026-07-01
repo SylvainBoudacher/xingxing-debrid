@@ -1,3 +1,4 @@
+import roiDesCanardsV135Img from "@/assets/patchnote/v1.3.5/roi-des-canards.webp";
 import parametresV134Img from "@/assets/patchnote/v1.3.4/parametres.webp";
 import multiSelectionV134Img from "@/assets/patchnote/v1.3.4/multi-selection.webp";
 import modaleV134Img from "@/assets/patchnote/v1.3.4/modale-magnet.webp";
@@ -34,6 +35,45 @@ export interface PatchNote {
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.3.5",
+    date: "1 juillet 2026",
+    intro:
+      "La 1.3.5 introduit un nouveau canard ultra legendaire, un parametre d'affichage personnalise au lancement, et une section « Pour vous » dans la page Decouvrir.",
+    sections: [
+      {
+        title: "Nouveau canard : Roi des Canards",
+        items: [
+          "Le Roi des Canards fait son entree dans la piscine. Ultra legendaire, il n'apparait qu'avec 1% de chance.",
+          "Bonne chance.",
+        ],
+        images: [
+          {
+            src: roiDesCanardsV135Img,
+            caption: "Le Roi des Canards - ultra legendaire, drop 1%",
+          },
+        ],
+      },
+      {
+        title: "Parametre d'affichage au lancement « personnalise »",
+        items: [
+          "Une nouvelle option « Personnalise » est disponible dans le parametre de taille au lancement.",
+          "L'application memorise la derniere taille et position de la fenetre et les restaure exactement au prochain demarrage.",
+        ],
+      },
+      {
+        title: "Section « Pour vous » dans la page Decouvrir",
+        items: [
+          "Une nouvelle section « Pour vous » apparait dans la page Decouvrir.",
+          "Elle analyse vos likes et votre bibliotheque pour identifier vos gouts et vous proposer des titres qui correspondent vraiment a ce que vous aimez.",
+        ],
+      },
+      {
+        title: "Corrections",
+        items: ["Resolution de quelques bugs mineurs."],
+      },
+    ],
+  },
   {
     version: "1.3.4",
     date: "27 juin 2026",

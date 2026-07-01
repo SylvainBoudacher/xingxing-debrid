@@ -47,12 +47,14 @@ async function getMaxDucks(): Promise<number> {
 }
 
 const RARITY_LABEL: Record<Rarity, string> = {
+  mythic: "★★★★",
   legendary: "★★★",
   rare: "★★",
   uncommon: "★",
   common: "",
 };
 const RARITY_BADGE: Record<Rarity, string> = {
+  mythic: "bg-yellow-300/20 text-yellow-300 ring-1 ring-yellow-300/40",
   legendary: "bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/30",
   rare: "bg-blue-400/15 text-blue-400 ring-1 ring-blue-400/30",
   uncommon: "bg-green-400/15 text-green-400 ring-1 ring-green-400/30",

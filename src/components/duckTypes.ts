@@ -46,7 +46,8 @@ export type Effect =
   | "prismatic"
   | "golden"
   | "ooze"
-  | "electric";
+  | "electric"
+  | "royal";
 
 export interface Variant {
   body: string;

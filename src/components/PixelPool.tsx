@@ -180,9 +180,16 @@ function enterPool(variant: Variant, scale: number, extra: Partial<Duck> = {}) {
   });
 }
 
+// The king is drawn much larger than an ordinary duck; everyone else keeps the
+// usual small size jitter.
+function scaleFor(v: Variant) {
+  return getRarity(v) === "mythic" ? 1.5 : 0.55 + Math.random() * 0.3;
+}
+
 function spawnDuck() {
   if (pool.length >= MAX_DUCKS) return;
-  enterPool(randomVariant(), 0.55 + Math.random() * 0.3);
+  const v = randomVariant();
+  enterPool(v, scaleFor(v));
 }
 
 // Saved ducks bypass MAX_DUCKS: they were collected on purpose, so they always
@@ -888,6 +895,41 @@ export function PixelPool({
         ctx.fill();
       }
 
+      // royal shine: rotating golden sunburst rays + a strong pulsing halo
+      if (d.effect === "royal") {
+        const cx = d.x;
+        const cy = d.y + bob;
+        const rot = t * 0.0004;
+        const rays = 12;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rot);
+        for (let i = 0; i < rays; i++) {
+          const a = (i / rays) * Math.PI * 2;
+          const long = i % 2 === 0;
+          const len = (long ? dw * 1.15 : dw * 0.85) * (0.95 + Math.sin(t * 0.004 + i) * 0.05);
+          const grad = ctx.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
+          grad.addColorStop(0, "rgba(255,225,120,0.5)");
+          grad.addColorStop(1, "rgba(255,225,120,0)");
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = long ? 3 : 1.6;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        const pulse = 0.4 + Math.sin(t * 0.005 + d.phase) * 0.14;
+        const gr = ctx.createRadialGradient(cx, cy, dw * 0.1, cx, cy, dw * 0.95);
+        gr.addColorStop(0, `rgba(255,215,80,${pulse})`);
+        gr.addColorStop(1, "rgba(255,215,80,0)");
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(cx, cy, dw * 0.95, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       // duck
       ctx.save();
       ctx.globalAlpha = d.effect === "ghost" ? 0.5 : 1;
@@ -897,6 +939,29 @@ export function PixelPool({
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(d.sprite, -dw / 2, -dh / 2, dw, dh);
       ctx.restore();
+
+      // royal sparkles: golden twinkles orbiting the king + a travelling glint
+      if (d.effect === "royal") {
+        const count = 8;
+        for (let i = 0; i < count; i++) {
+          const a = t * 0.0014 + i * ((Math.PI * 2) / count) + d.phase;
+          const tw = (Math.sin(t * 0.007 + i * 1.7) + 1) / 2;
+          const sx = d.x + Math.cos(a) * dw * 0.56;
+          const sy = d.y + bob + Math.sin(a) * dh * 0.5;
+          const r = 1.2 + tw * 3;
+          ctx.fillStyle = `rgba(255,240,160,${0.35 + tw * 0.6})`;
+          ctx.fillRect(sx - r, sy - 0.7, r * 2, 1.4);
+          ctx.fillRect(sx - 0.7, sy - r, 1.4, r * 2);
+        }
+        // a bright glint sweeping diagonally across the body
+        const gp = (t * 0.0004 + d.phase) % 1;
+        const gx = d.x - dw * 0.4 + gp * dw * 0.8;
+        const gy = d.y + bob - dh * 0.3 + gp * dh * 0.5;
+        const gtw = Math.sin(gp * Math.PI);
+        ctx.fillStyle = `rgba(255,255,255,${0.8 * gtw})`;
+        ctx.fillRect(gx - 5, gy - 0.8, 10, 1.6);
+        ctx.fillRect(gx - 0.8, gy - 5, 1.6, 10);
+      }
 
       // sparkles orbiting: gold for galaxy/magic, rainbow-cycling for prismatic (rainbow duck)
       if (d.effect === "sparkle" || d.effect === "prismatic") {
@@ -976,12 +1041,14 @@ export function PixelPool({
     }
 
     const RARITY_STARS: Record<string, string> = {
+      mythic: "★★★★",
       legendary: "★★★",
       rare: "★★",
       uncommon: "★",
       common: "☆",
     };
     const RARITY_COLOR: Record<string, string> = {
+      mythic: "#ffcf33",
       legendary: "#fbbf24",
       rare: "#60a5fa",
       uncommon: "#4ade80",
@@ -1325,22 +1392,30 @@ export function PixelPool({
           const mb = c.scale;
           const sum = ma + mb;
           const pen = min - dist;
-          a.x -= nx * pen * (mb / sum);
-          a.y -= ny * pen * (mb / sum);
-          c.x += nx * pen * (ma / sum);
-          c.y += ny * pen * (ma / sum);
+          // the king stands its ground: a duck sharing a collision with it takes
+          // the full separation and keeps zero inverse mass in the impulse.
+          const aKing = a.effect === "royal";
+          const cKing = c.effect === "royal";
+          const aShare = aKing && !cKing ? 0 : cKing && !aKing ? 1 : mb / sum;
+          const cShare = cKing && !aKing ? 0 : aKing && !cKing ? 1 : ma / sum;
+          a.x -= nx * pen * aShare;
+          a.y -= ny * pen * aShare;
+          c.x += nx * pen * cShare;
+          c.y += ny * pen * cShare;
           const vn = (c.vx - a.vx) * nx + (c.vy - a.vy) * ny;
-          if (vn < 0) {
+          const invA = aKing ? 0 : 1 / ma;
+          const invB = cKing ? 0 : 1 / mb;
+          if (vn < 0 && invA + invB > 0) {
             const e = 0.92; // restitution: bouncy but bleeds a little energy
-            const jimp = (-(1 + e) * vn) / (1 / ma + 1 / mb);
-            a.vx -= (jimp / ma) * nx;
-            a.vy -= (jimp / ma) * ny;
-            c.vx += (jimp / mb) * nx;
-            c.vy += (jimp / mb) * ny;
+            const jimp = (-(1 + e) * vn) / (invA + invB);
+            a.vx -= jimp * invA * nx;
+            a.vy -= jimp * invA * ny;
+            c.vx += jimp * invB * nx;
+            c.vy += jimp * invB * ny;
             // glancing hits spin the ducks (tangential relative velocity)
             const vt = (c.vx - a.vx) * -ny + (c.vy - a.vy) * nx;
-            a.spin = Math.max(-12, Math.min(12, (a.spin ?? 0) + vt * 0.03));
-            c.spin = Math.max(-12, Math.min(12, (c.spin ?? 0) - vt * 0.03));
+            if (!aKing) a.spin = Math.max(-12, Math.min(12, (a.spin ?? 0) + vt * 0.03));
+            if (!cKing) c.spin = Math.max(-12, Math.min(12, (c.spin ?? 0) - vt * 0.03));
             if (-vn > 70) spawnSplash((a.x + c.x) / 2, (a.y + c.y) / 2, -vn);
           }
         }
@@ -1416,7 +1491,7 @@ export function PixelPool({
     registerReleaser(unmarkSavedDuck);
     registerCounter(() => pool.filter((d) => !leaving(d) && !d.inShop).length);
     registerShopHitTest((x, y) => overShop(x, y));
-    registerVariantSpawner((v) => enterPool(v, 0.55 + Math.random() * 0.3));
+    registerVariantSpawner((v) => enterPool(v, scaleFor(v)));
     window.addEventListener("resize", resize);
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove);

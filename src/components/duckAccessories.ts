@@ -28,20 +28,24 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
     fillEll(c, 82, 10, 1.2, 1.5, "#1f2937");
     c.fillRect(78.5, 13, 3, 1.4);
   } else if (v.acc === "crown") {
-    c.fillStyle = v.accColor!;
-    c.beginPath();
-    c.moveTo(58, 16);
-    c.lineTo(63, 2);
-    c.lineTo(70, 11);
-    c.lineTo(80, -1);
-    c.lineTo(90, 11);
-    c.lineTo(97, 2);
-    c.lineTo(102, 16);
-    c.closePath();
-    c.fill();
-    fillEll(c, 63, 4, 2, 2, "#FF5C8A");
-    fillEll(c, 80, 1, 2.2, 2.2, "#5CC8FF");
-    fillEll(c, 97, 4, 2, 2, "#FF5C8A");
+    if (v.effect === "royal") {
+      drawRoyalCrown(c, v.accColor!);
+    } else {
+      c.fillStyle = v.accColor!;
+      c.beginPath();
+      c.moveTo(58, 16);
+      c.lineTo(63, 2);
+      c.lineTo(70, 11);
+      c.lineTo(80, -1);
+      c.lineTo(90, 11);
+      c.lineTo(97, 2);
+      c.lineTo(102, 16);
+      c.closePath();
+      c.fill();
+      fillEll(c, 63, 4, 2, 2, "#FF5C8A");
+      fillEll(c, 80, 1, 2.2, 2.2, "#5CC8FF");
+      fillEll(c, 97, 4, 2, 2, "#FF5C8A");
+    }
   } else if (v.acc === "party") {
     c.fillStyle = v.accColor!;
     c.beginPath();
@@ -292,4 +296,69 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
     fillEll(c, 80, -4, 4, 4, "#FF5C5C");
     fillEll(c, 79, -5, 1.3, 1.3, "#ffaaaa");
   }
+}
+
+// The king's grand crown: a red-velvet cap ringed by a gem-studded gold band
+// with five jewel-tipped points and a pearl base. Kept within the sprite's top
+// edge (y >= 1) so nothing is clipped. Drawn instead of the plain crown when the
+// duck carries the "royal" effect.
+function drawRoyalCrown(c: CanvasRenderingContext2D, gold: string) {
+  const tips: [number, number][] = [
+    [55, 9], // outer left
+    [67, 4], // inner left
+    [80, 2], // center
+    [93, 4], // inner right
+    [105, 9], // outer right
+  ];
+  const jewels = ["#FF4D6D", "#5CC8FF", "#7CFF7C", "#5CC8FF", "#FF4D6D"];
+  const bandTop = 17;
+  const bandBot = 27;
+
+  // red velvet cap peeking above the band, between the gold points
+  c.fillStyle = "#B0202E";
+  c.beginPath();
+  c.moveTo(56, bandTop);
+  c.quadraticCurveTo(80, 3, 104, bandTop);
+  c.closePath();
+  c.fill();
+
+  // gold band + five points as one filled outline
+  const gg = c.createLinearGradient(0, 2, 0, bandBot);
+  gg.addColorStop(0, "#FFF3B0");
+  gg.addColorStop(0.5, gold);
+  gg.addColorStop(1, "#B8860B");
+  c.fillStyle = gg;
+  c.beginPath();
+  c.moveTo(53, bandBot);
+  c.lineTo(53, bandTop);
+  for (let i = 0; i < tips.length; i++) {
+    c.lineTo(tips[i][0], tips[i][1]); // up to the point
+    if (i < tips.length - 1) c.lineTo((tips[i][0] + tips[i + 1][0]) / 2, bandTop); // valley
+  }
+  c.lineTo(107, bandTop);
+  c.lineTo(107, bandBot);
+  c.closePath();
+  c.fill();
+
+  // jewel on each point
+  for (let i = 0; i < tips.length; i++) {
+    const [sx, sy] = tips[i];
+    fillEll(c, sx, sy + 1, 2.4, 2.4, jewels[i]);
+    fillEll(c, sx - 0.7, sy + 0.3, 0.9, 0.9, "rgba(255,255,255,0.9)");
+  }
+
+  // gem-studded band
+  fillEll(c, 66, 22, 3, 3, "#FF4D6D");
+  fillEll(c, 80, 22, 3.4, 3.4, "#5CC8FF");
+  fillEll(c, 94, 22, 3, 3, "#7CFF7C");
+  fillEll(c, 65, 21, 0.9, 0.9, "rgba(255,255,255,0.9)");
+  fillEll(c, 79, 21, 1, 1, "rgba(255,255,255,0.9)");
+  fillEll(c, 93, 21, 0.9, 0.9, "rgba(255,255,255,0.9)");
+
+  // pearl base trim
+  for (let px = 55; px <= 105; px += 6.5) fillEll(c, px, bandBot, 2.3, 2.3, "#FFF8E0");
+
+  // sheen sweep across the band
+  c.fillStyle = "rgba(255,255,255,0.35)";
+  c.fillRect(58, bandTop + 1, 4, 8);
 }

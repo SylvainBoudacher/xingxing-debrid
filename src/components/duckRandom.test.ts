@@ -38,6 +38,7 @@ const VALID_EFFECTS = new Set<Effect>([
   "golden",
   "ooze",
   "electric",
+  "royal",
 ]);
 const HEX_RE = /^#[0-9a-fA-F]{3,8}$/;
 

@@ -142,7 +142,20 @@ const RARE: (() => Variant)[] = [
   () => ({ body: bodyColor(), beak: ORANGE_BEAK, acc: "none", effect: "glow" }),
 ];
 
-export type Rarity = "legendary" | "rare" | "uncommon" | "common";
+export type Rarity = "mythic" | "legendary" | "rare" | "uncommon" | "common";
+
+// The king of ducks: a single ultra-legendary skin. Bigger, golden, crowned and
+// wrapped in a royal shine. PixelPool spawns it at a larger scale (see spawnDuck).
+export function kingVariant(): Variant {
+  return {
+    body: "#F5C518",
+    beak: ORANGE_BEAK,
+    acc: "crown",
+    accColor: "#FFE96B",
+    pattern: "gold",
+    effect: "royal",
+  };
+}
 
 const LEGENDARY_EFFECTS = new Set<Effect>([
   "ghost",
@@ -168,6 +181,7 @@ const UNCOMMON_ACC_SET = new Set<Accessory>([
 ]);
 
 export function getRarity(v: Variant): Rarity {
+  if (v.effect === "royal") return "mythic";
   if (
     (v.pattern && LEGENDARY_PATTERNS.has(v.pattern)) ||
     (v.effect && LEGENDARY_EFFECTS.has(v.effect))
@@ -185,9 +199,10 @@ export function randomLegendaryVariant(): Variant {
 
 export function randomVariant(): Variant {
   const roll = Math.random();
-  if (roll < 0.03) return randOf(LEGENDARY)(); // ~3% legendary
-  if (roll < 0.12) return randOf(RARE)(); // ~9% rare
-  if (roll < 0.4) {
+  if (roll < 0.01) return kingVariant(); // 1% ultra-legendary king
+  if (roll < 0.04) return randOf(LEGENDARY)(); // ~3% legendary
+  if (roll < 0.13) return randOf(RARE)(); // ~9% rare
+  if (roll < 0.41) {
     // ~28% uncommon: simple pattern or a fancier accessory
     return Math.random() < 0.4
       ? { body: bodyColor(), beak: ORANGE_BEAK, acc: "none", pattern: randOf(SIMPLE_PATTERNS) }

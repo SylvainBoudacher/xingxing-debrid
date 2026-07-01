@@ -11,7 +11,7 @@ import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import type { Page } from "@/components/AppMenu";
 import { prefetchLibrary } from "@/lib/library";
-import { randomLegendaryVariant } from "@/components/duckRandom";
+import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
 
 const PixelPool = lazy(() =>
@@ -212,6 +212,14 @@ function App() {
               className="rounded-md bg-amber-500/15 ring-1 ring-amber-500/30 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 transition-colors"
             >
               + legendaire
+            </button>
+          )}
+          {summerEnabled && (
+            <button
+              onClick={() => spawnVariant(kingVariant())}
+              className="rounded-md bg-yellow-400/20 ring-1 ring-yellow-400/40 px-2 py-0.5 text-[10px] font-bold text-yellow-600 dark:text-yellow-300 hover:bg-yellow-400/30 transition-colors"
+            >
+              + roi
             </button>
           )}
         </div>
