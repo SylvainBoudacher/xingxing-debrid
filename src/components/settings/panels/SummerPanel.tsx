@@ -1,8 +1,8 @@
-import { Download, Sun, Upload } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
-import { useRef } from "react";
-import { toast } from "sonner";
 import { getSavedDucks, importSavedDucks, parseDucksJson } from "@/lib/savedDucks";
+import { invoke } from "@tauri-apps/api/core";
+import { Download, Sun, Upload } from "lucide-react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
 import { SettingsPanel } from "../SettingsPanel";
 import { Segmented, SettingRow, Toggle } from "../controls";
 
@@ -24,6 +24,18 @@ export function SummerPanel({
   onSetSummerMaxDucks,
 }: SummerPanelProps) {
   const importDucksInputRef = useRef<HTMLInputElement>(null);
+  const [draftMaxDucks, setDraftMaxDucks] = useState(String(summerMaxDucks));
+  const [prevMaxDucks, setPrevMaxDucks] = useState(summerMaxDucks);
+  if (prevMaxDucks !== summerMaxDucks) {
+    setPrevMaxDucks(summerMaxDucks);
+    setDraftMaxDucks(String(summerMaxDucks));
+  }
+
+  function commitMaxDucks() {
+    const v = Math.min(100, Math.max(1, Number(draftMaxDucks)));
+    if (!isNaN(v) && v !== summerMaxDucks) onSetSummerMaxDucks(v);
+    setDraftMaxDucks(String(isNaN(v) ? summerMaxDucks : v));
+  }
 
   async function handleExportDucks() {
     try {
@@ -93,11 +105,10 @@ export function SummerPanel({
               type="number"
               min={1}
               max={100}
-              value={summerMaxDucks}
-              onChange={(e) => {
-                const v = Math.min(100, Math.max(1, Number(e.target.value)));
-                if (!isNaN(v)) onSetSummerMaxDucks(v);
-              }}
+              value={draftMaxDucks}
+              onChange={(e) => setDraftMaxDucks(e.target.value)}
+              onBlur={commitMaxDucks}
+              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
               className="w-16 rounded-lg bg-black/6 dark:bg-white/6 px-2 py-1 text-center text-sm font-semibold text-zinc-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
             />
           </SettingRow>
