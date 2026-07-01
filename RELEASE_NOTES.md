@@ -1,3 +1,4 @@
-- Téléchargement dans l'app dispo !
-- Refonte page paramètre
-- Nouveau paramètres !
+- Nouveau canard ultra legendaire : le Roi des Canards (drop 1%).
+- Section « Pour vous » dans la page Decouvrir - basee sur vos likes et votre bibliotheque.
+- Nouveau parametre d'affichage au lancement : « Personnalise » (memorise la derniere taille et position).
+- Corrections de bugs mineurs.
