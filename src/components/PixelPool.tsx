@@ -107,6 +107,12 @@ function leaving(d: Duck) {
   return !!(d.draining || d.storing || d.exiting || d.sucked);
 }
 
+// The king and the god duck stand their ground: other ducks bounce off them,
+// cannonballs don't shove them, and they hold the centre of the parade.
+function immovable(d: Duck) {
+  return d.effect === "royal" || d.effect === "godly";
+}
+
 // Pool state lives at module scope so the ducks persist across page changes
 // (MainPage unmounting/remounting) instead of resetting.
 const pool: Duck[] = [];
@@ -130,13 +136,13 @@ function startParade() {
   if (marchers.length === 0) return;
   parade.active = true;
   parade.start = performance.now();
-  // the king (if present) holds the centre; the rest form the ring around it
-  const ring = marchers.filter((d) => d.effect !== "royal");
+  // the king/god (if present) holds the centre; the rest form the ring around it
+  const ring = marchers.filter((d) => !immovable(d));
   parade.count = ring.length;
   let slot = 0;
   for (const d of marchers) {
     d.parade = true;
-    d.paradeSlot = d.effect === "royal" ? -1 : slot++;
+    d.paradeSlot = immovable(d) ? -1 : slot++;
     d.boostTimer = 0;
   }
 }
@@ -1063,6 +1069,59 @@ export function PixelPool({
         ctx.fill();
       }
 
+      // godly (Zeus): storm-cloud ring circling the god, a white-gold sunburst
+      // outshining the king's, and a divine halo
+      if (d.effect === "godly") {
+        const cx = d.x;
+        const cy = d.y + bob;
+
+        // rotating sunburst: more rays, longer and whiter than the royal shine
+        const rot = -t * 0.0003;
+        const rays = 16;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rot);
+        for (let i = 0; i < rays; i++) {
+          const a = (i / rays) * Math.PI * 2;
+          const long = i % 2 === 0;
+          const len = (long ? dw * 1.45 : dw * 1.0) * (0.95 + Math.sin(t * 0.004 + i) * 0.05);
+          const grad = ctx.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
+          grad.addColorStop(0, "rgba(255,250,210,0.6)");
+          grad.addColorStop(1, "rgba(255,250,210,0)");
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = long ? 3.5 : 1.8;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // ring of slate storm clouds drifting around the god
+        for (let i = 0; i < 6; i++) {
+          const a = t * 0.0005 + i * (Math.PI / 3);
+          const sx = cx + Math.cos(a) * dw * 0.92;
+          const sy = cy + Math.sin(a) * dh * 0.62;
+          const puff = 0.9 + Math.sin(t * 0.002 + i * 2.3) * 0.12;
+          ctx.fillStyle = "rgba(70,82,104,0.34)";
+          ctx.beginPath();
+          ctx.ellipse(sx, sy, 13 * puff, 6.5 * puff, 0, 0, Math.PI * 2);
+          ctx.ellipse(sx - 9 * puff, sy + 2, 8 * puff, 4.6 * puff, 0, 0, Math.PI * 2);
+          ctx.ellipse(sx + 9 * puff, sy + 2, 8 * puff, 4.6 * puff, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // strong pulsing white-gold halo
+        const pulse = 0.45 + Math.sin(t * 0.005 + d.phase) * 0.15;
+        const gr = ctx.createRadialGradient(cx, cy, dw * 0.1, cx, cy, dw * 1.1);
+        gr.addColorStop(0, `rgba(255,245,190,${pulse})`);
+        gr.addColorStop(1, "rgba(255,245,190,0)");
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(cx, cy, dw * 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       // duck
       ctx.save();
       ctx.globalAlpha = d.effect === "ghost" ? 0.5 : 1;
@@ -1094,6 +1153,50 @@ export function PixelPool({
         ctx.fillStyle = `rgba(255,255,255,${0.8 * gtw})`;
         ctx.fillRect(gx - 5, gy - 0.8, 10, 1.6);
         ctx.fillRect(gx - 0.8, gy - 5, 1.6, 10);
+      }
+
+      // godly foreground: lightning bolts hurled down around the god — jagged,
+      // deterministic (hashed ticks like the electric arcs), with a flash tip
+      if (d.effect === "godly") {
+        const tick = (t * 0.004 + d.phase * 10) | 0;
+        for (let i = 0; i < 3; i++) {
+          const h0 = Math.sin(tick * 113.9 + i * 71.3);
+          if (h0 < 0.35) continue; // bolts strike in bursts, not constantly
+          const h1 = Math.sin(tick * 271.7 + i * 53.9);
+          const bx = d.x + h1 * dw * 0.85;
+          const top = d.y + bob - dh * 1.05;
+          const bottom = d.y + bob + dh * 0.25;
+          const seg = (bottom - top) / 4;
+          ctx.strokeStyle = `rgba(255,255,220,${0.55 + h0 * 0.4})`;
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(bx, top);
+          let px = bx;
+          for (let k = 1; k <= 4; k++) {
+            px += Math.sin(tick * 197.3 + i * 31.7 + k * 87.1) * 9;
+            ctx.lineTo(px, top + seg * k);
+          }
+          ctx.stroke();
+          // flash at the impact point
+          const fg = ctx.createRadialGradient(px, bottom, 0, px, bottom, 10);
+          fg.addColorStop(0, `rgba(255,255,240,${0.6 * h0})`);
+          fg.addColorStop(1, "rgba(255,255,240,0)");
+          ctx.fillStyle = fg;
+          ctx.beginPath();
+          ctx.arc(px, bottom, 10, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // orbiting white-gold twinkles
+        for (let i = 0; i < 10; i++) {
+          const a = t * 0.0016 + i * ((Math.PI * 2) / 10) + d.phase;
+          const tw = (Math.sin(t * 0.007 + i * 1.9) + 1) / 2;
+          const sx = d.x + Math.cos(a) * dw * 0.6;
+          const sy = d.y + bob + Math.sin(a) * dh * 0.52;
+          const r = 1.4 + tw * 3.2;
+          ctx.fillStyle = `rgba(255,250,200,${0.35 + tw * 0.6})`;
+          ctx.fillRect(sx - r, sy - 0.7, r * 2, 1.4);
+          ctx.fillRect(sx - 0.7, sy - r, 1.4, r * 2);
+        }
       }
 
       // supernova foreground: a tilted prismatic orbit ring + comets with trails
@@ -1150,6 +1253,25 @@ export function PixelPool({
           ctx.fillStyle = color;
           ctx.fillRect(sx - r, sy - 0.6, r * 2, 1.2);
           ctx.fillRect(sx - 0.6, sy - r, 1.2, r * 2);
+        }
+      }
+
+      // shiny twinkles: Pokemon-style glints popping on the body, on top of
+      // whatever effect the duck already carries
+      if (d.variant.shiny) {
+        for (let i = 0; i < 3; i++) {
+          const p = (t * 0.0009 + d.phase + i * 0.33) % 1;
+          const tw = Math.sin(p * Math.PI); // fade in, peak, fade out
+          if (tw < 0.05) continue;
+          const a = d.phase + i * 2.1;
+          const sx = d.x + Math.cos(a) * dw * 0.26;
+          const sy = d.y + bob + Math.sin(a * 1.7) * dh * 0.24;
+          const r = 1.5 + tw * 3;
+          ctx.fillStyle = `rgba(255,255,255,${0.4 + tw * 0.55})`;
+          ctx.fillRect(sx - r, sy - 0.7, r * 2, 1.4);
+          ctx.fillRect(sx - 0.7, sy - r, 1.4, r * 2);
+          ctx.fillStyle = `rgba(190,240,255,${0.3 * tw})`;
+          ctx.fillRect(sx - r * 0.55, sy - r * 0.55, r * 1.1, r * 1.1);
         }
       }
 
@@ -1228,11 +1350,21 @@ export function PixelPool({
 
     // "worth saving" tag stacked above the hover pill when the hovered duck
     // would unlock a new dex species or body color
-    function drawDexBadge(d: Duck, t: number, unlock: "species" | "color", below: number) {
+    function drawDexBadge(
+      d: Duck,
+      t: number,
+      unlock: "species" | "color" | "shiny",
+      below: number,
+    ) {
       const bob = Math.sin(t * 0.003 + d.phase) * 3;
       const dh = DUCK_BASE * d.scale;
-      const text = unlock === "species" ? "Nouvelle espèce !" : "Nouvelle couleur";
-      const color = unlock === "species" ? "#fbbf24" : "#60a5fa";
+      const text =
+        unlock === "shiny"
+          ? "✦ Shiny inédit !"
+          : unlock === "species"
+            ? "Nouvelle espèce !"
+            : "Nouvelle couleur";
+      const color = unlock === "shiny" ? "#e879f9" : unlock === "species" ? "#fbbf24" : "#60a5fa";
 
       ctx.font = "700 11px ui-sans-serif, system-ui, sans-serif";
       ctx.textAlign = "center";
@@ -1244,7 +1376,12 @@ export function PixelPool({
       const by = d.y + bob - dh * 0.5 - 4 - below - 3 - bh;
 
       ctx.fillStyle = "rgba(15,23,42,0.85)";
-      ctx.strokeStyle = unlock === "species" ? "rgba(251,191,36,0.45)" : "rgba(96,165,250,0.45)";
+      ctx.strokeStyle =
+        unlock === "shiny"
+          ? "rgba(232,121,249,0.45)"
+          : unlock === "species"
+            ? "rgba(251,191,36,0.45)"
+            : "rgba(96,165,250,0.45)";
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.roundRect(cx - bw / 2, by, bw, bh, 5);
@@ -1645,8 +1782,8 @@ export function PixelPool({
           const pen = min - dist;
           // the king stands its ground: a duck sharing a collision with it takes
           // the full separation and keeps zero inverse mass in the impulse.
-          const aKing = a.effect === "royal";
-          const cKing = c.effect === "royal";
+          const aKing = immovable(a);
+          const cKing = immovable(c);
           const aShare = aKing && !cKing ? 0 : cKing && !aKing ? 1 : mb / sum;
           const cShare = cKing && !aKing ? 0 : aKing && !cKing ? 1 : ma / sum;
           a.x -= nx * pen * aShare;
@@ -1686,7 +1823,7 @@ export function PixelPool({
           const nx = dx / dist;
           const ny = dy / dist;
           const bs = Math.hypot(ball.vx, ball.vy);
-          if (d.effect !== "royal") {
+          if (!immovable(d)) {
             d.vx += nx * (70 + bs * 0.5);
             d.vy += ny * (70 + bs * 0.5);
             d.spin = Math.max(-12, Math.min(12, (d.spin ?? 0) + (Math.random() - 0.5) * 9));

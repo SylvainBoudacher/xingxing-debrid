@@ -132,5 +132,38 @@ export function makeDuckSprite(v: Variant): HTMLCanvasElement {
 
   drawAccessory(c, v);
 
+  if (v.shiny) applyShinyOverlay(c, cv);
+
   return cv;
+}
+
+// Shiny recolor: hue-blend a diagonal iridescent gradient over the finished
+// sprite (keeping its shading), restore the original alpha, then bake a few
+// star glints so a shiny reads as shiny even on low-saturation bodies.
+function applyShinyOverlay(c: CanvasRenderingContext2D, cv: HTMLCanvasElement) {
+  const mask = document.createElement("canvas");
+  mask.width = SW;
+  mask.height = SH;
+  mask.getContext("2d")!.drawImage(cv, 0, 0);
+
+  c.globalCompositeOperation = "hue";
+  const ig = c.createLinearGradient(0, 0, SW, SH);
+  ig.addColorStop(0, "#7DF9FF");
+  ig.addColorStop(0.5, "#C77DFF");
+  ig.addColorStop(1, "#FFD166");
+  c.fillStyle = ig;
+  c.fillRect(0, 0, SW, SH);
+  c.globalCompositeOperation = "destination-in";
+  c.drawImage(mask, 0, 0);
+  c.globalCompositeOperation = "source-over";
+
+  for (const [sx, sy, r] of [
+    [38, 58, 4],
+    [96, 22, 3],
+    [66, 96, 3],
+  ]) {
+    c.fillStyle = "rgba(255,255,255,0.9)";
+    c.fillRect(sx - r, sy - 0.8, r * 2, 1.6);
+    c.fillRect(sx - 0.8, sy - r, 1.6, r * 2);
+  }
 }

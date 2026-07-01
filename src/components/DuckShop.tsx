@@ -204,6 +204,15 @@ export function DuckShop() {
         description: `${disc.colorCount}/${disc.species.maxColors} couleurs collectionnées`,
       });
     }
+    if (disc.newShiny) {
+      const shinyComplete = disc.shinyCount === disc.totalSpecies;
+      toast.success(`✦ Shiny collectionné : ${disc.species.name} !`, {
+        description: shinyComplete
+          ? "Collection shiny complète ! Le Dieu Canard t'attend dans le pokédex."
+          : `Shiny : ${disc.shinyCount}/${disc.totalSpecies} espèces`,
+        duration: 6000,
+      });
+    }
   }
 
   async function putInWater(d: SavedDuck) {
@@ -380,6 +389,11 @@ export function DuckShop() {
                               className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${RARITY_BADGE[rarity]}`}
                             >
                               {RARITY_LABEL[rarity]}
+                            </span>
+                          )}
+                          {d.variant.shiny && (
+                            <span className="shrink-0 text-[11px] text-fuchsia-400" title="Shiny">
+                              ✦
                             </span>
                           )}
                           {d.reserved && (

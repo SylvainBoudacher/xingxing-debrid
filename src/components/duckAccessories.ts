@@ -356,7 +356,68 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
       fillEll(c, tx, ty, 3.2, 4.8, colors[i]);
       fillEll(c, tx - 1, ty - 1.5, 1.2, 1.2, "rgba(255,255,255,0.5)");
     }
+  } else if (v.acc === "laurel") {
+    drawLaurelAndBeard(c);
   }
+}
+
+// Zeus regalia: a golden laurel wreath circling the head and a flowing white
+// beard under the beak. Worn by the god duck (dex shiny-completion reward).
+function drawLaurelAndBeard(c: CanvasRenderingContext2D) {
+  // wreath band following the forehead arc
+  c.strokeStyle = "#C9A227";
+  c.lineWidth = 3;
+  c.beginPath();
+  c.moveTo(54, 24);
+  c.quadraticCurveTo(80, 4, 106, 24);
+  c.stroke();
+  // gold leaves in mirrored pairs along the band, tilted outward
+  for (let i = 0; i < 5; i++) {
+    const p = i / 4;
+    const x = 58 + p * 44;
+    const y = 21 - Math.sin(p * Math.PI) * 10;
+    const tilt = (p - 0.5) * 1.4;
+    for (const side of [-1, 1]) {
+      c.save();
+      c.translate(x, y + side * 2);
+      c.rotate(tilt + side * 0.5);
+      fillEll(c, 0, 0, 4.6, 2.1, "#E8C547");
+      fillEll(c, 1, -0.5, 2.2, 0.9, "#FFF0B0");
+      c.restore();
+    }
+  }
+  // white beard flowing down from under the beak
+  c.fillStyle = "#F7F7F2";
+  c.beginPath();
+  c.moveTo(96, 58);
+  c.quadraticCurveTo(92, 76, 100, 92);
+  c.quadraticCurveTo(108, 100, 114, 88);
+  c.quadraticCurveTo(122, 72, 116, 58);
+  c.quadraticCurveTo(106, 64, 96, 58);
+  c.closePath();
+  c.fill();
+  // wavy strands
+  c.strokeStyle = "rgba(180,180,190,0.55)";
+  c.lineWidth = 1.4;
+  for (const [bx, amp] of [
+    [102, 3],
+    [108, 4],
+    [113, 3],
+  ]) {
+    c.beginPath();
+    c.moveTo(bx, 62);
+    c.quadraticCurveTo(bx - amp, 74, bx + 1, 86);
+    c.stroke();
+  }
+  // moustache tufts over the beard's top edge
+  fillEll(c, 100, 59, 5, 2.6, "#FFFFFF");
+  fillEll(c, 113, 59, 5, 2.6, "#FFFFFF");
+  // bushy white eyebrow above the eye
+  c.save();
+  c.translate(96, 29);
+  c.rotate(-0.15);
+  fillEll(c, 0, 0, 7, 2.8, "#FFFFFF");
+  c.restore();
 }
 
 // The king's grand crown: a red-velvet cap ringed by a gem-studded gold band

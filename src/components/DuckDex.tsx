@@ -5,10 +5,19 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   debugCompleteDex,
+  debugCompleteShinyDex,
   debugResetDex,
   getDex,
+  getShinyDex,
+  GOD_DUCK_ID,
+  GOD_DUCK_NAME,
+  GOD_DUCK_SCALE,
+  godVariant,
   isDexComplete,
+  isGodRewardClaimed,
   isRewardClaimed,
+  isShinyDexComplete,
+  markGodRewardClaimed,
   markRewardClaimed,
   REWARD_DUCK_ID,
   REWARD_DUCK_NAME,
@@ -16,6 +25,7 @@ import {
   rewardVariant,
   syncDexWithCollection,
   type DexEntries,
+  type ShinyEntries,
 } from "@/lib/duckDex";
 import { upsertSavedDuck } from "@/lib/savedDucks";
 import type { Rarity } from "./duckRandom";
@@ -45,7 +55,9 @@ const RARITY_RING: Record<Rarity, string> = {
 export function DuckDex() {
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<DexEntries>({});
+  const [shiny, setShiny] = useState<ShinyEntries>([]);
   const [claimed, setClaimed] = useState(false);
+  const [godClaimed, setGodClaimed] = useState(false);
 
   const openRef = useRef(false);
   useEffect(() => {
@@ -53,9 +65,15 @@ export function DuckDex() {
   }, [open]);
 
   async function openDex() {
-    const [synced, rewardClaimed] = await Promise.all([syncDexWithCollection(), isRewardClaimed()]);
+    const [synced, rewardClaimed, god] = await Promise.all([
+      syncDexWithCollection(),
+      isRewardClaimed(),
+      isGodRewardClaimed(),
+    ]);
     setEntries(synced);
+    setShiny(await getShinyDex());
     setClaimed(rewardClaimed);
+    setGodClaimed(god);
     setOpen(true);
   }
 
@@ -92,18 +110,40 @@ export function DuckDex() {
     toast.success(`${REWARD_DUCK_NAME} a rejoint ta collection !`);
   }
 
+  async function claimGod() {
+    const duck = {
+      id: GOD_DUCK_ID,
+      name: GOD_DUCK_NAME,
+      variant: godVariant(),
+      scale: GOD_DUCK_SCALE,
+      savedAt: Date.now(),
+    };
+    await upsertSavedDuck(duck);
+    injectDuck({ id: duck.id, name: duck.name, variant: duck.variant, scale: duck.scale });
+    await markGodRewardClaimed();
+    setGodClaimed(true);
+    toast.success(`${GOD_DUCK_NAME} descend de l'Olympe !`);
+  }
+
   async function devComplete() {
     setEntries(await debugCompleteDex());
+  }
+
+  async function devCompleteShiny() {
+    setShiny(await debugCompleteShinyDex());
   }
 
   async function devReset() {
     await debugResetDex();
     setEntries({});
+    setShiny([]);
     setClaimed(false);
+    setGodClaimed(false);
   }
 
   const discovered = SPECIES.filter((s) => (entries[s.id]?.length ?? 0) > 0).length;
   const complete = isDexComplete(entries);
+  const shinyComplete = isShinyDexComplete(shiny);
 
   return (
     <AnimatePresence>
@@ -131,6 +171,12 @@ export function DuckDex() {
                   </h2>
                   <p className="text-xs text-zinc-500">
                     {discovered}/{SPECIES.length} espèces découvertes
+                    {complete && (
+                      <span className="text-fuchsia-500 dark:text-fuchsia-400">
+                        {" "}
+                        · ✦ {shiny.length}/{SPECIES.length} shiny
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -141,6 +187,12 @@ export function DuckDex() {
                         className="rounded-md bg-amber-500/15 px-2 py-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 transition-colors"
                       >
                         DEV: compléter
+                      </button>
+                      <button
+                        onClick={devCompleteShiny}
+                        className="rounded-md bg-fuchsia-500/15 px-2 py-1 text-[10px] font-semibold text-fuchsia-600 dark:text-fuchsia-400 hover:bg-fuchsia-500/25 transition-colors"
+                      >
+                        DEV: shiny
                       </button>
                       <button
                         onClick={devReset}
@@ -164,6 +216,15 @@ export function DuckDex() {
                   style={{ width: `${(discovered / SPECIES.length) * 100}%` }}
                 />
               </div>
+              {/* extra achievement: the shiny counter only wakes up once the dex is complete */}
+              {complete && (
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 via-pink-400 to-amber-400 transition-[width] duration-500"
+                    style={{ width: `${(shiny.length / SPECIES.length) * 100}%` }}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-4">
@@ -176,13 +237,25 @@ export function DuckDex() {
                     {SPECIES.filter((s) => s.rarity === rarity).map((s) => {
                       const colors = entries[s.id] ?? [];
                       const found = colors.length > 0;
+                      const hasShiny = shiny.includes(s.id);
                       return (
                         <div
                           key={s.id}
-                          className={`flex flex-col items-center gap-1 rounded-xl bg-white/70 dark:bg-zinc-800/60 px-2 py-3 ring-1 ${found ? RARITY_RING[s.rarity] : "ring-black/5 dark:ring-white/5"}`}
+                          className={`relative flex flex-col items-center gap-1 rounded-xl bg-white/70 dark:bg-zinc-800/60 px-2 py-3 ring-1 ${found ? RARITY_RING[s.rarity] : "ring-black/5 dark:ring-white/5"}`}
                         >
+                          {hasShiny && (
+                            <span
+                              className="absolute right-1.5 top-1 text-[11px] text-fuchsia-500 dark:text-fuchsia-400"
+                              title="Version shiny collectionnée"
+                            >
+                              ✦
+                            </span>
+                          )}
                           <span className={found ? "" : "brightness-0 opacity-25 dark:invert"}>
-                            <DuckPreview variant={s.preview} size={52} />
+                            <DuckPreview
+                              variant={hasShiny ? { ...s.preview, shiny: true } : s.preview}
+                              size={52}
+                            />
                           </span>
                           <p className="w-full truncate text-center text-[11px] font-medium text-zinc-800 dark:text-zinc-200">
                             {found ? s.name : "???"}
@@ -200,7 +273,7 @@ export function DuckDex() {
               ))}
             </div>
 
-            <div className="border-t border-black/10 dark:border-white/10 px-5 py-4">
+            <div className="space-y-3 border-t border-black/10 dark:border-white/10 px-5 py-4">
               {claimed ? (
                 <div className="flex items-center gap-3">
                   <DuckPreview variant={rewardVariant()} size={48} />
@@ -231,6 +304,42 @@ export function DuckDex() {
                   </p>
                 </div>
               )}
+
+              {/* ultimate tier: only surfaces once the base dex is complete */}
+              {complete &&
+                (godClaimed ? (
+                  <div className="flex items-center gap-3">
+                    <DuckPreview variant={godVariant()} size={48} />
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                        {GOD_DUCK_NAME}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        Récompense ultime obtenue. Rien ne t'échappe.
+                      </p>
+                    </div>
+                  </div>
+                ) : shinyComplete ? (
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-gradient-to-r from-fuchsia-500/10 to-amber-400/10 px-3 py-2 ring-1 ring-fuchsia-400/30">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-fuchsia-500 dark:text-fuchsia-400" />
+                      <p className="text-sm text-zinc-700 dark:text-zinc-200">
+                        Collection shiny complète ! Le Dieu Canard t'attend.
+                      </p>
+                    </div>
+                    <Button size="sm" onClick={claimGod}>
+                      Réclamer
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-zinc-500">
+                    <Lock className="h-3.5 w-3.5" />
+                    <p className="text-xs">
+                      Collectionne la version ✦ shiny des {SPECIES.length} espèces pour éveiller le
+                      Dieu Canard.
+                    </p>
+                  </div>
+                ))}
             </div>
           </motion.div>
         </motion.div>

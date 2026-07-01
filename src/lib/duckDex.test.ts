@@ -43,8 +43,13 @@ import { upsertSavedDuck } from "./savedDucks";
 import {
   dexStatusOf,
   getDex,
+  getShinyDex,
+  godVariant,
   isDexComplete,
+  isGodRewardClaimed,
   isRewardClaimed,
+  isShinyDexComplete,
+  markGodRewardClaimed,
   markRewardClaimed,
   recordDiscovery,
   rewardVariant,
@@ -64,7 +69,8 @@ const VAMPIRE: Variant = {
 
 beforeEach(async () => {
   (LazyStore as unknown as { clearAll: () => void }).clearAll();
-  await getDex(); // refresh the module-level cache after the store reset
+  await getDex(); // refresh the module-level caches after the store reset
+  await getShinyDex();
 });
 
 describe("getDex", () => {
@@ -183,6 +189,44 @@ describe("dexStatusOf", () => {
   });
 });
 
+describe("shiny", () => {
+  const SHINY_SHADES: Variant = { ...SHADES, shiny: true };
+
+  it("records the shiny version of a species once", async () => {
+    const disc = await recordDiscovery(SHINY_SHADES);
+    expect(disc.newShiny).toBe(true);
+    expect(disc.shinyCount).toBe(1);
+    const dup = await recordDiscovery(SHINY_SHADES);
+    expect(dup.newShiny).toBe(false);
+    expect(await getShinyDex()).toEqual(["shades"]);
+  });
+
+  it("does not record shiny for a normal duck", async () => {
+    const disc = await recordDiscovery(SHADES);
+    expect(disc.newShiny).toBe(false);
+    expect(await getShinyDex()).toEqual([]);
+  });
+
+  it("dexStatusOf flags an uncollected shiny", async () => {
+    await recordDiscovery(SHADES);
+    expect(dexStatusOf(SHINY_SHADES)).toBe("shiny");
+    await recordDiscovery(SHINY_SHADES);
+    expect(dexStatusOf(SHINY_SHADES)).toBe(null);
+  });
+
+  it("syncs shiny ducks from the collection", async () => {
+    await upsertSavedDuck({ id: "a", name: "A", variant: SHINY_SHADES, scale: 0.6, savedAt: 1 });
+    await syncDexWithCollection();
+    expect(await getShinyDex()).toEqual(["shades"]);
+  });
+
+  it("is complete once every species was seen shiny", async () => {
+    expect(isShinyDexComplete([])).toBe(false);
+    for (const s of SPECIES) await recordDiscovery({ ...s.preview, shiny: true });
+    expect(isShinyDexComplete(await getShinyDex())).toBe(true);
+  });
+});
+
 describe("reward", () => {
   it("reward variant is mythic and maps to a cataloged species", () => {
     const v = rewardVariant();
@@ -190,9 +234,21 @@ describe("reward", () => {
     expect(SPECIES.some((s) => s.id === speciesOf(v))).toBe(true);
   });
 
-  it("claim flag persists", async () => {
+  it("god variant is mythic and unlocks nothing in the dex", async () => {
+    const v = godVariant();
+    expect(getRarity(v)).toBe("mythic");
+    const disc = await recordDiscovery(v);
+    expect(disc.newSpecies).toBe(false);
+    expect(disc.newColor).toBe(false);
+    expect(dexStatusOf(v)).toBe(null);
+  });
+
+  it("claim flags persist independently", async () => {
     expect(await isRewardClaimed()).toBe(false);
     await markRewardClaimed();
     expect(await isRewardClaimed()).toBe(true);
+    expect(await isGodRewardClaimed()).toBe(false);
+    await markGodRewardClaimed();
+    expect(await isGodRewardClaimed()).toBe(true);
   });
 });

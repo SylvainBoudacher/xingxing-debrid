@@ -210,7 +210,7 @@ const UNCOMMON_ACC_SET = new Set<Accessory>([
 ]);
 
 export function getRarity(v: Variant): Rarity {
-  if (v.effect === "royal" || v.effect === "nova") return "mythic";
+  if (v.effect === "royal" || v.effect === "nova" || v.effect === "godly") return "mythic";
   if (
     (v.pattern && LEGENDARY_PATTERNS.has(v.pattern)) ||
     (v.effect && LEGENDARY_EFFECTS.has(v.effect))
@@ -227,16 +227,25 @@ export function randomLegendaryVariant(): Variant {
   return randOf(LEGENDARY)();
 }
 
+// chance for any spawn to roll shiny, independent of its rarity tier
+const SHINY_RATE = 0.07;
+
 export function randomVariant(): Variant {
   const roll = Math.random();
-  if (roll < 0.01) return kingVariant(); // 1% ultra-legendary king
-  if (roll < 0.04) return randOf(LEGENDARY)(); // ~3% legendary
-  if (roll < 0.13) return randOf(RARE)(); // ~9% rare
-  if (roll < 0.41) {
+  let v: Variant;
+  if (roll < 0.01)
+    v = kingVariant(); // 1% ultra-legendary king
+  else if (roll < 0.04)
+    v = randOf(LEGENDARY)(); // ~3% legendary
+  else if (roll < 0.13)
+    v = randOf(RARE)(); // ~9% rare
+  else if (roll < 0.41) {
     // ~28% uncommon: simple pattern or a fancier accessory
-    return Math.random() < 0.4
-      ? { body: bodyColor(), beak: ORANGE_BEAK, acc: "none", pattern: randOf(SIMPLE_PATTERNS) }
-      : withAcc(randOf(UNCOMMON_ACC));
-  }
-  return withAcc(randOf(COMMON_ACC)); // ~60% common
+    v =
+      Math.random() < 0.4
+        ? { body: bodyColor(), beak: ORANGE_BEAK, acc: "none", pattern: randOf(SIMPLE_PATTERNS) }
+        : withAcc(randOf(UNCOMMON_ACC));
+  } else v = withAcc(randOf(COMMON_ACC)); // ~60% common
+  if (Math.random() < SHINY_RATE) v.shiny = true;
+  return v;
 }

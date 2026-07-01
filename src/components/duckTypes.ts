@@ -28,7 +28,8 @@ export type Accessory =
   | "scarf"
   | "antenna"
   | "cape"
-  | "feather";
+  | "feather"
+  | "laurel";
 
 export type Pattern =
   | "spots"
@@ -53,7 +54,8 @@ export type Effect =
   | "royal"
   | "fire"
   | "frost"
-  | "nova";
+  | "nova"
+  | "godly";
 
 export interface Variant {
   body: string;
@@ -62,4 +64,5 @@ export interface Variant {
   accColor?: string;
   pattern?: Pattern;
   effect?: Effect;
+  shiny?: boolean; // rare alternate look: iridescent recolor + twinkles, any species can roll it
 }
