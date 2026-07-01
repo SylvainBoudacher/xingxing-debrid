@@ -1,7 +1,9 @@
-import vlcLogo from "@/assets/vlc.png";
 import c411Logo from "@/assets/sources/C411.webp";
 import nyaaLogo from "@/assets/sources/nyaa.webp";
+import vlcLogo from "@/assets/vlc.png";
 import { AppMenu, type Page } from "@/components/AppMenu";
+import { NetworkErrorState } from "@/components/NetworkErrorState";
+import { NyaaSearchFilters } from "@/components/NyaaSearchFilters";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -11,21 +13,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { getApiKey } from "@/lib/apiKeys";
-import { parseRelease } from "@/lib/parseRelease";
-import { LATEST_VERSION } from "@/lib/patchnotes";
+import type { C411Torrent } from "@/lib/c411";
 import { flattenFiles, formatSize, isVideoFile, type DebridModal } from "@/lib/debrid";
 import { recordDownload } from "@/lib/library";
-import type { C411Torrent } from "@/lib/c411";
-import { mapNyaaResults, mapTorrents, pageNumbers, type SearchResult } from "@/lib/search";
+import { networkErrorMessage, toastNetworkError } from "@/lib/networkError";
+import { loadNyaaDefaults } from "@/lib/nyaaDefaults";
+import { buildNyaaQuery } from "@/lib/nyaaFilters";
+import { parseRelease } from "@/lib/parseRelease";
+import { LATEST_VERSION } from "@/lib/patchnotes";
 import { queryClient } from "@/lib/queryClient";
+import { mapNyaaResults, mapTorrents, pageNumbers, type SearchResult } from "@/lib/search";
 import { c411Keys, searchTorrents } from "@/lib/services/c411";
 import { nyaaKeys, searchNyaa } from "@/lib/services/nyaa";
-import { buildNyaaQuery } from "@/lib/nyaaFilters";
-import { loadNyaaDefaults } from "@/lib/nyaaDefaults";
-import { NyaaSearchFilters } from "@/components/NyaaSearchFilters";
-import { NetworkErrorState } from "@/components/NetworkErrorState";
-import { networkErrorMessage, toastNetworkError } from "@/lib/networkError";
 import { useDebridActions } from "@/lib/useDebridActions";
+import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import {
@@ -33,6 +34,7 @@ import {
   ArrowUp,
   Book,
   BookMarked,
+  BookmarkPlus,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -40,7 +42,6 @@ import {
   Compass,
   Copy,
   Download,
-  BookmarkPlus,
   FileText,
   Gamepad2,
   Headphones,
@@ -59,7 +60,6 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { type ViewMode, resolvePageViewMode } from "@/lib/viewMode";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
@@ -195,6 +195,7 @@ interface MainPageProps {
   /** Préférences UI pré-lues par useAppInit */
   initialPatchnotesSeen?: string | null;
   initialSearchViewMode?: ViewMode;
+  initialIdleAutoHide?: boolean;
 }
 
 export function MainPage({
@@ -209,6 +210,7 @@ export function MainPage({
   initialAllDebridKey,
   initialPatchnotesSeen,
   initialSearchViewMode,
+  initialIdleAutoHide = true,
 }: MainPageProps) {
   const [query, setQuery] = useState("");
   const [source, setSource] = useState<"c411" | "nyaa">("c411");
@@ -260,9 +262,26 @@ export function MainPage({
     openVlc: handleOpenVlc,
     downloadFile: handleDownloadFile,
   } = useDebridActions(() => allDebridKeyRef.current);
+  const [uiVisible, setUiVisible] = useState(true);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchedQueryRef = useRef<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  function resetIdleTimer() {
+    if (!initialIdleAutoHide) return;
+    setUiVisible(true);
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => setUiVisible(false), 30_000);
+  }
+
+  useEffect(() => {
+    if (!initialIdleAutoHide) return;
+    idleTimerRef.current = setTimeout(() => setUiVisible(false), 30_000);
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [initialIdleAutoHide]);
 
   useEffect(() => {
     const { c411Key, allDebridKey, patchnotesSeen, searchViewMode } = initialPropsRef.current;
@@ -598,7 +617,8 @@ export function MainPage({
   }, [parsedResults, activeCats, activeQualities, activeCodecs]);
   return (
     <main
-      className={`relative flex min-h-screen flex-col ${
+      onMouseMove={resetIdleTimer}
+      className={`relative flex min-h-screen flex-col transition-opacity duration-1000 ${uiVisible ? "opacity-100" : "opacity-0"} ${
         summerEnabled
           ? ""
           : "bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]"

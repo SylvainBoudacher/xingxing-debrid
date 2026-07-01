@@ -26,6 +26,8 @@ interface PreferencesPageProps {
   onSetSummerFps: (v: 30 | 60) => void;
   summerMaxDucks: number;
   onSetSummerMaxDucks: (v: number) => void;
+  idleAutoHide: boolean;
+  onSetIdleAutoHide: (v: boolean) => void;
   onKeysSaved: (keys: ApiKeys) => void;
 }
 
@@ -40,6 +42,8 @@ export function PreferencesPage({
   onSetSummerFps,
   summerMaxDucks,
   onSetSummerMaxDucks,
+  idleAutoHide,
+  onSetIdleAutoHide,
   onKeysSaved,
 }: PreferencesPageProps) {
   const [activePanel, setActivePanel] = useState<PanelId>(ALL_NAV_ITEMS[0].id);
@@ -71,6 +75,8 @@ export function PreferencesPage({
             onSetSummerFps={onSetSummerFps}
             summerMaxDucks={summerMaxDucks}
             onSetSummerMaxDucks={onSetSummerMaxDucks}
+            idleAutoHide={idleAutoHide}
+            onSetIdleAutoHide={onSetIdleAutoHide}
           />
         );
     }

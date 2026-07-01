@@ -13,6 +13,8 @@ export interface SummerPanelProps {
   onSetSummerFps: (v: 30 | 60) => void;
   summerMaxDucks: number;
   onSetSummerMaxDucks: (v: number) => void;
+  idleAutoHide: boolean;
+  onSetIdleAutoHide: (v: boolean) => void;
 }
 
 export function SummerPanel({
@@ -22,6 +24,8 @@ export function SummerPanel({
   onSetSummerFps,
   summerMaxDucks,
   onSetSummerMaxDucks,
+  idleAutoHide,
+  onSetIdleAutoHide,
 }: SummerPanelProps) {
   const importDucksInputRef = useRef<HTMLInputElement>(null);
   const [draftMaxDucks, setDraftMaxDucks] = useState(String(summerMaxDucks));
@@ -79,6 +83,17 @@ export function SummerPanel({
       >
         <Toggle checked={summerEnabled} onChange={onToggleSummer} />
       </SettingRow>
+
+      {summerEnabled && (
+        <div className="mt-3">
+          <SettingRow
+            title="Masquage automatique"
+            description="Cache l'interface apres 30 s d'inactivite. Un mouvement de souris la restaure."
+          >
+            <Toggle checked={idleAutoHide} onChange={onSetIdleAutoHide} />
+          </SettingRow>
+        </div>
+      )}
 
       {summerEnabled && (
         <div className="mt-3">

@@ -33,7 +33,6 @@ export function DisplayPanel() {
     magnets: "default",
     library: "default",
   });
-
   useEffect(() => {
     store.get<ViewMode>(DEFAULT_VIEW_MODE_KEY).then((v) => {
       if (v) setDefaultMode(v);

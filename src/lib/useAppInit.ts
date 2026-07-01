@@ -54,6 +54,8 @@ export interface AppPrefs {
   hideNfoFiles: boolean;
   /** Ne pas inclure les .nfo dans le téléchargement global */
   skipNfoDownload: boolean;
+  /** Masquer l'interface apres inactivite sur la page principale */
+  idleAutoHide: boolean;
 }
 
 export interface AppInitResult {
@@ -76,6 +78,7 @@ const DEFAULT_PREFS: AppPrefs = {
   patchnotesSeen: null,
   hideNfoFiles: true,
   skipNfoDownload: true,
+  idleAutoHide: true,
 };
 
 /**
@@ -159,6 +162,7 @@ export function useAppInit(): AppInitResult {
         patchnotesSeen,
         hideNfoFiles,
         skipNfoDownload,
+        idleAutoHide,
       ] = await Promise.all([
         getApiKey("tmdb_api_key"),
         getApiKey("alldebrid_api_key"),
@@ -168,6 +172,7 @@ export function useAppInit(): AppInitResult {
         store.get<string>("patchnotes_seen"),
         store.get<boolean>("hide_nfo_files"),
         store.get<boolean>("skip_nfo_download"),
+        store.get<boolean>("idle_auto_hide"),
       ]);
 
       if (cancelled) return;
@@ -185,6 +190,7 @@ export function useAppInit(): AppInitResult {
         patchnotesSeen: patchnotesSeen ?? null,
         hideNfoFiles: hideNfoFiles ?? true,
         skipNfoDownload: skipNfoDownload ?? true,
+        idleAutoHide: idleAutoHide ?? true,
       });
 
       // Prefetch d'une page complète de la Découverte : les 4 sources × films/séries
