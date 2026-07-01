@@ -110,12 +110,15 @@ function startParade() {
   if (marchers.length === 0) return;
   parade.active = true;
   parade.start = performance.now();
-  parade.count = marchers.length;
-  marchers.forEach((d, i) => {
+  // the king (if present) holds the centre; the rest form the ring around it
+  const ring = marchers.filter((d) => d.effect !== "royal");
+  parade.count = ring.length;
+  let slot = 0;
+  for (const d of marchers) {
     d.parade = true;
-    d.paradeSlot = i;
+    d.paradeSlot = d.effect === "royal" ? -1 : slot++;
     d.boostTimer = 0;
-  });
+  }
 }
 
 // Release the marchers and scatter them gently back into free swimming.
@@ -382,7 +385,8 @@ export function PixelPool({
 
     function updateHoverCursor(e: PointerEvent) {
       if (!activeRef.current || overUI(e)) return setCursor("");
-      if (cannon.loaded) return setCursor("crosshair");
+      if (cannon.loaded)
+        return setCursor(overCannon(e.clientX, e.clientY) ? "pointer" : "crosshair");
       if (overCannon(e.clientX, e.clientY)) return setCursor("pointer");
       if (overParade(e.clientX, e.clientY, h)) return setCursor("pointer");
       if (duckAt(e.clientX, e.clientY)) return setCursor("grab");
@@ -1241,13 +1245,23 @@ export function PixelPool({
         // parade marchers steer toward their formation slot and skip the normal
         // wander / boost / wall logic below
         if (d.parade && parade.active) {
-          const slot = paradeSlot(parade, now, d.paradeSlot ?? 0, w, h);
+          const slot =
+            d.paradeSlot === -1
+              ? { x: w / 2, y: h / 2 }
+              : paradeSlot(parade, now, d.paradeSlot ?? 0, w, h);
           const sx = slot.x - d.x;
           const sy = slot.y - d.y;
           const sd = Math.hypot(sx, sy) || 0.001;
-          const sp = Math.min(150, sd * 4 + 30);
-          d.vx = (sx / sd) * sp;
-          d.vy = (sy / sd) * sp;
+          if (d.paradeSlot === -1) {
+            // king holds the centre: ease in without a speed floor so it settles
+            // instead of overshooting and jittering left-right
+            d.vx = sx * 6;
+            d.vy = sy * 6;
+          } else {
+            const sp = Math.min(150, sd * 4 + 30);
+            d.vx = (sx / sd) * sp;
+            d.vy = (sy / sd) * sp;
+          }
           d.x += d.vx * dt;
           d.y += d.vy * dt;
           const targetLean = Math.max(-0.4, Math.min(0.4, d.vy / 140));
