@@ -22,6 +22,7 @@ import {
   upsertSavedDuck,
   type SavedDuck,
 } from "@/lib/savedDucks";
+import { recordDiscovery } from "@/lib/duckDex";
 import { getRarity, type Rarity } from "./duckRandom";
 import { DuckPreview } from "./DuckPreview";
 import {
@@ -186,9 +187,23 @@ export function DuckShop() {
       savedAt: Date.now(),
     };
     setSaved(await upsertSavedDuck(entry));
+    const disc = await recordDiscovery(entry.variant);
     dropped.markSaved(finalName);
     setDropped({ ...dropped, saved: true, name: finalName });
     toast.success(`${finalName} a rejoint ta collection`);
+    if (disc.newSpecies) {
+      const complete = disc.discoveredSpecies === disc.totalSpecies;
+      toast.success(`Nouvelle espèce découverte : ${disc.species.name} !`, {
+        description: complete
+          ? "Canardex complet ! Ouvre le pokédex pour réclamer ta récompense."
+          : `Canardex : ${disc.discoveredSpecies}/${disc.totalSpecies} espèces`,
+        duration: 6000,
+      });
+    } else if (disc.newColor) {
+      toast.info(`Nouvelle couleur pour ${disc.species.name}`, {
+        description: `${disc.colorCount}/${disc.species.maxColors} couleurs collectionnées`,
+      });
+    }
   }
 
   async function putInWater(d: SavedDuck) {

@@ -31,6 +31,8 @@ import {
   type ParadeState,
   paradeSlot,
 } from "./parade";
+import { drawDex, overDex } from "./dexIcon";
+import { dexStatusOf, syncDexWithCollection } from "@/lib/duckDex";
 import {
   drawSuckGuide,
   drawSuckPulses,
@@ -46,6 +48,7 @@ import {
 } from "./vacuum";
 import {
   type DuckSpec,
+  emitDexOpen,
   emitDuckDrop,
   emitDucksReserved,
   emitShopOpen,
@@ -412,6 +415,7 @@ export function PixelPool({
       if (overCannon(e.clientX, e.clientY)) return setCursor("pointer");
       if (overVacuum(e.clientX, e.clientY, w)) return setCursor("pointer");
       if (overParade(e.clientX, e.clientY, h)) return setCursor("pointer");
+      if (overDex(e.clientX, e.clientY, h)) return setCursor("pointer");
       if (duckAt(e.clientX, e.clientY)) return setCursor("grab");
       if (overShop(e.clientX, e.clientY)) return setCursor("pointer");
       setCursor("");
@@ -507,6 +511,12 @@ export function PixelPool({
       // clicking the pennant kicks off parade mode
       if (e.button === 0 && overParade(e.clientX, e.clientY, h)) {
         startParade();
+        e.preventDefault();
+        return;
+      }
+      // clicking the pokedex toggles the Canardex overlay
+      if (e.button === 0 && overDex(e.clientX, e.clientY, h)) {
+        emitDexOpen();
         e.preventDefault();
         return;
       }
@@ -1123,6 +1133,37 @@ export function PixelPool({
       common: "rgba(140,140,160,0.85)",
     };
 
+    // "worth saving" tag stacked above the hover pill when the hovered duck
+    // would unlock a new dex species or body color
+    function drawDexBadge(d: Duck, t: number, unlock: "species" | "color", below: number) {
+      const bob = Math.sin(t * 0.003 + d.phase) * 3;
+      const dh = DUCK_BASE * d.scale;
+      const text = unlock === "species" ? "Nouvelle espèce !" : "Nouvelle couleur";
+      const color = unlock === "species" ? "#fbbf24" : "#60a5fa";
+
+      ctx.font = "700 11px ui-sans-serif, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const tw = ctx.measureText(text).width;
+      const bw = tw + 14;
+      const bh = 18;
+      const cx = d.x;
+      const by = d.y + bob - dh * 0.5 - 4 - below - 3 - bh;
+
+      ctx.fillStyle = "rgba(15,23,42,0.85)";
+      ctx.strokeStyle = unlock === "species" ? "rgba(251,191,36,0.45)" : "rgba(96,165,250,0.45)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(cx - bw / 2, by, bw, bh, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.fillText(text, cx, by + bh / 2 + 0.5);
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    }
+
     // floating star pill above a hovered unnamed duck
     function drawRarityPill(d: Duck, t: number) {
       const bob = Math.sin(t * 0.003 + d.phase) * 3;
@@ -1294,6 +1335,7 @@ export function PixelPool({
       }
       drawVacuum(ctx, vacuum, now, w, dark, !dragging && overVacuum(pointerX, pointerY, w));
       drawParade(ctx, parade, now, !dragging && overParade(pointerX, pointerY, h), h, dark);
+      drawDex(ctx, now, !dragging && overDex(pointerX, pointerY, h), h, dark);
 
       // remove ducks whose exit animation (drain / reserve / cull) has finished
       for (let i = pool.length - 1; i >= 0; i--) {
@@ -1600,12 +1642,15 @@ export function PixelPool({
         if (hovered) {
           if (hovered.name) drawNameLabel(hovered, now);
           else drawRarityPill(hovered, now);
+          const unlock = dexStatusOf(hovered.variant);
+          if (unlock) drawDexBadge(hovered, now, unlock, hovered.name ? 22 : 20);
         }
       }
     }
 
     resize();
     ensureSpawning();
+    syncDexWithCollection().catch(() => {}); // warm the dex cache for hover badges
     registerInjector(spawnSavedDuck); // flush any saved ducks queued before mount
     registerRemover(removePoolDuck);
     registerReleaser(unmarkSavedDuck);

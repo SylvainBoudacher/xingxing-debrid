@@ -18,6 +18,7 @@ const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
 );
 const DuckShop = lazy(() => import("@/components/DuckShop").then((m) => ({ default: m.DuckShop })));
+const DuckDex = lazy(() => import("@/components/DuckDex").then((m) => ({ default: m.DuckDex })));
 const SetupPage = lazy(() => import("@/pages/SetupPage").then((m) => ({ default: m.SetupPage })));
 const MainPage = lazy(() => import("@/pages/MainPage").then((m) => ({ default: m.MainPage })));
 import { MagnetsPage } from "@/pages/MagnetsPage";
@@ -198,6 +199,7 @@ function App() {
       {summerEnabled && (
         <Suspense fallback={null}>
           <DuckShop />
+          <DuckDex />
         </Suspense>
       )}
 

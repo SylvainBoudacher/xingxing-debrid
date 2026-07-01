@@ -28,6 +28,9 @@ const BODY_COLORS: [string, number][] = [
   ["#4A5568", 1], // charcoal
 ];
 
+// number of distinct body colors a colorable species can roll (used by the dex)
+export const BODY_COLOR_COUNT = BODY_COLORS.length;
+
 // vivid colors handed to accessories that render with v.accColor
 const ACC_COLORS = [
   "#E0457B",
