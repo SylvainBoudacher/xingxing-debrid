@@ -32,6 +32,19 @@ import {
   paradeSlot,
 } from "./parade";
 import {
+  drawSuckGuide,
+  drawSuckPulses,
+  drawVacuum,
+  hosePort,
+  makeVacuum,
+  overVacuum,
+  SUCK_COOLDOWN,
+  SUCK_RADIUS,
+  type SuckPulse,
+  updateVacuum,
+  type VacuumState,
+} from "./vacuum";
+import {
   type DuckSpec,
   emitDuckDrop,
   emitDucksReserved,
@@ -77,16 +90,18 @@ interface Duck {
   paradeSlot?: number; // index of this duck's slot in the formation
   draining?: boolean; // being sucked into the drain
   drainT?: number; // timestamp when drain animation started
+  sucked?: boolean; // caught by the vacuum, chasing the suction head
   storing?: boolean; // being filed away into the shop crate (moved to reserve)
   storeT?: number; // timestamp when the storing animation started
   exiting?: boolean; // random duck fading out (culled when the limit drops)
   exitT?: number; // timestamp when the fade-out started
 }
 
-// A duck mid-exit (drain / reserve / cull) is animating out: excluded from
-// physics, hit-testing and the capacity count until the frame loop removes it.
+// A duck mid-exit (drain / vacuum / reserve / cull) is animating out: excluded
+// from physics, hit-testing and the capacity count until the frame loop
+// removes it.
 function leaving(d: Duck) {
-  return !!(d.draining || d.storing || d.exiting);
+  return !!(d.draining || d.storing || d.exiting || d.sucked);
 }
 
 // Pool state lives at module scope so the ducks persist across page changes
@@ -101,6 +116,8 @@ const pads: LilyPad[] = makeLilyPads();
 const cannon: CannonState = makeCannon();
 const balls: TennisBall[] = [];
 const parade: ParadeState = makeParade();
+const vacuum: VacuumState = makeVacuum();
+const suckPulses: SuckPulse[] = [];
 
 // Arrange every present duck in a ring that rotates around the pool centre for
 // PARADE_MS.
@@ -387,7 +404,10 @@ export function PixelPool({
       if (!activeRef.current || overUI(e)) return setCursor("");
       if (cannon.loaded)
         return setCursor(overCannon(e.clientX, e.clientY) ? "pointer" : "crosshair");
+      if (vacuum.loaded)
+        return setCursor(overVacuum(e.clientX, e.clientY, w) ? "pointer" : "crosshair");
       if (overCannon(e.clientX, e.clientY)) return setCursor("pointer");
+      if (overVacuum(e.clientX, e.clientY, w)) return setCursor("pointer");
       if (overParade(e.clientX, e.clientY, h)) return setCursor("pointer");
       if (duckAt(e.clientX, e.clientY)) return setCursor("grab");
       if (overShop(e.clientX, e.clientY)) return setCursor("pointer");
@@ -425,12 +445,40 @@ export function PixelPool({
       }
     }
 
+    // vacuum shot: every unsaved duck around the head is caught and dragged
+    // into the nozzle. Saved ducks are immune and ignore the suction.
+    function suckAt(px: number, py: number) {
+      if (vacuum.cooldown > 0) return;
+      vacuum.cooldown = SUCK_COOLDOWN;
+      suckPulses.push({ x: px, y: py, start: performance.now() });
+      spawnSplash(px, py, 120);
+      for (const d of pool) {
+        if (d === dragging || d.saved || d.inShop || leaving(d)) continue;
+        if (Math.hypot(d.x - px, d.y - py) > SUCK_RADIUS) continue;
+        d.sucked = true;
+        d.entering = false;
+        d.parade = false;
+        d.paradeSlot = undefined;
+      }
+    }
+
     function onPointerDown(e: PointerEvent) {
       if (!activeRef.current || overUI(e)) return;
       // clicking the cannon hub climbs in/out (loaded toggles the aim mode)
       if (e.button === 0 && overCannon(e.clientX, e.clientY)) {
         cannon.loaded = !cannon.loaded;
-        if (cannon.loaded) aimCannon(cannon, e.clientX, e.clientY);
+        if (cannon.loaded) {
+          vacuum.loaded = false;
+          aimCannon(cannon, e.clientX, e.clientY);
+        }
+        updateHoverCursor(e);
+        e.preventDefault();
+        return;
+      }
+      // clicking the vacuum robot switches it on/off
+      if (e.button === 0 && overVacuum(e.clientX, e.clientY, w)) {
+        vacuum.loaded = !vacuum.loaded;
+        if (vacuum.loaded) cannon.loaded = false;
         updateHoverCursor(e);
         e.preventDefault();
         return;
@@ -443,6 +491,12 @@ export function PixelPool({
           balls.push(ball);
           spawnSplash(ball.x, ball.y, 80);
         }
+        e.preventDefault();
+        return;
+      }
+      // while the vacuum is on, a left-click sucks around the suction head
+      if (e.button === 0 && vacuum.loaded) {
+        suckAt(vacuum.headX, vacuum.headY);
         e.preventDefault();
         return;
       }
@@ -567,10 +621,11 @@ export function PixelPool({
       updateHoverCursor(e);
     }
 
-    // Escape climbs back out of the cannon
+    // Escape climbs out of the cannon / switches the vacuum off
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && cannon.loaded) {
+      if (e.key === "Escape" && (cannon.loaded || vacuum.loaded)) {
         cannon.loaded = false;
+        vacuum.loaded = false;
         setCursor("");
       }
     }
@@ -865,7 +920,11 @@ export function PixelPool({
 
       const bob = Math.sin(t * 0.003 + d.phase) * 3;
       const idle = Math.sin(t * 0.003 + d.phase + 1) * 0.05;
-      const dh = DUCK_BASE * d.scale;
+      // vacuumed ducks shrink as they close in on the suction head
+      const shrink = d.sucked
+        ? Math.max(0.2, Math.min(1, Math.hypot(d.x - vacuum.headX, d.y - vacuum.headY) / 90))
+        : 1;
+      const dh = DUCK_BASE * d.scale * shrink;
       const dw = dh * (d.sprite.width / d.sprite.height);
       const flip = d.vx < 0 ? -1 : 1;
       // lean follows the flip so the leading edge dips either way; spin is added flat
@@ -1222,6 +1281,12 @@ export function PixelPool({
       );
       if (cannon.loaded && pointerX >= 0) aimCannon(cannon, pointerX, pointerY);
       drawCannon(ctx, cannon, now, dark);
+      const swallowed = updateVacuum(vacuum, dt, w, pointerX, pointerY);
+      if (swallowed) {
+        const port = hosePort(w);
+        spawnSplash(port.x, port.y, 60);
+      }
+      drawVacuum(ctx, vacuum, now, w, dark);
       drawParade(ctx, parade, now, !dragging && overParade(pointerX, pointerY, h), h, dark);
 
       // remove ducks whose exit animation (drain / reserve / cull) has finished
@@ -1237,6 +1302,37 @@ export function PixelPool({
       }
 
       if (parade.active && now - parade.start >= PARADE_MS) endParade();
+
+      // vacuumed ducks chase the suction head, shrinking as they close in;
+      // on contact they vanish into the nozzle and travel the hose as a bulge
+      for (let i = pool.length - 1; i >= 0; i--) {
+        const d = pool[i];
+        if (!d.sucked) continue;
+        const dx = vacuum.headX - d.x;
+        const dy = vacuum.headY - d.y;
+        const dist = Math.hypot(dx, dy) || 0.001;
+        const sp = 300;
+        d.vx = (dx / dist) * sp;
+        d.vy = (dy / dist) * sp;
+        d.x += d.vx * dt;
+        d.y += d.vy * dt;
+        d.spinAngle = (d.spinAngle ?? 0) + 5 * dt;
+        d.wakeTimer = (d.wakeTimer ?? 0) - dt;
+        if (d.wakeTimer <= 0 && wakes.length < 400) {
+          d.wakeTimer = WAKE_INTERVAL;
+          wakes.push({
+            x: d.x - (dx / dist) * 20 + (Math.random() - 0.5) * 6,
+            y: d.y - (dy / dist) * 20 + (Math.random() - 0.5) * 6,
+            life: 1,
+            r: 3 + Math.random() * 2,
+          });
+        }
+        if (dist < 12) {
+          pool.splice(i, 1);
+          vacuum.bulges.push(0);
+          spawnSplash(vacuum.headX, vacuum.headY, 70);
+        }
+      }
 
       const b = inner();
       for (const d of pool) {
@@ -1489,6 +1585,8 @@ export function PixelPool({
       for (const d of pool) if (!d.inShop) drawDuck(d, now);
       drawBalls(ctx, balls);
       drawSplashes(dark);
+      drawSuckPulses(ctx, suckPulses, now);
+      if (vacuum.loaded) drawSuckGuide(ctx, vacuum.headX, vacuum.headY, now);
 
       // name tag and rarity stars of the duck currently under the cursor (not while dragging)
       if (!dragging) {
