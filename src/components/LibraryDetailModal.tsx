@@ -210,17 +210,15 @@ export function LibraryDetailModal({
 
           <div className="flex flex-none items-center gap-1.5">
             {onEnrichTmdb && tmdb && (
-              <motion.button
-                whileTap={{ scale: 0.9 }}
+              <button
                 onClick={onEnrichTmdb}
                 title="Changer les informations TMDB"
-                className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 text-zinc-500 transition-colors hover:bg-indigo-500/15 hover:text-indigo-500 dark:bg-zinc-800 dark:text-zinc-400"
+                className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
               >
                 <Pencil className="h-3.5 w-3.5" />
-              </motion.button>
+              </button>
             )}
-            <motion.button
-              whileTap={{ scale: 0.9 }}
+            <button
               onClick={() => {
                 if (confirmDelete) {
                   onRemove(entry.infoHash);
@@ -231,12 +229,12 @@ export function LibraryDetailModal({
               className={`flex h-6 items-center justify-center rounded-md transition-colors ${
                 confirmDelete
                   ? "gap-1 bg-red-500 px-2 text-[11px] font-medium text-white hover:bg-red-600"
-                  : "w-6 bg-zinc-200 text-zinc-500 hover:bg-red-500/15 hover:text-red-500 dark:bg-zinc-800 dark:text-zinc-400"
+                  : "w-6 bg-zinc-200 text-red-500 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-zinc-700"
               }`}
             >
               <Trash2 className="h-3.5 w-3.5" />
               {confirmDelete && "Sûr ?"}
-            </motion.button>
+            </button>
             <button
               onClick={onClose}
               className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700"
