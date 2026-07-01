@@ -36,6 +36,54 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.3.6",
+    date: "1 juillet 2026",
+    intro:
+      "La 1.3.6 apporte des ameliorations au Coin des Canards avec un tri par rarete, un aspirateur pour la collection, un idle timer pour economiser vos ressources, et une meilleure experience dans la Bibliotheque avec la selection multiple et la suppression directe.",
+    sections: [
+      {
+        title: "Parametres : validation du nombre de canards",
+        items: [
+          "La modification du nombre de canards dans les Parametres est maintenant validee avant d'etre appliquee.",
+          "Cela evite d'effacer accidentellement tout votre board en cas de clic involontaire.",
+        ],
+      },
+      {
+        title: "Coin des Canards : tri par rarete",
+        items: [
+          "Une nouvelle option de tri permet de classer vos canards par niveau de rarete.",
+          "Identifiez rapidement vos canards les plus precieux ou ceux qui vous manquent encore.",
+        ],
+      },
+      {
+        title: "Coin des Canards : idle timer",
+        items: [
+          "Un nouveau parametre permet de masquer automatiquement l'interface de la piscine apres 30 secondes d'inactivite.",
+          "Utile pour economiser des ressources lorsque vous n'interagissez pas avec les canards.",
+          "Configurez cette duree dans les Parametres selon votre preference.",
+        ],
+      },
+      {
+        title: "Coin des Canards : aspirateur",
+        items: [
+          "Un nouvel item special fait son apparition dans la piscine : un aspirateur capable de collecter les canards.",
+          "Utilisez-le pour capturer automatiquement vos canards.",
+        ],
+      },
+      {
+        title: "Bibliotheque : selection multiple et suppression directe",
+        items: [
+          "Selectionnez plusieurs titres a la fois pour les valider, les dé-valider ou les supprimer d'un seul geste.",
+          "Un bouton de suppression sur chaque vignette permet egalement de supprimer un titre directement sans passer par la selection multiple.",
+        ],
+      },
+      {
+        title: "Corrections",
+        items: ["Resolution de quelques bugs mineurs et ameliorations mineures."],
+      },
+    ],
+  },
+  {
     version: "1.3.5",
     date: "1 juillet 2026",
     intro:
