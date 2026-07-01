@@ -1,6 +1,6 @@
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { Check, Clapperboard } from "lucide-react";
+import { Check, Clapperboard, Trash2 } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
 import {
   isSeries,
@@ -18,6 +18,11 @@ interface LibraryPosterCardProps {
   onToggle: () => void;
   // Présent uniquement si l'entrée peut être complétée via TMDB.
   onEnrichTmdb?: () => void;
+  // Suppression directe au survol (retire l'entrée de la bibliothèque).
+  onRemove?: () => void;
+  // Mode sélection multiple : le clic coche la carte au lieu de l'ouvrir.
+  selectMode?: boolean;
+  selected?: boolean;
 }
 
 export const LibraryPosterCard = memo(function LibraryPosterCard({
@@ -26,6 +31,9 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
   expanded,
   onToggle,
   onEnrichTmdb,
+  onRemove,
+  selectMode = false,
+  selected = false,
 }: LibraryPosterCardProps) {
   const tmdb = entry.tmdb;
   const series = isSeries(entry);
@@ -33,6 +41,14 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
   const ratio = progressRatio(entry);
   const title = tmdb?.title ?? (simple ? parseRelease(entry.title).title : entry.title);
   const year = tmdb?.year ?? "";
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const active = expanded || (selectMode && selected);
+
+  useEffect(() => {
+    if (!confirmDelete) return;
+    const t = setTimeout(() => setConfirmDelete(false), 3000);
+    return () => clearTimeout(t);
+  }, [confirmDelete]);
 
   return (
     <motion.button
@@ -40,8 +56,9 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
       onClick={onToggle}
+      onMouseLeave={() => setConfirmDelete(false)}
       className={`group relative block aspect-[2/3] cursor-pointer overflow-hidden rounded-xl text-left ring-2 transition-[box-shadow,ring-color] duration-200 ${
-        expanded
+        active
           ? "ring-indigo-500"
           : "ring-black/8 dark:ring-white/10 hover:ring-indigo-400/50 dark:hover:ring-indigo-400/40 hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.45)]"
       }`}
@@ -78,10 +95,43 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
         </div>
       )}
 
+      {/* Case de sélection (mode multi-sélection) */}
+      {selectMode && (
+        <span
+          className={`absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 shadow backdrop-blur-sm ${
+            selected ? "border-indigo-500 bg-indigo-500 text-white" : "border-white/80 bg-black/40"
+          }`}
+        >
+          {selected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+        </span>
+      )}
+
       {/* Pastille « vu » */}
-      {whole && (
+      {whole && !selectMode && (
         <span className="absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow">
           <Check className="h-3.5 w-3.5" strokeWidth={3} />
+        </span>
+      )}
+
+      {/* Suppression directe au survol */}
+      {onRemove && !selectMode && (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (confirmDelete) onRemove();
+            else setConfirmDelete(true);
+          }}
+          title={confirmDelete ? "Confirmer la suppression" : "Retirer de la bibliothèque"}
+          className={`absolute right-1.5 top-1.5 z-10 flex h-6 items-center justify-center gap-1 rounded-full text-white opacity-0 shadow transition-opacity group-hover:opacity-100 focus:opacity-100 ${
+            confirmDelete
+              ? "bg-red-500 px-2 text-[10px] font-semibold"
+              : "w-6 bg-red-500/85 hover:bg-red-500"
+          }`}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          {confirmDelete && "Sûr ?"}
         </span>
       )}
 

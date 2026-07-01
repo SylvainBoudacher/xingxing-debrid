@@ -5,19 +5,27 @@ import {
   groupWatchedCount,
   type SeriesGroup,
 } from "@/lib/library";
-import { Check } from "lucide-react";
-import { memo } from "react";
+import { Check, Trash2 } from "lucide-react";
+import { memo, useEffect, useState } from "react";
 
 interface SeriesGroupPosterCardProps {
   group: SeriesGroup;
   expanded: boolean;
   onToggle: () => void;
+  // Suppression directe au survol (retire toute la série de la bibliothèque).
+  onRemove?: () => void;
+  // Mode sélection multiple : le clic coche la série au lieu de l'ouvrir.
+  selectMode?: boolean;
+  selected?: boolean;
 }
 
 export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
   group,
   expanded,
   onToggle,
+  onRemove,
+  selectMode = false,
+  selected = false,
 }: SeriesGroupPosterCardProps) {
   const whole = groupIsWholeWatched(group);
   const ratio = groupProgressRatio(group);
@@ -25,12 +33,21 @@ export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
   const total = groupTotalCount(group);
   const title = group.tmdb.title;
   const year = group.tmdb.year;
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const active = expanded || (selectMode && selected);
+
+  useEffect(() => {
+    if (!confirmDelete) return;
+    const t = setTimeout(() => setConfirmDelete(false), 3000);
+    return () => clearTimeout(t);
+  }, [confirmDelete]);
 
   return (
     <button
       onClick={onToggle}
+      onMouseLeave={() => setConfirmDelete(false)}
       className={`group relative block aspect-[2/3] cursor-pointer overflow-hidden rounded-xl text-left ring-2 transition-[box-shadow,ring-color,transform] duration-200 hover:-translate-y-1 active:scale-[0.98] ${
-        expanded
+        active
           ? "ring-indigo-500"
           : "ring-black/8 dark:ring-white/10 hover:ring-indigo-400/50 dark:hover:ring-indigo-400/40 hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.45)]"
       }`}
@@ -53,15 +70,52 @@ export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
         </div>
       )}
 
-      {whole && (
+      {/* Case de sélection (mode multi-sélection) */}
+      {selectMode && (
+        <span
+          className={`absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 shadow backdrop-blur-sm ${
+            selected ? "border-indigo-500 bg-indigo-500 text-white" : "border-white/80 bg-black/40"
+          }`}
+        >
+          {selected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+        </span>
+      )}
+
+      {whole && !selectMode && (
         <span className="absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow">
           <Check className="h-3.5 w-3.5" strokeWidth={3} />
         </span>
       )}
 
-      <span className="absolute right-1.5 top-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+      <span
+        className={`absolute right-1.5 top-1.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm ${
+          onRemove && !selectMode ? "transition-opacity group-hover:opacity-0" : ""
+        }`}
+      >
         {group.entries.length} S
       </span>
+
+      {/* Suppression directe au survol */}
+      {onRemove && !selectMode && (
+        <span
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (confirmDelete) onRemove();
+            else setConfirmDelete(true);
+          }}
+          title={confirmDelete ? "Confirmer la suppression" : "Retirer de la bibliothèque"}
+          className={`absolute right-1.5 top-1.5 z-10 flex h-6 items-center justify-center gap-1 rounded-full text-white opacity-0 shadow transition-opacity group-hover:opacity-100 focus:opacity-100 ${
+            confirmDelete
+              ? "bg-red-500 px-2 text-[10px] font-semibold"
+              : "w-6 bg-red-500/85 hover:bg-red-500"
+          }`}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          {confirmDelete && "Sûr ?"}
+        </span>
+      )}
 
       <div
         className="absolute inset-x-0 bottom-0 px-2.5 pb-2 pt-8"

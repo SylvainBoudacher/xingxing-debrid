@@ -1,24 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
-import { invoke } from "@tauri-apps/api/core";
-import { LazyStore } from "@tauri-apps/plugin-store";
-import {
-  ArrowLeft,
-  Compass,
-  GripVertical,
-  Layers,
-  LayoutGrid,
-  Library as LibraryIcon,
-  List,
-  Search,
-} from "lucide-react";
 import { AppMenu, type Page } from "@/components/AppMenu";
+import { LibraryDetailModal } from "@/components/LibraryDetailModal";
 import { LibraryEntryCard, type DebridControls } from "@/components/LibraryEntryCard";
 import { LibraryPosterCard } from "@/components/LibraryPosterCard";
-import { LibraryDetailModal } from "@/components/LibraryDetailModal";
+import { LibrarySelectionBar } from "@/components/LibrarySelectionBar";
 import { SeriesGroupCard } from "@/components/SeriesGroupCard";
-import { SeriesGroupPosterCard } from "@/components/SeriesGroupPosterCard";
 import { SeriesGroupDetailModal } from "@/components/SeriesGroupDetailModal";
+import { SeriesGroupPosterCard } from "@/components/SeriesGroupPosterCard";
 import { TmdbMatchModal } from "@/components/TmdbMatchModal";
 import {
   Select,
@@ -27,9 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDebridActions } from "@/lib/useDebridActions";
 import { flattenFiles, isVideoFile, type DebridFile } from "@/lib/debrid";
-import { type ViewMode, resolvePageViewMode } from "@/lib/viewMode";
 import {
   applyEnrichment,
   canEnrichTmdb,
@@ -41,9 +26,28 @@ import {
   loadLibrary,
   progressRatio,
   saveLibraryDebounced,
+  setWholeWatched,
   type DisplayItem,
   type LibraryEntry,
 } from "@/lib/library";
+import { useDebridActions } from "@/lib/useDebridActions";
+import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
+import { invoke } from "@tauri-apps/api/core";
+import { LazyStore } from "@tauri-apps/plugin-store";
+import {
+  ArrowLeft,
+  CheckSquare,
+  Compass,
+  GripVertical,
+  Layers,
+  LayoutGrid,
+  Library as LibraryIcon,
+  List,
+  Search,
+} from "lucide-react";
+import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 interface LibraryPageProps {
   onBack: () => void;
@@ -173,6 +177,8 @@ export function LibraryPage({
     // Le tri manuel (glisser-déposer) n'existe qu'en vue liste : on bascule sur
     // « Plus récents » en passant en grille.
     if (next === "grid" && sort === "manual") setSort("recent");
+    // La sélection multiple n'existe qu'en vue grille.
+    if (next === "list") exitSelect();
     void store.set("library_layout", next).then(() => store.save());
   }
 
@@ -201,6 +207,72 @@ export function LibraryPage({
       return next;
     });
   }, []);
+
+  const removeHashes = useCallback((hashes: string[]) => {
+    const set = new Set(hashes);
+    setEntries((prev) => {
+      const next = prev.filter((e) => !set.has(e.infoHash));
+      saveLibraryDebounced(next);
+      return next;
+    });
+  }, []);
+
+  // Ré-insère des entrées supprimées (annulation). Ignore celles déjà présentes.
+  const restoreEntries = useCallback((restored: LibraryEntry[]) => {
+    setEntries((prev) => {
+      const have = new Set(prev.map((e) => e.infoHash));
+      const merged = [...prev, ...restored.filter((e) => !have.has(e.infoHash))];
+      saveLibraryDebounced(merged);
+      return merged;
+    });
+  }, []);
+
+  // ---------- Sélection multiple (vue grille) ----------
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+
+  const toggleSelected = useCallback((hashes: string[]) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      const allSel = hashes.every((h) => next.has(h));
+      for (const h of hashes) {
+        if (allSel) next.delete(h);
+        else next.add(h);
+      }
+      return next;
+    });
+  }, []);
+
+  const exitSelect = useCallback(() => {
+    setSelectMode(false);
+    setSelected(new Set());
+  }, []);
+
+  function bulkSetWatched(value: boolean) {
+    setEntries((prev) => {
+      const next = prev.map((e) => (selected.has(e.infoHash) ? setWholeWatched(e, value) : e));
+      saveLibraryDebounced(next);
+      return next;
+    });
+  }
+
+  function bulkRemove() {
+    const removed = entries.filter((e) => selected.has(e.infoHash));
+    if (removed.length === 0) return;
+    // Compte les cartes (une série regroupée = une carte, cf. libraryCounts).
+    const tvIds = new Set<number>();
+    let cards = 0;
+    for (const e of removed) {
+      if (e.tmdb?.mediaType === "tv") tvIds.add(e.tmdb.id);
+      else cards++;
+    }
+    cards += tvIds.size;
+    removeHashes([...selected]);
+    setSelected(new Set());
+    toast.success(`${cards} titre${cards > 1 ? "s" : ""} supprimé${cards > 1 ? "s" : ""}`, {
+      action: { label: "Annuler", onClick: () => restoreEntries(removed) },
+    });
+  }
 
   const counts = useMemo(() => libraryCounts(entries), [entries]);
 
@@ -266,6 +338,51 @@ export function LibraryPage({
   // l'entrée (C411 / Nyaa) n'a pas encore de métadonnées.
   const enrichHandler = (e: LibraryEntry) =>
     initialTmdbKey && canEnrichTmdb(e) ? () => setMatchingHash(e.infoHash) : undefined;
+
+  // Nombre de cartes cochées (une série regroupée = une carte).
+  const selectedCount = useMemo(() => {
+    if (!selectMode) return 0;
+    let n = 0;
+    for (const item of displayItems) {
+      if (item.type === "single") {
+        if (selected.has(item.entry.infoHash)) n++;
+      } else if (item.group.entries.every((e) => selected.has(e.infoHash))) {
+        n++;
+      }
+    }
+    return n;
+  }, [selectMode, displayItems, selected]);
+
+  const renderPoster = (item: DisplayItem) =>
+    item.type === "single" ? (
+      <LibraryPosterCard
+        key={item.entry.infoHash}
+        entry={item.entry}
+        simple={viewMode === "simple"}
+        expanded={expandedHash === item.entry.infoHash}
+        selectMode={selectMode}
+        selected={selected.has(item.entry.infoHash)}
+        onToggle={() =>
+          selectMode ? toggleSelected([item.entry.infoHash]) : setExpandedHash(item.entry.infoHash)
+        }
+        onEnrichTmdb={enrichHandler(item.entry)}
+        onRemove={() => handleRemove(item.entry.infoHash)}
+      />
+    ) : (
+      <SeriesGroupPosterCard
+        key={item.group.tmdbId}
+        group={item.group}
+        expanded={expandedGroupId === item.group.tmdbId}
+        selectMode={selectMode}
+        selected={item.group.entries.every((e) => selected.has(e.infoHash))}
+        onToggle={() =>
+          selectMode
+            ? toggleSelected(item.group.entries.map((e) => e.infoHash))
+            : setExpandedGroupId(item.group.tmdbId)
+        }
+        onRemove={() => removeHashes(item.group.entries.map((e) => e.infoHash))}
+      />
+    );
 
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
@@ -334,6 +451,21 @@ export function LibraryPage({
           </div>
 
           <div className="flex items-center gap-2">
+            {layout === "grid" && (
+              <button
+                onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+                title="Sélection multiple"
+                className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
+                  selectMode
+                    ? "bg-indigo-600 text-white"
+                    : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                }`}
+              >
+                <CheckSquare className="h-3.5 w-3.5" />
+                Sélection
+              </button>
+            )}
+
             <button
               onClick={() => {
                 const next = !split;
@@ -422,50 +554,14 @@ export function LibraryPage({
                 <div key={section.label}>
                   <SectionHeader label={section.label} count={section.items.length} />
                   <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-                    {section.items.map((item) =>
-                      item.type === "single" ? (
-                        <LibraryPosterCard
-                          key={item.entry.infoHash}
-                          entry={item.entry}
-                          simple={viewMode === "simple"}
-                          expanded={expandedHash === item.entry.infoHash}
-                          onToggle={() => setExpandedHash(item.entry.infoHash)}
-                          onEnrichTmdb={enrichHandler(item.entry)}
-                        />
-                      ) : (
-                        <SeriesGroupPosterCard
-                          key={item.group.tmdbId}
-                          group={item.group}
-                          expanded={expandedGroupId === item.group.tmdbId}
-                          onToggle={() => setExpandedGroupId(item.group.tmdbId)}
-                        />
-                      ),
-                    )}
+                    {section.items.map(renderPoster)}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-              {displayItems.map((item) =>
-                item.type === "single" ? (
-                  <LibraryPosterCard
-                    key={item.entry.infoHash}
-                    entry={item.entry}
-                    simple={viewMode === "simple"}
-                    expanded={expandedHash === item.entry.infoHash}
-                    onToggle={() => setExpandedHash(item.entry.infoHash)}
-                    onEnrichTmdb={enrichHandler(item.entry)}
-                  />
-                ) : (
-                  <SeriesGroupPosterCard
-                    key={item.group.tmdbId}
-                    group={item.group}
-                    expanded={expandedGroupId === item.group.tmdbId}
-                    onToggle={() => setExpandedGroupId(item.group.tmdbId)}
-                  />
-                ),
-              )}
+              {displayItems.map(renderPoster)}
             </div>
           )
         ) : canReorder ? (
@@ -572,6 +668,18 @@ export function LibraryPage({
             debrid={debrid}
             simple={viewMode === "simple"}
             autoWatchOnPlay={autoWatchOnPlay}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectMode && (
+          <LibrarySelectionBar
+            count={selectedCount}
+            onMarkWatched={() => bulkSetWatched(true)}
+            onMarkUnwatched={() => bulkSetWatched(false)}
+            onDelete={bulkRemove}
+            onCancel={exitSelect}
           />
         )}
       </AnimatePresence>
