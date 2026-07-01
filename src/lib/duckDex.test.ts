@@ -54,6 +54,13 @@ import {
 const SHADES: Variant = { body: "#FFD21E", beak: "#F5811F", acc: "shades" };
 const SHADES_PINK: Variant = { body: "#FB7AA8", beak: "#F5811F", acc: "shades" };
 const WIZARD: Variant = { body: "#FFD21E", beak: "#F5811F", acc: "wizard", accColor: "#A78BFA" };
+const VAMPIRE: Variant = {
+  body: "#300010",
+  beak: "#F5811F",
+  acc: "cape",
+  accColor: "#1A0008",
+  effect: "glow",
+};
 
 beforeEach(async () => {
   (LazyStore as unknown as { clearAll: () => void }).clearAll();
@@ -100,6 +107,13 @@ describe("recordDiscovery", () => {
     const disc = await recordDiscovery(WIZARD);
     expect(disc.newSpecies).toBe(true);
     expect(disc.discoveredSpecies).toBe(2);
+  });
+
+  it("records a new-generation species (vampire)", async () => {
+    const disc = await recordDiscovery(VAMPIRE);
+    expect(disc.newSpecies).toBe(true);
+    expect(disc.species.id).toBe("vampire");
+    expect(disc.species.name).toBe("Canard Vampire");
   });
 
   it("normalizes body color casing", async () => {
@@ -170,9 +184,9 @@ describe("dexStatusOf", () => {
 });
 
 describe("reward", () => {
-  it("reward variant classifies as a cataloged legendary", () => {
+  it("reward variant is mythic and maps to a cataloged species", () => {
     const v = rewardVariant();
-    expect(getRarity(v)).toBe("legendary");
+    expect(getRarity(v)).toBe("mythic");
     expect(SPECIES.some((s) => s.id === speciesOf(v))).toBe(true);
   });
 

@@ -120,6 +120,10 @@ export function makeDuckSprite(v: Variant): HTMLCanvasElement {
       fillEll(c, 96, 38, 5.2, 5.2, "#10202a");
       fillEll(c, 96, 38, 2.6, 2.6, "#FF5C5C");
       fillEll(c, 95, 37, 1, 1, "#ffd0d0");
+    } else if (v.pattern === "abyss") {
+      fillEll(c, 96, 38, 5.2, 5.2, "#06202E");
+      fillEll(c, 96, 38, 2.8, 2.8, "#3FE0C8");
+      fillEll(c, 95, 37, 1, 1, "#CFFFF2");
     } else {
       fillEll(c, 96, 38, 4.7, 5.3, "#181818");
       fillEll(c, 94.4, 35.8, 1.7, 1.9, "#ffffff");

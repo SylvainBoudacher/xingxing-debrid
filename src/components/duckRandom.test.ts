@@ -17,6 +17,7 @@ const COLORED_ACC = new Set<Accessory>([
   "propeller",
   "scarf",
   "monocle",
+  "cape",
 ]);
 
 const VALID_PATTERNS = new Set<Pattern>([
@@ -28,6 +29,7 @@ const VALID_PATTERNS = new Set<Pattern>([
   "galaxy",
   "zombie",
   "metal",
+  "abyss",
 ]);
 const VALID_EFFECTS = new Set<Effect>([
   "glow",
@@ -39,11 +41,21 @@ const VALID_EFFECTS = new Set<Effect>([
   "ooze",
   "electric",
   "royal",
+  "fire",
+  "frost",
+  "nova",
 ]);
 const HEX_RE = /^#[0-9a-fA-F]{3,8}$/;
 
 // Patterns that can only come from the LEGENDARY tier
-const LEGENDARY_PATTERNS = new Set<Pattern>(["rainbow", "gold", "galaxy", "zombie", "metal"]);
+const LEGENDARY_PATTERNS = new Set<Pattern>([
+  "rainbow",
+  "gold",
+  "galaxy",
+  "zombie",
+  "metal",
+  "abyss",
+]);
 
 describe("randomVariant", () => {
   it("always returns body, beak, and acc as strings", () => {
@@ -92,7 +104,12 @@ describe("randomVariant", () => {
     let count = 0;
     for (let i = 0; i < N; i++) {
       const v = randomVariant();
-      if (LEGENDARY_PATTERNS.has(v.pattern as Pattern) || v.effect === "ghost") count++;
+      if (
+        LEGENDARY_PATTERNS.has(v.pattern as Pattern) ||
+        v.effect === "ghost" ||
+        v.effect === "fire"
+      )
+        count++;
     }
     expect(count / N).toBeGreaterThan(0.01);
     expect(count / N).toBeLessThan(0.08);

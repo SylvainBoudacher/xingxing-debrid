@@ -26,7 +26,9 @@ export type Accessory =
   | "monocle"
   | "mustache"
   | "scarf"
-  | "antenna";
+  | "antenna"
+  | "cape"
+  | "feather";
 
 export type Pattern =
   | "spots"
@@ -36,7 +38,8 @@ export type Pattern =
   | "gold"
   | "galaxy"
   | "zombie"
-  | "metal";
+  | "metal"
+  | "abyss";
 
 export type Effect =
   | "glow"
@@ -47,7 +50,10 @@ export type Effect =
   | "golden"
   | "ooze"
   | "electric"
-  | "royal";
+  | "royal"
+  | "fire"
+  | "frost"
+  | "nova";
 
 export interface Variant {
   body: string;

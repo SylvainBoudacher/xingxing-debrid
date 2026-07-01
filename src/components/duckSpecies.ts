@@ -3,7 +3,7 @@ import type { Variant } from "./duckTypes";
 
 // The Canardex catalog: every look randomVariant() can produce, collapsed into
 // a "species" (body color and accessory color are cosmetic and don't split a
-// species). 33 entries total. speciesOf() maps a concrete Variant back to its
+// species). 42 entries total. speciesOf() maps a concrete Variant back to its
 // species id, mirroring the priority order of getRarity().
 
 export interface DuckSpecies {
@@ -31,7 +31,8 @@ function sp(
 export const SPECIES: DuckSpecies[] = [
   // commons
   sp("classique", "Canard Classique", "common", { body: YELLOW, beak: BEAK, acc: "none" }),
-  sp("shades", "Canard Cool", "common", { body: YELLOW, beak: BEAK, acc: "shades" }),
+  // charcoal shades reads as the Ninja, so one body color is off the table
+  sp("shades", "Canard Cool", "common", { body: YELLOW, beak: BEAK, acc: "shades" }, FULL - 1),
   sp("bowtie", "Canard Chic", "common", {
     body: YELLOW,
     beak: BEAK,
@@ -127,12 +128,14 @@ export const SPECIES: DuckSpecies[] = [
   }),
   // rares
   sp("halo", "Canard Céleste", "rare", { body: YELLOW, beak: BEAK, acc: "halo", effect: "glow" }),
-  sp("snorkel", "Canard Plongeur", "rare", {
-    body: YELLOW,
-    beak: BEAK,
-    acc: "snorkel",
-    effect: "bubbles",
-  }),
+  // teal snorkel reads as the Surfer, so one body color is off the table
+  sp(
+    "snorkel",
+    "Canard Plongeur",
+    "rare",
+    { body: YELLOW, beak: BEAK, acc: "snorkel", effect: "bubbles" },
+    FULL - 1,
+  ),
   sp("wizard", "Canard Sorcier", "rare", {
     body: YELLOW,
     beak: BEAK,
@@ -195,6 +198,81 @@ export const SPECIES: DuckSpecies[] = [
   ),
   // mythic
   sp("roi", "Le Roi des Canards", "mythic", kingVariant(), 1),
+  // new commons
+  sp("mustache", "Canard Moustachu", "common", { body: YELLOW, beak: BEAK, acc: "mustache" }),
+  // new uncommons
+  sp("ninja", "Canard Ninja", "uncommon", { body: "#4A5568", beak: BEAK, acc: "shades" }, 1),
+  sp("superhero", "Canard Super-Heros", "uncommon", {
+    body: YELLOW,
+    beak: BEAK,
+    acc: "cape",
+    accColor: "#E0457B",
+  }),
+  // new rares
+  sp(
+    "surfer",
+    "Canard Surfer",
+    "rare",
+    {
+      body: "#3FD0C8",
+      beak: BEAK,
+      acc: "snorkel",
+      effect: "bubbles",
+    },
+    1,
+  ),
+  sp(
+    "vampire",
+    "Canard Vampire",
+    "rare",
+    {
+      body: "#300010",
+      beak: BEAK,
+      acc: "cape",
+      accColor: "#1A0008",
+      effect: "glow",
+    },
+    1,
+  ),
+  sp("chamane", "Canard Chamane", "rare", { body: YELLOW, beak: BEAK, acc: "feather" }),
+  sp(
+    "glacial",
+    "Canard Glacial",
+    "rare",
+    {
+      body: "#B8E0FF",
+      beak: "#8DB5D0",
+      acc: "none",
+      effect: "frost",
+    },
+    1,
+  ),
+  // new legendaries
+  sp(
+    "infernal",
+    "Canard Infernal",
+    "legendary",
+    {
+      body: "#FF3D00",
+      beak: BEAK,
+      acc: "devil",
+      effect: "fire",
+    },
+    1,
+  ),
+  sp(
+    "abyssal",
+    "Canard Abyssal",
+    "legendary",
+    {
+      body: "#050F1E",
+      beak: "#1A3A5A",
+      acc: "none",
+      pattern: "abyss",
+      effect: "bubbles",
+    },
+    1,
+  ),
 ];
 
 export const SPECIES_BY_ID = new Map(SPECIES.map((s) => [s.id, s]));
@@ -207,6 +285,7 @@ const ACC_SPECIES = new Set([
   "scarf",
   "headphones",
   "monocle",
+  "mustache",
   "crown",
   "party",
   "tophat",
@@ -215,6 +294,8 @@ const ACC_SPECIES = new Set([
   "chef",
   "antlers",
   "propeller",
+  "cape",
+  "feather",
 ]);
 
 export function speciesOf(v: Variant): string {
@@ -224,12 +305,15 @@ export function speciesOf(v: Variant): string {
   if (v.pattern === "galaxy") return "galaxie";
   if (v.pattern === "zombie") return "zombie";
   if (v.pattern === "metal") return "robot";
+  if (v.pattern === "abyss") return "abyssal";
+  if (v.effect === "fire") return "infernal";
+  if (v.effect === "frost") return "glacial";
   if (v.effect === "ghost") return "fantome";
   switch (v.acc) {
     case "halo":
       return "halo";
     case "snorkel":
-      return "snorkel";
+      return v.body === "#3FD0C8" ? "surfer" : "snorkel";
     case "wizard":
       return "wizard";
     case "viking":
@@ -238,8 +322,13 @@ export function speciesOf(v: Variant): string {
       return "pirate";
     case "devil":
       return "devil";
+    case "feather":
+      return "chamane";
+    case "cape":
+      return v.body === "#300010" ? "vampire" : "superhero";
   }
   if (v.effect === "glow") return "aura";
+  if (v.body === "#4A5568" && v.acc === "shades") return "ninja";
   if (v.pattern === "spots") return "spots";
   if (v.pattern === "stripes") return "stripes";
   if (v.pattern === "polka") return "polka";

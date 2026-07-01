@@ -60,6 +60,7 @@ const COLORED_ACC = new Set<Accessory>([
   "propeller",
   "scarf",
   "monocle",
+  "cape",
 ]);
 
 const COMMON_ACC: Accessory[] = [
@@ -73,6 +74,7 @@ const COMMON_ACC: Accessory[] = [
   "scarf",
   "headphones",
   "monocle",
+  "mustache",
 ];
 const UNCOMMON_ACC: Accessory[] = [
   "crown",
@@ -83,6 +85,7 @@ const UNCOMMON_ACC: Accessory[] = [
   "chef",
   "antlers",
   "propeller",
+  "cape",
 ];
 const SIMPLE_PATTERNS: Pattern[] = ["spots", "stripes", "polka"];
 
@@ -133,6 +136,8 @@ const LEGENDARY: (() => Variant)[] = [
     pattern: "metal",
     effect: "electric",
   }),
+  () => ({ body: "#FF3D00", beak: ORANGE_BEAK, acc: "devil", effect: "fire" }),
+  () => ({ body: "#050F1E", beak: "#1A3A5A", acc: "none", pattern: "abyss", effect: "bubbles" }),
 ];
 
 const RARE: (() => Variant)[] = [
@@ -143,6 +148,10 @@ const RARE: (() => Variant)[] = [
   () => ({ body: "#FFD21E", beak: "#2A2A2A", acc: "pirate" }),
   () => ({ body: "#F0584E", beak: ORANGE_BEAK, acc: "devil" }),
   () => ({ body: bodyColor(), beak: ORANGE_BEAK, acc: "none", effect: "glow" }),
+  () => ({ body: "#3FD0C8", beak: ORANGE_BEAK, acc: "snorkel", effect: "bubbles" }),
+  () => ({ body: "#300010", beak: ORANGE_BEAK, acc: "cape", accColor: "#1A0008", effect: "glow" }),
+  () => withAcc("feather"),
+  () => ({ body: "#B8E0FF", beak: "#8DB5D0", acc: "none", effect: "frost" }),
 ];
 
 export type Rarity = "mythic" | "legendary" | "rare" | "uncommon" | "common";
@@ -167,10 +176,26 @@ const LEGENDARY_EFFECTS = new Set<Effect>([
   "golden",
   "ooze",
   "electric",
+  "fire",
 ]);
-const LEGENDARY_PATTERNS = new Set<Pattern>(["rainbow", "gold", "galaxy", "zombie", "metal"]);
-const RARE_EFFECTS = new Set<Effect>(["glow", "bubbles"]);
-const RARE_ACC = new Set<Accessory>(["wizard", "viking", "pirate", "devil", "halo", "snorkel"]);
+const LEGENDARY_PATTERNS = new Set<Pattern>([
+  "rainbow",
+  "gold",
+  "galaxy",
+  "zombie",
+  "metal",
+  "abyss",
+]);
+const RARE_EFFECTS = new Set<Effect>(["glow", "bubbles", "frost"]);
+const RARE_ACC = new Set<Accessory>([
+  "wizard",
+  "viking",
+  "pirate",
+  "devil",
+  "halo",
+  "snorkel",
+  "feather",
+]);
 const UNCOMMON_PATTERNS = new Set<Pattern>(["spots", "stripes", "polka"]);
 const UNCOMMON_ACC_SET = new Set<Accessory>([
   "crown",
@@ -181,10 +206,11 @@ const UNCOMMON_ACC_SET = new Set<Accessory>([
   "chef",
   "antlers",
   "propeller",
+  "cape",
 ]);
 
 export function getRarity(v: Variant): Rarity {
-  if (v.effect === "royal") return "mythic";
+  if (v.effect === "royal" || v.effect === "nova") return "mythic";
   if (
     (v.pattern && LEGENDARY_PATTERNS.has(v.pattern)) ||
     (v.effect && LEGENDARY_EFFECTS.has(v.effect))
@@ -193,6 +219,7 @@ export function getRarity(v: Variant): Rarity {
   if ((v.effect && RARE_EFFECTS.has(v.effect)) || RARE_ACC.has(v.acc)) return "rare";
   if ((v.pattern && UNCOMMON_PATTERNS.has(v.pattern)) || UNCOMMON_ACC_SET.has(v.acc))
     return "uncommon";
+  if (v.body === "#4A5568" && v.acc === "shades") return "uncommon";
   return "common";
 }
 

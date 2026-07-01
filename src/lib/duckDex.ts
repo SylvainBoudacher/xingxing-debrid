@@ -88,19 +88,37 @@ export function isDexComplete(entries: DexEntries): boolean {
   return SPECIES.every((s) => (entries[s.id]?.length ?? 0) > 0);
 }
 
-// Completion reward: a skin randomVariant() can never roll (galaxy pattern
-// with a prismatic shine and a wizard hat).
+// Completion reward: the only mythic besides the king. Its "nova" effect
+// (hue-cycling aura, prismatic orbit ring, comets) can never roll randomly.
 export const REWARD_DUCK_ID = "canardex-reward";
-export const REWARD_DUCK_NAME = "Canard Cosmique";
+export const REWARD_DUCK_NAME = "Canard Supernova";
+export const REWARD_DUCK_SCALE = 1.15;
 export function rewardVariant(): Variant {
   return {
     body: "#1B1035",
     beak: "#FFD21E",
-    acc: "wizard",
-    accColor: "#C9A8FF",
+    acc: "halo",
     pattern: "galaxy",
-    effect: "prismatic",
+    effect: "nova",
   };
+}
+
+// Dev-only helpers behind the DuckDex debug buttons: mark every species as
+// discovered, or wipe the whole dex (including the reward claim).
+export async function debugCompleteDex(): Promise<DexEntries> {
+  const entries = await getDex();
+  for (const s of SPECIES) merge(entries, s.preview);
+  cache = entries;
+  await store.set("entries", entries);
+  await store.save();
+  return entries;
+}
+
+export async function debugResetDex(): Promise<void> {
+  cache = {};
+  await store.set("entries", {});
+  await store.set("reward_claimed", false);
+  await store.save();
 }
 
 export async function isRewardClaimed(): Promise<boolean> {

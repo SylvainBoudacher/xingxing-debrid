@@ -28,6 +28,13 @@ export function bodyFill(c: CanvasRenderingContext2D, v: Variant): string | Canv
     gx.addColorStop(1, "#0B1030");
     return gx;
   }
+  if (v.pattern === "abyss") {
+    const ax = c.createLinearGradient(10, 12, 110, 112);
+    ax.addColorStop(0, "#071828");
+    ax.addColorStop(0.5, "#040F1C");
+    ax.addColorStop(1, "#020810");
+    return ax;
+  }
   return v.body;
 }
 
@@ -113,6 +120,15 @@ export function paintPattern(
       [cx + rx * 0.5, cy + ry * 0.4],
     ]) {
       fillEll(c, bx, by, 1.6, 1.6, "rgba(255,255,255,0.5)");
+    }
+  } else if (v.pattern === "abyss") {
+    // bioluminescent spots drifting in the deep
+    const bioColors = ["rgba(0,255,180,0.75)", "rgba(0,200,255,0.65)", "rgba(120,255,200,0.55)"];
+    for (let i = 0; i < 10; i++) {
+      const px = x0 + Math.random() * rx * 2;
+      const py = y0 + Math.random() * ry * 2;
+      const r = Math.random() < 0.3 ? 2.2 : 1.1;
+      fillEll(c, px, py, r, r, bioColors[i % bioColors.length]);
     }
   }
   c.restore();

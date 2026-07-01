@@ -4,12 +4,15 @@ import { Lock, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
+  debugCompleteDex,
+  debugResetDex,
   getDex,
   isDexComplete,
   isRewardClaimed,
   markRewardClaimed,
   REWARD_DUCK_ID,
   REWARD_DUCK_NAME,
+  REWARD_DUCK_SCALE,
   rewardVariant,
   syncDexWithCollection,
   type DexEntries,
@@ -78,7 +81,7 @@ export function DuckDex() {
       id: REWARD_DUCK_ID,
       name: REWARD_DUCK_NAME,
       variant: rewardVariant(),
-      scale: 1,
+      scale: REWARD_DUCK_SCALE,
       savedAt: Date.now(),
     };
     await upsertSavedDuck(duck);
@@ -87,6 +90,16 @@ export function DuckDex() {
     setEntries(await getDex());
     setClaimed(true);
     toast.success(`${REWARD_DUCK_NAME} a rejoint ta collection !`);
+  }
+
+  async function devComplete() {
+    setEntries(await debugCompleteDex());
+  }
+
+  async function devReset() {
+    await debugResetDex();
+    setEntries({});
+    setClaimed(false);
   }
 
   const discovered = SPECIES.filter((s) => (entries[s.id]?.length ?? 0) > 0).length;
@@ -120,12 +133,30 @@ export function DuckDex() {
                     {discovered}/{SPECIES.length} espèces découvertes
                   </p>
                 </div>
-                <button
-                  onClick={() => setOpen(false)}
-                  className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-                >
-                  <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {import.meta.env.DEV && (
+                    <>
+                      <button
+                        onClick={devComplete}
+                        className="rounded-md bg-amber-500/15 px-2 py-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 transition-colors"
+                      >
+                        DEV: compléter
+                      </button>
+                      <button
+                        onClick={devReset}
+                        className="rounded-md bg-red-500/15 px-2 py-1 text-[10px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/25 transition-colors"
+                      >
+                        DEV: reset
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={() => setOpen(false)}
+                    className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+                  </button>
+                </div>
               </div>
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
                 <div

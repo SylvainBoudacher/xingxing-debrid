@@ -951,7 +951,60 @@ export function PixelPool({
       ctx.ellipse(d.x, d.y + dh * 0.42, dw * 0.36, dh * 0.1, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // glowing aura behind the duck — cyan for glow, amber for golden, cold blue for ghost
+      // fire: flames rising from below the duck
+      if (d.effect === "fire") {
+        for (let i = 0; i < 5; i++) {
+          const p = (t * 0.0009 + d.phase + i * 0.22) % 1;
+          const bx = d.x - dw * 0.15 + Math.sin(t * 0.002 + i * 1.6 + d.phase) * dw * 0.32;
+          const by = d.y + bob + dh * 0.1 - p * dh * 0.9;
+          const r = (3.5 + i * 0.8) * (1 - p * 0.55);
+          const heat = 1 - p;
+          ctx.fillStyle = `rgba(255,${Math.floor(130 * heat)},0,${0.65 * (1 - p)})`;
+          ctx.beginPath();
+          ctx.arc(bx, by, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // frost: icy aura + orbiting ice crystals
+      if (d.effect === "frost") {
+        const pulse = 0.22 + Math.sin(t * 0.003 + d.phase) * 0.07;
+        const gr = ctx.createRadialGradient(d.x, d.y + bob, dw * 0.1, d.x, d.y + bob, dw);
+        gr.addColorStop(0, `rgba(200,240,255,${pulse})`);
+        gr.addColorStop(1, `rgba(200,240,255,0)`);
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y + bob, dw, 0, Math.PI * 2);
+        ctx.fill();
+        for (let i = 0; i < 5; i++) {
+          const a = t * 0.0009 + i * ((Math.PI * 2) / 5) + d.phase;
+          const tw = (Math.sin(t * 0.005 + i * 2.1) + 1) / 2;
+          const sx = d.x + Math.cos(a) * dw * 0.56;
+          const sy = d.y + bob + Math.sin(a) * dh * 0.5;
+          const r = 1 + tw * 2.2;
+          ctx.fillStyle = `rgba(210,242,255,${0.45 + tw * 0.5})`;
+          ctx.fillRect(sx - r, sy - 0.5, r * 2, 1);
+          ctx.fillRect(sx - 0.5, sy - r, 1, r * 2);
+          ctx.fillRect(sx - r * 0.7, sy - r * 0.7, r * 1.4, 1);
+          ctx.fillRect(sx - r * 0.7, sy + r * 0.7 - 1, r * 1.4, 1);
+        }
+      }
+
+      // supernova (dex completion reward): pulsing aura cycling through hues
+      if (d.effect === "nova") {
+        const hue = (t * 0.05) % 360;
+        const pulse = 0.4 + Math.sin(t * 0.005 + d.phase) * 0.12;
+        const gr = ctx.createRadialGradient(d.x, d.y + bob, dw * 0.1, d.x, d.y + bob, dw);
+        gr.addColorStop(0, `hsla(${hue},95%,70%,${pulse})`);
+        gr.addColorStop(1, `hsla(${hue},95%,70%,0)`);
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y + bob, dw, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // glowing aura behind the duck — cyan for glow (blood red for the
+      // vampire's body), amber for golden, cold blue for ghost
       if (d.effect === "glow" || d.effect === "golden" || d.effect === "ghost") {
         const pulse =
           d.effect === "ghost"
@@ -962,7 +1015,9 @@ export function PixelPool({
             ? "255,210,50"
             : d.effect === "ghost"
               ? "190,215,255"
-              : "140,235,255";
+              : d.variant.body === "#300010"
+                ? "220,40,50"
+                : "140,235,255";
         const radius = d.effect === "ghost" ? dw * 1.1 : dw * 0.9;
         const gr = ctx.createRadialGradient(d.x, d.y + bob, dw * 0.1, d.x, d.y + bob, radius);
         gr.addColorStop(0, `rgba(${col},${pulse})`);
@@ -1039,6 +1094,44 @@ export function PixelPool({
         ctx.fillStyle = `rgba(255,255,255,${0.8 * gtw})`;
         ctx.fillRect(gx - 5, gy - 0.8, 10, 1.6);
         ctx.fillRect(gx - 0.8, gy - 5, 1.6, 10);
+      }
+
+      // supernova foreground: a tilted prismatic orbit ring + comets with trails
+      if (d.effect === "nova") {
+        const hue = (t * 0.05) % 360;
+        const shards = 14;
+        for (let i = 0; i < shards; i++) {
+          const a = t * 0.0012 + (i / shards) * Math.PI * 2;
+          const sx = d.x + Math.cos(a) * dw * 0.72;
+          const sy = d.y + bob + Math.sin(a) * dh * 0.32;
+          const tw = (Math.sin(t * 0.006 + i * 1.3) + 1) / 2;
+          const r = 1.4 + tw * 2.2;
+          ctx.fillStyle = `hsla(${(hue + i * 26) % 360},100%,72%,${0.35 + tw * 0.55})`;
+          ctx.fillRect(sx - r, sy - 0.7, r * 2, 1.4);
+          ctx.fillRect(sx - 0.7, sy - r, 1.4, r * 2);
+        }
+        for (let i = 0; i < 3; i++) {
+          const a = -t * (0.0018 + i * 0.0004) + i * ((Math.PI * 2) / 3) + d.phase;
+          for (let k = 1; k <= 4; k++) {
+            const ta = a + k * 0.09;
+            const txx = d.x + Math.cos(ta) * dw * 0.95;
+            const tyy = d.y + bob + Math.sin(ta) * dh * 0.8;
+            ctx.fillStyle = `hsla(${(hue + i * 120) % 360},100%,75%,${0.5 * (1 - k / 5)})`;
+            ctx.beginPath();
+            ctx.arc(txx, tyy, 2.2 * (1 - k / 6), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(
+            d.x + Math.cos(a) * dw * 0.95,
+            d.y + bob + Math.sin(a) * dh * 0.8,
+            2.4,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+        }
       }
 
       // sparkles orbiting: gold for galaxy/magic, rainbow-cycling for prismatic (rainbow duck)

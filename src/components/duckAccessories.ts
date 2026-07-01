@@ -295,6 +295,67 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
     c.stroke();
     fillEll(c, 80, -4, 4, 4, "#FF5C5C");
     fillEll(c, 79, -5, 1.3, 1.3, "#ffaaaa");
+  } else if (v.acc === "mustache") {
+    // handlebar hanging just under the beak (beak underside sits around y=59)
+    c.strokeStyle = "#3D2010";
+    c.lineWidth = 3;
+    c.lineCap = "round";
+    c.beginPath();
+    c.moveTo(108, 60);
+    c.quadraticCurveTo(100, 66, 94, 61);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(108, 60);
+    c.quadraticCurveTo(116, 66, 122, 61);
+    c.stroke();
+  } else if (v.acc === "cape") {
+    const cc = v.accColor!;
+    // flowing fabric visible on the tail side
+    c.fillStyle = cc;
+    c.beginPath();
+    c.moveTo(40, 66);
+    c.quadraticCurveTo(12, 80, 8, 118);
+    c.lineTo(48, 112);
+    c.quadraticCurveTo(44, 88, 46, 70);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = "rgba(0,0,0,0.22)";
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(32, 74);
+    c.quadraticCurveTo(18, 92, 20, 112);
+    c.stroke();
+    // collar piece
+    c.fillStyle = cc;
+    c.beginPath();
+    c.moveTo(48, 62);
+    c.lineTo(36, 74);
+    c.lineTo(46, 80);
+    c.lineTo(56, 68);
+    c.closePath();
+    c.fill();
+  } else if (v.acc === "feather") {
+    const colors = ["#E74C3C", "#F39C12", "#27AE60", "#8E44AD"];
+    // leather headband
+    c.fillStyle = "#6B3A2A";
+    c.fillRect(54, 13, 50, 5);
+    c.fillStyle = "#4A2518";
+    c.fillRect(54, 13, 50, 2);
+    // feathers fan up-left from the band, kept inside the sprite's top edge
+    for (let i = 0; i < 4; i++) {
+      const bx = 64 + i * 9;
+      const tx = bx - 10;
+      const ty = 5 + Math.abs(i - 1.5) * 2;
+      c.strokeStyle = colors[i];
+      c.lineWidth = 3;
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(bx, 15);
+      c.quadraticCurveTo(bx - 7, 12, tx, ty + 4);
+      c.stroke();
+      fillEll(c, tx, ty, 3.2, 4.8, colors[i]);
+      fillEll(c, tx - 1, ty - 1.5, 1.2, 1.2, "rgba(255,255,255,0.5)");
+    }
   }
 }
 
