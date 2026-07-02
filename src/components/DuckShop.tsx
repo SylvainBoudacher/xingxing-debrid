@@ -22,6 +22,7 @@ import {
   upsertSavedDuck,
   type SavedDuck,
 } from "@/lib/savedDucks";
+import { recordDiscovery } from "@/lib/duckDex";
 import { getRarity, type Rarity } from "./duckRandom";
 import { DuckPreview } from "./DuckPreview";
 import {
@@ -48,6 +49,7 @@ async function getMaxDucks(): Promise<number> {
 }
 
 const RARITY_LABEL: Record<Rarity, string> = {
+  god: "★★★★★",
   mythic: "★★★★",
   legendary: "★★★",
   rare: "★★",
@@ -55,6 +57,7 @@ const RARITY_LABEL: Record<Rarity, string> = {
   common: "",
 };
 const RARITY_BADGE: Record<Rarity, string> = {
+  god: "bg-yellow-100/25 text-yellow-100 ring-1 ring-yellow-100/50",
   mythic: "bg-yellow-300/20 text-yellow-300 ring-1 ring-yellow-300/40",
   legendary: "bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/30",
   rare: "bg-blue-400/15 text-blue-400 ring-1 ring-blue-400/30",
@@ -71,11 +74,12 @@ const FILTER_LABELS: Record<Filter, string> = {
 
 type Sort = "default" | "rarity";
 const RARITY_ORDER: Record<Rarity, number> = {
-  mythic: 0,
-  legendary: 1,
-  rare: 2,
-  uncommon: 3,
-  common: 4,
+  god: 0,
+  mythic: 1,
+  legendary: 2,
+  rare: 3,
+  uncommon: 4,
+  common: 5,
 };
 
 export function DuckShop() {
@@ -186,9 +190,32 @@ export function DuckShop() {
       savedAt: Date.now(),
     };
     setSaved(await upsertSavedDuck(entry));
+    const disc = await recordDiscovery(entry.variant);
     dropped.markSaved(finalName);
     setDropped({ ...dropped, saved: true, name: finalName });
     toast.success(`${finalName} a rejoint ta collection`);
+    if (disc.newSpecies) {
+      const complete = disc.discoveredSpecies === disc.totalSpecies;
+      toast.success(`Nouvelle espèce découverte : ${disc.species.name} !`, {
+        description: complete
+          ? "Canardex complet ! Ouvre le pokédex pour réclamer ta récompense."
+          : `Canardex : ${disc.discoveredSpecies}/${disc.totalSpecies} espèces`,
+        duration: 6000,
+      });
+    } else if (disc.newColor) {
+      toast.info(`Nouvelle couleur pour ${disc.species.name}`, {
+        description: `${disc.colorCount}/${disc.species.maxColors} couleurs collectionnées`,
+      });
+    }
+    if (disc.newShiny) {
+      const shinyComplete = disc.shinyCount === disc.totalSpecies;
+      toast.success(`✦ Shiny collectionné : ${disc.species.name} !`, {
+        description: shinyComplete
+          ? "Collection shiny complète ! Le Dieu Canard t'attend dans le pokédex."
+          : `Shiny : ${disc.shinyCount}/${disc.totalSpecies} espèces`,
+        duration: 6000,
+      });
+    }
   }
 
   async function putInWater(d: SavedDuck) {
@@ -365,6 +392,11 @@ export function DuckShop() {
                               className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${RARITY_BADGE[rarity]}`}
                             >
                               {RARITY_LABEL[rarity]}
+                            </span>
+                          )}
+                          {d.variant.shiny && (
+                            <span className="shrink-0 text-[11px] text-fuchsia-400" title="Shiny">
+                              ✦
                             </span>
                           )}
                           {d.reserved && (

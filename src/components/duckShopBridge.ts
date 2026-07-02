@@ -43,6 +43,15 @@ export function emitShopOpen() {
   openCb?.();
 }
 
+// The dex icon drawn on the canvas toggles the Canardex overlay.
+let dexOpenCb: (() => void) | null = null;
+export function onDexOpen(cb: (() => void) | null) {
+  dexOpenCb = cb;
+}
+export function emitDexOpen() {
+  dexOpenCb?.();
+}
+
 // The pool reserved some saved ducks on its own (display limit lowered); the
 // shop persists the reserved flag and refreshes its list.
 let reservedCb: ((ids: string[]) => void) | null = null;

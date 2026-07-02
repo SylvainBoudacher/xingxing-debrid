@@ -120,6 +120,10 @@ export function makeDuckSprite(v: Variant): HTMLCanvasElement {
       fillEll(c, 96, 38, 5.2, 5.2, "#10202a");
       fillEll(c, 96, 38, 2.6, 2.6, "#FF5C5C");
       fillEll(c, 95, 37, 1, 1, "#ffd0d0");
+    } else if (v.pattern === "abyss") {
+      fillEll(c, 96, 38, 5.2, 5.2, "#06202E");
+      fillEll(c, 96, 38, 2.8, 2.8, "#3FE0C8");
+      fillEll(c, 95, 37, 1, 1, "#CFFFF2");
     } else {
       fillEll(c, 96, 38, 4.7, 5.3, "#181818");
       fillEll(c, 94.4, 35.8, 1.7, 1.9, "#ffffff");
@@ -128,5 +132,38 @@ export function makeDuckSprite(v: Variant): HTMLCanvasElement {
 
   drawAccessory(c, v);
 
+  if (v.shiny) applyShinyOverlay(c, cv);
+
   return cv;
+}
+
+// Shiny recolor: hue-blend a diagonal iridescent gradient over the finished
+// sprite (keeping its shading), restore the original alpha, then bake a few
+// star glints so a shiny reads as shiny even on low-saturation bodies.
+function applyShinyOverlay(c: CanvasRenderingContext2D, cv: HTMLCanvasElement) {
+  const mask = document.createElement("canvas");
+  mask.width = SW;
+  mask.height = SH;
+  mask.getContext("2d")!.drawImage(cv, 0, 0);
+
+  c.globalCompositeOperation = "hue";
+  const ig = c.createLinearGradient(0, 0, SW, SH);
+  ig.addColorStop(0, "#7DF9FF");
+  ig.addColorStop(0.5, "#C77DFF");
+  ig.addColorStop(1, "#FFD166");
+  c.fillStyle = ig;
+  c.fillRect(0, 0, SW, SH);
+  c.globalCompositeOperation = "destination-in";
+  c.drawImage(mask, 0, 0);
+  c.globalCompositeOperation = "source-over";
+
+  for (const [sx, sy, r] of [
+    [38, 58, 4],
+    [96, 22, 3],
+    [66, 96, 3],
+  ]) {
+    c.fillStyle = "rgba(255,255,255,0.9)";
+    c.fillRect(sx - r, sy - 0.8, r * 2, 1.6);
+    c.fillRect(sx - 0.8, sy - r, 1.6, r * 2);
+  }
 }

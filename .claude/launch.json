@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "vite",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev"],
+      "port": 1420
+    },
+    {
+      "name": "vite-alt",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev", "--", "--port", "4180"],
+      "port": 4180
+    }
+  ]
+}

@@ -295,7 +295,129 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
     c.stroke();
     fillEll(c, 80, -4, 4, 4, "#FF5C5C");
     fillEll(c, 79, -5, 1.3, 1.3, "#ffaaaa");
+  } else if (v.acc === "mustache") {
+    // handlebar hanging just under the beak (beak underside sits around y=59)
+    c.strokeStyle = "#3D2010";
+    c.lineWidth = 3;
+    c.lineCap = "round";
+    c.beginPath();
+    c.moveTo(108, 60);
+    c.quadraticCurveTo(100, 66, 94, 61);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(108, 60);
+    c.quadraticCurveTo(116, 66, 122, 61);
+    c.stroke();
+  } else if (v.acc === "cape") {
+    const cc = v.accColor!;
+    // flowing fabric visible on the tail side
+    c.fillStyle = cc;
+    c.beginPath();
+    c.moveTo(40, 66);
+    c.quadraticCurveTo(12, 80, 8, 118);
+    c.lineTo(48, 112);
+    c.quadraticCurveTo(44, 88, 46, 70);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = "rgba(0,0,0,0.22)";
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.moveTo(32, 74);
+    c.quadraticCurveTo(18, 92, 20, 112);
+    c.stroke();
+    // collar piece
+    c.fillStyle = cc;
+    c.beginPath();
+    c.moveTo(48, 62);
+    c.lineTo(36, 74);
+    c.lineTo(46, 80);
+    c.lineTo(56, 68);
+    c.closePath();
+    c.fill();
+  } else if (v.acc === "feather") {
+    const colors = ["#E74C3C", "#F39C12", "#27AE60", "#8E44AD"];
+    // leather headband
+    c.fillStyle = "#6B3A2A";
+    c.fillRect(54, 13, 50, 5);
+    c.fillStyle = "#4A2518";
+    c.fillRect(54, 13, 50, 2);
+    // feathers fan up-left from the band, kept inside the sprite's top edge
+    for (let i = 0; i < 4; i++) {
+      const bx = 64 + i * 9;
+      const tx = bx - 10;
+      const ty = 5 + Math.abs(i - 1.5) * 2;
+      c.strokeStyle = colors[i];
+      c.lineWidth = 3;
+      c.lineCap = "round";
+      c.beginPath();
+      c.moveTo(bx, 15);
+      c.quadraticCurveTo(bx - 7, 12, tx, ty + 4);
+      c.stroke();
+      fillEll(c, tx, ty, 3.2, 4.8, colors[i]);
+      fillEll(c, tx - 1, ty - 1.5, 1.2, 1.2, "rgba(255,255,255,0.5)");
+    }
+  } else if (v.acc === "laurel") {
+    drawLaurelAndBeard(c);
   }
+}
+
+// Zeus regalia: a golden laurel wreath circling the head and a flowing white
+// beard under the beak. Worn by the god duck (dex shiny-completion reward).
+function drawLaurelAndBeard(c: CanvasRenderingContext2D) {
+  // wreath band following the forehead arc
+  c.strokeStyle = "#C9A227";
+  c.lineWidth = 3;
+  c.beginPath();
+  c.moveTo(54, 24);
+  c.quadraticCurveTo(80, 4, 106, 24);
+  c.stroke();
+  // gold leaves in mirrored pairs along the band, tilted outward
+  for (let i = 0; i < 5; i++) {
+    const p = i / 4;
+    const x = 58 + p * 44;
+    const y = 21 - Math.sin(p * Math.PI) * 10;
+    const tilt = (p - 0.5) * 1.4;
+    for (const side of [-1, 1]) {
+      c.save();
+      c.translate(x, y + side * 2);
+      c.rotate(tilt + side * 0.5);
+      fillEll(c, 0, 0, 4.6, 2.1, "#E8C547");
+      fillEll(c, 1, -0.5, 2.2, 0.9, "#FFF0B0");
+      c.restore();
+    }
+  }
+  // white beard flowing down from under the beak
+  c.fillStyle = "#F7F7F2";
+  c.beginPath();
+  c.moveTo(96, 58);
+  c.quadraticCurveTo(92, 76, 100, 92);
+  c.quadraticCurveTo(108, 100, 114, 88);
+  c.quadraticCurveTo(122, 72, 116, 58);
+  c.quadraticCurveTo(106, 64, 96, 58);
+  c.closePath();
+  c.fill();
+  // wavy strands
+  c.strokeStyle = "rgba(180,180,190,0.55)";
+  c.lineWidth = 1.4;
+  for (const [bx, amp] of [
+    [102, 3],
+    [108, 4],
+    [113, 3],
+  ]) {
+    c.beginPath();
+    c.moveTo(bx, 62);
+    c.quadraticCurveTo(bx - amp, 74, bx + 1, 86);
+    c.stroke();
+  }
+  // moustache tufts over the beard's top edge
+  fillEll(c, 100, 59, 5, 2.6, "#FFFFFF");
+  fillEll(c, 113, 59, 5, 2.6, "#FFFFFF");
+  // bushy white eyebrow above the eye
+  c.save();
+  c.translate(96, 29);
+  c.rotate(-0.15);
+  fillEll(c, 0, 0, 7, 2.8, "#FFFFFF");
+  c.restore();
 }
 
 // The king's grand crown: a red-velvet cap ringed by a gem-studded gold band

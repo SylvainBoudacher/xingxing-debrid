@@ -18,6 +18,7 @@ const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
 );
 const DuckShop = lazy(() => import("@/components/DuckShop").then((m) => ({ default: m.DuckShop })));
+const DuckDex = lazy(() => import("@/components/DuckDex").then((m) => ({ default: m.DuckDex })));
 const SetupPage = lazy(() => import("@/pages/SetupPage").then((m) => ({ default: m.SetupPage })));
 const MainPage = lazy(() => import("@/pages/MainPage").then((m) => ({ default: m.MainPage })));
 import { MagnetsPage } from "@/pages/MagnetsPage";
@@ -28,6 +29,9 @@ const PreferencesPage = lazy(() =>
 );
 const PatchnotesPage = lazy(() =>
   import("@/pages/PatchnotesPage").then((m) => ({ default: m.PatchnotesPage })),
+);
+const BoatGamePage = lazy(() =>
+  import("@/pages/BoatGamePage").then((m) => ({ default: m.BoatGamePage })),
 );
 import { LibraryPage } from "@/pages/LibraryPage";
 
@@ -188,7 +192,12 @@ function App() {
           }`}
         >
           <Suspense fallback={null}>
-            <PixelPool active={showPool} fps={summerFps} maxDucks={summerMaxDucks} />
+            <PixelPool
+              active={showPool}
+              fps={summerFps}
+              maxDucks={summerMaxDucks}
+              onBoatWarp={() => setPage("boatgame")}
+            />
           </Suspense>
         </div>
       )}
@@ -198,6 +207,7 @@ function App() {
       {summerEnabled && (
         <Suspense fallback={null}>
           <DuckShop />
+          <DuckDex />
         </Suspense>
       )}
 
@@ -371,6 +381,17 @@ function App() {
               transition={{ duration: 0.22, ease: "easeInOut" }}
             >
               <NyaaTestPage onBack={() => setPage("main")} />
+            </motion.div>
+          )}
+          {effectivePhase === "done" && page === "boatgame" && (
+            <motion.div
+              key="boatgame"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, ease: "easeInOut" }}
+            >
+              <BoatGamePage onExit={() => setPage("main")} />
             </motion.div>
           )}
           {effectivePhase === "done" && page === "patchnotes" && (

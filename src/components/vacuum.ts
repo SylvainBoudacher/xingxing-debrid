@@ -44,24 +44,25 @@ export function makeVacuum(): VacuumState {
   return { loaded: false, cooldown: 0, headX: 0, headY: 0, rope: [], phase: 0, bulges: [] };
 }
 
-export function vacuumAnchor(w: number) {
-  return { x: w - 56, y: 140 };
+export function vacuumAnchor(w: number, h: number) {
+  // dock above the drain (bottom-right corner), matching drain x: w - 52, y: h - 52, r: 36
+  return { x: w - 56, y: h - 52 - 36 - BODY_H / 2 - 16 };
 }
 
 // where the hose leaves the dock (bottom-left corner of the body)
-export function hosePort(w: number) {
-  const a = vacuumAnchor(w);
+export function hosePort(w: number, h: number) {
+  const a = vacuumAnchor(w, h);
   return { x: a.x - BODY_W / 2 + 6, y: a.y + BODY_H / 2 - 2 };
 }
 
 // where the head floats while the vacuum is off
-function headRest(w: number) {
-  const a = vacuumAnchor(w);
+function headRest(w: number, h: number) {
+  const a = vacuumAnchor(w, h);
   return { x: a.x - 46, y: a.y + 34 };
 }
 
-export function overVacuum(px: number, py: number, w: number): boolean {
-  const a = vacuumAnchor(w);
+export function overVacuum(px: number, py: number, w: number, h: number): boolean {
+  const a = vacuumAnchor(w, h);
   return Math.abs(px - a.x) <= BODY_W / 2 + 12 && Math.abs(py - a.y) <= BODY_H / 2 + 14;
 }
 
@@ -72,6 +73,7 @@ export function updateVacuum(
   v: VacuumState,
   dt: number,
   w: number,
+  h: number,
   px: number,
   py: number,
 ): number {
@@ -87,9 +89,9 @@ export function updateVacuum(
     }
   }
 
-  const port = hosePort(w);
+  const port = hosePort(w, h);
   if (v.rope.length === 0) {
-    const rest = headRest(w);
+    const rest = headRest(w, h);
     v.headX = rest.x;
     v.headY = rest.y;
     for (let i = 0; i <= SEGS; i++) {
@@ -99,7 +101,7 @@ export function updateVacuum(
     }
   }
 
-  const rest = headRest(w);
+  const rest = headRest(w, h);
   const tx = v.loaded ? (px >= 0 ? px : v.headX) : rest.x;
   const ty = v.loaded ? (px >= 0 ? py : v.headY) : rest.y;
   const k = Math.min(1, dt * (v.loaded ? 14 : 5));
@@ -304,10 +306,11 @@ export function drawVacuum(
   v: VacuumState,
   t: number,
   w: number,
+  h: number,
   dark: boolean,
   hover: boolean,
 ) {
-  const a = vacuumAnchor(w);
+  const a = vacuumAnchor(w, h);
   const x0 = a.x - BODY_W / 2;
   const y0 = a.y - BODY_H / 2;
 
@@ -326,7 +329,7 @@ export function drawVacuum(
   drawHose(ctx, v, dark);
 
   // hose collar on the dock
-  const port = hosePort(w);
+  const port = hosePort(w, h);
   ctx.fillStyle = dark ? "#0a0c10" : "#1c2830";
   ctx.beginPath();
   ctx.arc(port.x, port.y, 6, 0, Math.PI * 2);

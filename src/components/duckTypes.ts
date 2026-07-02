@@ -26,7 +26,10 @@ export type Accessory =
   | "monocle"
   | "mustache"
   | "scarf"
-  | "antenna";
+  | "antenna"
+  | "cape"
+  | "feather"
+  | "laurel";
 
 export type Pattern =
   | "spots"
@@ -36,7 +39,8 @@ export type Pattern =
   | "gold"
   | "galaxy"
   | "zombie"
-  | "metal";
+  | "metal"
+  | "abyss";
 
 export type Effect =
   | "glow"
@@ -47,7 +51,11 @@ export type Effect =
   | "golden"
   | "ooze"
   | "electric"
-  | "royal";
+  | "royal"
+  | "fire"
+  | "frost"
+  | "nova"
+  | "godly";
 
 export interface Variant {
   body: string;
@@ -56,4 +64,5 @@ export interface Variant {
   accColor?: string;
   pattern?: Pattern;
   effect?: Effect;
+  shiny?: boolean; // rare alternate look: iridescent recolor + twinkles, any species can roll it
 }

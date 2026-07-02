@@ -28,6 +28,9 @@ const BODY_COLORS: [string, number][] = [
   ["#4A5568", 1], // charcoal
 ];
 
+// number of distinct body colors a colorable species can roll (used by the dex)
+export const BODY_COLOR_COUNT = BODY_COLORS.length;
+
 // vivid colors handed to accessories that render with v.accColor
 const ACC_COLORS = [
   "#E0457B",
@@ -57,6 +60,7 @@ const COLORED_ACC = new Set<Accessory>([
   "propeller",
   "scarf",
   "monocle",
+  "cape",
 ]);
 
 const COMMON_ACC: Accessory[] = [
@@ -70,6 +74,7 @@ const COMMON_ACC: Accessory[] = [
   "scarf",
   "headphones",
   "monocle",
+  "mustache",
 ];
 const UNCOMMON_ACC: Accessory[] = [
   "crown",
@@ -80,6 +85,7 @@ const UNCOMMON_ACC: Accessory[] = [
   "chef",
   "antlers",
   "propeller",
+  "cape",
 ];
 const SIMPLE_PATTERNS: Pattern[] = ["spots", "stripes", "polka"];
 
@@ -130,6 +136,8 @@ const LEGENDARY: (() => Variant)[] = [
     pattern: "metal",
     effect: "electric",
   }),
+  () => ({ body: "#FF3D00", beak: ORANGE_BEAK, acc: "devil", effect: "fire" }),
+  () => ({ body: "#050F1E", beak: "#1A3A5A", acc: "none", pattern: "abyss", effect: "bubbles" }),
 ];
 
 const RARE: (() => Variant)[] = [
@@ -140,9 +148,13 @@ const RARE: (() => Variant)[] = [
   () => ({ body: "#FFD21E", beak: "#2A2A2A", acc: "pirate" }),
   () => ({ body: "#F0584E", beak: ORANGE_BEAK, acc: "devil" }),
   () => ({ body: bodyColor(), beak: ORANGE_BEAK, acc: "none", effect: "glow" }),
+  () => ({ body: "#3FD0C8", beak: ORANGE_BEAK, acc: "snorkel", effect: "bubbles" }),
+  () => ({ body: "#300010", beak: ORANGE_BEAK, acc: "cape", accColor: "#1A0008", effect: "glow" }),
+  () => withAcc("feather"),
+  () => ({ body: "#B8E0FF", beak: "#8DB5D0", acc: "none", effect: "frost" }),
 ];
 
-export type Rarity = "mythic" | "legendary" | "rare" | "uncommon" | "common";
+export type Rarity = "god" | "mythic" | "legendary" | "rare" | "uncommon" | "common";
 
 // The king of ducks: a single ultra-legendary skin. Bigger, golden, crowned and
 // wrapped in a royal shine. PixelPool spawns it at a larger scale (see spawnDuck).
@@ -164,10 +176,26 @@ const LEGENDARY_EFFECTS = new Set<Effect>([
   "golden",
   "ooze",
   "electric",
+  "fire",
 ]);
-const LEGENDARY_PATTERNS = new Set<Pattern>(["rainbow", "gold", "galaxy", "zombie", "metal"]);
-const RARE_EFFECTS = new Set<Effect>(["glow", "bubbles"]);
-const RARE_ACC = new Set<Accessory>(["wizard", "viking", "pirate", "devil", "halo", "snorkel"]);
+const LEGENDARY_PATTERNS = new Set<Pattern>([
+  "rainbow",
+  "gold",
+  "galaxy",
+  "zombie",
+  "metal",
+  "abyss",
+]);
+const RARE_EFFECTS = new Set<Effect>(["glow", "bubbles", "frost"]);
+const RARE_ACC = new Set<Accessory>([
+  "wizard",
+  "viking",
+  "pirate",
+  "devil",
+  "halo",
+  "snorkel",
+  "feather",
+]);
 const UNCOMMON_PATTERNS = new Set<Pattern>(["spots", "stripes", "polka"]);
 const UNCOMMON_ACC_SET = new Set<Accessory>([
   "crown",
@@ -178,10 +206,12 @@ const UNCOMMON_ACC_SET = new Set<Accessory>([
   "chef",
   "antlers",
   "propeller",
+  "cape",
 ]);
 
 export function getRarity(v: Variant): Rarity {
-  if (v.effect === "royal") return "mythic";
+  if (v.effect === "godly") return "god"; // Zeus sits alone above the mythics
+  if (v.effect === "royal" || v.effect === "nova") return "mythic";
   if (
     (v.pattern && LEGENDARY_PATTERNS.has(v.pattern)) ||
     (v.effect && LEGENDARY_EFFECTS.has(v.effect))
@@ -190,6 +220,7 @@ export function getRarity(v: Variant): Rarity {
   if ((v.effect && RARE_EFFECTS.has(v.effect)) || RARE_ACC.has(v.acc)) return "rare";
   if ((v.pattern && UNCOMMON_PATTERNS.has(v.pattern)) || UNCOMMON_ACC_SET.has(v.acc))
     return "uncommon";
+  if (v.body === "#4A5568" && v.acc === "shades") return "uncommon";
   return "common";
 }
 
@@ -197,16 +228,25 @@ export function randomLegendaryVariant(): Variant {
   return randOf(LEGENDARY)();
 }
 
+// chance for any spawn to roll shiny, independent of its rarity tier
+const SHINY_RATE = 0.07;
+
 export function randomVariant(): Variant {
   const roll = Math.random();
-  if (roll < 0.01) return kingVariant(); // 1% ultra-legendary king
-  if (roll < 0.04) return randOf(LEGENDARY)(); // ~3% legendary
-  if (roll < 0.13) return randOf(RARE)(); // ~9% rare
-  if (roll < 0.41) {
+  let v: Variant;
+  if (roll < 0.01)
+    v = kingVariant(); // 1% ultra-legendary king
+  else if (roll < 0.04)
+    v = randOf(LEGENDARY)(); // ~3% legendary
+  else if (roll < 0.13)
+    v = randOf(RARE)(); // ~9% rare
+  else if (roll < 0.41) {
     // ~28% uncommon: simple pattern or a fancier accessory
-    return Math.random() < 0.4
-      ? { body: bodyColor(), beak: ORANGE_BEAK, acc: "none", pattern: randOf(SIMPLE_PATTERNS) }
-      : withAcc(randOf(UNCOMMON_ACC));
-  }
-  return withAcc(randOf(COMMON_ACC)); // ~60% common
+    v =
+      Math.random() < 0.4
+        ? { body: bodyColor(), beak: ORANGE_BEAK, acc: "none", pattern: randOf(SIMPLE_PATTERNS) }
+        : withAcc(randOf(UNCOMMON_ACC));
+  } else v = withAcc(randOf(COMMON_ACC)); // ~60% common
+  if (Math.random() < SHINY_RATE) v.shiny = true;
+  return v;
 }

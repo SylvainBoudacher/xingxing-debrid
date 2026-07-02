@@ -1,6 +1,17 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
+  BOAT_BASE,
+  BOAT_RADIUS,
+  type BoatState,
+  boatControlOf,
+  boatVelocity,
+  drawBoat,
+  getBoatSprite,
+  makeBoat,
+  updateBoat,
+} from "./boat";
+import {
   aimCannon,
   type CannonState,
   drawBalls,
@@ -31,6 +42,8 @@ import {
   type ParadeState,
   paradeSlot,
 } from "./parade";
+import { drawDex, overDex } from "./dexIcon";
+import { dexStatusOf, syncDexWithCollection } from "@/lib/duckDex";
 import {
   drawSuckGuide,
   drawSuckPulses,
@@ -46,6 +59,7 @@ import {
 } from "./vacuum";
 import {
   type DuckSpec,
+  emitDexOpen,
   emitDuckDrop,
   emitDucksReserved,
   emitShopOpen,
@@ -104,6 +118,20 @@ function leaving(d: Duck) {
   return !!(d.draining || d.storing || d.exiting || d.sucked);
 }
 
+// Push hierarchy: the king and the supernova stand their ground against
+// ordinary ducks and cannonballs; only Zeus the duck god can shove them,
+// and Zeus himself yields to nothing.
+function pushRank(d: Duck): number {
+  if (d.effect === "godly") return 2;
+  if (d.effect === "royal" || d.effect === "nova") return 1;
+  return 0;
+}
+
+// The king and the god duck hold the centre of the parade.
+function holdsParadeCentre(d: Duck) {
+  return d.effect === "royal" || d.effect === "godly";
+}
+
 // Pool state lives at module scope so the ducks persist across page changes
 // (MainPage unmounting/remounting) instead of resetting.
 const pool: Duck[] = [];
@@ -117,7 +145,13 @@ const cannon: CannonState = makeCannon();
 const balls: TennisBall[] = [];
 const parade: ParadeState = makeParade();
 const vacuum: VacuumState = makeVacuum();
+const boat: BoatState = makeBoat();
+// boat caught by the drain whirlpool: spirals in, then warps to the minigame
+let boatWarp: { start: number; x: number; y: number } | null = null;
 const suckPulses: SuckPulse[] = [];
+// ducks currently travelling the hose (FIFO, mirrors vacuum.bulges); spat into
+// the drain when their bulge reaches the dock
+const swallowedDucks: Duck[] = [];
 
 // Arrange every present duck in a ring that rotates around the pool centre for
 // PARADE_MS.
@@ -127,13 +161,13 @@ function startParade() {
   if (marchers.length === 0) return;
   parade.active = true;
   parade.start = performance.now();
-  // the king (if present) holds the centre; the rest form the ring around it
-  const ring = marchers.filter((d) => d.effect !== "royal");
+  // the king/god (if present) holds the centre; the rest form the ring around it
+  const ring = marchers.filter((d) => !holdsParadeCentre(d));
   parade.count = ring.length;
   let slot = 0;
   for (const d of marchers) {
     d.parade = true;
-    d.paradeSlot = d.effect === "royal" ? -1 : slot++;
+    d.paradeSlot = holdsParadeCentre(d) ? -1 : slot++;
     d.boostTimer = 0;
   }
 }
@@ -209,6 +243,15 @@ function scaleFor(v: Variant) {
 function spawnDuck() {
   if (pool.length >= MAX_DUCKS) return;
   const v = randomVariant();
+  enterPool(v, scaleFor(v));
+}
+
+// Dev-only (Shift+S): force un roll shiny pour tester le dex shiny sans
+// attendre le taux de 7%. Ignore MAX_DUCKS volontairement. (Shift, car S seul
+// est la marche arriere du bateau.)
+function spawnShinyDuck() {
+  const v = randomVariant();
+  v.shiny = true;
   enterPool(v, scaleFor(v));
 }
 
@@ -298,14 +341,21 @@ export function PixelPool({
   active = true,
   fps = 30,
   maxDucks = 15,
+  onBoatWarp,
 }: {
   active?: boolean;
   fps?: number;
   maxDucks?: number;
+  onBoatWarp?: () => void; // the boat drove into the drain: open the minigame
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const activeRef = useRef(active);
   const fpsRef = useRef(fps);
+  const warpRef = useRef(onBoatWarp);
+
+  useEffect(() => {
+    warpRef.current = onBoatWarp;
+  }, [onBoatWarp]);
 
   useEffect(() => {
     activeRef.current = active;
@@ -374,6 +424,7 @@ export function PixelPool({
     const wakes: Wake[] = [];
     const WAKE_SPEED = 28; // px/s threshold to emit wake (just above cruise)
     const WAKE_INTERVAL = 0.06; // seconds between wake drops per duck
+    let boatWakeTimer = 0;
 
     function spawnSplash(x: number, y: number, power: number) {
       if (splashes.length > 220) return;
@@ -408,10 +459,11 @@ export function PixelPool({
       if (cannon.loaded)
         return setCursor(overCannon(e.clientX, e.clientY) ? "pointer" : "crosshair");
       if (vacuum.loaded)
-        return setCursor(overVacuum(e.clientX, e.clientY, w) ? "pointer" : "crosshair");
+        return setCursor(overVacuum(e.clientX, e.clientY, w, h) ? "pointer" : "crosshair");
       if (overCannon(e.clientX, e.clientY)) return setCursor("pointer");
-      if (overVacuum(e.clientX, e.clientY, w)) return setCursor("pointer");
+      if (overVacuum(e.clientX, e.clientY, w, h)) return setCursor("pointer");
       if (overParade(e.clientX, e.clientY, h)) return setCursor("pointer");
+      if (overDex(e.clientX, e.clientY, h)) return setCursor("pointer");
       if (duckAt(e.clientX, e.clientY)) return setCursor("grab");
       if (overShop(e.clientX, e.clientY)) return setCursor("pointer");
       setCursor("");
@@ -479,7 +531,7 @@ export function PixelPool({
         return;
       }
       // clicking the vacuum robot switches it on/off
-      if (e.button === 0 && overVacuum(e.clientX, e.clientY, w)) {
+      if (e.button === 0 && overVacuum(e.clientX, e.clientY, w, h)) {
         vacuum.loaded = !vacuum.loaded;
         if (vacuum.loaded) cannon.loaded = false;
         updateHoverCursor(e);
@@ -507,6 +559,12 @@ export function PixelPool({
       // clicking the pennant kicks off parade mode
       if (e.button === 0 && overParade(e.clientX, e.clientY, h)) {
         startParade();
+        e.preventDefault();
+        return;
+      }
+      // clicking the pokedex toggles the Canardex overlay
+      if (e.button === 0 && overDex(e.clientX, e.clientY, h)) {
+        emitDexOpen();
         e.preventDefault();
         return;
       }
@@ -626,6 +684,12 @@ export function PixelPool({
       updateHoverCursor(e);
     }
 
+    function typing(e: KeyboardEvent): boolean {
+      return !!(e.target as HTMLElement | null)?.closest(
+        "input, textarea, select, [contenteditable]",
+      );
+    }
+
     // Escape climbs out of the cannon / switches the vacuum off
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && (cannon.loaded || vacuum.loaded)) {
@@ -633,6 +697,19 @@ export function PixelPool({
         vacuum.loaded = false;
         setCursor("");
       }
+      // ZQSD/WASD/arrows drive XingXing's boat
+      const control = boatControlOf(e.code);
+      if (control && activeRef.current && !typing(e)) {
+        boat.keys.add(control);
+        e.preventDefault();
+      }
+      if (import.meta.env.DEV && e.shiftKey && e.code === "KeyS" && activeRef.current && !typing(e))
+        spawnShinyDuck();
+    }
+
+    function onKeyUp(e: KeyboardEvent) {
+      const control = boatControlOf(e.code);
+      if (control) boat.keys.delete(control);
     }
 
     const isDark = () => document.documentElement.classList.contains("dark");
@@ -807,8 +884,23 @@ export function PixelPool({
       return Math.hypot(px - d.x, py - d.y) <= d.r;
     }
 
-    function drawDrain(now: number, hot: boolean, dark: boolean) {
+    function drawDrain(now: number, hot: boolean, dark: boolean, glint = false) {
       const d = drain();
+
+      // golden twinkles when the boat cruises nearby: a hint that the typhoon
+      // leads somewhere
+      if (glint) {
+        for (let i = 0; i < 6; i++) {
+          const a = now * 0.003 + (i * Math.PI) / 3;
+          const rr = d.r + 7 + Math.sin(now * 0.008 + i) * 2;
+          const gx = d.x + Math.cos(a) * rr;
+          const gy = d.y + Math.sin(a) * rr;
+          const al = 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(now * 0.01 + i * 2));
+          ctx.fillStyle = `rgba(255,224,102,${al})`;
+          ctx.fillRect(gx - 0.75, gy - 3, 1.5, 6);
+          ctx.fillRect(gx - 3, gy - 0.75, 6, 1.5);
+        }
+      }
 
       // coping ring
       ctx.fillStyle = dark ? "#0c2a40" : "#d4ecf8";
@@ -941,7 +1033,60 @@ export function PixelPool({
       ctx.ellipse(d.x, d.y + dh * 0.42, dw * 0.36, dh * 0.1, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // glowing aura behind the duck — cyan for glow, amber for golden, cold blue for ghost
+      // fire: flames rising from below the duck
+      if (d.effect === "fire") {
+        for (let i = 0; i < 5; i++) {
+          const p = (t * 0.0009 + d.phase + i * 0.22) % 1;
+          const bx = d.x - dw * 0.15 + Math.sin(t * 0.002 + i * 1.6 + d.phase) * dw * 0.32;
+          const by = d.y + bob + dh * 0.1 - p * dh * 0.9;
+          const r = (3.5 + i * 0.8) * (1 - p * 0.55);
+          const heat = 1 - p;
+          ctx.fillStyle = `rgba(255,${Math.floor(130 * heat)},0,${0.65 * (1 - p)})`;
+          ctx.beginPath();
+          ctx.arc(bx, by, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // frost: icy aura + orbiting ice crystals
+      if (d.effect === "frost") {
+        const pulse = 0.22 + Math.sin(t * 0.003 + d.phase) * 0.07;
+        const gr = ctx.createRadialGradient(d.x, d.y + bob, dw * 0.1, d.x, d.y + bob, dw);
+        gr.addColorStop(0, `rgba(200,240,255,${pulse})`);
+        gr.addColorStop(1, `rgba(200,240,255,0)`);
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y + bob, dw, 0, Math.PI * 2);
+        ctx.fill();
+        for (let i = 0; i < 5; i++) {
+          const a = t * 0.0009 + i * ((Math.PI * 2) / 5) + d.phase;
+          const tw = (Math.sin(t * 0.005 + i * 2.1) + 1) / 2;
+          const sx = d.x + Math.cos(a) * dw * 0.56;
+          const sy = d.y + bob + Math.sin(a) * dh * 0.5;
+          const r = 1 + tw * 2.2;
+          ctx.fillStyle = `rgba(210,242,255,${0.45 + tw * 0.5})`;
+          ctx.fillRect(sx - r, sy - 0.5, r * 2, 1);
+          ctx.fillRect(sx - 0.5, sy - r, 1, r * 2);
+          ctx.fillRect(sx - r * 0.7, sy - r * 0.7, r * 1.4, 1);
+          ctx.fillRect(sx - r * 0.7, sy + r * 0.7 - 1, r * 1.4, 1);
+        }
+      }
+
+      // supernova (dex completion reward): pulsing aura cycling through hues
+      if (d.effect === "nova") {
+        const hue = (t * 0.05) % 360;
+        const pulse = 0.4 + Math.sin(t * 0.005 + d.phase) * 0.12;
+        const gr = ctx.createRadialGradient(d.x, d.y + bob, dw * 0.1, d.x, d.y + bob, dw);
+        gr.addColorStop(0, `hsla(${hue},95%,70%,${pulse})`);
+        gr.addColorStop(1, `hsla(${hue},95%,70%,0)`);
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y + bob, dw, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // glowing aura behind the duck — cyan for glow (blood red for the
+      // vampire's body), amber for golden, cold blue for ghost
       if (d.effect === "glow" || d.effect === "golden" || d.effect === "ghost") {
         const pulse =
           d.effect === "ghost"
@@ -952,7 +1097,9 @@ export function PixelPool({
             ? "255,210,50"
             : d.effect === "ghost"
               ? "190,215,255"
-              : "140,235,255";
+              : d.variant.body === "#300010"
+                ? "220,40,50"
+                : "140,235,255";
         const radius = d.effect === "ghost" ? dw * 1.1 : dw * 0.9;
         const gr = ctx.createRadialGradient(d.x, d.y + bob, dw * 0.1, d.x, d.y + bob, radius);
         gr.addColorStop(0, `rgba(${col},${pulse})`);
@@ -998,6 +1145,59 @@ export function PixelPool({
         ctx.fill();
       }
 
+      // godly (Zeus): storm-cloud ring circling the god, a white-gold sunburst
+      // outshining the king's, and a divine halo
+      if (d.effect === "godly") {
+        const cx = d.x;
+        const cy = d.y + bob;
+
+        // rotating sunburst: more rays, longer and whiter than the royal shine
+        const rot = -t * 0.0003;
+        const rays = 16;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rot);
+        for (let i = 0; i < rays; i++) {
+          const a = (i / rays) * Math.PI * 2;
+          const long = i % 2 === 0;
+          const len = (long ? dw * 1.45 : dw * 1.0) * (0.95 + Math.sin(t * 0.004 + i) * 0.05);
+          const grad = ctx.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
+          grad.addColorStop(0, "rgba(255,250,210,0.6)");
+          grad.addColorStop(1, "rgba(255,250,210,0)");
+          ctx.strokeStyle = grad;
+          ctx.lineWidth = long ? 3.5 : 1.8;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // ring of slate storm clouds drifting around the god
+        for (let i = 0; i < 6; i++) {
+          const a = t * 0.0005 + i * (Math.PI / 3);
+          const sx = cx + Math.cos(a) * dw * 0.92;
+          const sy = cy + Math.sin(a) * dh * 0.62;
+          const puff = 0.9 + Math.sin(t * 0.002 + i * 2.3) * 0.12;
+          ctx.fillStyle = "rgba(70,82,104,0.34)";
+          ctx.beginPath();
+          ctx.ellipse(sx, sy, 13 * puff, 6.5 * puff, 0, 0, Math.PI * 2);
+          ctx.ellipse(sx - 9 * puff, sy + 2, 8 * puff, 4.6 * puff, 0, 0, Math.PI * 2);
+          ctx.ellipse(sx + 9 * puff, sy + 2, 8 * puff, 4.6 * puff, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // strong pulsing white-gold halo
+        const pulse = 0.45 + Math.sin(t * 0.005 + d.phase) * 0.15;
+        const gr = ctx.createRadialGradient(cx, cy, dw * 0.1, cx, cy, dw * 1.1);
+        gr.addColorStop(0, `rgba(255,245,190,${pulse})`);
+        gr.addColorStop(1, "rgba(255,245,190,0)");
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(cx, cy, dw * 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       // duck
       ctx.save();
       ctx.globalAlpha = d.effect === "ghost" ? 0.5 : 1;
@@ -1031,6 +1231,88 @@ export function PixelPool({
         ctx.fillRect(gx - 0.8, gy - 5, 1.6, 10);
       }
 
+      // godly foreground: lightning bolts hurled down around the god — jagged,
+      // deterministic (hashed ticks like the electric arcs), with a flash tip
+      if (d.effect === "godly") {
+        const tick = (t * 0.004 + d.phase * 10) | 0;
+        for (let i = 0; i < 3; i++) {
+          const h0 = Math.sin(tick * 113.9 + i * 71.3);
+          if (h0 < 0.35) continue; // bolts strike in bursts, not constantly
+          const h1 = Math.sin(tick * 271.7 + i * 53.9);
+          const bx = d.x + h1 * dw * 0.85;
+          const top = d.y + bob - dh * 1.05;
+          const bottom = d.y + bob + dh * 0.25;
+          const seg = (bottom - top) / 4;
+          ctx.strokeStyle = `rgba(255,255,220,${0.55 + h0 * 0.4})`;
+          ctx.lineWidth = 2.2;
+          ctx.beginPath();
+          ctx.moveTo(bx, top);
+          let px = bx;
+          for (let k = 1; k <= 4; k++) {
+            px += Math.sin(tick * 197.3 + i * 31.7 + k * 87.1) * 9;
+            ctx.lineTo(px, top + seg * k);
+          }
+          ctx.stroke();
+          // flash at the impact point
+          const fg = ctx.createRadialGradient(px, bottom, 0, px, bottom, 10);
+          fg.addColorStop(0, `rgba(255,255,240,${0.6 * h0})`);
+          fg.addColorStop(1, "rgba(255,255,240,0)");
+          ctx.fillStyle = fg;
+          ctx.beginPath();
+          ctx.arc(px, bottom, 10, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // orbiting white-gold twinkles
+        for (let i = 0; i < 10; i++) {
+          const a = t * 0.0016 + i * ((Math.PI * 2) / 10) + d.phase;
+          const tw = (Math.sin(t * 0.007 + i * 1.9) + 1) / 2;
+          const sx = d.x + Math.cos(a) * dw * 0.6;
+          const sy = d.y + bob + Math.sin(a) * dh * 0.52;
+          const r = 1.4 + tw * 3.2;
+          ctx.fillStyle = `rgba(255,250,200,${0.35 + tw * 0.6})`;
+          ctx.fillRect(sx - r, sy - 0.7, r * 2, 1.4);
+          ctx.fillRect(sx - 0.7, sy - r, 1.4, r * 2);
+        }
+      }
+
+      // supernova foreground: a tilted prismatic orbit ring + comets with trails
+      if (d.effect === "nova") {
+        const hue = (t * 0.05) % 360;
+        const shards = 14;
+        for (let i = 0; i < shards; i++) {
+          const a = t * 0.0012 + (i / shards) * Math.PI * 2;
+          const sx = d.x + Math.cos(a) * dw * 0.72;
+          const sy = d.y + bob + Math.sin(a) * dh * 0.32;
+          const tw = (Math.sin(t * 0.006 + i * 1.3) + 1) / 2;
+          const r = 1.4 + tw * 2.2;
+          ctx.fillStyle = `hsla(${(hue + i * 26) % 360},100%,72%,${0.35 + tw * 0.55})`;
+          ctx.fillRect(sx - r, sy - 0.7, r * 2, 1.4);
+          ctx.fillRect(sx - 0.7, sy - r, 1.4, r * 2);
+        }
+        for (let i = 0; i < 3; i++) {
+          const a = -t * (0.0018 + i * 0.0004) + i * ((Math.PI * 2) / 3) + d.phase;
+          for (let k = 1; k <= 4; k++) {
+            const ta = a + k * 0.09;
+            const txx = d.x + Math.cos(ta) * dw * 0.95;
+            const tyy = d.y + bob + Math.sin(ta) * dh * 0.8;
+            ctx.fillStyle = `hsla(${(hue + i * 120) % 360},100%,75%,${0.5 * (1 - k / 5)})`;
+            ctx.beginPath();
+            ctx.arc(txx, tyy, 2.2 * (1 - k / 6), 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(
+            d.x + Math.cos(a) * dw * 0.95,
+            d.y + bob + Math.sin(a) * dh * 0.8,
+            2.4,
+            0,
+            Math.PI * 2,
+          );
+          ctx.fill();
+        }
+      }
+
       // sparkles orbiting: gold for galaxy/magic, rainbow-cycling for prismatic (rainbow duck)
       if (d.effect === "sparkle" || d.effect === "prismatic") {
         const count = d.effect === "prismatic" ? 6 : 4;
@@ -1047,6 +1329,25 @@ export function PixelPool({
           ctx.fillStyle = color;
           ctx.fillRect(sx - r, sy - 0.6, r * 2, 1.2);
           ctx.fillRect(sx - 0.6, sy - r, 1.2, r * 2);
+        }
+      }
+
+      // shiny twinkles: Pokemon-style glints popping on the body, on top of
+      // whatever effect the duck already carries
+      if (d.variant.shiny) {
+        for (let i = 0; i < 3; i++) {
+          const p = (t * 0.0009 + d.phase + i * 0.33) % 1;
+          const tw = Math.sin(p * Math.PI); // fade in, peak, fade out
+          if (tw < 0.05) continue;
+          const a = d.phase + i * 2.1;
+          const sx = d.x + Math.cos(a) * dw * 0.26;
+          const sy = d.y + bob + Math.sin(a * 1.7) * dh * 0.24;
+          const r = 1.5 + tw * 3;
+          ctx.fillStyle = `rgba(255,255,255,${0.4 + tw * 0.55})`;
+          ctx.fillRect(sx - r, sy - 0.7, r * 2, 1.4);
+          ctx.fillRect(sx - 0.7, sy - r, 1.4, r * 2);
+          ctx.fillStyle = `rgba(190,240,255,${0.3 * tw})`;
+          ctx.fillRect(sx - r * 0.55, sy - r * 0.55, r * 1.1, r * 1.1);
         }
       }
 
@@ -1109,6 +1410,7 @@ export function PixelPool({
     }
 
     const RARITY_STARS: Record<string, string> = {
+      god: "★★★★★",
       mythic: "★★★★",
       legendary: "★★★",
       rare: "★★",
@@ -1116,12 +1418,59 @@ export function PixelPool({
       common: "☆",
     };
     const RARITY_COLOR: Record<string, string> = {
+      god: "#fff3c4",
       mythic: "#ffcf33",
       legendary: "#fbbf24",
       rare: "#60a5fa",
       uncommon: "#4ade80",
       common: "rgba(140,140,160,0.85)",
     };
+
+    // "worth saving" tag stacked above the hover pill when the hovered duck
+    // would unlock a new dex species or body color
+    function drawDexBadge(
+      d: Duck,
+      t: number,
+      unlock: "species" | "color" | "shiny",
+      below: number,
+    ) {
+      const bob = Math.sin(t * 0.003 + d.phase) * 3;
+      const dh = DUCK_BASE * d.scale;
+      const text =
+        unlock === "shiny"
+          ? "✦ Shiny inédit !"
+          : unlock === "species"
+            ? "Nouvelle espèce !"
+            : "Nouvelle couleur";
+      const color = unlock === "shiny" ? "#e879f9" : unlock === "species" ? "#fbbf24" : "#60a5fa";
+
+      ctx.font = "700 11px ui-sans-serif, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const tw = ctx.measureText(text).width;
+      const bw = tw + 14;
+      const bh = 18;
+      const cx = d.x;
+      const by = d.y + bob - dh * 0.5 - 4 - below - 3 - bh;
+
+      ctx.fillStyle = "rgba(15,23,42,0.85)";
+      ctx.strokeStyle =
+        unlock === "shiny"
+          ? "rgba(232,121,249,0.45)"
+          : unlock === "species"
+            ? "rgba(251,191,36,0.45)"
+            : "rgba(96,165,250,0.45)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(cx - bw / 2, by, bw, bh, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.fillText(text, cx, by + bh / 2 + 0.5);
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    }
 
     // floating star pill above a hovered unnamed duck
     function drawRarityPill(d: Duck, t: number) {
@@ -1253,6 +1602,43 @@ export function PixelPool({
     const DRAIN_MS = 900;
     const STORE_MS = 600;
     const EXIT_MS = 450;
+    const WARP_MS = 1200;
+
+    // the boat spirals into the drain like a drained duck, then hands control
+    // to the minigame page and resets for its return to the pool
+    function drawBoatWarp(now: number) {
+      if (!boatWarp) return;
+      const p = Math.min(1, (now - boatWarp.start) / WARP_MS);
+      const dr = drain();
+      const ease = p * p;
+      const r0 = Math.hypot(boatWarp.x - dr.x, boatWarp.y - dr.y);
+      const a0 = Math.atan2(boatWarp.y - dr.y, boatWarp.x - dr.x);
+      const rr = r0 * (1 - ease);
+      const ang = a0 + ease * 4.5;
+      const x = dr.x + Math.cos(ang) * rr;
+      const y = dr.y + Math.sin(ang) * rr;
+      const spr = getBoatSprite();
+      const dh = BOAT_BASE * (1 - ease * 0.9);
+      const dw = dh * (spr.width / spr.height);
+
+      ctx.save();
+      ctx.globalAlpha = 1 - ease * ease;
+      ctx.translate(x, y);
+      ctx.rotate(ease * Math.PI * 3);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(spr, -dw / 2, -dh / 2, dw, dh);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+
+      if (p >= 1) {
+        boatWarp = null;
+        boat.x = -1; // re-placed on the next update, back in the pool
+        boat.y = -1;
+        boat.speed = 0;
+        boat.keys.clear();
+        warpRef.current?.();
+      }
+    }
     let last = performance.now();
     let raf = 0;
     function frame(now: number) {
@@ -1276,7 +1662,15 @@ export function PixelPool({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       drawRipples(now, dark);
-      drawDrain(now, !!(dragging && !dragging.saved && overDrain(dragging.x, dragging.y)), dark);
+      const drainGeo = drain();
+      const boatDrainDist =
+        boat.x >= 0 ? Math.hypot(boat.x - drainGeo.x, boat.y - drainGeo.y) : Infinity;
+      drawDrain(
+        now,
+        !!(dragging && !dragging.saved && overDrain(dragging.x, dragging.y)),
+        dark,
+        boatWarp !== null || boatDrainDist < 160,
+      );
       drawShop(
         now,
         dragging !== null,
@@ -1287,13 +1681,26 @@ export function PixelPool({
       if (cannon.loaded && pointerX >= 0) aimCannon(cannon, pointerX, pointerY);
       drawCannon(ctx, cannon, now, dark, !dragging && overCannon(pointerX, pointerY));
       if (sucking && vacuum.loaded) suckAt(vacuum.headX, vacuum.headY);
-      const swallowed = updateVacuum(vacuum, dt, w, pointerX, pointerY);
+      const swallowed = updateVacuum(vacuum, dt, w, h, pointerX, pointerY);
       if (swallowed) {
-        const port = hosePort(w);
+        const port = hosePort(w, h);
         spawnSplash(port.x, port.y, 60);
+        // spit the swallowed ducks back out into the whirlpool below the dock
+        for (let i = 0; i < swallowed; i++) {
+          const d = swallowedDucks.shift();
+          if (!d) break;
+          d.sucked = false;
+          d.spinAngle = 0;
+          d.x = port.x;
+          d.y = port.y;
+          d.draining = true;
+          d.drainT = now;
+          pool.push(d);
+        }
       }
-      drawVacuum(ctx, vacuum, now, w, dark, !dragging && overVacuum(pointerX, pointerY, w));
+      drawVacuum(ctx, vacuum, now, w, h, dark, !dragging && overVacuum(pointerX, pointerY, w, h));
       drawParade(ctx, parade, now, !dragging && overParade(pointerX, pointerY, h), h, dark);
+      drawDex(ctx, now, !dragging && overDex(pointerX, pointerY, h), h, dark);
 
       // remove ducks whose exit animation (drain / reserve / cull) has finished
       for (let i = pool.length - 1; i >= 0; i--) {
@@ -1335,6 +1742,7 @@ export function PixelPool({
         }
         if (dist < 12) {
           pool.splice(i, 1);
+          swallowedDucks.push(d);
           vacuum.bulges.push(0);
           spawnSplash(vacuum.headX, vacuum.headY, 70);
         }
@@ -1508,19 +1916,20 @@ export function PixelPool({
           const mb = c.scale;
           const sum = ma + mb;
           const pen = min - dist;
-          // the king stands its ground: a duck sharing a collision with it takes
-          // the full separation and keeps zero inverse mass in the impulse.
-          const aKing = a.effect === "royal";
-          const cKing = c.effect === "royal";
-          const aShare = aKing && !cKing ? 0 : cKing && !aKing ? 1 : mb / sum;
-          const cShare = cKing && !aKing ? 0 : aKing && !cKing ? 1 : ma / sum;
+          // a ranked duck stands its ground unless the other outranks it (only
+          // Zeus outranks the king/supernova): pinned ducks take no separation
+          // and keep zero inverse mass in the impulse.
+          const aPinned = pushRank(a) > 0 && pushRank(c) <= pushRank(a);
+          const cPinned = pushRank(c) > 0 && pushRank(a) <= pushRank(c);
+          const aShare = aPinned && !cPinned ? 0 : cPinned && !aPinned ? 1 : mb / sum;
+          const cShare = cPinned && !aPinned ? 0 : aPinned && !cPinned ? 1 : ma / sum;
           a.x -= nx * pen * aShare;
           a.y -= ny * pen * aShare;
           c.x += nx * pen * cShare;
           c.y += ny * pen * cShare;
           const vn = (c.vx - a.vx) * nx + (c.vy - a.vy) * ny;
-          const invA = aKing ? 0 : 1 / ma;
-          const invB = cKing ? 0 : 1 / mb;
+          const invA = aPinned ? 0 : 1 / ma;
+          const invB = cPinned ? 0 : 1 / mb;
           if (vn < 0 && invA + invB > 0) {
             const e = 0.92; // restitution: bouncy but bleeds a little energy
             const jimp = (-(1 + e) * vn) / (invA + invB);
@@ -1530,11 +1939,67 @@ export function PixelPool({
             c.vy += jimp * invB * ny;
             // glancing hits spin the ducks (tangential relative velocity)
             const vt = (c.vx - a.vx) * -ny + (c.vy - a.vy) * nx;
-            if (!aKing) a.spin = Math.max(-12, Math.min(12, (a.spin ?? 0) + vt * 0.03));
-            if (!cKing) c.spin = Math.max(-12, Math.min(12, (c.spin ?? 0) - vt * 0.03));
+            if (!aPinned) a.spin = Math.max(-12, Math.min(12, (a.spin ?? 0) + vt * 0.03));
+            if (!cPinned) c.spin = Math.max(-12, Math.min(12, (c.spin ?? 0) - vt * 0.03));
             if (-vn > 70) spawnSplash((a.x + c.x) / 2, (a.y + c.y) / 2, -vn);
           }
         }
+      }
+
+      // XingXing's boat: steer it, then plough through ducks — they get shoved
+      // aside like a duck-duck collision where the boat never yields (except to
+      // the ranked ducks, who hold their ground against everything)
+      if (boatWarp === null && boatDrainDist < drainGeo.r * 0.9) {
+        // drove into the typhoon: the whirlpool takes over
+        boatWarp = { start: now, x: boat.x, y: boat.y };
+        boat.keys.clear();
+        spawnSplash(drainGeo.x, drainGeo.y, 130);
+      }
+      const wallHit = boatWarp ? 0 : updateBoat(boat, dt, w, h);
+      if (wallHit) spawnSplash(boat.x, boat.y, wallHit);
+      const bv = boatWarp ? { vx: 0, vy: 0 } : boatVelocity(boat);
+      for (const d of boatWarp ? [] : pool) {
+        if (d === dragging || leaving(d) || d.inShop || d.parade || pushRank(d) > 0) continue;
+        const dr = DUCK_BASE * d.scale * 0.32;
+        const dx = d.x - boat.x;
+        const dy = d.y - boat.y;
+        const dist = Math.hypot(dx, dy) || 0.001;
+        const min = BOAT_RADIUS + dr;
+        if (dist >= min) continue;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        d.x += nx * (min - dist);
+        d.y += ny * (min - dist);
+        d.entering = false;
+        const vn = (bv.vx - d.vx) * nx + (bv.vy - d.vy) * ny;
+        if (vn > 0) {
+          d.vx += nx * (vn + 30);
+          d.vy += ny * (vn + 30);
+          d.spin = Math.max(-12, Math.min(12, (d.spin ?? 0) + (Math.random() - 0.5) * 8));
+          if (vn > 70) spawnSplash(d.x, d.y, vn);
+        }
+      }
+      // wake trailing off the stern when the boat moves at speed
+      const bsp = boatWarp ? 0 : Math.abs(boat.speed);
+      if (bsp > WAKE_SPEED && wakes.length < 400) {
+        boatWakeTimer -= dt;
+        if (boatWakeTimer <= 0) {
+          boatWakeTimer = WAKE_INTERVAL;
+          const dir = boat.speed >= 0 ? 1 : -1;
+          const nx = -Math.cos(boat.heading) * dir;
+          const ny = -Math.sin(boat.heading) * dir;
+          const tail = 46;
+          for (const side of [-1, 0, 1]) {
+            wakes.push({
+              x: boat.x + nx * tail + ny * side * 14 + (Math.random() - 0.5) * 5,
+              y: boat.y + 26 + ny * tail - nx * side * 14 + (Math.random() - 0.5) * 5,
+              life: 1,
+              r: 3.5 + Math.random() * 2.5,
+            });
+          }
+        }
+      } else {
+        boatWakeTimer = 0;
       }
 
       // tennis balls in flight: move them, then shove any duck they strike
@@ -1551,7 +2016,7 @@ export function PixelPool({
           const nx = dx / dist;
           const ny = dy / dist;
           const bs = Math.hypot(ball.vx, ball.vy);
-          if (d.effect !== "royal") {
+          if (pushRank(d) === 0) {
             d.vx += nx * (70 + bs * 0.5);
             d.vy += ny * (70 + bs * 0.5);
             d.spin = Math.max(-12, Math.min(12, (d.spin ?? 0) + (Math.random() - 0.5) * 9));
@@ -1580,6 +2045,7 @@ export function PixelPool({
           }
         }
         for (const ball of balls) bumpLilyPad(p, ball.x, ball.y, ball.vx, ball.vy, ball.r);
+        bumpLilyPad(p, boat.x, boat.y, bv.vx, bv.vy, BOAT_RADIUS);
       }
       updateLilyPads(pads, dt);
 
@@ -1588,7 +2054,18 @@ export function PixelPool({
       pool.sort((a, c) => a.y - c.y);
       drawWakes(dark);
       for (const p of pads) drawLilyPad(ctx, p, now, dark);
-      for (const d of pool) if (!d.inShop) drawDuck(d, now);
+      // ducks and the boat share the same painter's order (sorted by y)
+      let boatDrawn = boatWarp !== null; // warp animation draws on top instead
+      for (const d of pool) {
+        if (d.inShop) continue;
+        if (!boatDrawn && d.y > boat.y) {
+          drawBoat(ctx, boat, now, dark);
+          boatDrawn = true;
+        }
+        drawDuck(d, now);
+      }
+      if (!boatDrawn) drawBoat(ctx, boat, now, dark);
+      if (boatWarp) drawBoatWarp(now);
       drawBalls(ctx, balls);
       drawSplashes(dark);
       drawSuckPulses(ctx, suckPulses, now);
@@ -1600,12 +2077,15 @@ export function PixelPool({
         if (hovered) {
           if (hovered.name) drawNameLabel(hovered, now);
           else drawRarityPill(hovered, now);
+          const unlock = dexStatusOf(hovered.variant);
+          if (unlock) drawDexBadge(hovered, now, unlock, hovered.name ? 22 : 20);
         }
       }
     }
 
     resize();
     ensureSpawning();
+    syncDexWithCollection().catch(() => {}); // warm the dex cache for hover badges
     registerInjector(spawnSavedDuck); // flush any saved ducks queued before mount
     registerRemover(removePoolDuck);
     registerReleaser(unmarkSavedDuck);
@@ -1618,10 +2098,12 @@ export function PixelPool({
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointercancel", onPointerUp);
     window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
     const clearPointer = () => {
       pointerX = -1;
       pointerY = -1;
       sucking = false;
+      boat.keys.clear(); // keyup is lost when the window blurs mid-press
     };
     window.addEventListener("blur", clearPointer);
     raf = requestAnimationFrame(frame);
@@ -1644,6 +2126,7 @@ export function PixelPool({
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerUp);
       window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", clearPointer);
       document.body.style.cursor = "";
     };
