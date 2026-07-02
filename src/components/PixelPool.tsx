@@ -135,6 +135,9 @@ const balls: TennisBall[] = [];
 const parade: ParadeState = makeParade();
 const vacuum: VacuumState = makeVacuum();
 const suckPulses: SuckPulse[] = [];
+// ducks currently travelling the hose (FIFO, mirrors vacuum.bulges); spat into
+// the drain when their bulge reaches the dock
+const swallowedDucks: Duck[] = [];
 
 // Arrange every present duck in a ring that rotates around the pool centre for
 // PARADE_MS.
@@ -1587,6 +1590,18 @@ export function PixelPool({
       if (swallowed) {
         const port = hosePort(w, h);
         spawnSplash(port.x, port.y, 60);
+        // spit the swallowed ducks back out into the whirlpool below the dock
+        for (let i = 0; i < swallowed; i++) {
+          const d = swallowedDucks.shift();
+          if (!d) break;
+          d.sucked = false;
+          d.spinAngle = 0;
+          d.x = port.x;
+          d.y = port.y;
+          d.draining = true;
+          d.drainT = now;
+          pool.push(d);
+        }
       }
       drawVacuum(ctx, vacuum, now, w, h, dark, !dragging && overVacuum(pointerX, pointerY, w, h));
       drawParade(ctx, parade, now, !dragging && overParade(pointerX, pointerY, h), h, dark);
@@ -1632,6 +1647,7 @@ export function PixelPool({
         }
         if (dist < 12) {
           pool.splice(i, 1);
+          swallowedDucks.push(d);
           vacuum.bulges.push(0);
           spawnSplash(vacuum.headX, vacuum.headY, 70);
         }
