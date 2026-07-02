@@ -1557,6 +1557,49 @@ export function PixelPool({
       ctx.textBaseline = "alphabetic";
     }
 
+    function overBoat(px: number, py: number): boolean {
+      if (boat.x < 0 || boatWarp) return false;
+      return Math.hypot(px - boat.x, py - boat.y) <= BOAT_RADIUS + 8;
+    }
+
+    // speech bubble above XingXing hinting that the boat is keyboard-driven
+    function drawBoatBubble(t: number) {
+      const bob = Math.sin(t * 0.003) * 3;
+      const text = "ZQSD ←↑↓→ !";
+
+      ctx.font = "600 13px ui-sans-serif, system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const tw = ctx.measureText(text).width;
+      const bw = tw + 18;
+      const bh = 24;
+      // keep the bubble on-screen near the edges; the tail still points at the boat
+      const cx = Math.min(Math.max(boat.x, bw / 2 + 6), w - bw / 2 - 6);
+      const tx = Math.min(Math.max(boat.x, cx - bw / 2 + 12), cx + bw / 2 - 12);
+      const by = Math.max(6, boat.y + bob - BOAT_BASE * 0.72 - bh);
+      const tip = 6;
+
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.strokeStyle = "rgba(15,23,42,0.35)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(cx - bw / 2, by, bw, bh, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(tx - tip, by + bh - 0.5);
+      ctx.lineTo(tx + tip, by + bh - 0.5);
+      ctx.lineTo(tx, by + bh + tip);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.fill();
+
+      ctx.fillStyle = "#0f172a";
+      ctx.fillText(text, cx, by + bh / 2 + 0.5);
+      ctx.textAlign = "start";
+      ctx.textBaseline = "alphabetic";
+    }
+
     function updateWakes(dt: number) {
       for (let i = wakes.length - 1; i >= 0; i--) {
         wakes[i].life -= dt * 3.5; // ~0.28s lifetime
@@ -2079,6 +2122,8 @@ export function PixelPool({
           else drawRarityPill(hovered, now);
           const unlock = dexStatusOf(hovered.variant);
           if (unlock) drawDexBadge(hovered, now, unlock, hovered.name ? 22 : 20);
+        } else if (overBoat(pointerX, pointerY)) {
+          drawBoatBubble(now);
         }
       }
     }

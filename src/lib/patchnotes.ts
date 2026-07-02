@@ -1,3 +1,5 @@
+import pokedexV140Img from "@/assets/patchnote/v1.4.0/pokedex.webp";
+import xingxingV140Img from "@/assets/patchnote/v1.4.0/xingxing.webp";
 import roiDesCanardsV135Img from "@/assets/patchnote/v1.3.5/roi-des-canards.webp";
 import parametresV134Img from "@/assets/patchnote/v1.3.4/parametres.webp";
 import multiSelectionV134Img from "@/assets/patchnote/v1.3.4/multi-selection.webp";
@@ -35,6 +37,47 @@ export interface PatchNote {
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.4.0",
+    date: "2 juillet 2026",
+    intro:
+      "La 1.4.0 introduit le Pokedex des canards : une collection a completer, 9 nouvelles especes, des versions shiny pour chaque famille, et des recompenses pour les plus achernes.",
+    sections: [
+      {
+        title: "Le Pokedex des canards",
+        items: [
+          "Un Pokedex fait son apparition dans le Coin des Canards. Retrouvez-y toutes les especes de canards a debloquer et suivez votre progression.",
+          "9 nouvelles especes de canards viennent agrandir la famille : partez a la chasse pour les decouvrir.",
+          "Chaque famille dispose desormais d'une version shiny, plus rare et reconnaissable entre mille.",
+        ],
+        images: [
+          {
+            src: pokedexV140Img,
+            caption: "Le Pokedex des canards - toutes les especes a debloquer",
+          },
+        ],
+      },
+      {
+        title: "Recompenses",
+        items: [
+          "Remplir votre Pokedex completement debloque une nouvelle recompense.",
+          "Posseder toutes les familles ET toutes leurs versions shiny offre une recompense exceptionnelle.",
+        ],
+      },
+      {
+        title: "Un visiteur mysterieux",
+        items: [
+          "Un mysterieux XingXing se balade dans la piscine... il y a peut-etre quelque chose a faire avec. Je vous laisse trouver !",
+        ],
+        images: [
+          {
+            src: xingxingV140Img,
+            caption: "XingXing dans la piscine - a vous de decouvrir son secret",
+          },
+        ],
+      },
+    ],
+  },
   {
     version: "1.3.6",
     date: "1 juillet 2026",
