@@ -49,6 +49,7 @@ async function getMaxDucks(): Promise<number> {
 }
 
 const RARITY_LABEL: Record<Rarity, string> = {
+  god: "★★★★★",
   mythic: "★★★★",
   legendary: "★★★",
   rare: "★★",
@@ -56,6 +57,7 @@ const RARITY_LABEL: Record<Rarity, string> = {
   common: "",
 };
 const RARITY_BADGE: Record<Rarity, string> = {
+  god: "bg-yellow-100/25 text-yellow-100 ring-1 ring-yellow-100/50",
   mythic: "bg-yellow-300/20 text-yellow-300 ring-1 ring-yellow-300/40",
   legendary: "bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/30",
   rare: "bg-blue-400/15 text-blue-400 ring-1 ring-blue-400/30",
@@ -72,11 +74,12 @@ const FILTER_LABELS: Record<Filter, string> = {
 
 type Sort = "default" | "rarity";
 const RARITY_ORDER: Record<Rarity, number> = {
-  mythic: 0,
-  legendary: 1,
-  rare: 2,
-  uncommon: 3,
-  common: 4,
+  god: 0,
+  mythic: 1,
+  legendary: 2,
+  rare: 3,
+  uncommon: 4,
+  common: 5,
 };
 
 export function DuckShop() {

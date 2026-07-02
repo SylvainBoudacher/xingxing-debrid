@@ -154,7 +154,7 @@ const RARE: (() => Variant)[] = [
   () => ({ body: "#B8E0FF", beak: "#8DB5D0", acc: "none", effect: "frost" }),
 ];
 
-export type Rarity = "mythic" | "legendary" | "rare" | "uncommon" | "common";
+export type Rarity = "god" | "mythic" | "legendary" | "rare" | "uncommon" | "common";
 
 // The king of ducks: a single ultra-legendary skin. Bigger, golden, crowned and
 // wrapped in a royal shine. PixelPool spawns it at a larger scale (see spawnDuck).
@@ -210,7 +210,8 @@ const UNCOMMON_ACC_SET = new Set<Accessory>([
 ]);
 
 export function getRarity(v: Variant): Rarity {
-  if (v.effect === "royal" || v.effect === "nova" || v.effect === "godly") return "mythic";
+  if (v.effect === "godly") return "god"; // Zeus sits alone above the mythics
+  if (v.effect === "royal" || v.effect === "nova") return "mythic";
   if (
     (v.pattern && LEGENDARY_PATTERNS.has(v.pattern)) ||
     (v.effect && LEGENDARY_EFFECTS.has(v.effect))

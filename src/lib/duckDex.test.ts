@@ -234,9 +234,9 @@ describe("reward", () => {
     expect(SPECIES.some((s) => s.id === speciesOf(v))).toBe(true);
   });
 
-  it("god variant is mythic and unlocks nothing in the dex", async () => {
+  it("god variant is god-tier and unlocks nothing in the dex", async () => {
     const v = godVariant();
-    expect(getRarity(v)).toBe("mythic");
+    expect(getRarity(v)).toBe("god");
     const disc = await recordDiscovery(v);
     expect(disc.newSpecies).toBe(false);
     expect(disc.newColor).toBe(false);

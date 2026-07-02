@@ -107,9 +107,17 @@ function leaving(d: Duck) {
   return !!(d.draining || d.storing || d.exiting || d.sucked);
 }
 
-// The king and the god duck stand their ground: other ducks bounce off them,
-// cannonballs don't shove them, and they hold the centre of the parade.
-function immovable(d: Duck) {
+// Push hierarchy: the king and the supernova stand their ground against
+// ordinary ducks and cannonballs; only Zeus the duck god can shove them,
+// and Zeus himself yields to nothing.
+function pushRank(d: Duck): number {
+  if (d.effect === "godly") return 2;
+  if (d.effect === "royal" || d.effect === "nova") return 1;
+  return 0;
+}
+
+// The king and the god duck hold the centre of the parade.
+function holdsParadeCentre(d: Duck) {
   return d.effect === "royal" || d.effect === "godly";
 }
 
@@ -137,12 +145,12 @@ function startParade() {
   parade.active = true;
   parade.start = performance.now();
   // the king/god (if present) holds the centre; the rest form the ring around it
-  const ring = marchers.filter((d) => !immovable(d));
+  const ring = marchers.filter((d) => !holdsParadeCentre(d));
   parade.count = ring.length;
   let slot = 0;
   for (const d of marchers) {
     d.parade = true;
-    d.paradeSlot = immovable(d) ? -1 : slot++;
+    d.paradeSlot = holdsParadeCentre(d) ? -1 : slot++;
     d.boostTimer = 0;
   }
 }
@@ -218,6 +226,14 @@ function scaleFor(v: Variant) {
 function spawnDuck() {
   if (pool.length >= MAX_DUCKS) return;
   const v = randomVariant();
+  enterPool(v, scaleFor(v));
+}
+
+// Dev-only (touche S): force un roll shiny pour tester le dex shiny sans
+// attendre le taux de 7%. Ignore MAX_DUCKS volontairement.
+function spawnShinyDuck() {
+  const v = randomVariant();
+  v.shiny = true;
   enterPool(v, scaleFor(v));
 }
 
@@ -417,9 +433,9 @@ export function PixelPool({
       if (cannon.loaded)
         return setCursor(overCannon(e.clientX, e.clientY) ? "pointer" : "crosshair");
       if (vacuum.loaded)
-        return setCursor(overVacuum(e.clientX, e.clientY, w) ? "pointer" : "crosshair");
+        return setCursor(overVacuum(e.clientX, e.clientY, w, h) ? "pointer" : "crosshair");
       if (overCannon(e.clientX, e.clientY)) return setCursor("pointer");
-      if (overVacuum(e.clientX, e.clientY, w)) return setCursor("pointer");
+      if (overVacuum(e.clientX, e.clientY, w, h)) return setCursor("pointer");
       if (overParade(e.clientX, e.clientY, h)) return setCursor("pointer");
       if (overDex(e.clientX, e.clientY, h)) return setCursor("pointer");
       if (duckAt(e.clientX, e.clientY)) return setCursor("grab");
@@ -489,7 +505,7 @@ export function PixelPool({
         return;
       }
       // clicking the vacuum robot switches it on/off
-      if (e.button === 0 && overVacuum(e.clientX, e.clientY, w)) {
+      if (e.button === 0 && overVacuum(e.clientX, e.clientY, w, h)) {
         vacuum.loaded = !vacuum.loaded;
         if (vacuum.loaded) cannon.loaded = false;
         updateHoverCursor(e);
@@ -649,6 +665,13 @@ export function PixelPool({
         vacuum.loaded = false;
         setCursor("");
       }
+      if (
+        import.meta.env.DEV &&
+        e.key.toLowerCase() === "s" &&
+        activeRef.current &&
+        !(e.target as HTMLElement | null)?.closest("input, textarea, select, [contenteditable]")
+      )
+        spawnShinyDuck();
     }
 
     const isDark = () => document.documentElement.classList.contains("dark");
@@ -1334,6 +1357,7 @@ export function PixelPool({
     }
 
     const RARITY_STARS: Record<string, string> = {
+      god: "★★★★★",
       mythic: "★★★★",
       legendary: "★★★",
       rare: "★★",
@@ -1341,6 +1365,7 @@ export function PixelPool({
       common: "☆",
     };
     const RARITY_COLOR: Record<string, string> = {
+      god: "#fff3c4",
       mythic: "#ffcf33",
       legendary: "#fbbf24",
       rare: "#60a5fa",
@@ -1558,12 +1583,12 @@ export function PixelPool({
       if (cannon.loaded && pointerX >= 0) aimCannon(cannon, pointerX, pointerY);
       drawCannon(ctx, cannon, now, dark, !dragging && overCannon(pointerX, pointerY));
       if (sucking && vacuum.loaded) suckAt(vacuum.headX, vacuum.headY);
-      const swallowed = updateVacuum(vacuum, dt, w, pointerX, pointerY);
+      const swallowed = updateVacuum(vacuum, dt, w, h, pointerX, pointerY);
       if (swallowed) {
-        const port = hosePort(w);
+        const port = hosePort(w, h);
         spawnSplash(port.x, port.y, 60);
       }
-      drawVacuum(ctx, vacuum, now, w, dark, !dragging && overVacuum(pointerX, pointerY, w));
+      drawVacuum(ctx, vacuum, now, w, h, dark, !dragging && overVacuum(pointerX, pointerY, w, h));
       drawParade(ctx, parade, now, !dragging && overParade(pointerX, pointerY, h), h, dark);
       drawDex(ctx, now, !dragging && overDex(pointerX, pointerY, h), h, dark);
 
@@ -1780,19 +1805,20 @@ export function PixelPool({
           const mb = c.scale;
           const sum = ma + mb;
           const pen = min - dist;
-          // the king stands its ground: a duck sharing a collision with it takes
-          // the full separation and keeps zero inverse mass in the impulse.
-          const aKing = immovable(a);
-          const cKing = immovable(c);
-          const aShare = aKing && !cKing ? 0 : cKing && !aKing ? 1 : mb / sum;
-          const cShare = cKing && !aKing ? 0 : aKing && !cKing ? 1 : ma / sum;
+          // a ranked duck stands its ground unless the other outranks it (only
+          // Zeus outranks the king/supernova): pinned ducks take no separation
+          // and keep zero inverse mass in the impulse.
+          const aPinned = pushRank(a) > 0 && pushRank(c) <= pushRank(a);
+          const cPinned = pushRank(c) > 0 && pushRank(a) <= pushRank(c);
+          const aShare = aPinned && !cPinned ? 0 : cPinned && !aPinned ? 1 : mb / sum;
+          const cShare = cPinned && !aPinned ? 0 : aPinned && !cPinned ? 1 : ma / sum;
           a.x -= nx * pen * aShare;
           a.y -= ny * pen * aShare;
           c.x += nx * pen * cShare;
           c.y += ny * pen * cShare;
           const vn = (c.vx - a.vx) * nx + (c.vy - a.vy) * ny;
-          const invA = aKing ? 0 : 1 / ma;
-          const invB = cKing ? 0 : 1 / mb;
+          const invA = aPinned ? 0 : 1 / ma;
+          const invB = cPinned ? 0 : 1 / mb;
           if (vn < 0 && invA + invB > 0) {
             const e = 0.92; // restitution: bouncy but bleeds a little energy
             const jimp = (-(1 + e) * vn) / (invA + invB);
@@ -1802,8 +1828,8 @@ export function PixelPool({
             c.vy += jimp * invB * ny;
             // glancing hits spin the ducks (tangential relative velocity)
             const vt = (c.vx - a.vx) * -ny + (c.vy - a.vy) * nx;
-            if (!aKing) a.spin = Math.max(-12, Math.min(12, (a.spin ?? 0) + vt * 0.03));
-            if (!cKing) c.spin = Math.max(-12, Math.min(12, (c.spin ?? 0) - vt * 0.03));
+            if (!aPinned) a.spin = Math.max(-12, Math.min(12, (a.spin ?? 0) + vt * 0.03));
+            if (!cPinned) c.spin = Math.max(-12, Math.min(12, (c.spin ?? 0) - vt * 0.03));
             if (-vn > 70) spawnSplash((a.x + c.x) / 2, (a.y + c.y) / 2, -vn);
           }
         }
@@ -1823,7 +1849,7 @@ export function PixelPool({
           const nx = dx / dist;
           const ny = dy / dist;
           const bs = Math.hypot(ball.vx, ball.vy);
-          if (!immovable(d)) {
+          if (pushRank(d) === 0) {
             d.vx += nx * (70 + bs * 0.5);
             d.vy += ny * (70 + bs * 0.5);
             d.spin = Math.max(-12, Math.min(12, (d.spin ?? 0) + (Math.random() - 0.5) * 9));

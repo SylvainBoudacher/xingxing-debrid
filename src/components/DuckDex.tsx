@@ -42,6 +42,7 @@ const SECTIONS: Array<{ rarity: Rarity; label: string }> = [
 ];
 
 const RARITY_RING: Record<Rarity, string> = {
+  god: "ring-yellow-100/60",
   mythic: "ring-yellow-300/50",
   legendary: "ring-amber-400/40",
   rare: "ring-blue-400/40",
