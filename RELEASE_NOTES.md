@@ -1,4 +1,2 @@
-- Paramètres : validation du nombre de canards pour éviter les suppressions accidentelles du board.
-- MainPage : tri par rareté, idle timer (masquage après 30 sec d'inactivité), et nouvel item aspirateur à canards.
-- Bibliothèque : sélection multiple pour valider/dé-valider/supprimer des titres, suppression directe depuis les vignettes.
-- Corrections de bugs mineurs.
+- Pokédex : découvrez et consultez les fiches de tous les Pokémon directement dans l'app.
+- XingXing : notre canard vedette prend la mer sur son bateau dans le PixelPool.
