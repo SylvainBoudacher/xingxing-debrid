@@ -1,6 +1,15 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
+  BOAT_RADIUS,
+  type BoatState,
+  boatControlOf,
+  boatVelocity,
+  drawBoat,
+  makeBoat,
+  updateBoat,
+} from "./boat";
+import {
   aimCannon,
   type CannonState,
   drawBalls,
@@ -134,6 +143,7 @@ const cannon: CannonState = makeCannon();
 const balls: TennisBall[] = [];
 const parade: ParadeState = makeParade();
 const vacuum: VacuumState = makeVacuum();
+const boat: BoatState = makeBoat();
 const suckPulses: SuckPulse[] = [];
 // ducks currently travelling the hose (FIFO, mirrors vacuum.bulges); spat into
 // the drain when their bulge reaches the dock
@@ -232,8 +242,9 @@ function spawnDuck() {
   enterPool(v, scaleFor(v));
 }
 
-// Dev-only (touche S): force un roll shiny pour tester le dex shiny sans
-// attendre le taux de 7%. Ignore MAX_DUCKS volontairement.
+// Dev-only (Shift+S): force un roll shiny pour tester le dex shiny sans
+// attendre le taux de 7%. Ignore MAX_DUCKS volontairement. (Shift, car S seul
+// est la marche arriere du bateau.)
 function spawnShinyDuck() {
   const v = randomVariant();
   v.shiny = true;
@@ -402,6 +413,7 @@ export function PixelPool({
     const wakes: Wake[] = [];
     const WAKE_SPEED = 28; // px/s threshold to emit wake (just above cruise)
     const WAKE_INTERVAL = 0.06; // seconds between wake drops per duck
+    let boatWakeTimer = 0;
 
     function spawnSplash(x: number, y: number, power: number) {
       if (splashes.length > 220) return;
@@ -661,6 +673,12 @@ export function PixelPool({
       updateHoverCursor(e);
     }
 
+    function typing(e: KeyboardEvent): boolean {
+      return !!(e.target as HTMLElement | null)?.closest(
+        "input, textarea, select, [contenteditable]",
+      );
+    }
+
     // Escape climbs out of the cannon / switches the vacuum off
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && (cannon.loaded || vacuum.loaded)) {
@@ -668,13 +686,19 @@ export function PixelPool({
         vacuum.loaded = false;
         setCursor("");
       }
-      if (
-        import.meta.env.DEV &&
-        e.key.toLowerCase() === "s" &&
-        activeRef.current &&
-        !(e.target as HTMLElement | null)?.closest("input, textarea, select, [contenteditable]")
-      )
+      // ZQSD/WASD/arrows drive XingXing's boat
+      const control = boatControlOf(e.code);
+      if (control && activeRef.current && !typing(e)) {
+        boat.keys.add(control);
+        e.preventDefault();
+      }
+      if (import.meta.env.DEV && e.shiftKey && e.code === "KeyS" && activeRef.current && !typing(e))
         spawnShinyDuck();
+    }
+
+    function onKeyUp(e: KeyboardEvent) {
+      const control = boatControlOf(e.code);
+      if (control) boat.keys.delete(control);
     }
 
     const isDark = () => document.documentElement.classList.contains("dark");
@@ -1851,6 +1875,56 @@ export function PixelPool({
         }
       }
 
+      // XingXing's boat: steer it, then plough through ducks — they get shoved
+      // aside like a duck-duck collision where the boat never yields (except to
+      // the ranked ducks, who hold their ground against everything)
+      const wallHit = updateBoat(boat, dt, w, h);
+      if (wallHit) spawnSplash(boat.x, boat.y, wallHit);
+      const bv = boatVelocity(boat);
+      for (const d of pool) {
+        if (d === dragging || leaving(d) || d.inShop || d.parade || pushRank(d) > 0) continue;
+        const dr = DUCK_BASE * d.scale * 0.32;
+        const dx = d.x - boat.x;
+        const dy = d.y - boat.y;
+        const dist = Math.hypot(dx, dy) || 0.001;
+        const min = BOAT_RADIUS + dr;
+        if (dist >= min) continue;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        d.x += nx * (min - dist);
+        d.y += ny * (min - dist);
+        d.entering = false;
+        const vn = (bv.vx - d.vx) * nx + (bv.vy - d.vy) * ny;
+        if (vn > 0) {
+          d.vx += nx * (vn + 30);
+          d.vy += ny * (vn + 30);
+          d.spin = Math.max(-12, Math.min(12, (d.spin ?? 0) + (Math.random() - 0.5) * 8));
+          if (vn > 70) spawnSplash(d.x, d.y, vn);
+        }
+      }
+      // wake trailing off the stern when the boat moves at speed
+      const bsp = Math.abs(boat.speed);
+      if (bsp > WAKE_SPEED && wakes.length < 400) {
+        boatWakeTimer -= dt;
+        if (boatWakeTimer <= 0) {
+          boatWakeTimer = WAKE_INTERVAL;
+          const dir = boat.speed >= 0 ? 1 : -1;
+          const nx = -Math.cos(boat.heading) * dir;
+          const ny = -Math.sin(boat.heading) * dir;
+          const tail = 46;
+          for (const side of [-1, 0, 1]) {
+            wakes.push({
+              x: boat.x + nx * tail + ny * side * 14 + (Math.random() - 0.5) * 5,
+              y: boat.y + 26 + ny * tail - nx * side * 14 + (Math.random() - 0.5) * 5,
+              life: 1,
+              r: 3.5 + Math.random() * 2.5,
+            });
+          }
+        }
+      } else {
+        boatWakeTimer = 0;
+      }
+
       // tennis balls in flight: move them, then shove any duck they strike
       updateCannon(cannon, dt);
       updateBalls(balls, dt, w, h);
@@ -1894,6 +1968,7 @@ export function PixelPool({
           }
         }
         for (const ball of balls) bumpLilyPad(p, ball.x, ball.y, ball.vx, ball.vy, ball.r);
+        bumpLilyPad(p, boat.x, boat.y, bv.vx, bv.vy, BOAT_RADIUS);
       }
       updateLilyPads(pads, dt);
 
@@ -1902,7 +1977,17 @@ export function PixelPool({
       pool.sort((a, c) => a.y - c.y);
       drawWakes(dark);
       for (const p of pads) drawLilyPad(ctx, p, now, dark);
-      for (const d of pool) if (!d.inShop) drawDuck(d, now);
+      // ducks and the boat share the same painter's order (sorted by y)
+      let boatDrawn = false;
+      for (const d of pool) {
+        if (d.inShop) continue;
+        if (!boatDrawn && d.y > boat.y) {
+          drawBoat(ctx, boat, now, dark);
+          boatDrawn = true;
+        }
+        drawDuck(d, now);
+      }
+      if (!boatDrawn) drawBoat(ctx, boat, now, dark);
       drawBalls(ctx, balls);
       drawSplashes(dark);
       drawSuckPulses(ctx, suckPulses, now);
@@ -1935,10 +2020,12 @@ export function PixelPool({
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointercancel", onPointerUp);
     window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
     const clearPointer = () => {
       pointerX = -1;
       pointerY = -1;
       sucking = false;
+      boat.keys.clear(); // keyup is lost when the window blurs mid-press
     };
     window.addEventListener("blur", clearPointer);
     raf = requestAnimationFrame(frame);
@@ -1961,6 +2048,7 @@ export function PixelPool({
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerUp);
       window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", clearPointer);
       document.body.style.cursor = "";
     };
