@@ -38,6 +38,12 @@ let pilotReady = false;
 let sprite: HTMLCanvasElement | null = null;
 let spriteHasPilot = false;
 
+// Expose the pre-rendered sprite so the typhoon minigame can draw the same
+// boat (BoatGamePage renders it at low resolution for the retro look).
+export function getBoatSprite(): HTMLCanvasElement {
+  return boatSprite();
+}
+
 function boatSprite(): HTMLCanvasElement {
   if (!pilot) {
     pilot = new Image();

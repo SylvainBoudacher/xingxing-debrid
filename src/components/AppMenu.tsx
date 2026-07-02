@@ -36,7 +36,8 @@ export type Page =
   | "patchnotes"
   | "discover"
   | "setup"
-  | "nyaa";
+  | "nyaa"
+  | "boatgame";
 
 interface AppMenuProps {
   currentPage: Page;

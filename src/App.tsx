@@ -30,6 +30,9 @@ const PreferencesPage = lazy(() =>
 const PatchnotesPage = lazy(() =>
   import("@/pages/PatchnotesPage").then((m) => ({ default: m.PatchnotesPage })),
 );
+const BoatGamePage = lazy(() =>
+  import("@/pages/BoatGamePage").then((m) => ({ default: m.BoatGamePage })),
+);
 import { LibraryPage } from "@/pages/LibraryPage";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
@@ -189,7 +192,12 @@ function App() {
           }`}
         >
           <Suspense fallback={null}>
-            <PixelPool active={showPool} fps={summerFps} maxDucks={summerMaxDucks} />
+            <PixelPool
+              active={showPool}
+              fps={summerFps}
+              maxDucks={summerMaxDucks}
+              onBoatWarp={() => setPage("boatgame")}
+            />
           </Suspense>
         </div>
       )}
@@ -373,6 +381,17 @@ function App() {
               transition={{ duration: 0.22, ease: "easeInOut" }}
             >
               <NyaaTestPage onBack={() => setPage("main")} />
+            </motion.div>
+          )}
+          {effectivePhase === "done" && page === "boatgame" && (
+            <motion.div
+              key="boatgame"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4, ease: "easeInOut" }}
+            >
+              <BoatGamePage onExit={() => setPage("main")} />
             </motion.div>
           )}
           {effectivePhase === "done" && page === "patchnotes" && (

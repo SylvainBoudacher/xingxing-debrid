@@ -1,11 +1,13 @@
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import {
+  BOAT_BASE,
   BOAT_RADIUS,
   type BoatState,
   boatControlOf,
   boatVelocity,
   drawBoat,
+  getBoatSprite,
   makeBoat,
   updateBoat,
 } from "./boat";
@@ -144,6 +146,8 @@ const balls: TennisBall[] = [];
 const parade: ParadeState = makeParade();
 const vacuum: VacuumState = makeVacuum();
 const boat: BoatState = makeBoat();
+// boat caught by the drain whirlpool: spirals in, then warps to the minigame
+let boatWarp: { start: number; x: number; y: number } | null = null;
 const suckPulses: SuckPulse[] = [];
 // ducks currently travelling the hose (FIFO, mirrors vacuum.bulges); spat into
 // the drain when their bulge reaches the dock
@@ -337,14 +341,21 @@ export function PixelPool({
   active = true,
   fps = 30,
   maxDucks = 15,
+  onBoatWarp,
 }: {
   active?: boolean;
   fps?: number;
   maxDucks?: number;
+  onBoatWarp?: () => void; // the boat drove into the drain: open the minigame
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const activeRef = useRef(active);
   const fpsRef = useRef(fps);
+  const warpRef = useRef(onBoatWarp);
+
+  useEffect(() => {
+    warpRef.current = onBoatWarp;
+  }, [onBoatWarp]);
 
   useEffect(() => {
     activeRef.current = active;
@@ -873,8 +884,23 @@ export function PixelPool({
       return Math.hypot(px - d.x, py - d.y) <= d.r;
     }
 
-    function drawDrain(now: number, hot: boolean, dark: boolean) {
+    function drawDrain(now: number, hot: boolean, dark: boolean, glint = false) {
       const d = drain();
+
+      // golden twinkles when the boat cruises nearby: a hint that the typhoon
+      // leads somewhere
+      if (glint) {
+        for (let i = 0; i < 6; i++) {
+          const a = now * 0.003 + (i * Math.PI) / 3;
+          const rr = d.r + 7 + Math.sin(now * 0.008 + i) * 2;
+          const gx = d.x + Math.cos(a) * rr;
+          const gy = d.y + Math.sin(a) * rr;
+          const al = 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(now * 0.01 + i * 2));
+          ctx.fillStyle = `rgba(255,224,102,${al})`;
+          ctx.fillRect(gx - 0.75, gy - 3, 1.5, 6);
+          ctx.fillRect(gx - 3, gy - 0.75, 6, 1.5);
+        }
+      }
 
       // coping ring
       ctx.fillStyle = dark ? "#0c2a40" : "#d4ecf8";
@@ -1576,6 +1602,43 @@ export function PixelPool({
     const DRAIN_MS = 900;
     const STORE_MS = 600;
     const EXIT_MS = 450;
+    const WARP_MS = 1200;
+
+    // the boat spirals into the drain like a drained duck, then hands control
+    // to the minigame page and resets for its return to the pool
+    function drawBoatWarp(now: number) {
+      if (!boatWarp) return;
+      const p = Math.min(1, (now - boatWarp.start) / WARP_MS);
+      const dr = drain();
+      const ease = p * p;
+      const r0 = Math.hypot(boatWarp.x - dr.x, boatWarp.y - dr.y);
+      const a0 = Math.atan2(boatWarp.y - dr.y, boatWarp.x - dr.x);
+      const rr = r0 * (1 - ease);
+      const ang = a0 + ease * 4.5;
+      const x = dr.x + Math.cos(ang) * rr;
+      const y = dr.y + Math.sin(ang) * rr;
+      const spr = getBoatSprite();
+      const dh = BOAT_BASE * (1 - ease * 0.9);
+      const dw = dh * (spr.width / spr.height);
+
+      ctx.save();
+      ctx.globalAlpha = 1 - ease * ease;
+      ctx.translate(x, y);
+      ctx.rotate(ease * Math.PI * 3);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(spr, -dw / 2, -dh / 2, dw, dh);
+      ctx.restore();
+      ctx.globalAlpha = 1;
+
+      if (p >= 1) {
+        boatWarp = null;
+        boat.x = -1; // re-placed on the next update, back in the pool
+        boat.y = -1;
+        boat.speed = 0;
+        boat.keys.clear();
+        warpRef.current?.();
+      }
+    }
     let last = performance.now();
     let raf = 0;
     function frame(now: number) {
@@ -1599,7 +1662,15 @@ export function PixelPool({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       drawRipples(now, dark);
-      drawDrain(now, !!(dragging && !dragging.saved && overDrain(dragging.x, dragging.y)), dark);
+      const drainGeo = drain();
+      const boatDrainDist =
+        boat.x >= 0 ? Math.hypot(boat.x - drainGeo.x, boat.y - drainGeo.y) : Infinity;
+      drawDrain(
+        now,
+        !!(dragging && !dragging.saved && overDrain(dragging.x, dragging.y)),
+        dark,
+        boatWarp !== null || boatDrainDist < 160,
+      );
       drawShop(
         now,
         dragging !== null,
@@ -1878,10 +1949,16 @@ export function PixelPool({
       // XingXing's boat: steer it, then plough through ducks — they get shoved
       // aside like a duck-duck collision where the boat never yields (except to
       // the ranked ducks, who hold their ground against everything)
-      const wallHit = updateBoat(boat, dt, w, h);
+      if (boatWarp === null && boatDrainDist < drainGeo.r * 0.9) {
+        // drove into the typhoon: the whirlpool takes over
+        boatWarp = { start: now, x: boat.x, y: boat.y };
+        boat.keys.clear();
+        spawnSplash(drainGeo.x, drainGeo.y, 130);
+      }
+      const wallHit = boatWarp ? 0 : updateBoat(boat, dt, w, h);
       if (wallHit) spawnSplash(boat.x, boat.y, wallHit);
-      const bv = boatVelocity(boat);
-      for (const d of pool) {
+      const bv = boatWarp ? { vx: 0, vy: 0 } : boatVelocity(boat);
+      for (const d of boatWarp ? [] : pool) {
         if (d === dragging || leaving(d) || d.inShop || d.parade || pushRank(d) > 0) continue;
         const dr = DUCK_BASE * d.scale * 0.32;
         const dx = d.x - boat.x;
@@ -1903,7 +1980,7 @@ export function PixelPool({
         }
       }
       // wake trailing off the stern when the boat moves at speed
-      const bsp = Math.abs(boat.speed);
+      const bsp = boatWarp ? 0 : Math.abs(boat.speed);
       if (bsp > WAKE_SPEED && wakes.length < 400) {
         boatWakeTimer -= dt;
         if (boatWakeTimer <= 0) {
@@ -1978,7 +2055,7 @@ export function PixelPool({
       drawWakes(dark);
       for (const p of pads) drawLilyPad(ctx, p, now, dark);
       // ducks and the boat share the same painter's order (sorted by y)
-      let boatDrawn = false;
+      let boatDrawn = boatWarp !== null; // warp animation draws on top instead
       for (const d of pool) {
         if (d.inShop) continue;
         if (!boatDrawn && d.y > boat.y) {
@@ -1988,6 +2065,7 @@ export function PixelPool({
         drawDuck(d, now);
       }
       if (!boatDrawn) drawBoat(ctx, boat, now, dark);
+      if (boatWarp) drawBoatWarp(now);
       drawBalls(ctx, balls);
       drawSplashes(dark);
       drawSuckPulses(ctx, suckPulses, now);
