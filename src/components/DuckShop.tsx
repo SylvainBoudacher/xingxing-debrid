@@ -7,6 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
@@ -93,6 +103,7 @@ export function DuckShop() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("default");
+  const [pendingRelease, setPendingRelease] = useState<SavedDuck | null>(null);
 
   // keep a ref so the event handlers always see the current dropped duck
   const droppedRef = useRef<DroppedDuck | null>(null);
@@ -166,6 +177,7 @@ export function DuckShop() {
       const t = e.target as HTMLElement;
       if (panelRef.current?.contains(t)) return;
       if (t.closest("[data-radix-popper-content-wrapper]")) return; // filter dropdown (portaled)
+      if (document.querySelector("[role=alertdialog]")) return; // release confirmation open (portaled)
       if (isOverShopIcon(e.clientX, e.clientY)) return;
       close();
     }
@@ -440,7 +452,7 @@ export function DuckShop() {
                             <IconAction
                               label="Relacher ce canard"
                               className="text-muted-foreground hover:text-foreground"
-                              onClick={() => remove(d)}
+                              onClick={() => setPendingRelease(d)}
                             >
                               <DoorOpen className="h-3 w-3" />
                             </IconAction>
@@ -455,6 +467,31 @@ export function DuckShop() {
           </TooltipProvider>
         </motion.div>
       )}
+
+      <AlertDialog
+        open={pendingRelease !== null}
+        onOpenChange={(o) => !o && setPendingRelease(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Relacher {pendingRelease?.name} ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ce canard quittera ta collection pour de bon. Cette action est irreversible.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingRelease) remove(pendingRelease);
+                setPendingRelease(null);
+              }}
+            >
+              Relacher
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AnimatePresence>
   );
 }
