@@ -106,4 +106,13 @@ src-tauri/
 
 ## Disclaimer
 
-This application is a client for third-party services. You are responsible for how you use it and for complying with the laws in your country.
+This software is provided for personal and educational use only. It is a client that interacts with third-party services (AllDebrid, C411, TMDB) through their standard interfaces.
+
+- The author is not responsible for how you use this application.
+- You are solely responsible for complying with the terms of service of any third-party service accessed through this application.
+- You are solely responsible for complying with the laws and regulations applicable in your country.
+- This project does not host, distribute, or reproduce any copyrighted content.
+
+## License
+
+MIT - see [LICENSE](LICENSE).
