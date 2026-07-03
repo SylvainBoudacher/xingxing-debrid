@@ -6,7 +6,10 @@ import { BH, type BoatControl, BW, getBoatSprite } from "@/components/boat";
 import { LH, PLAY_MAX_X, SEA_TOP } from "./run";
 
 export const PLAYER_R = 8; // collision circle around the hull
-export const GRAZE_R = 17; // shots inside this ring (but outside PLAYER_R) count as a graze
+// near-miss band beyond any hitbox that scores a graze (frisson). Sized so it
+// reaches past the visible hull (~22px half-width), not just the tiny 8px
+// collision circle, so skimming a bullet or an enemy actually rewards you.
+export const GRAZE_MARGIN = 16;
 
 const MAX_SPEED = 150;
 const ACCEL = 640;

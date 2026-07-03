@@ -29,6 +29,7 @@ export interface Enemy {
   charging: boolean; // kamikaze: locked in and rushing
   r: number;
   h: number; // draw height
+  grazed?: boolean; // already scored a frisson for skimming this enemy
   sprite: HTMLCanvasElement;
 }
 

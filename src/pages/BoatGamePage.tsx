@@ -59,7 +59,7 @@ import {
   updateBananas,
   updateBananaSpawns,
 } from "@/game/pickups";
-import { drawPlayer, GRAZE_R, makePlayer, PLAYER_R, updatePlayer } from "@/game/player";
+import { drawPlayer, GRAZE_MARGIN, makePlayer, PLAYER_R, updatePlayer } from "@/game/player";
 import {
   drawPowerups,
   MAGNET_DURATION,
@@ -429,10 +429,27 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
     }
     const onBlur = () => keys.clear();
 
+    // closest distance from point (px,py) to the segment [ax,ay]-[bx,by]
+    function segPointDist(ax: number, ay: number, bx: number, by: number, px: number, py: number) {
+      const dx = bx - ax;
+      const dy = by - ay;
+      const len2 = dx * dx + dy * dy;
+      const tt = len2 > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+      return Math.hypot(px - (ax + dx * tt), py - (ay + dy * tt));
+    }
+
     // ---- collisions ----
-    function collide() {
+    function collide(wdt: number) {
       for (const e of enemies) {
-        if (Math.hypot(e.x - player.x, e.y - player.y) < e.r + PLAYER_R) hitPlayer();
+        const d = Math.hypot(e.x - player.x, e.y - player.y);
+        const hitR = e.r + PLAYER_R;
+        if (d < hitR) hitPlayer();
+        else if (d < hitR + GRAZE_MARGIN && !e.grazed && player.inv <= 0) {
+          e.grazed = true;
+          run.grazes++;
+          addPopup(popups, e.x, e.y - e.r - 4, "+50", "#8be9fd");
+          burstSparks(sparks, player.x, player.y, "#8be9fd", 4, 40);
+        }
       }
       if (
         boss &&
@@ -446,11 +463,16 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
 
       for (let i = shots.length - 1; i >= 0; i--) {
         const s = shots[i];
-        const d = Math.hypot(s.x - player.x, s.y - player.y);
-        if (d < s.r + PLAYER_R) {
+        // swept test over the shot's travel this frame so fast bullets can't
+        // tunnel through the thin graze band between two sampled positions
+        const px = s.x - s.vx * wdt;
+        const py = s.y - s.vy * wdt;
+        const d = segPointDist(px, py, s.x, s.y, player.x, player.y);
+        const hitR = s.r + PLAYER_R;
+        if (d < hitR) {
           shots.splice(i, 1);
           hitPlayer();
-        } else if (d < GRAZE_R && !s.grazed && player.inv <= 0) {
+        } else if (d < hitR + GRAZE_MARGIN && !s.grazed && player.inv <= 0) {
           s.grazed = true;
           run.grazes++;
           addPopup(popups, s.x, s.y - 6, "+50", "#8be9fd");
@@ -578,7 +600,7 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
         }
       }
 
-      collide();
+      collide(wdt);
       updateSparks(sparks, dt);
       updatePopups(popups, dt);
 
