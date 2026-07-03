@@ -1,2 +1,2 @@
-- Pokédex : découvrez et consultez les fiches de tous les Pokémon directement dans l'app.
-- XingXing : notre canard vedette prend la mer sur son bateau dans le PixelPool.
+- Fix du bateau et de certains skins de canard.
+- Fix de certain probleme dans l'Easter Eggs.

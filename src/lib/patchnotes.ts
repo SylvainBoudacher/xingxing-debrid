@@ -38,6 +38,41 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.4.2",
+    date: "3 juillet 2026",
+    intro:
+      "La 1.4.2 corrige plusieurs bugs signales apres la 1.4.0 : direction du bateau de XingXing, hitbox de Frisson, effet retro de l'easter egg, et quelques skins de canards.",
+    sections: [
+      {
+        title: "Piscine",
+        items: [
+          "Le bateau de XingXing retrouve la bonne direction : il se deplace desormais comme dans le jeu, et non plus a l'envers.",
+        ],
+      },
+      {
+        title: "Jeux",
+        items: [
+          "L'effet retro de l'easter egg beneficie d'une resolution plus elevee - le rendu pixelise etait trop grossier.",
+          "Correction de la hitbox de Frisson : la detection de collision etait trop grande par rapport a son sprite.",
+        ],
+      },
+      {
+        title: "Coin des Canards",
+        items: [
+          "Des tooltips sont maintenant affichés sur les boutons d'action du stand pour mieux comprendre leur role.",
+          "Le bouton « Supprimer de la liste » a ete renomme en « Relacher le canard ».",
+          "Une confirmation s'affiche avant de relacher un canard, pour eviter les accidents.",
+        ],
+      },
+      {
+        title: "Corrections",
+        items: [
+          "Correction d'un bug graphique affectant l'affichage de certains skins de canards.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.4.0",
     date: "2 juillet 2026",
     intro:
