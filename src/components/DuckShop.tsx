@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Archive, Check, ListFilter, Pencil, Search, Trash2, Waves, X } from "lucide-react";
+import { Archive, Check, DoorOpen, ListFilter, Pencil, Search, Waves, X } from "lucide-react";
 import { toast } from "sonner";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -273,203 +274,215 @@ export function DuckShop() {
           transition={{ duration: 0.22, ease: "easeOut" }}
           className="fixed bottom-24 left-4 z-50 flex max-h-[80vh] w-80 flex-col overflow-hidden rounded-xl border border-border bg-background/95 shadow-2xl backdrop-blur"
         >
-          <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
-            <h2 className="text-sm font-semibold">Le Coin des Canards</h2>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={close}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {dropped && (
-            <div className="flex flex-col items-center gap-3 border-b border-border bg-muted/40 px-4 py-4">
-              <DuckPreview variant={dropped.variant} size={104} />
-              <div className="flex w-full gap-2">
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Nomme ton canard"
-                  maxLength={40}
-                  onKeyDown={(e) => e.key === "Enter" && save()}
-                  autoFocus
-                />
-                <Button onClick={save}>{dropped.saved ? "Mettre à jour" : "Enregistrer"}</Button>
-              </div>
+          <TooltipProvider delayDuration={200}>
+            <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+              <h2 className="text-sm font-semibold">Le Coin des Canards</h2>
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={close}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-          )}
 
-          <div className="px-2 py-2">
-            <p className="px-2 pb-1.5 text-xs font-medium text-muted-foreground">
-              Ma collection ({saved.length}) · {saved.filter((d) => !d.reserved).length} à l'eau
-            </p>
-            {saved.length > 0 && (
-              <div className="mb-1.5 flex items-center gap-1.5 px-2">
-                <div className="relative flex-1">
-                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            {dropped && (
+              <div className="flex flex-col items-center gap-3 border-b border-border bg-muted/40 px-4 py-4">
+                <DuckPreview variant={dropped.variant} size={104} />
+                <div className="flex w-full gap-2">
                   <Input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Rechercher un canard"
-                    className="h-8 pl-8"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Nomme ton canard"
+                    maxLength={40}
+                    onKeyDown={(e) => e.key === "Enter" && save()}
+                    autoFocus
                   />
+                  <Button onClick={save}>{dropped.saved ? "Mettre à jour" : "Enregistrer"}</Button>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 px-2.5">
-                      <ListFilter className="h-3.5 w-3.5" />
-                      <span className="text-xs">{FILTER_LABELS[filter]}</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuRadioGroup
-                      value={filter}
-                      onValueChange={(v) => setFilter(v as Filter)}
-                    >
-                      <DropdownMenuRadioItem value="all">Tous</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="water">À l'eau</DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="reserve">En réserve</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuRadioGroup value={sort} onValueChange={(v) => setSort(v as Sort)}>
-                      <DropdownMenuRadioItem value="default">
-                        Ordre par défaut
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="rarity">Par rareté</DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
             )}
-            {saved.length === 0 ? (
-              <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-                Dépose un canard ici pour le sauvegarder.
+
+            <div className="px-2 py-2">
+              <p className="px-2 pb-1.5 text-xs font-medium text-muted-foreground">
+                Ma collection ({saved.length}) · {saved.filter((d) => !d.reserved).length} à l'eau
               </p>
-            ) : visible.length === 0 ? (
-              <p className="px-2 py-6 text-center text-xs text-muted-foreground">
-                Aucun canard ne correspond.
-              </p>
-            ) : (
-              // ~7.5 ducks visible (row ≈ 52px + 4px gap) so the next one peeks,
-              // plus a fade mask top/bottom that signals there's more to scroll
-              <ul
-                ref={listRef}
-                onScroll={updateScroll}
-                className="flex max-h-[418px] flex-col gap-1 overflow-y-auto"
-                style={{
-                  maskImage: `linear-gradient(to bottom, ${scroll.up ? "transparent" : "black"}, black 24px, black calc(100% - 24px), ${scroll.down ? "transparent" : "black"})`,
-                  WebkitMaskImage: `linear-gradient(to bottom, ${scroll.up ? "transparent" : "black"}, black 24px, black calc(100% - 24px), ${scroll.down ? "transparent" : "black"})`,
-                }}
-              >
-                {visible.map((d) => {
-                  const rarity = getRarity(d.variant);
-                  return (
-                    <li
-                      key={d.id}
-                      className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/60"
-                    >
-                      <span className={d.reserved ? "opacity-40" : ""}>
-                        <DuckPreview variant={d.variant} size={40} />
-                      </span>
-                      {editingId === d.id ? (
-                        <Input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          onBlur={() => commitRename(d.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") commitRename(d.id);
-                            if (e.key === "Escape") setEditingId(null);
-                          }}
-                          maxLength={40}
-                          autoFocus
-                          className="h-7 flex-1"
-                        />
-                      ) : (
-                        <span className="flex flex-1 items-center gap-1.5 truncate text-sm">
-                          <span className={`truncate ${d.reserved ? "text-muted-foreground" : ""}`}>
-                            {d.name}
-                          </span>
-                          {rarity !== "common" && (
-                            <span
-                              className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${RARITY_BADGE[rarity]}`}
-                            >
-                              {RARITY_LABEL[rarity]}
-                            </span>
-                          )}
-                          {d.variant.shiny && (
-                            <span className="shrink-0 text-[11px] text-fuchsia-400" title="Shiny">
-                              ✦
-                            </span>
-                          )}
-                          {d.reserved && (
-                            <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                              réserve
-                            </span>
-                          )}
+              {saved.length > 0 && (
+                <div className="mb-1.5 flex items-center gap-1.5 px-2">
+                  <div className="relative flex-1">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Rechercher un canard"
+                      className="h-8 pl-8"
+                    />
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8 shrink-0 gap-1.5 px-2.5">
+                        <ListFilter className="h-3.5 w-3.5" />
+                        <span className="text-xs">{FILTER_LABELS[filter]}</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuRadioGroup
+                        value={filter}
+                        onValueChange={(v) => setFilter(v as Filter)}
+                      >
+                        <DropdownMenuRadioItem value="all">Tous</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="water">À l'eau</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="reserve">En réserve</DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuRadioGroup
+                        value={sort}
+                        onValueChange={(v) => setSort(v as Sort)}
+                      >
+                        <DropdownMenuRadioItem value="default">
+                          Ordre par défaut
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="rarity">Par rareté</DropdownMenuRadioItem>
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
+              {saved.length === 0 ? (
+                <p className="px-2 py-6 text-center text-xs text-muted-foreground">
+                  Dépose un canard ici pour le sauvegarder.
+                </p>
+              ) : visible.length === 0 ? (
+                <p className="px-2 py-6 text-center text-xs text-muted-foreground">
+                  Aucun canard ne correspond.
+                </p>
+              ) : (
+                // ~7.5 ducks visible (row ≈ 52px + 4px gap) so the next one peeks,
+                // plus a fade mask top/bottom that signals there's more to scroll
+                <ul
+                  ref={listRef}
+                  onScroll={updateScroll}
+                  className="flex max-h-[418px] flex-col gap-1 overflow-y-auto"
+                  style={{
+                    maskImage: `linear-gradient(to bottom, ${scroll.up ? "transparent" : "black"}, black 24px, black calc(100% - 24px), ${scroll.down ? "transparent" : "black"})`,
+                    WebkitMaskImage: `linear-gradient(to bottom, ${scroll.up ? "transparent" : "black"}, black 24px, black calc(100% - 24px), ${scroll.down ? "transparent" : "black"})`,
+                  }}
+                >
+                  {visible.map((d) => {
+                    const rarity = getRarity(d.variant);
+                    return (
+                      <li
+                        key={d.id}
+                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/60"
+                      >
+                        <span className={d.reserved ? "opacity-40" : ""}>
+                          <DuckPreview variant={d.variant} size={40} />
                         </span>
-                      )}
-                      {editingId === d.id ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 shrink-0"
-                          onClick={() => commitRename(d.id)}
-                          title="Valider"
-                        >
-                          <Check className="h-3 w-3" />
-                        </Button>
-                      ) : (
-                        <div className="flex shrink-0 items-center [&_button]:cursor-pointer">
-                          {d.reserved ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => putInWater(d)}
-                              title="Mettre à l'eau"
-                            >
-                              <Waves className="h-3 w-3" />
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => putInReserve(d)}
-                              title="Mettre en réserve"
-                            >
-                              <Archive className="h-3 w-3" />
-                            </Button>
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => {
-                              setEditingId(d.id);
-                              setEditName(d.name);
+                        {editingId === d.id ? (
+                          <Input
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            onBlur={() => commitRename(d.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") commitRename(d.id);
+                              if (e.key === "Escape") setEditingId(null);
                             }}
-                            title="Renommer"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-destructive hover:text-destructive"
-                            onClick={() => remove(d)}
-                            title="Supprimer"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
+                            maxLength={40}
+                            autoFocus
+                            className="h-7 flex-1"
+                          />
+                        ) : (
+                          <span className="flex flex-1 items-center gap-1.5 truncate text-sm">
+                            <span
+                              className={`truncate ${d.reserved ? "text-muted-foreground" : ""}`}
+                            >
+                              {d.name}
+                            </span>
+                            {rarity !== "common" && (
+                              <span
+                                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${RARITY_BADGE[rarity]}`}
+                              >
+                                {RARITY_LABEL[rarity]}
+                              </span>
+                            )}
+                            {d.variant.shiny && (
+                              <span className="shrink-0 text-[11px] text-fuchsia-400" title="Shiny">
+                                ✦
+                              </span>
+                            )}
+                            {d.reserved && (
+                              <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                réserve
+                              </span>
+                            )}
+                          </span>
+                        )}
+                        {editingId === d.id ? (
+                          <IconAction label="Valider le nom" onClick={() => commitRename(d.id)}>
+                            <Check className="h-3 w-3" />
+                          </IconAction>
+                        ) : (
+                          <div className="flex shrink-0 items-center [&_button]:cursor-pointer">
+                            {d.reserved ? (
+                              <IconAction label="Remettre a l'eau" onClick={() => putInWater(d)}>
+                                <Waves className="h-3 w-3" />
+                              </IconAction>
+                            ) : (
+                              <IconAction label="Mettre en reserve" onClick={() => putInReserve(d)}>
+                                <Archive className="h-3 w-3" />
+                              </IconAction>
+                            )}
+                            <IconAction
+                              label="Renommer"
+                              onClick={() => {
+                                setEditingId(d.id);
+                                setEditName(d.name);
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </IconAction>
+                            <IconAction
+                              label="Relacher ce canard"
+                              className="text-muted-foreground hover:text-foreground"
+                              onClick={() => remove(d)}
+                            >
+                              <DoorOpen className="h-3 w-3" />
+                            </IconAction>
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </TooltipProvider>
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+function IconAction({
+  label,
+  onClick,
+  className,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`h-6 w-6 shrink-0${className ? ` ${className}` : ""}`}
+          onClick={onClick}
+        >
+          {children}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
   );
 }
