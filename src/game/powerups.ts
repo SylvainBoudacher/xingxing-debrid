@@ -65,16 +65,22 @@ export function drawPowerups(ctx: CanvasRenderingContext2D, pows: Powerup[], t: 
     ctx.stroke();
 
     if (p.kind === "shield") {
-      ctx.fillStyle = "#4fb0f0";
-      ctx.fillRect(p.x - 3, y - 4, 6, 5);
+      // heraldic shield: domed shoulders tapering to a point, with a cross
+      ctx.fillStyle = "#3f8fd8";
       ctx.beginPath();
-      ctx.moveTo(p.x - 3, y + 1);
-      ctx.lineTo(p.x, y + 5);
-      ctx.lineTo(p.x + 3, y + 1);
+      ctx.moveTo(p.x - 4.5, y - 5);
+      ctx.quadraticCurveTo(p.x, y - 6.5, p.x + 4.5, y - 5); // domed top
+      ctx.lineTo(p.x + 4.5, y - 1);
+      ctx.quadraticCurveTo(p.x + 4, y + 4, p.x, y + 6.5); // right flank to tip
+      ctx.quadraticCurveTo(p.x - 4, y + 4, p.x - 4.5, y - 1); // left flank
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = "#bfe3ff";
-      ctx.fillRect(p.x - 1, y - 3, 2, 3);
+      ctx.strokeStyle = "#bfe3ff";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = "#eaf6ff";
+      ctx.fillRect(p.x - 0.7, y - 3.5, 1.4, 7);
+      ctx.fillRect(p.x - 3, y - 1.2, 6, 1.4);
     } else if (p.kind === "magnet") {
       ctx.strokeStyle = "#f0584e";
       ctx.lineWidth = 2.5;

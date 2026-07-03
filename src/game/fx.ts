@@ -4,6 +4,25 @@
 
 import { LH, LW, type RunState } from "./run";
 
+// Text is written in low-res virtual coordinates but drawn crisply at the
+// display resolution: rendering glyphs into the low-res buffer and upscaling
+// with nearest-neighbor turned them into unreadable blocks. So pixelText only
+// queues the label (coords, size and alpha in low-res space), and flushText
+// paints the whole queue onto the real canvas after the low-res frame is
+// blitted, scaling positions/sizes back up. The CRT scanline overlay still
+// lands on top, keeping the retro feel while the text stays sharp.
+interface QueuedText {
+  txt: string;
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+  align: CanvasTextAlign;
+  alpha: number;
+}
+
+const textQueue: QueuedText[] = [];
+
 export function pixelText(
   ctx: CanvasRenderingContext2D,
   txt: string,
@@ -13,13 +32,47 @@ export function pixelText(
   color: string,
   align: CanvasTextAlign = "center",
 ) {
-  ctx.font = `bold ${size}px monospace`;
-  ctx.textAlign = align;
-  ctx.textBaseline = "middle";
-  ctx.fillStyle = "rgba(0,0,0,0.6)";
-  ctx.fillText(txt, x + 1, y + 1);
-  ctx.fillStyle = color;
-  ctx.fillText(txt, x, y);
+  textQueue.push({ txt, x, y, size, color, align, alpha: ctx.globalAlpha });
+}
+
+// Middle ground between the unreadable 1x blocks and pin-sharp text: labels are
+// rendered into an offscreen at TEXT_SS times the low-res, then nearest-neighbor
+// upscaled to the display. Glyphs stay chunky/retro but legible. Bump TEXT_SS
+// toward `scale` for cleaner text, drop it toward 1 for grittier text.
+const TEXT_SS = 2;
+let txtBuf: HTMLCanvasElement | null = null;
+
+// scale/ox/oy map low-res virtual coordinates onto the real canvas (same
+// transform as the frame blit).
+export function flushText(ctx: CanvasRenderingContext2D, scale: number, ox: number, oy: number) {
+  if (!textQueue.length) return;
+  const bw = LW * TEXT_SS;
+  const bh = LH * TEXT_SS;
+  if (!txtBuf) txtBuf = document.createElement("canvas");
+  if (txtBuf.width !== bw || txtBuf.height !== bh) {
+    txtBuf.width = bw;
+    txtBuf.height = bh;
+  }
+  const tc = txtBuf.getContext("2d")!;
+  tc.clearRect(0, 0, bw, bh);
+  tc.textBaseline = "middle";
+  const shadow = Math.max(1, Math.round(TEXT_SS / 2));
+  for (const q of textQueue) {
+    tc.globalAlpha = q.alpha;
+    tc.font = `bold ${q.size * TEXT_SS}px monospace`;
+    tc.textAlign = q.align;
+    const x = q.x * TEXT_SS;
+    const y = q.y * TEXT_SS;
+    tc.fillStyle = "rgba(0,0,0,0.6)";
+    tc.fillText(q.txt, x + shadow, y + shadow);
+    tc.fillStyle = q.color;
+    tc.fillText(q.txt, x, y);
+  }
+  tc.globalAlpha = 1;
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(txtBuf, 0, 0, bw, bh, ox, oy, LW * scale, LH * scale);
+  textQueue.length = 0;
 }
 
 // ---- background ----

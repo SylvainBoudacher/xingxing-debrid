@@ -44,6 +44,7 @@ import {
   drawPopups,
   drawSparks,
   drawWarning,
+  flushText,
   pixelText,
   type Popup,
   type Spark,
@@ -769,6 +770,8 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
       ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(low, sx, sy, LW * scale, LH * scale);
+      // crisp text pass on top of the upscaled frame, still under the scanlines
+      flushText(ctx, scale, sx, sy);
       if (scanlines) ctx.drawImage(scanlines, 0, 0);
     }
 
