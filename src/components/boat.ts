@@ -2,9 +2,11 @@ import xingxingUrl from "@/assets/xingxingImg.png";
 
 // XingXing's boat: a little wooden dinghy piloted by the app's mascot (the
 // chill monkey sipping his banana juice, straight from the logo artwork).
-// Driven with ZQSD/WASD or the arrow keys — tank-style: up throttles forward,
-// down brakes/reverses, left/right steer the bow. It drifts lazily when
-// nobody touches the keys.
+// Driven with ZQSD/WASD or the arrow keys the same way as the typhoon
+// minigame: free 2D movement — each key pushes the hull straight in that
+// direction with inertia, no tank steering. It keeps a lazy cruise when nobody
+// touches the keys. heading/speed are derived from the velocity so the sprite
+// still faces its travel direction.
 
 // Sprite canvas dimensions (boat faces right). PixelPool reads BW/BH to keep
 // the on-screen boat at the sprite's aspect ratio.
@@ -13,20 +15,20 @@ export const BH = 130;
 export const BOAT_BASE = 100; // on-screen height
 export const BOAT_RADIUS = 42; // collision circle used to shove ducks
 
-const MAX_FWD = 150; // px/s
-const MAX_REV = 60;
-const ACCEL = 130; // px/s^2 throttle response
-const TURN = 2.4; // rad/s steering rate
-const DRIFT = 10; // idle cruise speed, like an unhurried duck
-const DRAG = 0.45; // per-second speed decay factor toward drift
+const MAX_SPEED = 150; // px/s, matches the minigame's player
+const ACCEL = 640; // px/s^2 directional thrust
+const DAMP = 7; // exponential velocity decay when an axis is released
+const DRIFT = 10; // idle cruise floor, like an unhurried duck
 
 export type BoatControl = "up" | "down" | "left" | "right";
 
 export interface BoatState {
   x: number;
   y: number;
-  heading: number; // radians, 0 = right
-  speed: number; // signed: negative when reversing
+  vx: number; // px/s
+  vy: number;
+  heading: number; // radians, 0 = right (derived from velocity)
+  speed: number; // px/s magnitude (derived from velocity)
   phase: number; // bob phase offset
   keys: Set<BoatControl>;
 }
@@ -60,10 +62,13 @@ function boatSprite(): HTMLCanvasElement {
 }
 
 export function makeBoat(): BoatState {
+  const heading = Math.random() * Math.PI * 2;
   return {
     x: -1, // placed on the first update once the pool size is known
     y: -1,
-    heading: Math.random() * Math.PI * 2,
+    vx: Math.cos(heading) * DRIFT,
+    vy: Math.sin(heading) * DRIFT,
+    heading,
     speed: DRIFT,
     phase: Math.random() * Math.PI * 2,
     keys: new Set(),
@@ -92,49 +97,63 @@ export function boatControlOf(code: string): BoatControl | null {
 }
 
 export function boatVelocity(b: BoatState) {
-  return { vx: Math.cos(b.heading) * b.speed, vy: Math.sin(b.heading) * b.speed };
+  return { vx: b.vx, vy: b.vy };
 }
 
-// Integrate steering/throttle and keep the boat inside the pool. Returns the
-// impact speed when it just hit a wall (0 otherwise) so the caller can splash.
+// Integrate the minigame-style free 2D movement and keep the boat inside the
+// pool. Each axis is thrust independently with inertia, then bled back toward a
+// lazy idle cruise. Returns the impact speed when it just hit a wall (0
+// otherwise) so the caller can splash.
 export function updateBoat(b: BoatState, dt: number, w: number, h: number): number {
   if (w <= 0 || h <= 0) return 0;
   if (b.x < 0) {
     b.x = w * 0.3;
     b.y = h * 0.4;
+    b.vx = Math.cos(b.heading) * DRIFT;
+    b.vy = Math.sin(b.heading) * DRIFT;
   }
 
-  const throttle = (b.keys.has("up") ? 1 : 0) - (b.keys.has("down") ? 1 : 0);
-  const steer = (b.keys.has("right") ? 1 : 0) - (b.keys.has("left") ? 1 : 0);
+  const ax = (b.keys.has("right") ? 1 : 0) - (b.keys.has("left") ? 1 : 0);
+  const ay = (b.keys.has("down") ? 1 : 0) - (b.keys.has("up") ? 1 : 0);
 
-  b.heading += steer * TURN * dt;
+  b.vx += ax * ACCEL * dt;
+  b.vy += ay * ACCEL * dt;
+  if (!ax) b.vx *= Math.exp(-DAMP * dt);
+  if (!ay) b.vy *= Math.exp(-DAMP * dt);
 
-  if (throttle > 0) b.speed = Math.min(MAX_FWD, b.speed + ACCEL * dt);
-  else if (throttle < 0) b.speed = Math.max(-MAX_REV, b.speed - ACCEL * dt);
-  else {
-    // no input: bleed speed back toward the lazy drift
-    const target = DRIFT + (b.speed - DRIFT) * Math.pow(DRAG, dt);
-    b.speed = target;
+  let sp = Math.hypot(b.vx, b.vy);
+  if (sp > MAX_SPEED) {
+    b.vx = (b.vx / sp) * MAX_SPEED;
+    b.vy = (b.vy / sp) * MAX_SPEED;
+    sp = MAX_SPEED;
+  }
+  // idle: keep at least a lazy cruise along the current heading so the boat
+  // ambles instead of sitting dead still like a duck
+  if (!ax && !ay && sp > 0.001 && sp < DRIFT) {
+    b.vx = (b.vx / sp) * DRIFT;
+    b.vy = (b.vy / sp) * DRIFT;
   }
 
-  b.x += Math.cos(b.heading) * b.speed * dt;
-  b.y += Math.sin(b.heading) * b.speed * dt;
+  b.x += b.vx * dt;
+  b.y += b.vy * dt;
 
   // walls: clamp and kill the outward velocity component (the boat noses
   // against the edge instead of bouncing like a duck)
   const m = BOAT_BASE * 0.45;
   let hit = 0;
-  const { vx, vy } = boatVelocity(b);
   if (b.x < m || b.x > w - m) {
-    hit = Math.abs(vx);
+    hit = Math.abs(b.vx);
     b.x = Math.max(m, Math.min(w - m, b.x));
-    b.speed *= 0.25;
+    b.vx *= -0.15;
   }
   if (b.y < m || b.y > h - m) {
-    hit = Math.max(hit, Math.abs(vy));
+    hit = Math.max(hit, Math.abs(b.vy));
     b.y = Math.max(m, Math.min(h - m, b.y));
-    b.speed *= 0.25;
+    b.vy *= -0.15;
   }
+
+  b.speed = Math.hypot(b.vx, b.vy);
+  if (b.speed > 0.5) b.heading = Math.atan2(b.vy, b.vx);
   return hit > 60 ? hit : 0;
 }
 

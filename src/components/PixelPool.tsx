@@ -1677,6 +1677,8 @@ export function PixelPool({
         boatWarp = null;
         boat.x = -1; // re-placed on the next update, back in the pool
         boat.y = -1;
+        boat.vx = 0;
+        boat.vy = 0;
         boat.speed = 0;
         boat.keys.clear();
         warpRef.current?.();
