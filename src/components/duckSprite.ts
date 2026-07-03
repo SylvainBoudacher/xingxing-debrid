@@ -8,7 +8,10 @@ export type { Accessory, Effect, Pattern, Variant } from "./duckTypes";
 // Sprite canvas dimensions and the base body/head geometry. PixelPool reads
 // SW/SH to keep on-screen ducks at the sprite's aspect ratio.
 export const SW = 130;
-export const SH = 120;
+export const SH = 155;
+// headroom above y=0 of the body coordinate space, so tall hats (wizard tip
+// reaches y=-34) render instead of being clipped by the canvas edge
+const PAD = 35;
 const BODY = { cx: 56, cy: 82, rx: 46, ry: 32 };
 const HEAD = { cx: 82, cy: 44, r: 32 };
 
@@ -20,6 +23,7 @@ export function makeDuckSprite(v: Variant): HTMLCanvasElement {
   cv.height = SH;
   const c = cv.getContext("2d")!;
   c.imageSmoothingEnabled = true;
+  c.translate(0, PAD); // body/accessory code keeps its historical coordinates
 
   const fill = bodyFill(c, v);
 
@@ -132,6 +136,7 @@ export function makeDuckSprite(v: Variant): HTMLCanvasElement {
 
   drawAccessory(c, v);
 
+  c.setTransform(1, 0, 0, 1, 0, 0);
   if (v.shiny) applyShinyOverlay(c, cv);
 
   return cv;
@@ -158,9 +163,9 @@ function applyShinyOverlay(c: CanvasRenderingContext2D, cv: HTMLCanvasElement) {
   c.globalCompositeOperation = "source-over";
 
   for (const [sx, sy, r] of [
-    [38, 58, 4],
-    [96, 22, 3],
-    [66, 96, 3],
+    [38, 58 + PAD, 4],
+    [96, 22 + PAD, 3],
+    [66, 96 + PAD, 3],
   ]) {
     c.fillStyle = "rgba(255,255,255,0.9)";
     c.fillRect(sx - r, sy - 0.8, r * 2, 1.6);

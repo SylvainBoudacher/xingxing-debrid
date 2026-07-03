@@ -59,6 +59,19 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
     c.fillRect(84, 6, 3, 3);
     c.fillRect(79, -6, 3, 3);
     fillEll(c, 80, -18, 3.2, 3.2, "#FACC15"); // pom-pom
+    // party blower held in the beak (tip around x=123, y=55)
+    c.strokeStyle = "#5CC8FF";
+    c.lineWidth = 4;
+    c.lineCap = "round";
+    c.beginPath();
+    c.moveTo(117, 54);
+    c.lineTo(124, 58);
+    c.stroke();
+    c.strokeStyle = "#FF5C8A"; // curled end
+    c.lineWidth = 3.5;
+    c.beginPath();
+    c.arc(124.5, 61.5, 3.2, -Math.PI / 2, Math.PI);
+    c.stroke();
   } else if (v.acc === "tophat") {
     c.fillStyle = "#23272e";
     fillEll(c, 80, 15, 27, 6.5, "#23272e"); // brim
@@ -94,27 +107,28 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
     c.fillStyle = "#1f2937";
     c.fillRect(112.5, 36, 5, 5); // mouthpiece
   } else if (v.acc === "bowtie") {
+    // at the neck, where the head meets the chest (below the beak)
     const bc = v.accColor!;
     tri(
       c,
       [
-        [86, 60],
-        [78, 55],
-        [78, 65],
+        [88, 72],
+        [80, 67],
+        [80, 77],
       ],
       bc,
     );
     tri(
       c,
       [
-        [86, 60],
-        [94, 55],
-        [94, 65],
+        [88, 72],
+        [96, 67],
+        [96, 77],
       ],
       bc,
     );
-    fillEll(c, 86, 60, 2.2, 3, "rgba(0,0,0,0.25)");
-    fillEll(c, 86, 60, 1.8, 2.5, bc);
+    fillEll(c, 88, 72, 2.2, 3, "rgba(0,0,0,0.25)");
+    fillEll(c, 88, 72, 1.8, 2.5, bc);
   } else if (v.acc === "headphones") {
     c.strokeStyle = "#22303C";
     c.lineWidth = 4;
@@ -262,6 +276,14 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
     c.lineTo(110, -6);
     c.stroke();
   } else if (v.acc === "monocle") {
+    // top hat to match the monocle
+    c.fillStyle = "#23272e";
+    fillEll(c, 80, 15, 27, 6.5, "#23272e"); // brim
+    c.fillRect(67, 0, 28, 15); // cylinder
+    c.fillStyle = v.accColor ?? "#D4AF37";
+    c.fillRect(67, 5, 28, 4); // band
+    c.fillStyle = "rgba(255,255,255,0.12)";
+    c.fillRect(70, 1, 3, 13); // sheen
     c.strokeStyle = v.accColor ?? "#D4AF37";
     c.lineWidth = 2;
     c.beginPath();
@@ -275,17 +297,28 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
     c.stroke();
   } else if (v.acc === "scarf") {
     const sc = v.accColor!;
+    // matching bonnet on top of the head
     c.fillStyle = sc;
-    c.fillRect(60, 60, 36, 8); // wrap
+    c.beginPath();
+    c.moveTo(54, 24);
+    c.quadraticCurveTo(80, -14, 106, 24);
+    c.closePath();
+    c.fill();
+    c.fillStyle = "rgba(0,0,0,0.18)";
+    c.fillRect(54, 21, 52, 5); // brim band
+    fillEll(c, 80, -12, 6, 6, "#ffffff"); // pompom
+    // scarf wrapped around the neck (head/body junction)
+    c.fillStyle = sc;
+    c.fillRect(58, 64, 40, 9); // wrap
     c.beginPath(); // hanging end
-    c.moveTo(88, 66);
-    c.lineTo(96, 84);
-    c.lineTo(88, 84);
-    c.lineTo(84, 66);
+    c.moveTo(88, 71);
+    c.lineTo(96, 90);
+    c.lineTo(88, 90);
+    c.lineTo(84, 71);
     c.closePath();
     c.fill();
     c.fillStyle = "rgba(0,0,0,0.12)";
-    c.fillRect(60, 64, 36, 2);
+    c.fillRect(58, 69, 40, 2);
   } else if (v.acc === "antenna") {
     c.strokeStyle = "#888";
     c.lineWidth = 2.5;
@@ -296,44 +329,79 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
     fillEll(c, 80, -4, 4, 4, "#FF5C5C");
     fillEll(c, 79, -5, 1.3, 1.3, "#ffaaaa");
   } else if (v.acc === "mustache") {
-    // handlebar hanging just under the beak (beak underside sits around y=59)
+    // handlebar resting on the beak's base (beak top edge starts at x=103, y=48)
     c.strokeStyle = "#3D2010";
-    c.lineWidth = 3;
+    c.lineWidth = 3.5;
     c.lineCap = "round";
     c.beginPath();
-    c.moveTo(108, 60);
-    c.quadraticCurveTo(100, 66, 94, 61);
+    c.moveTo(104, 50);
+    c.quadraticCurveTo(95, 55, 90, 49);
     c.stroke();
     c.beginPath();
-    c.moveTo(108, 60);
-    c.quadraticCurveTo(116, 66, 122, 61);
+    c.moveTo(104, 50);
+    c.quadraticCurveTo(113, 55, 119, 49);
     c.stroke();
   } else if (v.acc === "cape") {
     const cc = v.accColor!;
-    // flowing fabric visible on the tail side
+    // cape anchored at the neck, billowing down the duck's back (tail side)
     c.fillStyle = cc;
     c.beginPath();
-    c.moveTo(40, 66);
-    c.quadraticCurveTo(12, 80, 8, 118);
-    c.lineTo(48, 112);
-    c.quadraticCurveTo(44, 88, 46, 70);
+    c.moveTo(60, 62);
+    c.quadraticCurveTo(20, 70, 8, 116);
+    c.lineTo(52, 110);
+    c.quadraticCurveTo(48, 84, 64, 70);
     c.closePath();
     c.fill();
     c.strokeStyle = "rgba(0,0,0,0.22)";
     c.lineWidth = 1.5;
     c.beginPath();
-    c.moveTo(32, 74);
-    c.quadraticCurveTo(18, 92, 20, 112);
+    c.moveTo(38, 74);
+    c.quadraticCurveTo(22, 92, 24, 110);
     c.stroke();
-    // collar piece
-    c.fillStyle = cc;
+    // knot strap across the neck
+    c.strokeStyle = cc;
+    c.lineWidth = 4;
+    c.lineCap = "round";
     c.beginPath();
-    c.moveTo(48, 62);
-    c.lineTo(36, 74);
-    c.lineTo(46, 80);
-    c.lineTo(56, 68);
-    c.closePath();
-    c.fill();
+    c.moveTo(60, 63);
+    c.quadraticCurveTo(76, 70, 92, 68);
+    c.stroke();
+    fillEll(c, 92, 68, 3, 3, cc); // knot
+    // hero mask + chest emblem (skipped for the vampire, who shares this acc)
+    if (v.body !== "#300010") {
+      fillEll(c, 96, 38, 12, 7.5, cc); // mask band over the eye
+      tri(
+        c,
+        [
+          [84, 36],
+          [78, 33],
+          [85, 40],
+        ],
+        cc,
+      ); // mask wing
+      fillEll(c, 96, 38, 4.7, 5.3, "#181818"); // redraw eye over the mask
+      fillEll(c, 94.4, 35.8, 1.7, 1.9, "#ffffff");
+      // lightning-bolt emblem on the chest
+      fillEll(c, 80, 88, 9, 9, "#FFD21E");
+      tri(
+        c,
+        [
+          [82, 81],
+          [76, 89],
+          [81, 88],
+        ],
+        cc,
+      );
+      tri(
+        c,
+        [
+          [81, 88],
+          [78, 95],
+          [85, 87],
+        ],
+        cc,
+      );
+    }
   } else if (v.acc === "feather") {
     const colors = ["#E74C3C", "#F39C12", "#27AE60", "#8E44AD"];
     // leather headband

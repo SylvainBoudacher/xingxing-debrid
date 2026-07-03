@@ -158,7 +158,7 @@ export function bossAiming(b: Boss): boolean {
 }
 
 export function drawBoss(ctx: CanvasRenderingContext2D, b: Boss, t: number, phase: number) {
-  const dh = 68;
+  const dh = 88; // sprite incl. hat headroom; body ≈ 68
   const dw = dh * (b.sprite.width / b.sprite.height);
   const shiver = b.mode === "aim" ? (Math.random() - 0.5) * 3 : 0;
   const bob = Math.sin(t * 2 + 1) * 2.5 + shiver;

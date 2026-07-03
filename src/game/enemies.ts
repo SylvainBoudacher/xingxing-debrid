@@ -115,14 +115,14 @@ function base(kind: EnemyKind, sprite: HTMLCanvasElement, h: number): Enemy {
     fireT: 99,
     lockT: 0,
     charging: false,
-    r: h * 0.42,
+    r: h * 0.33, // hit radius sized on the body, not the hat headroom above it
     h,
     sprite,
   };
 }
 
 function spawnFloater(enemies: Enemy[], run: RunState) {
-  const h = rand(20, 28);
+  const h = rand(26, 36);
   const e = base("floater", sprites().floaters[(Math.random() * 4) | 0], h);
   e.y = rand(SEA_TOP + 6, LH - 26);
   e.vx = -(scrollSpeed(run) + rand(5, 40));
@@ -131,7 +131,7 @@ function spawnFloater(enemies: Enemy[], run: RunState) {
 }
 
 function spawnSniper(enemies: Enemy[]) {
-  const e = base("sniper", sprites().sniper, 26);
+  const e = base("sniper", sprites().sniper, 34);
   e.y = rand(SEA_TOP + 10, LH - 36);
   e.vx = -70;
   e.life = rand(6, 8.5);
@@ -144,7 +144,7 @@ function spawnWaverColumn(enemies: Enemy[], run: RunState) {
   const yBase = rand(SEA_TOP + 10, LH - 110);
   const vx = -(scrollSpeed(run) + 32);
   for (let i = 0; i < 4; i++) {
-    const e = base("waver", sprites().waver, 22);
+    const e = base("waver", sprites().waver, 28);
     e.x = LW + 30 + i * 26;
     e.y = yBase + i * 26;
     e.baseY = e.y;
@@ -157,7 +157,7 @@ function spawnWaverColumn(enemies: Enemy[], run: RunState) {
 }
 
 function spawnKamikaze(enemies: Enemy[]) {
-  const e = base("kamikaze", sprites().kamikaze, 24);
+  const e = base("kamikaze", sprites().kamikaze, 31);
   e.y = rand(SEA_TOP + 10, LH - 30);
   e.vx = -85;
   e.lockT = 0.85;
@@ -166,7 +166,7 @@ function spawnKamikaze(enemies: Enemy[]) {
 }
 
 function spawnBomber(enemies: Enemy[]) {
-  const e = base("bomber", sprites().bomber, 22);
+  const e = base("bomber", sprites().bomber, 28);
   e.y = rand(40, SEA_TOP - 26); // flies in the sky band
   e.vx = -52;
   e.fireT = rand(0.7, 1.3);

@@ -78,7 +78,7 @@ let MAX_DUCKS = 15;
 const SPAWN_MS = 40_000;
 const FIRST_SPAWN_MS = 5_000;
 const BORDER = 0; // no coping — water fills the full canvas
-const DUCK_BASE = 92; // on-screen height of a scale-1 duck
+const DUCK_BASE = 119; // on-screen height of a scale-1 duck (sprite incl. hat headroom; body ≈ 92)
 
 interface Duck {
   id: string;
