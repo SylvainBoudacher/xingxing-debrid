@@ -31,7 +31,7 @@ export async function upsertSavedDuck(duck: SavedDuck): Promise<SavedDuck[]> {
   const list = await getSavedDucks();
   const i = list.findIndex((d) => d.id === duck.id);
   if (i >= 0) list[i] = duck;
-  else list.push(duck);
+  else list.unshift(duck);
   return persist(list);
 }
 

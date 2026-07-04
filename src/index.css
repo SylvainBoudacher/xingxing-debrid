@@ -82,6 +82,65 @@
   }
 }
 
+/* Rare-loot sheen: a diagonal light streak sweeps the orb, then rests. */
+@keyframes orb-sheen {
+  0% {
+    transform: translateX(-130%) skewX(-20deg);
+  }
+  38%,
+  100% {
+    transform: translateX(130%) skewX(-20deg);
+  }
+}
+
+@keyframes orb-glint {
+  0%,
+  24%,
+  46%,
+  100% {
+    opacity: 0.85;
+    transform: scale(1);
+  }
+  32% {
+    opacity: 1;
+    transform: scale(1.35);
+    text-shadow: 0 0 4px rgba(255, 255, 255, 0.95);
+  }
+}
+
+.shiny-orb {
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow:
+    0 0 6px rgba(232, 121, 249, 0.55),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  transition: box-shadow 0.2s;
+}
+
+.shiny-orb:hover {
+  box-shadow:
+    0 0 10px rgba(232, 121, 249, 0.9),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+.shiny-orb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.95) 50%,
+    transparent 70%
+  );
+  animation: orb-sheen 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.shiny-orb > span {
+  display: inline-block;
+  animation: orb-glint 2.6s ease-out infinite;
+}
+
 @property --halo-angle {
   syntax: "<angle>";
   inherits: false;

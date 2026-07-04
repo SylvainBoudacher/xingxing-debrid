@@ -58,6 +58,7 @@ export function DuckDex() {
   const [entries, setEntries] = useState<DexEntries>({});
   const [shiny, setShiny] = useState<ShinyEntries>([]);
   const [claimed, setClaimed] = useState(false);
+  const [shinyShown, setShinyShown] = useState<Set<string>>(new Set());
   const [godClaimed, setGodClaimed] = useState(false);
 
   const openRef = useRef(false);
@@ -124,6 +125,15 @@ export function DuckDex() {
     await markGodRewardClaimed();
     setGodClaimed(true);
     toast.success(`${GOD_DUCK_NAME} descend de l'Olympe !`);
+  }
+
+  function toggleShinyShown(id: string) {
+    setShinyShown((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   async function devComplete() {
@@ -239,22 +249,34 @@ export function DuckDex() {
                       const colors = entries[s.id] ?? [];
                       const found = colors.length > 0;
                       const hasShiny = shiny.includes(s.id);
+                      const showShiny = hasShiny && shinyShown.has(s.id);
                       return (
                         <div
                           key={s.id}
                           className={`relative flex flex-col items-center gap-1 rounded-xl bg-white/70 dark:bg-zinc-800/60 px-2 py-3 ring-1 ${found ? RARITY_RING[s.rarity] : "ring-black/5 dark:ring-white/5"}`}
                         >
-                          {hasShiny && (
-                            <span
-                              className="absolute right-1.5 top-1 text-[11px] text-fuchsia-500 dark:text-fuchsia-400"
-                              title="Version shiny collectionnée"
-                            >
-                              ✦
-                            </span>
-                          )}
+                          {found &&
+                            (hasShiny ? (
+                              <button
+                                onClick={() => toggleShinyShown(s.id)}
+                                title={
+                                  showShiny
+                                    ? "Afficher la version normale"
+                                    : "Afficher la version shiny"
+                                }
+                                className={`shiny-orb absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-fuchsia-500 via-pink-400 to-amber-400 text-[8px] leading-none text-white shadow-sm ring-1 ${showShiny ? "ring-fuchsia-300" : "ring-white/40"}`}
+                              >
+                                <span>✦</span>
+                              </button>
+                            ) : (
+                              <span
+                                title="Version shiny non collectionnée"
+                                className="absolute right-1.5 top-1.5 h-4 w-4 rounded-full ring-1 ring-inset ring-black/15 dark:ring-white/20 bg-black/5 dark:bg-white/5"
+                              />
+                            ))}
                           <span className={found ? "" : "brightness-0 opacity-25 dark:invert"}>
                             <DuckPreview
-                              variant={hasShiny ? { ...s.preview, shiny: true } : s.preview}
+                              variant={showShiny ? { ...s.preview, shiny: true } : s.preview}
                               size={52}
                             />
                           </span>
