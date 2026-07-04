@@ -69,6 +69,18 @@ async function get<T>(url: string): Promise<T> {
   }
 }
 
+// true si TMDB accepte la clé, false si 401 (clé invalide). Les autres
+// erreurs réseau remontent : hors-ligne, impossible de trancher.
+export async function validateKey(apiKey: string): Promise<boolean> {
+  try {
+    await get(`${BASE}/configuration?api_key=${apiKey}`);
+    return true;
+  } catch (err) {
+    if (err instanceof NetworkError && err.status === 401) return false;
+    throw err;
+  }
+}
+
 export function feed(f: TmdbFeed, mt: TmdbMediaType, page: number, apiKey: string) {
   if (f === "trending")
     return get<TmdbListResponse>(

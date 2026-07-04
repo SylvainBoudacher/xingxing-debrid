@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import {
   Bell,
   Compass,
   FlaskConical,
   Home,
+  KeyRound,
   Library,
   Magnet,
   Menu,
@@ -27,6 +29,7 @@ import {
 import { ThemeMenuItem } from "@/components/ThemeMenuItem";
 import { toast } from "sonner";
 import { LazyStore } from "@tauri-apps/plugin-store";
+import { getApiKey } from "@/lib/apiKeys";
 
 export type Page =
   | "main"
@@ -64,6 +67,15 @@ export function AppMenu({
   onShowUpdatePreview,
 }: AppMenuProps) {
   const isMain = currentPage === "main";
+  // La page Découverte est inutilisable sans clé TMDB : petit indicateur sur
+  // l'entrée du menu pour prévenir avant de naviguer.
+  const [tmdbKeyMissing, setTmdbKeyMissing] = useState(false);
+
+  useEffect(() => {
+    getApiKey("tmdb_api_key")
+      .then((v) => setTmdbKeyMissing(!v))
+      .catch(() => {});
+  }, []);
 
   return (
     <DropdownMenu>
@@ -87,6 +99,12 @@ export function AppMenu({
           <DropdownMenuItem onClick={() => onNavigate("discover")}>
             <Compass className="mr-2 h-4 w-4" />
             Découverte
+            {tmdbKeyMissing && (
+              <KeyRound
+                className="ml-auto h-3 w-3 text-amber-500"
+                aria-label="Clé TMDB manquante"
+              />
+            )}
           </DropdownMenuItem>
         )}
         {currentPage !== "magnets" && (

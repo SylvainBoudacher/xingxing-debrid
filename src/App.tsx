@@ -21,9 +21,14 @@ const DuckShop = lazy(() => import("@/components/DuckShop").then((m) => ({ defau
 const DuckDex = lazy(() => import("@/components/DuckDex").then((m) => ({ default: m.DuckDex })));
 const SetupPage = lazy(() => import("@/pages/SetupPage").then((m) => ({ default: m.SetupPage })));
 const MainPage = lazy(() => import("@/pages/MainPage").then((m) => ({ default: m.MainPage })));
-import { MagnetsPage } from "@/pages/MagnetsPage";
+const MagnetsPage = lazy(() =>
+  import("@/pages/MagnetsPage").then((m) => ({ default: m.MagnetsPage })),
+);
 import { DiscoverPage } from "@/pages/DiscoverPage";
-import { NyaaTestPage } from "@/pages/NyaaTestPage";
+// Page de test dev uniquement : exclue du bundle de production.
+const NyaaTestPage = import.meta.env.DEV
+  ? lazy(() => import("@/pages/NyaaTestPage").then((m) => ({ default: m.NyaaTestPage })))
+  : null;
 const PreferencesPage = lazy(() =>
   import("@/pages/PreferencesPage").then((m) => ({ default: m.PreferencesPage })),
 );
@@ -372,7 +377,7 @@ function App() {
               />
             </motion.div>
           )}
-          {effectivePhase === "done" && page === "nyaa" && devMode && (
+          {effectivePhase === "done" && page === "nyaa" && devMode && NyaaTestPage && (
             <motion.div
               key="nyaa"
               initial={{ opacity: 0, y: 12 }}

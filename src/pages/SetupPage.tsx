@@ -37,6 +37,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey, setApiKey } from "@/lib/apiKeys";
+import { validateKey as validateTmdbKey } from "@/lib/services/tmdb";
 import { applyTheme, type Theme } from "@/lib/theme";
 
 const PixelPool = lazy(() =>
@@ -386,6 +387,15 @@ export function SetupPage({ onComplete }: SetupPageProps) {
       await setApiKey("c411_api_key", c411Key.trim());
       await setApiKey("alldebrid_api_key", allDebridKey.trim());
       await setApiKey("tmdb_api_key", tmdbKey.trim());
+      // Clé optionnelle : on prévient si elle est invalide mais on ne bloque pas
+      // le setup (hors-ligne / TMDB injoignable = on laisse passer).
+      if (tmdbKey.trim()) {
+        const valid = await validateTmdbKey(tmdbKey.trim()).catch(() => true);
+        if (!valid)
+          toast.error(
+            "Clé TMDB invalide : la page Découverte ne fonctionnera pas sans clé valide.",
+          );
+      }
       setStep("display");
     } catch (err) {
       toast.error(String(err));

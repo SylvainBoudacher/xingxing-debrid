@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getApiKey, setApiKey, type ApiKeyName } from "@/lib/apiKeys";
+import { validateKey as validateTmdbKey } from "@/lib/services/tmdb";
 
 const C411_STEPS = [
   "Connectez-vous a votre compte C411.",
@@ -140,10 +141,19 @@ export function ApiKeysForm({ onSaved }: { onSaved?: (keys: ApiKeys) => void }) 
       await setApiKey(KEY_STORE_NAMES[field], value);
       savedRef.current = { ...savedRef.current, [field]: value };
       onSaved?.(savedRef.current);
-      toast.success("Cle sauvegardee.");
     } catch (err) {
       toast.error(String(err));
+      return;
     }
+    if (field === "tmdbKey" && value) {
+      // Hors-ligne / TMDB injoignable : impossible de verifier, on ne bloque pas.
+      const valid = await validateTmdbKey(value).catch(() => true);
+      if (!valid) {
+        toast.error("Cle TMDB invalide : verifiez-la sur themoviedb.org.");
+        return;
+      }
+    }
+    toast.success("Cle sauvegardee.");
   }
 
   return (
