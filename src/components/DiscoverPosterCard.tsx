@@ -1,12 +1,13 @@
 import { memo } from "react";
 import { motion } from "motion/react";
-import { Heart, Star } from "lucide-react";
+import { Check, Heart, Star } from "lucide-react";
 import type { TmdbItem } from "@/lib/tmdbItem";
 
 interface DiscoverPosterCardProps {
   item: TmdbItem;
   index: number;
   liked: boolean;
+  inLibrary: boolean;
   subtitle: string;
   onOpen: (item: TmdbItem) => void;
   onToggleLike: (item: TmdbItem) => void;
@@ -18,6 +19,7 @@ export const DiscoverPosterCard = memo(function DiscoverPosterCard({
   item,
   index,
   liked,
+  inLibrary,
   subtitle,
   onOpen,
   onToggleLike,
@@ -76,6 +78,12 @@ export const DiscoverPosterCard = memo(function DiscoverPosterCard({
             }`}
           />
         </span>
+        {inLibrary && (
+          <span className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-md bg-emerald-600/85 px-1.5 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm">
+            <Check className="h-2.5 w-2.5" strokeWidth={3} />
+            Dans la bibliotheque
+          </span>
+        )}
       </div>
       <p className="mt-2 text-xs font-medium text-zinc-900 dark:text-white leading-snug line-clamp-1">
         {item.title}

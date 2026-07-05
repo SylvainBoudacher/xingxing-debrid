@@ -634,6 +634,15 @@ export function DiscoverPage({
 
   const likedKeys = useMemo(() => new Set(likes.map((l) => `${l.mediaType}-${l.id}`)), [likes]);
 
+  // Ids TMDB deja presents dans la bibliotheque : badge "Dans la bibliotheque"
+  // sur les affiches. Rafraichi apres chaque ajout depuis cette page.
+  const [ownedKeys, setOwnedKeys] = useState<Set<string>>(() =>
+    ownedTmdbKeys(getCachedLibrary() ?? []),
+  );
+  useEffect(() => {
+    void loadLibrary().then((lib) => setOwnedKeys(ownedTmdbKeys(lib)));
+  }, []);
+
   // Onglets "feed" (recherche + scroll infini + sources) vs onglets curatifs
   // (Ma liste, Pour vous) qui affichent une liste deja constituee.
   const feedMode = mediaType === "movie" || mediaType === "tv" || mediaType === "animation";
@@ -768,8 +777,7 @@ export function DiscoverPage({
         throw new Error(json.error?.message ?? "Erreur AllDebrid inconnue");
 
       const uploaded = json.data?.files?.[0] as
-        | { id: number; name: string; ready: boolean }
-        | undefined;
+        { id: number; name: string; ready: boolean } | undefined;
       if (!uploaded) throw new Error("Reponse AllDebrid inattendue");
 
       if (uploaded.ready) {
@@ -805,6 +813,7 @@ export function DiscoverPage({
             enriched: true,
             tmdb: tmdbMeta,
           });
+          setOwnedKeys(ownedTmdbKeys(getCachedLibrary() ?? []));
         }
       } else {
         toast.success(
@@ -826,6 +835,7 @@ export function DiscoverPage({
           enriched: false,
           tmdb: tmdbMeta,
         });
+        setOwnedKeys(ownedTmdbKeys(getCachedLibrary() ?? []));
       }
     } catch (err) {
       toastNetworkError(err, () => handleSendToDebrid(occ, addToLibrary));
@@ -1071,6 +1081,7 @@ export function DiscoverPage({
                   item={m}
                   index={i}
                   liked={likedKeys.has(key)}
+                  inLibrary={ownedKeys.has(key)}
                   subtitle={because ? `Car vous avez aimé ${because}` : m.year}
                   onOpen={openItem}
                   onToggleLike={toggleLike}
