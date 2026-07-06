@@ -7,7 +7,9 @@ use std::sync::{Mutex, OnceLock};
 use tauri::{Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 
-const KEYRING_SERVICE: &str = "com.sulyk.c411-debrid-app";
+mod profile;
+
+pub(crate) const KEYRING_SERVICE: &str = "com.sulyk.c411-debrid-app";
 
 // Ids des telechargements dont l'annulation a ete demandee. La boucle de
 // streaming verifie ce set a chaque chunk et s'interrompt si l'id y figure.
@@ -486,6 +488,8 @@ pub fn run() {
             download_to_dir,
             cancel_download,
             open_file,
+            profile::export_profile,
+            profile::import_profile,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,5 +1,6 @@
 import {
   Compass,
+  DatabaseBackup,
   Download,
   Keyboard,
   KeyRound,
@@ -15,6 +16,7 @@ import type { LucideIcon } from "lucide-react";
 export type PanelId =
   | "appearance"
   | "api-keys"
+  | "backup"
   | "shortcuts"
   | "display"
   | "magnets"
@@ -56,6 +58,12 @@ export const SETTINGS_GROUPS: SettingsNavGroup[] = [
         label: "Comptes et clés API",
         subtitle: "Les clés C411 et AllDebrid utilisées par l'application.",
         icon: KeyRound,
+      },
+      {
+        id: "backup",
+        label: "Sauvegarde du profil",
+        subtitle: "Exporter votre profil complet dans un fichier chiffré.",
+        icon: DatabaseBackup,
       },
       {
         id: "shortcuts",
