@@ -1,3 +1,4 @@
+import raccourcisV143Img from "@/assets/patchnote/v1.4.3/raccourcis.webp";
 import pokedexV140Img from "@/assets/patchnote/v1.4.0/pokedex.webp";
 import xingxingV140Img from "@/assets/patchnote/v1.4.0/xingxing.webp";
 import roiDesCanardsV135Img from "@/assets/patchnote/v1.3.5/roi-des-canards.webp";
@@ -37,6 +38,34 @@ export interface PatchNote {
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.4.3",
+    date: "6 juillet 2026",
+    intro:
+      "La 1.4.3 ajoute des raccourcis clavier pour naviguer entre les pages et un label sur la page Decouvrir pour reperer les titres deja dans votre bibliotheque.",
+    sections: [
+      {
+        title: "Raccourcis clavier",
+        items: [
+          "Naviguez entre les pages de l'application directement au clavier, sans passer par le menu.",
+          "Les raccourcis sont entierement configurables depuis la page Parametres.",
+        ],
+        images: [
+          {
+            src: raccourcisV143Img,
+            caption: "Les raccourcis clavier configurables dans les Parametres",
+          },
+        ],
+      },
+      {
+        title: "Decouvrir : label bibliotheque",
+        items: [
+          "Les films et series deja presents dans votre bibliotheque affichent desormais un petit label directement sur leur carte dans la page Decouvrir.",
+          "Plus besoin de cliquer pour savoir si vous l'avez deja : c'est visible en un coup d'oeil.",
+        ],
+      },
+    ],
+  },
   {
     version: "1.4.2",
     date: "3 juillet 2026",
