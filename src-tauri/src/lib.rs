@@ -237,6 +237,11 @@ async fn unlock_link(link: String, alldebrid_key: String) -> Result<String, Stri
 
     let json: Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
 
+    if json.pointer("/status").and_then(|v| v.as_str()) == Some("error") {
+        let code = json.pointer("/error/code").and_then(|v| v.as_str()).unwrap_or("");
+        return Err(alldebrid_error_message(code));
+    }
+
     let download_url = json
         .pointer("/data/link")
         .and_then(|v| v.as_str())
@@ -244,6 +249,31 @@ async fn unlock_link(link: String, alldebrid_key: String) -> Result<String, Stri
         .to_string();
 
     Ok(download_url)
+}
+
+// Traduit un code d'erreur AllDebrid en message francais lisible. Les codes
+// inconnus retombent sur un message generique plutot que d'exposer le JSON brut.
+fn alldebrid_error_message(code: &str) -> String {
+    match code {
+        "FREE_TRIAL_LIMIT_REACHED" => {
+            "Limite de l'essai gratuit atteinte (7 jours / 25 Go), ou cet hebergeur n'est pas eligible a l'essai gratuit. Un abonnement AllDebrid est necessaire pour continuer.".to_string()
+        }
+        "AUTH_BAD_APIKEY" | "AUTH_MISSING_APIKEY" | "AUTH_APIKEY_INVALID" => {
+            "Cle API AllDebrid invalide ou manquante. Verifiez-la dans les parametres.".to_string()
+        }
+        "AUTH_BLOCKED" | "AUTH_USER_BANNED" => {
+            "Votre compte AllDebrid est bloque.".to_string()
+        }
+        "LINK_HOST_UNSUPPORTED" | "LINK_HOST_NOT_SUPPORTED" => {
+            "Cet hebergeur n'est pas supporte par AllDebrid.".to_string()
+        }
+        "LINK_DOWN" | "LINK_HOST_UNAVAILABLE" => {
+            "Ce lien est indisponible ou l'hebergeur est temporairement hors service.".to_string()
+        }
+        "MAINTENANCE" => "AllDebrid est en maintenance. Reessayez plus tard.".to_string(),
+        "" => "AllDebrid a renvoye une erreur inattendue.".to_string(),
+        other => format!("AllDebrid a refuse le debridage ({}).", other),
+    }
 }
 
 #[tauri::command]
