@@ -13,6 +13,7 @@ import type { Page } from "@/components/AppMenu";
 import { prefetchLibrary } from "@/lib/library";
 import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
+import { useNavShortcuts } from "@/lib/useNavShortcuts";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -78,6 +79,10 @@ function App() {
   const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(
     import.meta.env.DEV ? fakeUpdate : null,
   );
+
+  useNavShortcuts((action) => {
+    setPage((p) => (p === null || p === "setup" || p === "boatgame" ? p : action));
+  });
 
   useEffect(() => {
     checkForUpdate()

@@ -748,6 +748,18 @@ export function MagnetsPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadMagnets]);
 
+  // Escape : retour à l'accueil, sauf si une modale est ouverte (fermée par
+  // son propre handler ou par le bouton Annuler).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (filesModal || confirmDelete) return;
+      onBack();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [filesModal, confirmDelete, onBack]);
+
   // Déclenche la suppression : passe par la modale de confirmation, ou supprime
   // directement si l'utilisateur a désactivé la confirmation dans les réglages.
   function requestDelete(ids: number[], label: string) {

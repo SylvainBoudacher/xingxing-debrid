@@ -10,10 +10,11 @@ import { LibraryPanel } from "@/components/settings/panels/LibraryPanel";
 import { DownloadsPanel } from "@/components/settings/panels/DownloadsPanel";
 import { MagnetsPanel } from "@/components/settings/panels/MagnetsPanel";
 import { NyaaPanel } from "@/components/settings/panels/NyaaPanel";
+import { ShortcutsPanel } from "@/components/settings/panels/ShortcutsPanel";
 import { SummerPanel } from "@/components/settings/panels/SummerPanel";
 import { ArrowLeft } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface PreferencesPageProps {
   onBack: () => void;
@@ -48,12 +49,23 @@ export function PreferencesPage({
 }: PreferencesPageProps) {
   const [activePanel, setActivePanel] = useState<PanelId>(ALL_NAV_ITEMS[0].id);
 
+  // Escape : retour à l'accueil.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onBack();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onBack]);
+
   function renderPanel() {
     switch (activePanel) {
       case "appearance":
         return <AppearancePanel />;
       case "api-keys":
         return <ApiKeysPanel onSaved={onKeysSaved} />;
+      case "shortcuts":
+        return <ShortcutsPanel />;
       case "display":
         return <DisplayPanel />;
       case "magnets":

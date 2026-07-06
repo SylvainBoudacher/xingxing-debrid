@@ -783,7 +783,6 @@ export function MainPage({
               )}
               <input
                 ref={searchInputRef}
-                autoFocus
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}

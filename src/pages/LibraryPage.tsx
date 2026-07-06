@@ -185,6 +185,18 @@ export function LibraryPage({
   // Flushe l'écriture en attente quand on quitte la page.
   useEffect(() => flushLibrary, []);
 
+  // Escape : retour à l'accueil, sauf si une modale est ouverte (elle gère
+  // elle-même sa fermeture sur Escape).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (expandedHash || expandedGroupId || matchingHash) return;
+      onBack();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expandedHash, expandedGroupId, matchingHash, onBack]);
+
   // Updaters fonctionnels : identité stable (deps vides) pour ne pas casser le
   // React.memo des cartes, tout en lisant le dernier état via `prev`.
   const persist = useCallback((next: LibraryEntry[]) => {

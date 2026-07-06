@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { ArrowLeft } from "lucide-react";
+import { useEffect } from "react";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { PATCH_NOTES } from "@/lib/patchnotes";
 
@@ -16,6 +17,15 @@ export function PatchnotesPage({
   hasPendingUpdate,
   onShowPendingUpdate,
 }: PatchnotesPageProps) {
+  // Escape : retour à l'accueil.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onBack();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onBack]);
+
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
       {/* Header */}

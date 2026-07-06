@@ -1,6 +1,7 @@
 import {
   Compass,
   Download,
+  Keyboard,
   KeyRound,
   Layers,
   Library,
@@ -14,6 +15,7 @@ import type { LucideIcon } from "lucide-react";
 export type PanelId =
   | "appearance"
   | "api-keys"
+  | "shortcuts"
   | "display"
   | "magnets"
   | "downloads"
@@ -54,6 +56,12 @@ export const SETTINGS_GROUPS: SettingsNavGroup[] = [
         label: "Comptes et clés API",
         subtitle: "Les clés C411 et AllDebrid utilisées par l'application.",
         icon: KeyRound,
+      },
+      {
+        id: "shortcuts",
+        label: "Raccourcis clavier",
+        subtitle: "Naviguer entre les pages au clavier.",
+        icon: Keyboard,
       },
     ],
   },

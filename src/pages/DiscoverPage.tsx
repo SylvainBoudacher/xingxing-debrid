@@ -443,10 +443,11 @@ export function DiscoverPage({
       if (e.key !== "Escape") return;
       if (debridModal) setDebridModal(null);
       else if (selected) closeMovie();
+      else onBack();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [debridModal, selected]);
+  }, [debridModal, selected, onBack]);
 
   // Scroll infini : charge la page suivante quand la sentinelle entre dans le
   // viewport. Le garde `loadingMovies` évite les déclenchements multiples (la
@@ -946,7 +947,6 @@ export function DiscoverPage({
                 />
               </span>
               <input
-                autoFocus
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
