@@ -65,6 +65,10 @@ function App() {
   const [page, setPage] = useState<Page | null>(null);
   const [discoverQuery, setDiscoverQuery] = useState("");
   const [discoverItem, setDiscoverItem] = useState<TmdbItem | null>(null);
+  const [mainSearch, setMainSearch] = useState<{
+    query: string;
+    source: "c411" | "nyaa";
+  } | null>(null);
   const [patchnotesSeenVersion, setPatchnotesSeenVersion] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [summerEnabled, setSummerEnabled] = useState(true);
@@ -179,6 +183,9 @@ function App() {
       setDiscoverQuery("");
       setDiscoverItem(null);
     }
+    // Toute navigation "normale" vers l'accueil repart sur une barre vierge :
+    // seule la fiche Découverte injecte une recherche tracker à lancer.
+    if (p === "main") setMainSearch(null);
     setPage(p);
   }
 
@@ -194,6 +201,13 @@ function App() {
     setDiscoverQuery(item.title);
     setDiscoverItem(item);
     setPage("discover");
+  }
+
+  // Depuis la fiche Découverte sans version C411 : bascule sur l'accueil et lance
+  // une recherche brute sur le tracker choisi.
+  function launchTrackerSearch(query: string, source: "c411" | "nyaa") {
+    setMainSearch({ query, source });
+    setPage("main");
   }
 
   async function handleSetupComplete() {
@@ -320,6 +334,8 @@ function App() {
                 initialPatchnotesSeen={patchnotesSeenVersion ?? initPrefs.patchnotesSeen}
                 initialSearchViewMode={initPrefs.searchViewMode}
                 initialIdleAutoHide={idleAutoHide && summerEnabled}
+                initialSearch={mainSearch}
+                onSearchConsumed={() => setMainSearch(null)}
               />
             </motion.div>
           )}
@@ -407,6 +423,7 @@ function App() {
                 initialC411Key={initC411Key}
                 initialAllDebridKey={initAllDebridKey}
                 initialLikes={initLikes}
+                onSearchTracker={launchTrackerSearch}
               />
             </motion.div>
           )}

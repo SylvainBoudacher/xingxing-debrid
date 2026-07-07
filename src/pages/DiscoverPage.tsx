@@ -1,4 +1,6 @@
 import vlcLogo from "@/assets/vlc.png";
+import c411Logo from "@/assets/sources/C411.webp";
+import nyaaLogo from "@/assets/sources/nyaa.webp";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { DiscoverPosterCard } from "@/components/DiscoverPosterCard";
 import { mapTmdb, type MediaType, type TmdbItem } from "@/lib/tmdbItem";
@@ -269,6 +271,8 @@ interface DiscoverPageProps {
   initialAllDebridKey?: string | null;
   /** Likes pré-chargés par useAppInit */
   initialLikes?: LikedItem[];
+  /** Lance une recherche brute sur un tracker (C411 / Nyaa) via la page principale */
+  onSearchTracker: (query: string, source: "c411" | "nyaa") => void;
 }
 
 export function DiscoverPage({
@@ -283,6 +287,7 @@ export function DiscoverPage({
   initialC411Key,
   initialAllDebridKey,
   initialLikes,
+  onSearchTracker,
 }: DiscoverPageProps) {
   const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(
     initialTmdbKey !== undefined ? initialTmdbKey : undefined,
@@ -934,7 +939,7 @@ export function DiscoverPage({
       }`}
     >
       {/* Background */}
-      <div className="pointer-events-none fixed inset-0 -z-10">
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
         <motion.div
           animate={prefersReducedMotion ? {} : { opacity: [0.7, 1, 0.7], scale: [1, 1.08, 1] }}
           transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
@@ -1413,12 +1418,44 @@ export function DiscoverPage({
                   </div>
                 )}
                 {releases !== null && releases.length === 0 && (
-                  <div className="flex h-full items-center justify-center">
+                  <div className="flex h-full flex-col items-center justify-center gap-5 px-6">
                     <p className="text-center text-sm text-zinc-500">
                       {selected.mediaType === "tv"
                         ? "Aucune version disponible pour cette saison."
                         : "Aucune version disponible pour ce film."}
                     </p>
+                    <div className="flex flex-col items-center gap-3">
+                      <p className="max-w-xs text-center text-xs text-zinc-400 dark:text-zinc-500">
+                        Peut-être juste mal répertorié entre TMDB et C411. Cherchez directement sur
+                        un tracker :
+                      </p>
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          onClick={() => onSearchTracker(selected.title, "c411")}
+                          className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-medium text-zinc-700 ring-1 ring-black/10 transition-colors hover:bg-zinc-100 dark:bg-zinc-800/80 dark:text-zinc-200 dark:ring-white/10 dark:hover:bg-zinc-700/80"
+                        >
+                          <img
+                            src={c411Logo}
+                            alt=""
+                            className="h-5 w-5 rounded-full object-cover bg-white"
+                          />
+                          Chercher sur C411
+                        </button>
+                        <button
+                          onClick={() =>
+                            onSearchTracker(selected.originalTitle || selected.title, "nyaa")
+                          }
+                          className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-medium text-zinc-700 ring-1 ring-black/10 transition-colors hover:bg-zinc-100 dark:bg-zinc-800/80 dark:text-zinc-200 dark:ring-white/10 dark:hover:bg-zinc-700/80"
+                        >
+                          <img
+                            src={nyaaLogo}
+                            alt=""
+                            className="h-5 w-5 rounded-full object-cover bg-white"
+                          />
+                          Chercher sur Nyaa
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
                 {releases !== null && releases.length > 0 && visibleReleases?.length === 0 && (

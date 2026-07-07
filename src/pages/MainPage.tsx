@@ -221,6 +221,10 @@ interface MainPageProps {
   initialPatchnotesSeen?: string | null;
   initialSearchViewMode?: ViewMode;
   initialIdleAutoHide?: boolean;
+  /** Recherche tracker à lancer au montage (depuis la fiche Découverte) */
+  initialSearch?: { query: string; source: "c411" | "nyaa" } | null;
+  /** Notifie que `initialSearch` a été consommé (évite un relancement au remontage) */
+  onSearchConsumed?: () => void;
 }
 
 export function MainPage({
@@ -239,9 +243,11 @@ export function MainPage({
   initialPatchnotesSeen,
   initialSearchViewMode,
   initialIdleAutoHide = true,
+  initialSearch,
+  onSearchConsumed,
 }: MainPageProps) {
-  const [query, setQuery] = useState("");
-  const [source, setSource] = useState<SearchMode>("discover");
+  const [query, setQuery] = useState(initialSearch?.query ?? "");
+  const [source, setSource] = useState<SearchMode>(initialSearch?.source ?? "discover");
   const [activeSource, setActiveSource] = useState<"c411" | "nyaa">("c411");
   const [searchFocused, setSearchFocused] = useState(false);
   const [nyaaTeam, setNyaaTeam] = useState("");
@@ -502,9 +508,9 @@ export function MainPage({
     });
   }
 
-  async function fetchNyaaResults() {
+  async function fetchNyaaResults(rawQuery: string = query) {
     searchedQueryRef.current = buildNyaaQuery(
-      query.trim(),
+      rawQuery.trim(),
       nyaaTeam,
       nyaaQuality,
       nyaaCodec,
@@ -546,8 +552,9 @@ export function MainPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nyaaTeam, nyaaQuality, nyaaCodec, nyaaLanguage]);
 
-  async function performSearch(src: "c411" | "nyaa") {
-    if (!query.trim()) return;
+  async function performSearch(src: "c411" | "nyaa", queryOverride?: string) {
+    const q = (queryOverride ?? query).trim();
+    if (!q) return;
 
     setPhase((prev) => (prev === "idle" ? "title-exiting" : "active"));
     setLoading(true);
@@ -564,9 +571,9 @@ export function MainPage({
       setPage(1);
 
       if (src === "nyaa") {
-        await fetchNyaaResults();
+        await fetchNyaaResults(q);
       } else {
-        searchedQueryRef.current = query.trim();
+        searchedQueryRef.current = q;
         const json = await fetchPage(1, "pertinence", "desc");
         setResults(mapTorrents(json.data));
         setTotal(json.meta.total);
@@ -578,6 +585,16 @@ export function MainPage({
       setLoading(false);
     }
   }
+
+  // Arrivee depuis la fiche Decouverte ("Aucune version") : on lance directement
+  // la recherche brute sur le tracker choisi, requete deja pre-remplie au montage.
+  useEffect(() => {
+    if (!initialSearch) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    performSearch(initialSearch.source, initialSearch.query);
+    onSearchConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
