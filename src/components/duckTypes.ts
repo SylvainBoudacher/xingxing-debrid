@@ -32,15 +32,7 @@ export type Accessory =
   | "laurel";
 
 export type Pattern =
-  | "spots"
-  | "stripes"
-  | "polka"
-  | "rainbow"
-  | "gold"
-  | "galaxy"
-  | "zombie"
-  | "metal"
-  | "abyss";
+  "spots" | "stripes" | "polka" | "rainbow" | "gold" | "galaxy" | "zombie" | "metal" | "abyss";
 
 export type Effect =
   | "glow"

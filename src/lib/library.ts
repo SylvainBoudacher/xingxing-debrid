@@ -1,5 +1,5 @@
-import { LazyStore } from "@tauri-apps/plugin-store";
 import { isVideoFile, type DebridFile } from "@/lib/debrid";
+import { LazyStore } from "@tauri-apps/plugin-store";
 
 export type LibraryProvider = "c411" | "nyaa" | "discover";
 
@@ -284,8 +284,7 @@ export interface SeriesGroup {
 }
 
 export type DisplayItem =
-  | { type: "single"; entry: LibraryEntry }
-  | { type: "group"; group: SeriesGroup };
+  { type: "single"; entry: LibraryEntry } | { type: "group"; group: SeriesGroup };
 
 // Best-guess season number for an entry: the season that has the most files.
 export function dominantSeason(entry: LibraryEntry): number | null {
