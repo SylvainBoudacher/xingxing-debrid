@@ -4,6 +4,7 @@ import { SettingsRail } from "@/components/settings/SettingsRail";
 import { ALL_NAV_ITEMS, type PanelId } from "@/components/settings/settingsNav";
 import { AppearancePanel } from "@/components/settings/panels/AppearancePanel";
 import { ApiKeysPanel } from "@/components/settings/panels/ApiKeysPanel";
+import { BackupPanel } from "@/components/settings/panels/BackupPanel";
 import { DiscoverPanel } from "@/components/settings/panels/DiscoverPanel";
 import { DisplayPanel } from "@/components/settings/panels/DisplayPanel";
 import { LibraryPanel } from "@/components/settings/panels/LibraryPanel";
@@ -64,6 +65,8 @@ export function PreferencesPage({
         return <AppearancePanel />;
       case "api-keys":
         return <ApiKeysPanel onSaved={onKeysSaved} />;
+      case "backup":
+        return <BackupPanel />;
       case "shortcuts":
         return <ShortcutsPanel />;
       case "display":

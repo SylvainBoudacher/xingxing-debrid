@@ -1389,7 +1389,10 @@ export function MainPage({
                         </motion.button>
                         <motion.button
                           whileTap={{ scale: 0.97 }}
-                          onClick={() => handleDownloadFile(file.link)}
+                          onClick={() => {
+                            handleDownloadFile(file.link);
+                            setDebridModal(null);
+                          }}
                           disabled={
                             downloadingLink !== null || copiedLink !== null || vlcLink !== null
                           }

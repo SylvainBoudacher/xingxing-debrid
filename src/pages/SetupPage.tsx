@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
+  Clapperboard,
   Compass,
   CreditCard,
   Download,
@@ -22,6 +23,7 @@ import {
   Sparkles,
   Sun,
   Terminal,
+  Upload,
   UserRound,
   Wifi,
   X,
@@ -37,6 +39,8 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey, setApiKey } from "@/lib/apiKeys";
+import { pickBackupFile } from "@/lib/profileBackup";
+import { ImportProfileModal } from "@/components/ImportProfileModal";
 import { validateKey as validateTmdbKey } from "@/lib/services/tmdb";
 import { applyTheme, type Theme } from "@/lib/theme";
 
@@ -73,7 +77,7 @@ const TMDB_STEPS = [
   'Allez dans "Paramètres" puis "API".',
   "Demandez une clé API (usage personnel).",
   'Copiez la "Clé d\'API" (v3) et collez-la ci-dessous.',
-  "Cette clé est optionnelle : elle sert uniquement à la page Découverte.",
+  "Sans cette clé, l'application est bridée : pas de page Découverte, et votre bibliothèque perd les jaquettes et les infos de vos films et séries.",
 ];
 
 const FEATURES = [
@@ -135,7 +139,7 @@ function KeyCard({
     <motion.div variants={item}>
       {optional && (
         <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-          Optionnel
+          Optionnel, mais fortement recommandé
         </p>
       )}
       <div
@@ -338,6 +342,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   const [theme, setThemeState] = useState<Theme>("dark");
   const [summerEnabled, setSummerEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [importPath, setImportPath] = useState<string | null>(null);
 
   useEffect(() => {
     getApiKey("c411_api_key").then((v) => {
@@ -377,6 +382,11 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     setStep("prereqs");
     setDnsStatus("checking");
     checkDns();
+  }
+
+  async function handlePickImport() {
+    const path = await pickBackupFile();
+    if (path) setImportPath(path);
   }
 
   const bothFilled = c411Key.trim() !== "" && allDebridKey.trim() !== "";
@@ -485,24 +495,24 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               animate="visible"
               exit={{ opacity: 0, x: -24, transition: { duration: 0.2 } }}
               variants={stagger}
-              className="relative mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-6 py-12 sm:px-8"
+              className="relative mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-6 py-6 sm:px-8"
             >
-              <motion.div variants={item} className="flex flex-col items-center text-center mb-10">
-                <div className="relative mb-4 flex h-72 w-72 items-center justify-center [perspective:700px]">
+              <motion.div variants={item} className="flex flex-col items-center text-center mb-5">
+                <div className="relative mb-2 flex h-52 w-52 items-center justify-center [perspective:700px]">
                   <motion.div
                     animate={{ opacity: [0.4, 0.9, 0.4], scale: [0.95, 1.15, 0.95] }}
                     transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/50 blur-2xl"
+                    className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/50 blur-2xl"
                   />
                   {/* 3D scene: the logo sits at z=0, the orbit plane is tilted so icons pass in front of and behind it */}
                   <div className="absolute inset-0 flex items-center justify-center [transform-style:preserve-3d]">
                     <img
                       src={logo}
                       alt="XingXing Debrid"
-                      className="relative h-32 w-32 rounded-2xl ring-1 ring-black/10 dark:ring-white/10 shadow-[0_0_50px_rgba(79,70,229,0.5)]"
+                      className="relative h-24 w-24 rounded-2xl ring-1 ring-black/10 dark:ring-white/10 shadow-[0_0_50px_rgba(79,70,229,0.5)]"
                     />
                     <div className="pointer-events-none absolute inset-0 [transform-style:preserve-3d] [transform:rotateX(70deg)]">
-                      <div className="absolute inset-[34px] rounded-full border border-dashed border-indigo-500/25" />
+                      <div className="absolute inset-[26px] rounded-full border border-dashed border-indigo-500/25" />
                       <motion.div
                         animate={{ rotateZ: 360 }}
                         transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
@@ -512,7 +522,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                           <div
                             key={f.title}
                             className="absolute left-1/2 top-1/2 -ml-6 -mt-6 h-12 w-12 [transform-style:preserve-3d]"
-                            style={{ transform: `rotateZ(${i * 90}deg) translateY(-110px)` }}
+                            style={{ transform: `rotateZ(${i * 90}deg) translateY(-78px)` }}
                           >
                             {/* counter-rotation + un-tilt so the icon stays upright and faces the camera */}
                             <motion.div
@@ -531,7 +541,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                     </div>
                   </div>
                 </div>
-                <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-3">
+                <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
                   XingXing Debrid
                 </h1>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm leading-relaxed">
@@ -539,12 +549,12 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 </p>
               </motion.div>
 
-              <div className="space-y-3 mb-10">
+              <div className="space-y-2 mb-5">
                 {FEATURES.map((f) => (
                   <motion.div
                     key={f.title}
                     variants={item}
-                    className="flex items-start gap-4 rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-4"
+                    className="flex items-start gap-4 rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-3"
                   >
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
                       <f.icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
@@ -561,13 +571,21 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 ))}
               </div>
 
-              <motion.div variants={item}>
+              <motion.div variants={item} className="space-y-2.5">
+                <motion.button
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handlePickImport}
+                  className="flex w-full items-center justify-center gap-2 h-10 rounded-xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/10 dark:ring-white/10 text-sm font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                >
+                  <Upload className="h-4 w-4" />
+                  Importer un profil
+                </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.98 }}
                   onClick={goToPrereqs}
-                  className="flex w-full items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors"
+                  className="flex w-full items-center justify-center gap-2 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors"
                 >
-                  Continuer
+                  Nouveau profil
                   <ArrowRight className="h-4 w-4" />
                 </motion.button>
               </motion.div>
@@ -663,6 +681,41 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                     className="mt-2 flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
                   >
                     c411.org
+                    <ExternalLink className="h-3 w-3" />
+                  </button>
+                </div>
+              </motion.div>
+
+              {/* TMDB */}
+              <motion.div
+                variants={item}
+                className="flex items-start gap-4 rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-4"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/12 ring-1 ring-emerald-500/20">
+                  <Clapperboard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
+                      Compte TMDB
+                    </p>
+                    <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                      Gratuit
+                    </span>
+                    <span className="rounded-md bg-zinc-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      Optionnel
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Base de donnees de films et series. Fait tourner la page Decouverte et affiche
+                    les jaquettes et les infos des films et series de votre bibliotheque.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => openUrl("https://www.themoviedb.org")}
+                    className="mt-2 flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
+                  >
+                    themoviedb.org
                     <ExternalLink className="h-3 w-3" />
                   </button>
                 </div>
@@ -825,7 +878,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                   </h1>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
                     Deux clés gratuites pour relier l'application à C411 et AllDebrid. La clé TMDB
-                    est optionnelle.
+                    est optionnelle, mais sans elle une partie de l'application reste bridée.
                   </p>
                 </div>
               </motion.div>
@@ -1279,6 +1332,16 @@ export function SetupPage({ onComplete }: SetupPageProps) {
           )}
         </AnimatePresence>
       </div>
+
+      <AnimatePresence>
+        {importPath && (
+          <ImportProfileModal
+            path={importPath}
+            onClose={() => setImportPath(null)}
+            onImported={() => window.location.reload()}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showDnsGuide && (
