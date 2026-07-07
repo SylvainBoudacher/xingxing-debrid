@@ -1,2 +1,4 @@
-- Fix du bateau et de certains skins de canard.
-- Fix de certain probleme dans l'Easter Eggs.
+- Barre de recherche principale revue avec auto-completion integree.
+- Import/Export de profil encrypte pour faciliter le multi-device.
+- TMDB devient obligatoire pour le bon fonctionnement de l'application.
+- Canards nommes par defaut selon leur famille ; bateau de XingXing securise.

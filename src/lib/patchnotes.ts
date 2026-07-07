@@ -1,3 +1,6 @@
+import newsPrincipalesV150Img from "@/assets/patchnote/v1.5.0/news-principales.webp";
+import importExportV150Img from "@/assets/patchnote/v1.5.0/import-export.webp";
+import canardsNomesV150Img from "@/assets/patchnote/v1.5.0/canards-nomes.webp";
 import raccourcisV143Img from "@/assets/patchnote/v1.4.3/raccourcis.webp";
 import pokedexV140Img from "@/assets/patchnote/v1.4.0/pokedex.webp";
 import xingxingV140Img from "@/assets/patchnote/v1.4.0/xingxing.webp";
@@ -38,6 +41,77 @@ export interface PatchNote {
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.5.0",
+    date: "7 juillet 2026",
+    intro:
+      "La 1.5.0 recentre l'application autour de la barre de recherche principale, integre l'import/export de profil pour faciliter le multi-device, et renforce TMDB comme element clé de l'experience.",
+    sections: [
+      {
+        title: "La barre de recherche redevient principale",
+        items: [
+          "La barre de recherche sur la page d'accueil devient l'element principal de l'application pour faire vos recherches.",
+          "Avec l'auto-completion des noms de series et films, retrouver vos contenus est plus rapide et plus fluide.",
+          "L'application tourne desormais bien autour de la page Decouvrir et de son mode de fonctionnement, ce qui simplifie l'utilisation globalement.",
+          "Rien n'empeche d'utiliser la recherche brute sur C411 ou Nyaa pour autant - les deux approches coexistent.",
+        ],
+        images: [
+          {
+            src: newsPrincipalesV150Img,
+            caption: "La barre de recherche principale avec auto-completion",
+          },
+        ],
+      },
+      {
+        title: "Decouvrir : auto-completion globale",
+        items: [
+          "La page Decouvrir obtient aussi un systeme d'auto-completion des recherches.",
+          "Les recherches sont maintenant globales et ne ciblent plus uniquement films, series ou animation - trouvez ce que vous cherchez quel que soit le type de contenu.",
+        ],
+      },
+      {
+        title: "Import/Export de profil pour multi-device",
+        items: [
+          "Exportez votre profil complet dans un fichier encrypte par un mot de passe : reglages, informations, cles API, canards, bibliotheque, et tout le reste.",
+          "Importez ce fichier sur une autre installation de Xingxing pour retrouver l'integralite de votre configuration.",
+          "Attention : ne partagez votre profil avec n'importe qui, car il contient vos cles API et donnees personnelles.",
+        ],
+        images: [
+          {
+            src: importExportV150Img,
+            caption: "Import/Export de profil pour transporter votre configuration",
+          },
+        ],
+      },
+      {
+        title: "TMDB devient obligatoire",
+        items: [
+          "La cle API du service TMDB est maintenant obligatoire pour le bon fonctionnement de l'application et du user flow global.",
+          "TMDB est essential pour enrichir votre experience de recherche et de decouverte.",
+        ],
+      },
+      {
+        title: "Coin des Canards : canards nommes par defaut",
+        items: [
+          "Les canards ne sont plus des « sans nom » : ils portent desormais par defaut le nom de leur famille, comme « Canard moustachu ».",
+          "Vous pouvez toujours les renommer comme bon vous semble, mais cette amelioration rend votre collection plus vivante.",
+        ],
+      },
+      {
+        title: "Coin des Canards : bateau securise",
+        items: [
+          "Le bateau de XingXing ne peut plus lancer le jeu tout seul sans une action du joueur avec le typhon.",
+          "Cela evite les interactions involontaires et rend le jeu plus intentionnel.",
+        ],
+        images: [
+          {
+            src: canardsNomesV150Img,
+            caption: "Les canards nommes et le bateau de XingXing securise",
+          },
+        ],
+      },
+    ],
+  },
   {
     version: "1.4.3",
     date: "6 juillet 2026",
@@ -787,4 +861,4 @@ export const PATCH_NOTES: PatchNote[] = [
   },
 ];
 
-export const LATEST_VERSION = PATCH_NOTES[0].version;
+export const LATEST_VERSION = "1.5.0";
