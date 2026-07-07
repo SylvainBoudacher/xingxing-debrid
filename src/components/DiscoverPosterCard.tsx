@@ -26,13 +26,16 @@ export const DiscoverPosterCard = memo(function DiscoverPosterCard({
 }: DiscoverPosterCardProps) {
   return (
     <motion.button
-      initial={{ opacity: 0, y: 8 }}
+      initial={{ opacity: 0, y: 12, scale: 0.97 }}
       animate={{
         opacity: 1,
         y: 0,
+        scale: 1,
         transition: {
-          duration: 0.25,
-          delay: Math.min((index % 20) * 0.02, 0.3),
+          type: "spring",
+          stiffness: 200,
+          damping: 26,
+          delay: Math.min((index % 20) * 0.03, 0.35),
         },
       }}
       whileHover={{

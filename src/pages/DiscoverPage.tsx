@@ -77,6 +77,13 @@ const FEEDS = Object.keys(FEED_LABELS) as TmdbFeed[];
 // Les listes TMDB bougent peu : cache 10 min pour couper les refetch au
 // changement d'onglet / retour sur une recherche deja vue.
 const TMDB_STALE_MS = 10 * 60_000;
+
+// Live-search de la grille : la recherche se lance pendant la frappe (debounce),
+// les resultats remplissent le quadrillage des jaquettes. Passer sous le seuil
+// restaure le feed de navigation en cours.
+const LIVE_SEARCH_MIN = 3;
+const LIVE_SEARCH_DEBOUNCE_MS = 300;
+
 function cachedTmdb<T>(queryKey: readonly unknown[], queryFn: () => Promise<T>): Promise<T> {
   return queryClient.fetchQuery({ queryKey, queryFn, staleTime: TMDB_STALE_MS });
 }
@@ -465,6 +472,25 @@ export function DiscoverPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tmdbKey]);
 
+  // Live-search : chaque frappe relance la recherche generale (debounce) et
+  // remplit la grille. Sous le seuil, on restaure le feed de navigation.
+  useEffect(() => {
+    if (!tmdbKey) return;
+    const q = query.trim();
+    if (q.length >= LIVE_SEARCH_MIN) {
+      // Deja affiche (recherche en cours ou terminee) : rien a relancer.
+      if (mode === "search" && q === searchedQuery) return;
+      const t = setTimeout(() => startGeneralSearch(q, tmdbKey), LIVE_SEARCH_DEBOUNCE_MS);
+      return () => clearTimeout(t);
+    }
+    if (mode === "search") {
+      const back = lastBrowseTypeRef.current;
+      setMediaType(back);
+      showTopFromCacheOrFetch(back, feed);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, tmdbKey, mode, searchedQuery, feed]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -692,6 +718,18 @@ export function DiscoverPage({
   const feedMode =
     mediaType === "movie" || mediaType === "tv" || mediaType === "animation" || mediaType === "all";
   const displayItems = mediaType === "likes" ? likes : mediaType === "recos" ? recos : items;
+
+  // Signature de la vue courante : le fond de grille se croise en fondu quand on
+  // passe du feed aux resultats (ou d'une recherche a une autre). La pagination
+  // (meme cle) n'anime que les nouvelles cartes, pas toute la grille.
+  const gridKey =
+    mediaType === "likes"
+      ? "likes"
+      : mediaType === "recos"
+        ? "recos"
+        : mode === "search"
+          ? `search:${searchedQuery}`
+          : `${mediaType}:${feed}`;
 
   // Stables (useCallback) pour que React.memo sur DiscoverPosterCard tienne
   // quand la grille grossit au scroll infini.
@@ -1118,24 +1156,33 @@ export function DiscoverPage({
           )}
 
           {/* Poster grid */}
-          <div className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-            {displayItems.map((m, i) => {
-              const key = `${m.mediaType}-${m.id}`;
-              const because = mediaType === "recos" ? recosBecause.get(key) : undefined;
-              return (
-                <DiscoverPosterCard
-                  key={`${key}-${i}`}
-                  item={m}
-                  index={i}
-                  liked={likedKeys.has(key)}
-                  inLibrary={ownedKeys.has(key)}
-                  subtitle={because ? `Car vous avez aimé ${because}` : m.year}
-                  onOpen={openItem}
-                  onToggleLike={toggleLike}
-                />
-              );
-            })}
-          </div>
+          <AnimatePresence mode="popLayout" initial={false}>
+            <motion.div
+              key={gridKey}
+              initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: -8 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              className="grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-5"
+            >
+              {displayItems.map((m, i) => {
+                const key = `${m.mediaType}-${m.id}`;
+                const because = mediaType === "recos" ? recosBecause.get(key) : undefined;
+                return (
+                  <DiscoverPosterCard
+                    key={`${key}-${i}`}
+                    item={m}
+                    index={i}
+                    liked={likedKeys.has(key)}
+                    inLibrary={ownedKeys.has(key)}
+                    subtitle={because ? `Car vous avez aimé ${because}` : m.year}
+                    onOpen={openItem}
+                    onToggleLike={toggleLike}
+                  />
+                );
+              })}
+            </motion.div>
+          </AnimatePresence>
 
           {feedMode && tmdbPage < tmdbTotalPages && items.length > 0 && (
             <div ref={loadMoreRef} className="mt-8 flex h-8 justify-center">
