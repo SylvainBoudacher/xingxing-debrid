@@ -136,11 +136,14 @@ export function SeriesGroupDetailModal({
                 {group.tmdb.overview}
               </p>
             )}
-            <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+            <div className="relative mt-2.5 h-3.5 w-full overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.08]">
               <div
-                className="h-full rounded-full bg-emerald-500 transition-all"
+                className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all"
                 style={{ width: `${Math.round(ratio * 100)}%` }}
               />
+              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold leading-none tabular-nums text-zinc-700 dark:text-zinc-200">
+                {watched}/{total}
+              </span>
             </div>
           </div>
 
@@ -256,12 +259,6 @@ function ModalSeasonSection({
               <span className="flex-none text-[11px] text-zinc-400">
                 {seenCount}/{total}
               </span>
-            </div>
-            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
-              <div
-                className="h-full rounded-full bg-emerald-500 transition-all"
-                style={{ width: `${Math.round((seenCount / (total || 1)) * 100)}%` }}
-              />
             </div>
           </div>
           <ChevronDown

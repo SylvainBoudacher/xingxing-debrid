@@ -316,7 +316,7 @@ function SeasonSection({
   return (
     <div>
       <div className="bg-black/[0.02] dark:bg-white/[0.03] transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]">
-        <div className="flex items-center gap-3 px-4 pt-2">
+        <div className="flex items-center gap-3 px-4 py-2.5">
           {selection ? (
             <button onClick={() => selection.setMany(links, !allSelected)}>
               <SelectionBox checked={allSelected} />
@@ -359,14 +359,6 @@ function SeasonSection({
             />
           )}
           {!selection && <DebridActions links={links} groupKey={groupKey} debrid={debrid} />}
-        </div>
-        <div className="px-4 pb-2 pt-1.5">
-          <div className="h-1 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
-            <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
-              style={{ width: `${Math.round((seenCount / names.length) * 100)}%` }}
-            />
-          </div>
         </div>
       </div>
       <AnimatePresence initial={false}>

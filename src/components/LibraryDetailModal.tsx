@@ -199,11 +199,14 @@ export function LibraryDetailModal({
               </button>
             )}
             {series && (
-              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+              <div className="relative mt-2.5 h-3.5 w-full overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.08]">
                 <div
-                  className="h-full rounded-full bg-emerald-500 transition-all"
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all"
                   style={{ width: `${Math.round(ratio * 100)}%` }}
                 />
+                <span className="absolute inset-0 flex items-center justify-center text-[9px] font-semibold leading-none tabular-nums text-zinc-700 dark:text-zinc-200">
+                  {watchedCount(entry)}/{totalCount(entry)}
+                </span>
               </div>
             )}
           </div>
@@ -247,7 +250,7 @@ export function LibraryDetailModal({
         {/* Barre d'actions globales : seulement pour les séries (plusieurs fichiers).
             Pour un film, la ligne du fichier unique suffit. */}
         {vids.length > 1 && !selectMode && (
-          <div className="flex items-center gap-3 border-y border-black/5 bg-black/[0.02] px-5 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="flex items-center gap-3 border-y border-black/5 bg-black/[0.02] px-4 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
             <Checkbox checked={whole} onClick={() => onChange(setWholeWatched(entry, !whole))} />
             <span className="flex-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">
               {whole ? "Marqué comme vu" : "Marquer comme vu"}
@@ -281,7 +284,7 @@ export function LibraryDetailModal({
         )}
 
         {vids.length > 1 && selectMode && (
-          <div className="flex items-center gap-2 border-y border-black/5 bg-black/[0.02] px-5 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="flex items-center gap-2 border-y border-black/5 bg-black/[0.02] px-4 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
             <button
               onClick={() => selection.setMany(allLinks, !allSelected)}
               disabled={busySelection}
