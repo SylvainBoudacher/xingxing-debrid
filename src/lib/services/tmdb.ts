@@ -42,6 +42,18 @@ export interface TmdbFindResponse {
   tv_results: TmdbRawResult[];
 }
 
+// /search/multi renvoie films, séries et personnes mélangés ; chaque résultat
+// porte son propre media_type. On ignore les "person" côté appelant.
+export interface TmdbMultiResult extends TmdbRawResult {
+  media_type: "movie" | "tv" | "person";
+}
+
+export interface TmdbMultiResponse {
+  page: number;
+  total_pages: number;
+  results: TmdbMultiResult[];
+}
+
 export interface TmdbTvDetail {
   seasons?: Array<{ season_number: number; episode_count: number }>;
 }
@@ -51,6 +63,7 @@ export const tmdbKeys = {
   feed: (f: TmdbFeed, mt: TmdbMediaType, page: number) => ["tmdb", "feed", f, mt, page] as const,
   search: (mt: TmdbMediaType, query: string, page: number) =>
     ["tmdb", "search", mt, query, page] as const,
+  searchMulti: (query: string, page: number) => ["tmdb", "search", "multi", query, page] as const,
   discoverAnimation: (mt: TmdbMediaType, page: number) =>
     ["tmdb", "discover", "animation", mt, page] as const,
   find: (imdbId: string) => ["tmdb", "find", imdbId.toLowerCase()] as const,
@@ -94,6 +107,12 @@ export function feed(f: TmdbFeed, mt: TmdbMediaType, page: number, apiKey: strin
 export function search(mt: TmdbMediaType, query: string, page: number, apiKey: string) {
   return get<TmdbListResponse>(
     `${BASE}/search/${mt}?api_key=${apiKey}&language=fr-FR&include_adult=false&query=${encodeURIComponent(query)}&page=${page}`,
+  );
+}
+
+export function searchMulti(query: string, page: number, apiKey: string) {
+  return get<TmdbMultiResponse>(
+    `${BASE}/search/multi?api_key=${apiKey}&language=fr-FR&include_adult=false&query=${encodeURIComponent(query)}&page=${page}`,
   );
 }
 

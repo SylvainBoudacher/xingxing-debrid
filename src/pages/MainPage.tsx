@@ -4,6 +4,9 @@ import vlcLogo from "@/assets/vlc.png";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
 import { NyaaSearchFilters } from "@/components/NyaaSearchFilters";
+import { SearchSuggestions } from "@/components/SearchSuggestions";
+import { useTmdbSuggestions } from "@/lib/useTmdbSuggestions";
+import type { TmdbItem } from "@/lib/tmdbItem";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -36,6 +39,7 @@ import {
   BookMarked,
   BookmarkPlus,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clapperboard,
@@ -169,6 +173,22 @@ type SortKey = keyof typeof SORT_LABELS;
 
 const PER_PAGE = 10;
 
+type SearchMode = "discover" | "c411" | "nyaa";
+
+// Modes du sélecteur en bout de barre. "discover" (défaut) redirige vers la
+// page Découverte (TMDB) ; c411 / nyaa lancent une recherche brute sur place.
+const SEARCH_MODES: Array<{
+  id: SearchMode;
+  label: string;
+  icon?: LucideIcon;
+  logo?: string;
+  tip: string;
+}> = [
+  { id: "discover", label: "Films & Séries", icon: Compass, tip: "Recherche guidée via TMDB" },
+  { id: "c411", label: "C411", logo: c411Logo, tip: "Recherche directe - torrent généraliste" },
+  { id: "nyaa", label: "Nyaa", logo: nyaaLogo, tip: "Recherche directe - animé" },
+];
+
 const API_SORT: Record<SortKey, string> = {
   pertinence: "relevance",
   seeders: "seeders",
@@ -183,6 +203,10 @@ interface C411Response {
 
 interface MainPageProps {
   onNavigate: (page: Page) => void;
+  /** Lance la page Découverte avec une recherche TMDB pré-remplie */
+  onLaunchDiscover: (query: string) => void;
+  /** Ouvre directement la fiche d'un titre TMDB dans la page Découverte */
+  onLaunchDiscoverItem: (item: TmdbItem) => void;
   devMode: boolean;
   onToggleDevMode: () => void;
   onShowUpdatePreview: () => void;
@@ -192,6 +216,7 @@ interface MainPageProps {
   /** Clés API pré-lues par useAppInit — zéro latence au montage */
   initialC411Key?: string | null;
   initialAllDebridKey?: string | null;
+  initialTmdbKey?: string | null;
   /** Préférences UI pré-lues par useAppInit */
   initialPatchnotesSeen?: string | null;
   initialSearchViewMode?: ViewMode;
@@ -200,6 +225,8 @@ interface MainPageProps {
 
 export function MainPage({
   onNavigate,
+  onLaunchDiscover,
+  onLaunchDiscoverItem,
   devMode,
   onToggleDevMode,
   onShowUpdatePreview,
@@ -208,12 +235,13 @@ export function MainPage({
   summerEnabled,
   initialC411Key,
   initialAllDebridKey,
+  initialTmdbKey,
   initialPatchnotesSeen,
   initialSearchViewMode,
   initialIdleAutoHide = true,
 }: MainPageProps) {
   const [query, setQuery] = useState("");
-  const [source, setSource] = useState<"c411" | "nyaa">("c411");
+  const [source, setSource] = useState<SearchMode>("discover");
   const [activeSource, setActiveSource] = useState<"c411" | "nyaa">("c411");
   const [searchFocused, setSearchFocused] = useState(false);
   const [nyaaTeam, setNyaaTeam] = useState("");
@@ -244,6 +272,8 @@ export function MainPage({
   const [simpleSearchView, setSimpleSearchView] = useState(
     (initialSearchViewMode ?? "simple") === "simple",
   );
+  const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(initialTmdbKey);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const apiKeyRef = useRef<string>(initialC411Key ?? "");
   const allDebridKeyRef = useRef<string>(initialAllDebridKey ?? "");
   // Snapshot initial props so the mount-only effect doesn't need them as deps
@@ -268,6 +298,18 @@ export function MainPage({
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-complete TMDB : uniquement en mode Films & Séries, barre focalisée.
+  const { suggestions, loading: suggestionsLoading } = useTmdbSuggestions(
+    query,
+    source === "discover" && searchFocused,
+    tmdbKey,
+  );
+  // On n'ouvre le panneau qu'une fois les suggestions chargées : le bloc se
+  // déplie d'un coup avec son contenu complet, sans passer par un spinner qui
+  // ferait sauter la hauteur. Le retour de chargement se fait via l'icône.
+  const showSuggestions =
+    source === "discover" && searchFocused && query.trim().length >= 4 && suggestions.length > 0;
+
   function resetIdleTimer() {
     if (!initialIdleAutoHide) return;
     setUiVisible(true);
@@ -282,6 +324,14 @@ export function MainPage({
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     };
   }, [initialIdleAutoHide]);
+
+  // Clé TMDB (auto-complete) : re-fetch seulement si non injectée par useAppInit.
+  useEffect(() => {
+    if (initialTmdbKey === undefined) {
+      getApiKey("tmdb_api_key").then((v) => setTmdbKey(v || null));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const { c411Key, allDebridKey, patchnotesSeen, searchViewMode } = initialPropsRef.current;
@@ -531,6 +581,12 @@ export function MainPage({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const q = query.trim();
+    if (!q) return;
+    if (source === "discover") {
+      onLaunchDiscover(q);
+      return;
+    }
     if (source === "c411") {
       searchInputRef.current?.blur();
       setSearchFocused(false);
@@ -538,11 +594,41 @@ export function MainPage({
     performSearch(source);
   }
 
-  // Bascule de source : relance la recherche avec le nouveau site si du texte est saisi.
-  function selectSource(src: "c411" | "nyaa") {
+  // Sélection d'une suggestion : on ouvre directement la fiche du titre dans
+  // la page Découverte.
+  function selectSuggestion(item: TmdbItem) {
+    setHighlightedIndex(-1);
+    searchInputRef.current?.blur();
+    setSearchFocused(false);
+    onLaunchDiscoverItem(item);
+  }
+
+  function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!showSuggestions || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedIndex((h) => (h + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedIndex((h) => (h <= 0 ? suggestions.length - 1 : h - 1));
+    } else if (e.key === "Enter" && highlightedIndex >= 0) {
+      // Entrée sur une suggestion surlignée = clic. Sinon : submit libre normal.
+      e.preventDefault();
+      selectSuggestion(suggestions[highlightedIndex]);
+    } else if (e.key === "Escape") {
+      setHighlightedIndex(-1);
+      searchInputRef.current?.blur();
+      setSearchFocused(false);
+    }
+  }
+
+  // Changement de mode via le dropdown. On ne soumet pas automatiquement ;
+  // seule exception : basculer entre trackers bruts pendant qu'on affiche déjà
+  // des résultats relance la recherche sur le nouveau site.
+  function selectSource(src: SearchMode) {
     if (src === source) return;
     setSource(src);
-    if (query.trim()) performSearch(src);
+    if (src !== "discover" && phase === "active" && query.trim()) performSearch(src);
   }
 
   async function goToPage(pageNum: number, sort: SortKey = sortBy, dir: "desc" | "asc" = sortDir) {
@@ -615,6 +701,8 @@ export function MainPage({
       });
     return list;
   }, [parsedResults, activeCats, activeQualities, activeCodecs]);
+
+  const currentMode = SEARCH_MODES.find((m) => m.id === source) ?? SEARCH_MODES[0];
   return (
     <main
       onMouseMove={resetIdleTimer}
@@ -775,120 +863,138 @@ export function MainPage({
             }}
             className="relative w-full max-w-2xl px-6"
           >
-            <div className="relative flex items-center gap-3 rounded-full bg-white/90 dark:bg-zinc-800/80 px-6 py-4 shadow-[0_8px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)] transition-all">
-              {loading ? (
-                <Loader2 className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400 animate-spin" />
-              ) : (
-                <Search className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
-              )}
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Rechercher un film, une serie..."
-                className="flex-1 bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-500 outline-none text-lg pr-10"
-              />
-              <AnimatePresence>
-                {(query.trim() || results !== null) && (
-                  <motion.button
-                    key="clear-btn"
-                    initial={{ opacity: 0, scale: 0.7 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.7 }}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ duration: 0.15 }}
-                    type="button"
-                    onClick={() => {
-                      setQuery("");
-                      setError(null);
-                      const hasResults = results !== null && results.length > 0;
-                      setResults(null);
-                      setPhase((prev) => {
-                        if (prev !== "active") return "idle";
-                        return hasResults ? "results-exiting" : "bar-returning";
-                      });
-                    }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200/90 dark:bg-zinc-700/80 hover:bg-zinc-300 dark:hover:bg-zinc-600/80 transition-colors"
-                  >
-                    <X className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
-                  </motion.button>
+            <div
+              className={`relative overflow-hidden bg-white/90 dark:bg-zinc-800/80 shadow-[0_8px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)] transition-[border-radius] duration-200 ${
+                showSuggestions ? "rounded-[28px]" : "rounded-[34px]"
+              }`}
+            >
+              <div className="relative flex items-center gap-2 px-6 py-4">
+                {loading || suggestionsLoading ? (
+                  <Loader2 className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400 animate-spin" />
+                ) : (
+                  <Search className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
                 )}
-              </AnimatePresence>
-              <AnimatePresence>
-                {query.trim() && (
-                  <motion.button
-                    key="submit-btn"
-                    initial={{ opacity: 0, scale: 0.7 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.7 }}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ duration: 0.15 }}
-                    type="submit"
-                    className="absolute right-12 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors"
-                  >
-                    <ArrowUp className="h-4 w-4 text-white" />
-                  </motion.button>
-                )}
-              </AnimatePresence>
-            </div>
-            <div className="absolute left-0 right-0 top-full mt-3 flex flex-col items-center gap-3">
-              <AnimatePresence>
-                {(searchFocused || (source === "nyaa" && phase === "active")) && (
-                  <motion.div
-                    key="sources"
-                    initial="hidden"
-                    animate="visible"
-                    exit="hidden"
-                    variants={pillStaggerVariants}
-                    className="flex justify-center gap-2"
-                  >
-                    {(
-                      [
-                        {
-                          id: "c411",
-                          label: "C411",
-                          logo: c411Logo,
-                          tip: "Torrent généraliste - français",
-                        },
-                        {
-                          id: "nyaa",
-                          label: "Nyaa",
-                          logo: nyaaLogo,
-                          tip: "Torrent spécialisé en animé - monde",
-                        },
-                      ] as const
-                    ).map((s) => (
-                      <motion.button
-                        key={s.id}
-                        type="button"
-                        variants={pillItemVariants}
-                        whileHover={{ scale: 1.06 }}
-                        whileTap={{ scale: 0.94 }}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => selectSource(s.id)}
-                        className={`group relative flex items-center gap-1.5 h-8 pl-1.5 pr-4 rounded-full text-xs font-medium ring-1 shadow-sm cursor-pointer transition-colors ${
-                          source === s.id
-                            ? "bg-indigo-600 text-white ring-indigo-500"
-                            : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                        }`}
-                      >
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setHighlightedIndex(-1);
+                  }}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="Rechercher un film, une serie..."
+                  className="flex-1 min-w-0 bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-500 outline-none text-lg"
+                />
+                <AnimatePresence>
+                  {query.trim() && (
+                    <motion.button
+                      key="submit-btn"
+                      initial={{ opacity: 0, scale: 0.7, width: 0 }}
+                      animate={{ opacity: 1, scale: 1, width: 36 }}
+                      exit={{ opacity: 0, scale: 0.7, width: 0 }}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      transition={{ duration: 0.15 }}
+                      type="submit"
+                      className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors"
+                    >
+                      <ArrowUp className="h-4 w-4 text-white" />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+                <AnimatePresence>
+                  {(query.trim() || results !== null) && (
+                    <motion.button
+                      key="clear-btn"
+                      initial={{ opacity: 0, scale: 0.7, width: 0 }}
+                      animate={{ opacity: 1, scale: 1, width: 36 }}
+                      exit={{ opacity: 0, scale: 0.7, width: 0 }}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      transition={{ duration: 0.15 }}
+                      type="button"
+                      onClick={() => {
+                        setQuery("");
+                        setError(null);
+                        const hasResults = results !== null && results.length > 0;
+                        setResults(null);
+                        setPhase((prev) => {
+                          if (prev !== "active") return "idle";
+                          return hasResults ? "results-exiting" : "bar-returning";
+                        });
+                      }}
+                      className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200/90 dark:bg-zinc-700/80 hover:bg-zinc-300 dark:hover:bg-zinc-600/80 transition-colors"
+                    >
+                      <X className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+                <div className="h-6 w-px shrink-0 bg-black/10 dark:bg-white/10" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Choisir le mode de recherche"
+                      className="group relative shrink-0 flex items-center gap-1 h-9 pl-2 pr-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+                    >
+                      {currentMode.icon ? (
+                        <currentMode.icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                      ) : (
                         <img
-                          src={s.logo}
+                          src={currentMode.logo}
                           alt=""
                           className="h-5 w-5 rounded-full object-cover bg-white"
                         />
-                        {s.label}
-                        <span className="pointer-events-none absolute left-1/2 bottom-full mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                          {s.tip}
+                      )}
+                      <ChevronDown className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-60">
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">
+                      Rechercher via
+                    </DropdownMenuLabel>
+                    {SEARCH_MODES.map((m) => (
+                      <DropdownMenuCheckboxItem
+                        key={m.id}
+                        checked={source === m.id}
+                        onSelect={(e) => e.preventDefault()}
+                        onCheckedChange={() => selectSource(m.id)}
+                      >
+                        <span className="flex items-center gap-2">
+                          {m.icon ? (
+                            <m.icon className="h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                          ) : (
+                            <img
+                              src={m.logo}
+                              alt=""
+                              className="h-4 w-4 shrink-0 rounded-full object-cover bg-white"
+                            />
+                          )}
+                          <span className="flex flex-col">
+                            <span className="text-sm leading-tight">{m.label}</span>
+                            <span className="text-[11px] text-muted-foreground leading-tight">
+                              {m.tip}
+                            </span>
+                          </span>
                         </span>
-                      </motion.button>
+                      </DropdownMenuCheckboxItem>
                     ))}
-                  </motion.div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <AnimatePresence>
+                {showSuggestions && (
+                  <SearchSuggestions
+                    suggestions={suggestions}
+                    highlightedIndex={highlightedIndex}
+                    onSelect={selectSuggestion}
+                    onHover={setHighlightedIndex}
+                  />
                 )}
               </AnimatePresence>
+            </div>
+            <div className="absolute left-0 right-0 top-full mt-3 px-6 flex flex-col items-center gap-3">
               <AnimatePresence>
                 {source === "nyaa" && (searchFocused || phase === "active") && (
                   <motion.div
@@ -916,19 +1022,12 @@ export function MainPage({
               </AnimatePresence>
             </div>
           </form>
-          {/* Reserve l'espace du panneau flottant (bulles + filtres nyaa) pour
-              que les resultats se decalent dessous au lieu d'etre recouverts. */}
+          {/* Reserve l'espace des filtres nyaa pour que les resultats se
+              decalent dessous au lieu d'etre recouverts. */}
           <motion.div
             aria-hidden
             initial={false}
-            animate={{
-              height:
-                phase === "active" && (searchFocused || source === "nyaa")
-                  ? source === "nyaa"
-                    ? 104
-                    : 56
-                  : 0,
-            }}
+            animate={{ height: phase === "active" && source === "nyaa" ? 104 : 0 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           />
         </motion.div>

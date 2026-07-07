@@ -35,6 +35,7 @@ import {
 } from "@/lib/savedDucks";
 import { recordDiscovery } from "@/lib/duckDex";
 import { getRarity, type Rarity } from "./duckRandom";
+import { SPECIES_BY_ID, speciesOf } from "./duckSpecies";
 import { DuckPreview } from "./DuckPreview";
 import {
   injectDuck,
@@ -150,7 +151,7 @@ export function DuckShop() {
     onDuckDrop((d) => {
       droppedRef.current?.release(); // free a previously held duck, if any
       setDropped(d);
-      setName(d.name);
+      setName(d.name || SPECIES_BY_ID.get(speciesOf(d.variant))?.name || "");
       setOpen(true);
     });
     onShopOpen(() => setOpen((prev) => !prev)); // toggle the collection panel
