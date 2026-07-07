@@ -304,11 +304,11 @@ export function MainPage({
     source === "discover" && searchFocused,
     tmdbKey,
   );
+  // On n'ouvre le panneau qu'une fois les suggestions chargées : le bloc se
+  // déplie d'un coup avec son contenu complet, sans passer par un spinner qui
+  // ferait sauter la hauteur. Le retour de chargement se fait via l'icône.
   const showSuggestions =
-    source === "discover" &&
-    searchFocused &&
-    query.trim().length >= 4 &&
-    (suggestions.length > 0 || suggestionsLoading);
+    source === "discover" && searchFocused && query.trim().length >= 4 && suggestions.length > 0;
 
   function resetIdleTimer() {
     if (!initialIdleAutoHide) return;
@@ -863,133 +863,138 @@ export function MainPage({
             }}
             className="relative w-full max-w-2xl px-6"
           >
-            <div className="relative flex items-center gap-2 rounded-full bg-white/90 dark:bg-zinc-800/80 px-6 py-4 shadow-[0_8px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)] transition-all">
-              {loading ? (
-                <Loader2 className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400 animate-spin" />
-              ) : (
-                <Search className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
-              )}
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setHighlightedIndex(-1);
-                }}
-                onKeyDown={handleSearchKeyDown}
-                placeholder="Rechercher un film, une serie..."
-                className="flex-1 min-w-0 bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-500 outline-none text-lg"
-              />
-              <AnimatePresence>
-                {query.trim() && (
-                  <motion.button
-                    key="submit-btn"
-                    initial={{ opacity: 0, scale: 0.7, width: 0 }}
-                    animate={{ opacity: 1, scale: 1, width: 36 }}
-                    exit={{ opacity: 0, scale: 0.7, width: 0 }}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ duration: 0.15 }}
-                    type="submit"
-                    className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors"
-                  >
-                    <ArrowUp className="h-4 w-4 text-white" />
-                  </motion.button>
+            <div
+              className={`relative overflow-hidden bg-white/90 dark:bg-zinc-800/80 shadow-[0_8px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)] transition-[border-radius] duration-200 ${
+                showSuggestions ? "rounded-[28px]" : "rounded-[34px]"
+              }`}
+            >
+              <div className="relative flex items-center gap-2 px-6 py-4">
+                {loading || suggestionsLoading ? (
+                  <Loader2 className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400 animate-spin" />
+                ) : (
+                  <Search className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
                 )}
-              </AnimatePresence>
-              <AnimatePresence>
-                {(query.trim() || results !== null) && (
-                  <motion.button
-                    key="clear-btn"
-                    initial={{ opacity: 0, scale: 0.7, width: 0 }}
-                    animate={{ opacity: 1, scale: 1, width: 36 }}
-                    exit={{ opacity: 0, scale: 0.7, width: 0 }}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    transition={{ duration: 0.15 }}
-                    type="button"
-                    onClick={() => {
-                      setQuery("");
-                      setError(null);
-                      const hasResults = results !== null && results.length > 0;
-                      setResults(null);
-                      setPhase((prev) => {
-                        if (prev !== "active") return "idle";
-                        return hasResults ? "results-exiting" : "bar-returning";
-                      });
-                    }}
-                    className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200/90 dark:bg-zinc-700/80 hover:bg-zinc-300 dark:hover:bg-zinc-600/80 transition-colors"
-                  >
-                    <X className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
-                  </motion.button>
-                )}
-              </AnimatePresence>
-              <div className="h-6 w-px shrink-0 bg-black/10 dark:bg-white/10" />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label="Choisir le mode de recherche"
-                    className="group relative shrink-0 flex items-center gap-1 h-9 pl-2 pr-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
-                  >
-                    {currentMode.icon ? (
-                      <currentMode.icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                    ) : (
-                      <img
-                        src={currentMode.logo}
-                        alt=""
-                        className="h-5 w-5 rounded-full object-cover bg-white"
-                      />
-                    )}
-                    <ChevronDown className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-60">
-                  <DropdownMenuLabel className="text-xs text-muted-foreground">
-                    Rechercher via
-                  </DropdownMenuLabel>
-                  {SEARCH_MODES.map((m) => (
-                    <DropdownMenuCheckboxItem
-                      key={m.id}
-                      checked={source === m.id}
-                      onSelect={(e) => e.preventDefault()}
-                      onCheckedChange={() => selectSource(m.id)}
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setHighlightedIndex(-1);
+                  }}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder="Rechercher un film, une serie..."
+                  className="flex-1 min-w-0 bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-500 outline-none text-lg"
+                />
+                <AnimatePresence>
+                  {query.trim() && (
+                    <motion.button
+                      key="submit-btn"
+                      initial={{ opacity: 0, scale: 0.7, width: 0 }}
+                      animate={{ opacity: 1, scale: 1, width: 36 }}
+                      exit={{ opacity: 0, scale: 0.7, width: 0 }}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      transition={{ duration: 0.15 }}
+                      type="submit"
+                      className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-indigo-600 hover:bg-indigo-500 transition-colors"
                     >
-                      <span className="flex items-center gap-2">
-                        {m.icon ? (
-                          <m.icon className="h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
-                        ) : (
-                          <img
-                            src={m.logo}
-                            alt=""
-                            className="h-4 w-4 shrink-0 rounded-full object-cover bg-white"
-                          />
-                        )}
-                        <span className="flex flex-col">
-                          <span className="text-sm leading-tight">{m.label}</span>
-                          <span className="text-[11px] text-muted-foreground leading-tight">
-                            {m.tip}
+                      <ArrowUp className="h-4 w-4 text-white" />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+                <AnimatePresence>
+                  {(query.trim() || results !== null) && (
+                    <motion.button
+                      key="clear-btn"
+                      initial={{ opacity: 0, scale: 0.7, width: 0 }}
+                      animate={{ opacity: 1, scale: 1, width: 36 }}
+                      exit={{ opacity: 0, scale: 0.7, width: 0 }}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      transition={{ duration: 0.15 }}
+                      type="button"
+                      onClick={() => {
+                        setQuery("");
+                        setError(null);
+                        const hasResults = results !== null && results.length > 0;
+                        setResults(null);
+                        setPhase((prev) => {
+                          if (prev !== "active") return "idle";
+                          return hasResults ? "results-exiting" : "bar-returning";
+                        });
+                      }}
+                      className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full bg-zinc-200/90 dark:bg-zinc-700/80 hover:bg-zinc-300 dark:hover:bg-zinc-600/80 transition-colors"
+                    >
+                      <X className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+                <div className="h-6 w-px shrink-0 bg-black/10 dark:bg-white/10" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Choisir le mode de recherche"
+                      className="group relative shrink-0 flex items-center gap-1 h-9 pl-2 pr-1.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 transition-colors"
+                    >
+                      {currentMode.icon ? (
+                        <currentMode.icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                      ) : (
+                        <img
+                          src={currentMode.logo}
+                          alt=""
+                          className="h-5 w-5 rounded-full object-cover bg-white"
+                        />
+                      )}
+                      <ChevronDown className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-60">
+                    <DropdownMenuLabel className="text-xs text-muted-foreground">
+                      Rechercher via
+                    </DropdownMenuLabel>
+                    {SEARCH_MODES.map((m) => (
+                      <DropdownMenuCheckboxItem
+                        key={m.id}
+                        checked={source === m.id}
+                        onSelect={(e) => e.preventDefault()}
+                        onCheckedChange={() => selectSource(m.id)}
+                      >
+                        <span className="flex items-center gap-2">
+                          {m.icon ? (
+                            <m.icon className="h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                          ) : (
+                            <img
+                              src={m.logo}
+                              alt=""
+                              className="h-4 w-4 shrink-0 rounded-full object-cover bg-white"
+                            />
+                          )}
+                          <span className="flex flex-col">
+                            <span className="text-sm leading-tight">{m.label}</span>
+                            <span className="text-[11px] text-muted-foreground leading-tight">
+                              {m.tip}
+                            </span>
                           </span>
                         </span>
-                      </span>
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className="absolute left-0 right-0 top-full mt-3 px-6 flex flex-col items-center gap-3">
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
               <AnimatePresence>
                 {showSuggestions && (
                   <SearchSuggestions
                     suggestions={suggestions}
-                    loading={suggestionsLoading}
                     highlightedIndex={highlightedIndex}
                     onSelect={selectSuggestion}
                     onHover={setHighlightedIndex}
                   />
                 )}
               </AnimatePresence>
+            </div>
+            <div className="absolute left-0 right-0 top-full mt-3 px-6 flex flex-col items-center gap-3">
               <AnimatePresence>
                 {source === "nyaa" && (searchFocused || phase === "active") && (
                   <motion.div
