@@ -30,6 +30,7 @@ import {
   feed as tmdbFeed,
   search as tmdbSearch,
   discoverAnimation as tmdbDiscoverAnimation,
+  searchMulti as tmdbSearchMulti,
   findByImdb as tmdbFindByImdb,
   tvDetail as tmdbTvDetail,
   recommendations as tmdbRecommendations,
@@ -59,7 +60,9 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-type BrowseType = MediaType | "animation";
+// "all" = état de recherche générale (multi films + séries). Ce n'est pas un
+// onglet cliquable : les onglets restent dédiés à la navigation de découverte.
+type BrowseType = MediaType | "animation" | "all";
 type DiscoverTab = BrowseType | "likes" | "recos";
 
 // Sources proposées sous les onglets Films / Séries, dans l'ordre d'affichage.
@@ -82,7 +85,7 @@ function cachedTmdb<T>(queryKey: readonly unknown[], queryFn: () => Promise<T>):
 // démarrage par useAppInit). Renvoie null si froid → l'appelant retombe sur un
 // fetch réseau. Évite le flash de spinner et le re-render asynchrone au switch.
 function readTopFromCache(
-  type: BrowseType,
+  type: MediaType | "animation",
   f: TmdbFeed,
 ): { items: TmdbItem[]; totalPages: number } | null {
   if (type === "animation") {
@@ -248,6 +251,10 @@ interface DiscoverPageProps {
   hasPendingUpdate: boolean;
   onShowPendingUpdate: () => void;
   summerEnabled: boolean;
+  /** Requête pré-remplie depuis la barre de MainPage (mode "Films & Séries") */
+  initialQuery?: string;
+  /** Fiche à ouvrir directement (sélection d'une suggestion d'auto-complete) */
+  initialItem?: TmdbItem | null;
   /** Clé TMDB pré-chargée par useAppInit */
   initialTmdbKey?: string | null;
   /** Clés C411 et AllDebrid pré-chargées par useAppInit */
@@ -263,6 +270,8 @@ export function DiscoverPage({
   hasPendingUpdate,
   onShowPendingUpdate,
   summerEnabled,
+  initialQuery,
+  initialItem,
   initialTmdbKey,
   initialC411Key,
   initialAllDebridKey,
@@ -271,7 +280,7 @@ export function DiscoverPage({
   const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(
     initialTmdbKey !== undefined ? initialTmdbKey : undefined,
   );
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery ?? "");
   const [mediaType, setMediaType] = useState<DiscoverTab>("movie");
   const [feed, setFeed] = useState<TmdbFeed>("top_rated");
   const [likes, setLikes] = useState<LikedItem[]>(initialLikes ?? []);
@@ -306,6 +315,9 @@ export function DiscoverPage({
   const c411KeyRef = useRef<string>(initialC411Key ?? "");
   const allDebridKeyRef = useRef<string>(initialAllDebridKey ?? "");
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  // Dernier onglet de navigation choisi : sert à revenir au bon feed quand on
+  // efface une recherche générale (qui, elle, n'est rattachée à aucun onglet).
+  const lastBrowseTypeRef = useRef<MediaType | "animation">("movie");
 
   const {
     downloadingLink,
@@ -433,6 +445,21 @@ export function DiscoverPage({
 
   useEffect(() => {
     if (!tmdbKey) return;
+    // Arrivée depuis la barre de MainPage : on lance directement la recherche
+    // TMDB sur l'onglet Films (le terme est conservé si on bascule vers Séries).
+    const q = initialQuery?.trim();
+    if (q) {
+      startGeneralSearch(q, tmdbKey);
+      // Suggestion d'auto-complete : on ouvre la fiche du titre APRÈS la
+      // transition d'entrée de la page, pour éviter que les deux animations se
+      // superposent (ouverture "brutale"). La recherche générale reste en fond.
+      if (initialItem) {
+        const item = initialItem;
+        const timer = setTimeout(() => openItem(item), 420);
+        return () => clearTimeout(timer);
+      }
+      return;
+    }
     // Données préchauffées au démarrage : lecture directe du cache, sans spinner.
     showTopFromCacheOrFetch("movie", "top_rated");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -480,7 +507,7 @@ export function DiscoverPage({
 
   // Affiche une source "top" depuis le cache si elle est chaude (cas normal,
   // préchauffé au démarrage) — sans spinner ni round-trip async. Sinon fetch.
-  function showTopFromCacheOrFetch(type: BrowseType, f: TmdbFeed) {
+  function showTopFromCacheOrFetch(type: MediaType | "animation", f: TmdbFeed) {
     const cached = readTopFromCache(type, f);
     if (!cached) {
       fetchItems("top", "", 1, tmdbKey!, type, f);
@@ -519,6 +546,16 @@ export function DiscoverPage({
                   ...found.tv_results.map((r) => mapTmdb(r, "tv")),
                 ];
         totalPages = 1;
+      } else if (m === "search" && type === "all") {
+        // Recherche générale : films + séries mélangés en un appel, on écarte
+        // les résultats "person".
+        const list = await cachedTmdb(tmdbKeys.searchMulti(q, page), () =>
+          tmdbSearchMulti(q, page, key),
+        );
+        mapped = list.results
+          .filter((r) => r.media_type === "movie" || r.media_type === "tv")
+          .map((r) => mapTmdb(r, r.media_type as MediaType));
+        totalPages = list.total_pages;
       } else if (type === "animation") {
         const fetchFor = (mt: MediaType) =>
           m === "search"
@@ -535,11 +572,13 @@ export function DiscoverPage({
         ].sort((a, b) => b.voteAverage - a.voteAverage);
         totalPages = Math.max(movies.total_pages, tvs.total_pages);
       } else {
+        // "all" et "animation" sont traités plus haut : ici type vaut movie|tv.
+        const mt = type as MediaType;
         const list =
           m === "search"
-            ? await cachedTmdb(tmdbKeys.search(type, q, page), () => tmdbSearch(type, q, page, key))
-            : await cachedTmdb(tmdbKeys.feed(f, type, page), () => tmdbFeed(f, type, page, key));
-        mapped = list.results.map((r) => mapTmdb(r, type));
+            ? await cachedTmdb(tmdbKeys.search(mt, q, page), () => tmdbSearch(mt, q, page, key))
+            : await cachedTmdb(tmdbKeys.feed(f, mt, page), () => tmdbFeed(f, mt, page, key));
+        mapped = list.results.map((r) => mapTmdb(r, mt));
         totalPages = list.total_pages;
       }
       setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
@@ -592,18 +631,21 @@ export function DiscoverPage({
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!tmdbKey || mediaType === "likes" || mediaType === "recos") return;
-    const q = query.trim();
-    if (!q) {
-      fetchItems("top", "", 1, tmdbKey, mediaType, feed);
-      return;
-    }
-    fetchItems("search", q, 1, tmdbKey, mediaType, feed);
+  // Recherche générale (films + séries mélangés), quel que soit l'onglet.
+  function startGeneralSearch(q: string, key: string) {
+    setMediaType("all");
+    fetchItems("search", q, 1, key, "all", feed);
   }
 
-  function switchType(type: DiscoverTab) {
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!tmdbKey) return;
+    const q = query.trim();
+    if (!q) return;
+    startGeneralSearch(q, tmdbKey);
+  }
+
+  function switchType(type: Exclude<DiscoverTab, "all">) {
     if (type === mediaType || !tmdbKey) return;
     setMediaType(type);
     if (type === "likes") return;
@@ -611,11 +653,11 @@ export function DiscoverPage({
       if (!recosLoading) loadRecommendations();
       return;
     }
-    if (mode === "search" && searchedQuery) {
-      fetchItems("search", searchedQuery, 1, tmdbKey, type, feed);
-    } else {
-      showTopFromCacheOrFetch(type, feed);
-    }
+    // Onglet de navigation : on quitte toujours la recherche pour parcourir le
+    // feed de découverte de la catégorie (la recherche, elle, reste générale).
+    lastBrowseTypeRef.current = type;
+    setQuery("");
+    showTopFromCacheOrFetch(type, feed);
   }
 
   // Change la source (Tendances, Populaires…) — onglets Films / Séries uniquement.
@@ -625,7 +667,8 @@ export function DiscoverPage({
       !tmdbKey ||
       mediaType === "likes" ||
       mediaType === "recos" ||
-      mediaType === "animation"
+      mediaType === "animation" ||
+      mediaType === "all"
     )
       return;
     setFeed(f);
@@ -646,7 +689,8 @@ export function DiscoverPage({
 
   // Onglets "feed" (recherche + scroll infini + sources) vs onglets curatifs
   // (Ma liste, Pour vous) qui affichent une liste deja constituee.
-  const feedMode = mediaType === "movie" || mediaType === "tv" || mediaType === "animation";
+  const feedMode =
+    mediaType === "movie" || mediaType === "tv" || mediaType === "animation" || mediaType === "all";
   const displayItems = mediaType === "likes" ? likes : mediaType === "recos" ? recos : items;
 
   // Stables (useCallback) pour que React.memo sur DiscoverPosterCard tienne
@@ -958,8 +1002,11 @@ export function DiscoverPage({
                   type="button"
                   onClick={() => {
                     setQuery("");
-                    if (mode === "search" && feedMode)
-                      fetchItems("top", "", 1, tmdbKey, mediaType, feed);
+                    if (mode === "search") {
+                      const back = lastBrowseTypeRef.current;
+                      setMediaType(back);
+                      showTopFromCacheOrFetch(back, feed);
+                    }
                   }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200/90 dark:bg-zinc-700/80 hover:bg-zinc-300 dark:hover:bg-zinc-600/80 transition-colors"
                 >
@@ -1105,14 +1152,15 @@ export function DiscoverPage({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
             className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
             onClick={closeMovie}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              initial={{ opacity: 0, scale: 0.96, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 8 }}
-              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              exit={{ opacity: 0, scale: 0.97, y: 8 }}
+              transition={{ type: "spring", stiffness: 260, damping: 26, mass: 0.9 }}
               onClick={(e) => e.stopPropagation()}
               className="w-full max-w-2xl rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
             >

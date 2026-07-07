@@ -10,6 +10,7 @@ import { UpdateDialog } from "@/components/UpdateDialog";
 import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import type { Page } from "@/components/AppMenu";
+import type { TmdbItem } from "@/lib/tmdbItem";
 import { prefetchLibrary } from "@/lib/library";
 import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
@@ -62,6 +63,8 @@ function App() {
     applyKeys,
   } = useAppInit();
   const [page, setPage] = useState<Page | null>(null);
+  const [discoverQuery, setDiscoverQuery] = useState("");
+  const [discoverItem, setDiscoverItem] = useState<TmdbItem | null>(null);
   const [patchnotesSeenVersion, setPatchnotesSeenVersion] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [summerEnabled, setSummerEnabled] = useState(true);
@@ -170,7 +173,27 @@ function App() {
 
   function handleNavigate(p: Page) {
     if (p === "patchnotes") setPatchnotesSeenVersion(LATEST_VERSION);
+    // Une navigation "normale" vers Découverte (menu, CTA) repart sur le feed :
+    // seule la barre de recherche de MainPage passe une requête / un item.
+    if (p === "discover") {
+      setDiscoverQuery("");
+      setDiscoverItem(null);
+    }
     setPage(p);
+  }
+
+  function launchDiscover(q: string) {
+    setDiscoverQuery(q);
+    setDiscoverItem(null);
+    setPage("discover");
+  }
+
+  // Sélection d'une suggestion d'auto-complete : on ouvre directement la fiche
+  // du titre dans Découverte, avec sa recherche générale en fond.
+  function launchDiscoverItem(item: TmdbItem) {
+    setDiscoverQuery(item.title);
+    setDiscoverItem(item);
+    setPage("discover");
   }
 
   async function handleSetupComplete() {
@@ -277,6 +300,8 @@ function App() {
             >
               <MainPage
                 onNavigate={handleNavigate}
+                onLaunchDiscover={launchDiscover}
+                onLaunchDiscoverItem={launchDiscoverItem}
                 devMode={devMode}
                 onToggleDevMode={() => setDevMode((v) => !v)}
                 onShowUpdatePreview={() =>
@@ -291,6 +316,7 @@ function App() {
                 summerEnabled={summerEnabled}
                 initialC411Key={initC411Key}
                 initialAllDebridKey={initAllDebridKey}
+                initialTmdbKey={initTmdbKey}
                 initialPatchnotesSeen={patchnotesSeenVersion ?? initPrefs.patchnotesSeen}
                 initialSearchViewMode={initPrefs.searchViewMode}
                 initialIdleAutoHide={idleAutoHide && summerEnabled}
@@ -375,6 +401,8 @@ function App() {
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 summerEnabled={summerEnabled}
+                initialQuery={discoverQuery}
+                initialItem={discoverItem}
                 initialTmdbKey={initTmdbKey}
                 initialC411Key={initC411Key}
                 initialAllDebridKey={initAllDebridKey}
