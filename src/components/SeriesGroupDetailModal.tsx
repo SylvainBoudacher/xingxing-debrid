@@ -243,39 +243,39 @@ function ModalSeasonSection({
 
   return (
     <div>
-      <div className="flex items-center gap-3 bg-black/[0.02] px-5 py-2.5 dark:bg-white/[0.03] transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]">
-        <Checkbox checked={allSeen} onClick={() => onChange(setWholeWatched(entry, !allSeen))} />
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
-        >
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span
-                className={`truncate text-xs font-semibold ${allSeen ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}
-              >
-                {label}
-              </span>
-              <span className="flex-none text-[11px] text-zinc-400">
-                {seenCount}/{total}
-              </span>
-            </div>
-          </div>
+      <div
+        onClick={() => setOpen((v) => !v)}
+        className="flex cursor-pointer items-center gap-3 bg-black/[0.02] px-5 py-2.5 dark:bg-white/[0.03] transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]"
+      >
+        <div onClick={(e) => e.stopPropagation()} className="flex flex-none items-center">
+          <Checkbox checked={allSeen} onClick={() => onChange(setWholeWatched(entry, !allSeen))} />
+        </div>
+        <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
+          <span
+            className={`truncate text-xs font-semibold ${allSeen ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}
+          >
+            {label}
+          </span>
+          <span className="flex-none text-[11px] text-zinc-400">
+            {seenCount}/{total}
+          </span>
           <ChevronDown
-            className={`h-3.5 w-3.5 flex-none text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`}
+            className={`ml-auto h-3.5 w-3.5 flex-none text-zinc-400 transition-transform ${open ? "rotate-180" : ""}`}
           />
-        </button>
-        {next && (
-          <ResumeButton
-            next={next}
-            groupKey={resumeKey}
-            debrid={debrid}
-            started={seenCount > 0}
-            hideSeason
-            onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
-          />
-        )}
-        <DebridActions links={links} groupKey={sectionKey} debrid={debrid} />
+        </div>
+        <div onClick={(e) => e.stopPropagation()} className="flex flex-none items-center gap-3">
+          {next && (
+            <ResumeButton
+              next={next}
+              groupKey={resumeKey}
+              debrid={debrid}
+              started={seenCount > 0}
+              hideSeason
+              onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
+            />
+          )}
+          <DebridActions links={links} groupKey={sectionKey} debrid={debrid} />
+        </div>
       </div>
       <AnimatePresence initial={false}>
         {open && (

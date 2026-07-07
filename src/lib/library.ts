@@ -182,6 +182,12 @@ export function episodeLabel(name: string): string | null {
   const m = base.match(/\bS(\d{1,2})[ ._-]?E(\d{1,3})\b/i);
   if (m) return `S${parseInt(m[1], 10)}E${parseInt(m[2], 10)}`;
   const s = seasonOf(name);
+  // Numérotation anime sans marqueur SxxEyy : "E30", "Ep 30", "Episode 30"
+  // ou " - 30 " suivi d'un séparateur (évite les années et résolutions).
+  const e =
+    base.match(/\b(?:E|Ep|Episode)[ ._]?(\d{1,3})\b/i) ??
+    base.match(/[ ._]-[ ._](\d{1,3})(?=[ ._]|$)/);
+  if (e) return s !== null ? `S${s}E${parseInt(e[1], 10)}` : `E${parseInt(e[1], 10)}`;
   if (s !== null) return `S${s}`;
   return null;
 }

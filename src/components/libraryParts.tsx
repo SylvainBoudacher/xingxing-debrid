@@ -238,9 +238,15 @@ function FileRow({
   selection?: EpisodeSelection;
 }) {
   const fileWatched = entry.watched[file.name] ?? false;
+  const baseName = file.name.split("/").pop() ?? file.name;
+  // La saison est déjà affichée par la section parente : on ne garde que l'épisode.
+  const ep = episodeLabel(file.name)?.replace(/^S\d+(?=E)/i, "") ?? null;
+  const simpleName = parseRelease(baseName).title.replace(/ - S\d+ E(\d+)$/i, " - E$1");
   const name = simple
-    ? parseRelease(file.name.split("/").pop() ?? file.name).title
-    : file.name.split("/").pop();
+    ? ep && !/E\d+$/i.test(simpleName)
+      ? `${simpleName} - ${ep}`
+      : simpleName
+    : baseName;
 
   if (selection) {
     const sel = selection.has(file.link);
@@ -316,22 +322,24 @@ function SeasonSection({
   return (
     <div>
       <div className="bg-black/[0.02] dark:bg-white/[0.03] transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]">
-        <div className="flex items-center gap-3 px-4 py-2.5">
-          {selection ? (
-            <button onClick={() => selection.setMany(links, !allSelected)}>
-              <SelectionBox checked={allSelected} />
-            </button>
-          ) : (
-            <Checkbox
-              checked={allSeen}
-              onClick={() => onChange(setFilesWatched(entry, names, !allSeen))}
-            />
-          )}
-          <button
-            onClick={() => setOpen((v) => !v)}
-            title={open ? "Masquer les épisodes" : "Voir les épisodes"}
-            className="flex min-w-0 flex-1 items-center gap-2 text-left"
-          >
+        <div
+          onClick={() => setOpen((v) => !v)}
+          title={open ? "Masquer les épisodes" : "Voir les épisodes"}
+          className="flex cursor-pointer items-center gap-3 px-4 py-2.5"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="flex flex-none items-center">
+            {selection ? (
+              <button onClick={() => selection.setMany(links, !allSelected)}>
+                <SelectionBox checked={allSelected} />
+              </button>
+            ) : (
+              <Checkbox
+                checked={allSeen}
+                onClick={() => onChange(setFilesWatched(entry, names, !allSeen))}
+              />
+            )}
+          </div>
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
             <span
               className={`truncate text-xs font-semibold ${allSeen ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}
             >
@@ -347,18 +355,20 @@ function SeasonSection({
               {seenCount}/{names.length}
               <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
             </span>
-          </button>
-          {!selection && next && (
-            <ResumeButton
-              next={next}
-              groupKey={resumeKey}
-              debrid={debrid}
-              started={seenCount > 0}
-              hideSeason
-              onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
-            />
-          )}
-          {!selection && <DebridActions links={links} groupKey={groupKey} debrid={debrid} />}
+          </div>
+          <div onClick={(e) => e.stopPropagation()} className="flex flex-none items-center gap-3">
+            {!selection && next && (
+              <ResumeButton
+                next={next}
+                groupKey={resumeKey}
+                debrid={debrid}
+                started={seenCount > 0}
+                hideSeason
+                onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
+              />
+            )}
+            {!selection && <DebridActions links={links} groupKey={groupKey} debrid={debrid} />}
+          </div>
         </div>
       </div>
       <AnimatePresence initial={false}>
