@@ -42,6 +42,32 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.5.1",
+    date: "8 juillet 2026",
+    intro:
+      "La 1.5.1 corrige un bug graphique mineur, ajoute le support natif Apple Silicon pour Mac, et ameliore la lisibilite des resultats de series.",
+    sections: [
+      {
+        title: "Corrections graphiques",
+        items: ["Resolution d'un bug graphique mineur affectant l'affichage de l'interface."],
+      },
+      {
+        title: "Support Apple Silicon",
+        items: [
+          "Les Mac equipes d'une puce Apple Silicon (M1, M2, M3...) disposent desormais de leur propre build natif.",
+          "L'application tourne nativement sur ARM, sans emulation Rosetta, pour de meilleures performances et une consommation reduite.",
+        ],
+      },
+      {
+        title: "Resultats de series : labels saison ou episode",
+        items: [
+          "Dans les resultats de recherche pour les series, un label indique desormais en un coup d'oeil si le fichier correspond a une saison complete ou a un episode unique.",
+          "Plus besoin de lire le nom de fichier en entier pour savoir ce que vous allez telecharger.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.5.0",
     date: "7 juillet 2026",
     intro:
@@ -861,4 +887,4 @@ export const PATCH_NOTES: PatchNote[] = [
   },
 ];
 
-export const LATEST_VERSION = "1.5.0";
+export const LATEST_VERSION = "1.5.1";

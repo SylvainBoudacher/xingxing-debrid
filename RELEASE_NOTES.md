@@ -1,4 +1,3 @@
-- Barre de recherche principale revue avec auto-completion integree.
-- Import/Export de profil encrypte pour faciliter le multi-device.
-- TMDB devient obligatoire pour le bon fonctionnement de l'application.
-- Canards nommes par defaut selon leur famille ; bateau de XingXing securise.
+- Fix de bug mineur
+- Support de Apple Silicon !
+- Meilleurs resultats les series.
