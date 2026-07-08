@@ -15,6 +15,31 @@ export const CODEC_RE = /\b(x265|x264|h265|h264|hevc|av1|xvid)\b/i;
 export const LANG_RE =
   /\b(vostfr|vosta|vostang|vost|multi|truefrench|subfrench|french|vff|vf2|vfq|vfi|vf|voq|vo)\b/i;
 const EPISODE_RE = /\bS(\d{1,2})[ .-]?E(\d{1,3})\b/i;
+
+export type ReleaseScope =
+  | { kind: "episode"; season: number; episode: number }
+  | { kind: "season"; season: number }
+  | { kind: "complete" };
+
+const SCOPE_EPISODE_RE = /\bS(\d{1,2})[ .-]?E(\d{1,3})(?:[ .-]?E?(\d{1,3}))?\b/i;
+const SCOPE_SEASON_RE = /\bS(\d{1,2})\b(?![ .-]?E\d)|\b(?:saison|season)[ .-]?(\d{1,2})\b/i;
+const SCOPE_COMPLETE_RE = /\bintegrale\b|\bcomplete\b|\bcomplet\b/i;
+
+// Detecte la portee d'une release TV depuis son nom : episode unique
+// ("S09E06"), pack saison ("S01", "Saison 1") ou integrale.
+// Un range multi-episodes ("S01E01-E10") est traite comme un pack saison.
+export function parseReleaseScope(name: string): ReleaseScope | null {
+  const flat = name.replace(/[._]/g, " ");
+  const ep = flat.match(SCOPE_EPISODE_RE);
+  if (ep) {
+    if (ep[3]) return { kind: "season", season: parseInt(ep[1], 10) };
+    return { kind: "episode", season: parseInt(ep[1], 10), episode: parseInt(ep[2], 10) };
+  }
+  const s = flat.match(SCOPE_SEASON_RE);
+  if (s) return { kind: "season", season: parseInt(s[1] ?? s[2], 10) };
+  if (SCOPE_COMPLETE_RE.test(flat)) return { kind: "complete" };
+  return null;
+}
 const CUT_RE =
   /\b((19|20)\d{2}|2160p|1080p|720p|480p|4k|uhd|multi|vostfr|vff|vf2?|truefrench|french|web(-?dl|rip)?|bluray|blu-ray|brrip|bd(-?rip)?|hdtv|hdlight|dvdrip|repack|proper|integrale|complete|saison|season)\b/i;
 const BRACKET_RE = /\[([^\]]+)\]/g;

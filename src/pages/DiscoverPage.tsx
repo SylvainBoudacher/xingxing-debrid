@@ -8,7 +8,7 @@ import { NetworkErrorState } from "@/components/NetworkErrorState";
 import { NetworkError, networkErrorMessage, toastNetworkError } from "@/lib/networkError";
 import { getApiKey } from "@/lib/apiKeys";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
-import { parseRelease } from "@/lib/parseRelease";
+import { parseRelease, parseReleaseScope, type ReleaseScope } from "@/lib/parseRelease";
 import { flattenFiles, formatSize, isVideoFile, type DebridModal } from "@/lib/debrid";
 import { recordDownload, getCachedLibrary, loadLibrary } from "@/lib/library";
 import {
@@ -136,6 +136,14 @@ interface Occupant {
   resolution: string | null;
   torrentName: string;
   specialVersion: string | null;
+  scope: ReleaseScope | null;
+}
+
+function scopeLabel(scope: ReleaseScope): string {
+  if (scope.kind === "episode")
+    return `S${scope.season} E${String(scope.episode).padStart(2, "0")}`;
+  if (scope.kind === "season") return `Saison ${scope.season}`;
+  return "Intégrale";
 }
 
 const SERIES_SLUGS = new Set(["serie-tv", "serie-documentaire", "emission-tv", "animation-serie"]);
@@ -189,6 +197,7 @@ function toOccupant(t: C411Torrent): Occupant {
     audioCodec: flat.match(AUDIO_RE)?.[1].toUpperCase().replace(/[._-]/g, " ") ?? null,
     audioChannels: flat.match(CHANNELS_RE)?.[1] ?? null,
     specialVersion: flat.match(SPECIAL_RE)?.[1].toUpperCase() ?? null,
+    scope: parseReleaseScope(t.name),
   };
 }
 
@@ -1479,6 +1488,17 @@ export function DiscoverPage({
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                        {selected?.mediaType === "tv" && occ.scope && (
+                          <span
+                            className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                              occ.scope.kind === "episode"
+                                ? "bg-sky-500/12 text-sky-600 dark:text-sky-400"
+                                : "bg-fuchsia-500/12 text-fuchsia-700 dark:text-fuchsia-400"
+                            }`}
+                          >
+                            {scopeLabel(occ.scope)}
+                          </span>
+                        )}
                         {occ.resolution && (
                           <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
                             {occ.resolution}

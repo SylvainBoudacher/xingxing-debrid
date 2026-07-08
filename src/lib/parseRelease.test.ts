@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseRelease } from "./parseRelease";
+import { parseRelease, parseReleaseScope } from "./parseRelease";
 
 describe("parseRelease", () => {
   describe("title extraction", () => {
@@ -183,5 +183,41 @@ describe("parseRelease", () => {
       const r = parseRelease("Tenet.FRENCH.1080p.BluRay.mkv");
       expect(r.title).toBe("Tenet");
     });
+  });
+});
+
+describe("parseReleaseScope", () => {
+  it("detects a single episode", () => {
+    expect(parseReleaseScope("Rick.et.Morty.S09E06.MULTi.VFF.1080p.WEB.H265-TyHD")).toEqual({
+      kind: "episode",
+      season: 9,
+      episode: 6,
+    });
+  });
+
+  it("detects a season pack from Sxx", () => {
+    expect(parseReleaseScope("Rick.And.Morty.S01.MULTI.VFF.1080p.BluRay.x264-T3KASHi")).toEqual({
+      kind: "season",
+      season: 1,
+    });
+  });
+
+  it("detects a season pack from 'Saison N'", () => {
+    expect(parseReleaseScope("Rick et Morty Saison 3 MULTI 1080p")).toEqual({
+      kind: "season",
+      season: 3,
+    });
+  });
+
+  it("treats an episode range as a season pack", () => {
+    expect(parseReleaseScope("Show.S02E01-E10.1080p.WEB")).toEqual({ kind: "season", season: 2 });
+  });
+
+  it("detects a complete series without season number", () => {
+    expect(parseReleaseScope("Rick et Morty INTEGRALE MULTI 1080p")).toEqual({ kind: "complete" });
+  });
+
+  it("returns null for movie names", () => {
+    expect(parseReleaseScope("Inception.2010.1080p.BluRay.x264")).toBeNull();
   });
 });
