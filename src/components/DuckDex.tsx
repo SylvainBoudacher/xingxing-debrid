@@ -239,20 +239,33 @@ export function DuckDex() {
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-4">
-              {SECTIONS.map(({ rarity, label }) => (
-                <div key={rarity} className="mb-5 last:mb-0">
+              {SECTIONS.map(({ rarity, label }, sectionIndex) => (
+                <motion.div
+                  key={rarity}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: 0.1 + sectionIndex * 0.06, ease: "easeOut" }}
+                  className="mb-5 last:mb-0"
+                >
                   <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
                     {label}
                   </p>
                   <div className="grid grid-cols-4 gap-2">
-                    {SPECIES.filter((s) => s.rarity === rarity).map((s) => {
+                    {SPECIES.filter((s) => s.rarity === rarity).map((s, tileIndex) => {
                       const colors = entries[s.id] ?? [];
                       const found = colors.length > 0;
                       const hasShiny = shiny.includes(s.id);
                       const showShiny = hasShiny && shinyShown.has(s.id);
                       return (
-                        <div
+                        <motion.div
                           key={s.id}
+                          initial={{ opacity: 0, scale: 0.9, y: 6 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          transition={{
+                            duration: 0.25,
+                            delay: 0.15 + sectionIndex * 0.06 + tileIndex * 0.03,
+                            ease: "easeOut",
+                          }}
                           className={`relative flex flex-col items-center gap-1 rounded-xl bg-white/70 dark:bg-zinc-800/60 px-2 py-3 ring-1 ${found ? RARITY_RING[s.rarity] : "ring-black/5 dark:ring-white/5"}`}
                         >
                           {found &&
@@ -288,11 +301,11 @@ export function DuckDex() {
                               {colors.length}/{s.maxColors} couleurs
                             </p>
                           )}
-                        </div>
+                        </motion.div>
                       );
                     })}
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
 
