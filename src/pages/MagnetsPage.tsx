@@ -908,17 +908,6 @@ export function MagnetsPage({
           </h1>
 
           <div className="flex items-center gap-2">
-            <motion.button
-              whileTap={{ scale: 0.93 }}
-              animate={loading ? { rotate: 360 } : { rotate: 0 }}
-              transition={loading ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
-              onClick={forceReloadMagnets}
-              disabled={loading}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 transition-colors"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </motion.button>
-
             <AppMenu
               currentPage="magnets"
               onNavigate={onNavigate}
@@ -937,6 +926,15 @@ export function MagnetsPage({
         transition={{ duration: 0.4, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
         className="mx-auto w-full max-w-3xl px-6 pt-6 pb-4 sm:px-8 space-y-3"
       >
+        <div className="flex items-start gap-3 rounded-xl border border-indigo-500/20 bg-indigo-500/[0.06] px-4 py-3">
+          <Zap className="mt-0.5 h-4 w-4 flex-none text-indigo-600 dark:text-indigo-400" />
+          <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">
+            Cette page reprend la rubrique "Magnets" de ton compte AllDebrid (accessible aussi sur
+            alldebrid.com). C'est là qu'atterrit tout ce que tu envoies au débrideur : tu suis
+            l'avancement, puis tu télécharges les fichiers une fois prêts.
+          </p>
+        </div>
+
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="flex flex-1 gap-1 rounded-xl bg-white/80 dark:bg-zinc-900/70 p-1 ring-1 ring-black/6 dark:ring-white/6">
             {tabs.map((tab) => (
@@ -988,6 +986,14 @@ export function MagnetsPage({
                 : `${filtered.length} magnet${filtered.length > 1 ? "s" : ""}${search ? ` pour "${search}"` : ""}`}
             </p>
             <div className="flex shrink-0 items-center gap-2">
+              <motion.button
+                whileTap={{ scale: 0.93 }}
+                onClick={forceReloadMagnets}
+                className="flex items-center gap-1.5 h-7 px-3 rounded-lg bg-black/5 dark:bg-white/5 ring-1 ring-black/10 dark:ring-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+              >
+                <RefreshCw className="h-3 w-3" />
+                <span className="text-[11px] font-medium">Rafraîchir</span>
+              </motion.button>
               {statusFilter === "error" && counts.error > 0 && (
                 <motion.button
                   whileTap={{ scale: 0.97 }}
