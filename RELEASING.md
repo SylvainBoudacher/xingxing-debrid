@@ -33,9 +33,13 @@ The app uses Tauri auto-update (`tauri-plugin-updater`). Users receive updates a
    git push origin main --tags
    ```
 
-4. The `.github/workflows/build-windows.yml` workflow triggers on `v*.*.*` tags:
-   builds Windows -> signs -> creates the GitHub Release with `.msi`, `.exe`,
-   their `.sig` files, and `latest.json`.
+4. The `.github/workflows/release.yml` workflow triggers on `v*.*.*` tags:
+   builds Windows and macOS (Apple Silicon) in parallel -> signs with the Tauri
+   updater key -> creates the GitHub Release with `.msi`, `.exe`, `.dmg`,
+   `.app.tar.gz`, their `.sig` files, and a `latest.json` covering both platforms.
+   The macOS build is not Apple-signed/notarized: on first install, users must
+   allow the app in System Settings > Privacy & Security (updates after that
+   install silently via the in-app updater).
 
 5. Installed apps detect the new version via
    `https://github.com/SylvainBoudacher/xingxing-debrid/releases/latest/download/latest.json`
