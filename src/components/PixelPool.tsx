@@ -64,11 +64,13 @@ import {
   emitDuckDrop,
   emitDucksReserved,
   emitShopOpen,
+  registerCapturer,
   registerCounter,
   registerInjector,
   registerReleaser,
   registerRemover,
   registerShopHitTest,
+  registerVacuumToggle,
   registerVariantSpawner,
 } from "./duckShopBridge";
 
@@ -619,6 +621,32 @@ export function PixelPool({
       dragging.y = e.clientY + dragDY;
     }
 
+    // Freeze + hide a duck and open the shop panel with it (capture). Shared by
+    // the drag-into-shop drop and the "Capturer un canard" keyboard shortcut.
+    function sendToShop(d: Duck) {
+      d.inShop = true;
+      d.vx = 0;
+      d.vy = 0;
+      emitDuckDrop({
+        id: d.id,
+        variant: d.variant,
+        scale: d.scale,
+        saved: d.saved ?? false,
+        name: d.name ?? "",
+        release: () => {
+          d.inShop = false;
+          const a = Math.random() * Math.PI * 2;
+          d.vx = Math.cos(a) * 14;
+          d.vy = Math.sin(a) * 14;
+          d.entering = false;
+        },
+        markSaved: (name: string) => {
+          d.name = name;
+          d.saved = true;
+        },
+      });
+    }
+
     function onPointerUp(e: PointerEvent) {
       sucking = false;
       if (!dragging) return;
@@ -647,29 +675,8 @@ export function PixelPool({
       // dropped into the shop: freeze + hide the duck and open the panel. It
       // stays in the pool so it can swim again when the panel closes.
       if (overShop(dragging.x, dragging.y)) {
-        const d = dragging;
-        d.inShop = true;
-        d.vx = 0;
-        d.vy = 0;
+        sendToShop(dragging);
         dragging = null;
-        emitDuckDrop({
-          id: d.id,
-          variant: d.variant,
-          scale: d.scale,
-          saved: d.saved ?? false,
-          name: d.name ?? "",
-          release: () => {
-            d.inShop = false;
-            const a = Math.random() * Math.PI * 2;
-            d.vx = Math.cos(a) * 14;
-            d.vy = Math.sin(a) * 14;
-            d.entering = false;
-          },
-          markSaved: (name: string) => {
-            d.name = name;
-            d.saved = true;
-          },
-        });
         updateHoverCursor(e);
         return;
       }
@@ -2152,6 +2159,29 @@ export function PixelPool({
     registerCounter(() => pool.filter((d) => !leaving(d) && !d.inShop).length);
     registerShopHitTest((x, y) => overShop(x, y));
     registerVariantSpawner((v) => enterPool(v, scaleFor(v)));
+    registerCapturer(() => {
+      if (!activeRef.current) return false;
+      // capture the hovered duck, else the topmost duck currently swimming
+      let d = duckAt(pointerX, pointerY);
+      if (!d) {
+        for (let i = pool.length - 1; i >= 0; i--) {
+          const c = pool[i];
+          if (c.inShop || leaving(c) || c.draining) continue;
+          d = c;
+          break;
+        }
+      }
+      if (!d) return false;
+      sendToShop(d);
+      return true;
+    });
+    registerVacuumToggle(() => {
+      if (!activeRef.current) return false;
+      vacuum.loaded = !vacuum.loaded;
+      if (vacuum.loaded) cannon.loaded = false;
+      else sucking = false;
+      return true;
+    });
     window.addEventListener("resize", resize);
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove);
@@ -2180,6 +2210,8 @@ export function PixelPool({
       registerCounter(null);
       registerShopHitTest(null);
       registerVariantSpawner(null);
+      registerCapturer(null);
+      registerVacuumToggle(null);
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);

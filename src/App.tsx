@@ -15,6 +15,7 @@ import { prefetchLibrary } from "@/lib/library";
 import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
 import { useNavShortcuts } from "@/lib/useNavShortcuts";
+import { useActionShortcuts } from "@/lib/useActionShortcuts";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -90,6 +91,7 @@ function App() {
   useNavShortcuts((action) => {
     setPage((p) => (p === null || p === "setup" || p === "boatgame" ? p : action));
   });
+  useActionShortcuts();
 
   useEffect(() => {
     checkForUpdate()
