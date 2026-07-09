@@ -148,6 +148,10 @@ const vacuum: VacuumState = makeVacuum();
 const boat: BoatState = makeBoat();
 // boat caught by the drain whirlpool: spirals in, then warps to the minigame
 let boatWarp: { start: number; x: number; y: number } | null = null;
+// last time the user steered the boat: the whirlpool only grabs a boat that
+// was piloted recently, never one idly drifting on its own
+let boatPilotedAt = -Infinity;
+const PILOT_GRACE_MS = 2000;
 const suckPulses: SuckPulse[] = [];
 // ducks currently travelling the hose (FIFO, mirrors vacuum.bulges); spat into
 // the drain when their bulge reaches the dock
@@ -701,6 +705,7 @@ export function PixelPool({
       const control = boatControlOf(e.code);
       if (control && activeRef.current && !typing(e)) {
         boat.keys.add(control);
+        boatPilotedAt = performance.now();
         e.preventDefault();
       }
       if (import.meta.env.DEV && e.shiftKey && e.code === "KeyS" && activeRef.current && !typing(e))
@@ -1994,7 +1999,11 @@ export function PixelPool({
       // XingXing's boat: steer it, then plough through ducks — they get shoved
       // aside like a duck-duck collision where the boat never yields (except to
       // the ranked ducks, who hold their ground against everything)
-      if (boatWarp === null && boatDrainDist < drainGeo.r * 0.9) {
+      if (
+        boatWarp === null &&
+        boatDrainDist < drainGeo.r * 0.9 &&
+        now - boatPilotedAt < PILOT_GRACE_MS
+      ) {
         // drove into the typhoon: the whirlpool takes over
         boatWarp = { start: now, x: boat.x, y: boat.y };
         boat.keys.clear();
