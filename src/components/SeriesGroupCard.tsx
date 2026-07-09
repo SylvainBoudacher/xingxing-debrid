@@ -1,29 +1,28 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown, Trash2 } from "lucide-react";
 import { formatSize } from "@/lib/debrid";
 import {
-  dominantSeason,
   groupIsWholeWatched,
   groupNextUnwatched,
   groupProgressRatio,
+  groupSeasons,
   groupSize,
   groupTotalCount,
   groupWatchedCount,
-  isWholeWatched,
-  nextUnwatched,
+  setSeasonItemsWatched,
   setWholeWatched,
   toggleFile,
   totalCount,
   videoFiles,
-  watchedCount,
+  type GroupSeason,
   type LibraryEntry,
   type SeriesGroup,
 } from "@/lib/library";
 import {
   Checkbox,
   DebridActions,
-  EntryEpisodes,
+  FileRow,
   ResumeButton,
   type DebridControls,
 } from "@/components/libraryParts";
@@ -57,6 +56,7 @@ export const SeriesGroupCard = memo(function SeriesGroupCard({
   const groupKey = `series-${group.tmdbId}`;
   const nextData = groupNextUnwatched(group);
   const size = groupSize(group);
+  const seasons = useMemo(() => groupSeasons(group), [group]);
 
   useEffect(() => {
     if (!confirmDelete) return;
@@ -90,7 +90,7 @@ export const SeriesGroupCard = memo(function SeriesGroupCard({
                 {title}
               </p>
               <span className="flex-none text-xs text-zinc-400 dark:text-zinc-500">
-                {group.entries.length} saisons
+                {seasons.length} saison{seasons.length > 1 ? "s" : ""}
               </span>
             </div>
             <div className="mt-0.5 flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -158,11 +158,11 @@ export const SeriesGroupCard = memo(function SeriesGroupCard({
             className="overflow-hidden border-t border-black/5 dark:border-white/10"
           >
             <div className="divide-y divide-black/5 dark:divide-white/10">
-              {group.entries.map((entry) => (
-                <EntrySeasonSection
-                  key={entry.infoHash}
-                  entry={entry}
-                  season={dominantSeason(entry)}
+              {seasons.map((season) => (
+                <SeasonSection
+                  key={season.season ?? "other"}
+                  season={season}
+                  groupKey={groupKey}
                   onChange={onChange}
                   onRemove={onRemove}
                   debrid={debrid}
@@ -178,17 +178,17 @@ export const SeriesGroupCard = memo(function SeriesGroupCard({
   );
 });
 
-function EntrySeasonSection({
-  entry,
+function SeasonSection({
   season,
+  groupKey,
   onChange,
   onRemove,
   debrid,
   simple,
   autoWatchOnPlay,
 }: {
-  entry: LibraryEntry;
-  season: number | null;
+  season: GroupSeason;
+  groupKey: string;
   onChange: (e: LibraryEntry) => void;
   onRemove: (hash: string) => void;
   debrid: DebridControls;
@@ -197,15 +197,20 @@ function EntrySeasonSection({
 }) {
   const [open, setOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const vids = videoFiles(entry);
-  const seenCount = watchedCount(entry);
-  const allSeen = isWholeWatched(entry);
-  const label = season !== null ? `Saison ${season}` : "Saison ?";
-  const links = vids.map((f) => f.link);
-  const sectionKey = entry.infoHash;
-  const next = !allSeen ? nextUnwatched(entry) : null;
-  const resumeKey = `resume-${sectionKey}`;
-  const total = totalCount(entry);
+  const items = season.items;
+  const seenCount = items.filter((it) => it.entry.watched[it.file.name]).length;
+  const allSeen = seenCount === items.length;
+  const label = season.season !== null ? `Saison ${season.season}` : "Saison ?";
+  const links = items.map((it) => it.file.link);
+  const sectionKey = `${groupKey}-s${season.season ?? "x"}`;
+  const next = items.find((it) => !it.entry.watched[it.file.name]) ?? null;
+  const total = items.length;
+
+  // Entrées dont tous les fichiers vidéo sont dans cette saison : ce sont
+  // celles qu'on peut supprimer sans toucher aux autres saisons.
+  const removableHashes = [...new Set(items.map((it) => it.entry))]
+    .filter((e) => items.filter((it) => it.entry === e).length === totalCount(e))
+    .map((e) => e.infoHash);
 
   useEffect(() => {
     if (!confirmDelete) return;
@@ -216,7 +221,10 @@ function EntrySeasonSection({
   return (
     <div>
       <div className="flex items-center gap-3 bg-black/[0.02] px-4 py-2 dark:bg-white/[0.03] transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]">
-        <Checkbox checked={allSeen} onClick={() => onChange(setWholeWatched(entry, !allSeen))} />
+        <Checkbox
+          checked={allSeen}
+          onClick={() => setSeasonItemsWatched(items, !allSeen, onChange)}
+        />
         <button
           onClick={() => setOpen((v) => !v)}
           className="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -245,31 +253,33 @@ function EntrySeasonSection({
         </button>
         {next && (
           <ResumeButton
-            next={next}
-            groupKey={resumeKey}
+            next={next.file}
+            groupKey={`resume-${sectionKey}`}
             debrid={debrid}
             started={seenCount > 0}
             hideSeason
-            onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
+            onResume={() => autoWatchOnPlay && onChange(toggleFile(next.entry, next.file.name))}
           />
         )}
         <DebridActions links={links} groupKey={sectionKey} debrid={debrid} />
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => {
-            if (confirmDelete) onRemove(entry.infoHash);
-            else setConfirmDelete(true);
-          }}
-          title={confirmDelete ? "Confirmer" : "Retirer cette saison"}
-          className={`flex h-7 flex-none items-center justify-center rounded-lg transition-colors ${
-            confirmDelete
-              ? "gap-1 bg-red-500 px-2 text-xs font-medium text-white hover:bg-red-600"
-              : "w-7 text-zinc-400 hover:bg-red-500/10 hover:text-red-500"
-          }`}
-        >
-          <Trash2 className="h-4 w-4" />
-          {confirmDelete && "Sûr ?"}
-        </motion.button>
+        {removableHashes.length > 0 && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              if (confirmDelete) for (const h of removableHashes) onRemove(h);
+              else setConfirmDelete(true);
+            }}
+            title={confirmDelete ? "Confirmer" : "Retirer cette saison"}
+            className={`flex h-7 flex-none items-center justify-center rounded-lg transition-colors ${
+              confirmDelete
+                ? "gap-1 bg-red-500 px-2 text-xs font-medium text-white hover:bg-red-600"
+                : "w-7 text-zinc-400 hover:bg-red-500/10 hover:text-red-500"
+            }`}
+          >
+            <Trash2 className="h-4 w-4" />
+            {confirmDelete && "Sûr ?"}
+          </motion.button>
+        )}
       </div>
       <AnimatePresence initial={false}>
         {open && (
@@ -280,13 +290,19 @@ function EntrySeasonSection({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <EntryEpisodes
-              entry={entry}
-              onChange={onChange}
-              debrid={debrid}
-              simple={simple}
-              autoWatchOnPlay={autoWatchOnPlay}
-            />
+            <ul className="divide-y divide-black/5 dark:divide-white/5">
+              {items.map((it) => (
+                <FileRow
+                  key={`${it.entry.infoHash}-${it.file.name}`}
+                  file={it.file}
+                  entry={it.entry}
+                  onChange={onChange}
+                  debrid={debrid}
+                  simple={simple}
+                  autoWatchOnPlay={autoWatchOnPlay}
+                />
+              ))}
+            </ul>
           </motion.div>
         )}
       </AnimatePresence>

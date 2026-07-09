@@ -1,6 +1,7 @@
 import {
   groupIsWholeWatched,
   groupProgressRatio,
+  groupSeasons,
   groupTotalCount,
   groupWatchedCount,
   type SeriesGroup,
@@ -92,7 +93,7 @@ export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
           onRemove && !selectMode ? "transition-opacity group-hover:opacity-0" : ""
         }`}
       >
-        {group.entries.length} S
+        {groupSeasons(group).length} S
       </span>
 
       {/* Suppression directe au survol */}

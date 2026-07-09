@@ -23,6 +23,9 @@ vi.mock("@tauri-apps/plugin-store", () => ({
 
 import {
   applyEnrichment,
+  dominantSeason,
+  episodeOf,
+  groupSeasons,
   flushLibrary,
   getCachedLibrary,
   groupBySeason,
@@ -321,10 +324,10 @@ describe("groupLibraryEntries", () => {
     if (items[0].type === "group") expect(items[0].group.entries).toHaveLength(2);
   });
 
-  it("collapse un groupe à une seule entrée en single", () => {
+  it("garde un groupe à une seule entrée en group (structure série dès le 1er épisode)", () => {
     const items = groupLibraryEntries([entry({ infoHash: "a", tmdb: tvMeta(1) })]);
     expect(items).toHaveLength(1);
-    expect(items[0].type).toBe("single");
+    expect(items[0].type).toBe("group");
   });
 
   it("garde films et entrées sans TMDB en singles, dans l'ordre d'apparition", () => {
@@ -333,6 +336,63 @@ describe("groupLibraryEntries", () => {
       entry({ infoHash: "x" }),
     ]);
     expect(items.map((i) => i.type)).toEqual(["single", "single"]);
+  });
+});
+
+describe("episodeOf", () => {
+  it("détecte SxxEyy, Exx et - NN", () => {
+    expect(episodeOf("Show.S09E06.mkv")).toBe(6);
+    expect(episodeOf("Show - E06.mkv")).toBe(6);
+    expect(episodeOf("Show - 30 (1080p).mkv")).toBe(30);
+    expect(episodeOf("Show.mkv")).toBeNull();
+  });
+});
+
+describe("dominantSeason", () => {
+  it("retombe sur le titre du torrent quand les fichiers n'ont pas de saison", () => {
+    const e = entry({
+      title: "Rick.et.Morty.S09E06.FRENCH.1080p",
+      files: [file("Rick and Morty - E06.mkv")],
+    });
+    expect(dominantSeason(e)).toBe(9);
+  });
+});
+
+describe("groupSeasons", () => {
+  it("fusionne les épisodes de plusieurs entrées dans la même saison, triés", () => {
+    const a = entry({
+      infoHash: "a",
+      title: "Show S09E07",
+      tmdb: tvMeta(1),
+      files: [file("Show - E07.mkv")],
+    });
+    const b = entry({
+      infoHash: "b",
+      title: "Show S09E06",
+      tmdb: tvMeta(1),
+      files: [file("Show - E06.mkv")],
+    });
+    const c = entry({
+      infoHash: "c",
+      title: "Show Saison 1",
+      tmdb: tvMeta(1),
+      files: [ep1, ep2],
+    });
+    const seasons = groupSeasons({ tmdbId: 1, tmdb: tvMeta(1), entries: [a, b, c] });
+    expect(seasons.map((s) => s.season)).toEqual([1, 9]);
+    expect(seasons[1].items.map((it) => it.file.name)).toEqual([
+      "Show - E06.mkv",
+      "Show - E07.mkv",
+    ]);
+  });
+
+  it("répartit un pack multi-saisons fichier par fichier", () => {
+    const pack = entry({ infoHash: "p", tmdb: tvMeta(1), files: [ep1, ep2, ep3] });
+    const seasons = groupSeasons({ tmdbId: 1, tmdb: tvMeta(1), entries: [pack] });
+    expect(seasons.map((s) => [s.season, s.items.length])).toEqual([
+      [1, 2],
+      [2, 1],
+    ]);
   });
 });
 
