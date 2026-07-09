@@ -67,8 +67,13 @@ export interface AppInitResult {
   likes: LikedItem[];
   /** Préférences UI lues pendant le splash — zéro latence à l'ouverture des pages */
   prefs: AppPrefs;
-  /** Met à jour les clés en mémoire après une sauvegarde (sans redémarrage). */
-  applyKeys: (keys: { c411Key: string; allDebridKey: string; tmdbKey: string }) => void;
+  /** Met à jour les clés en mémoire après une sauvegarde (sans redémarrage).
+   *  Partiel : seules les clés fournies sont modifiées. */
+  applyKeys: (keys: {
+    c411Key?: string | null;
+    allDebridKey?: string | null;
+    tmdbKey?: string | null;
+  }) => void;
 }
 
 const DEFAULT_PREFS: AppPrefs = {
@@ -265,10 +270,14 @@ export function useAppInit(): AppInitResult {
     };
   }, []);
 
-  function applyKeys(keys: { c411Key: string; allDebridKey: string; tmdbKey: string }) {
-    setC411Key(keys.c411Key);
-    setAllDebridKey(keys.allDebridKey);
-    setTmdbKey(keys.tmdbKey);
+  function applyKeys(keys: {
+    c411Key?: string | null;
+    allDebridKey?: string | null;
+    tmdbKey?: string | null;
+  }) {
+    if (keys.c411Key !== undefined) setC411Key(keys.c411Key || null);
+    if (keys.allDebridKey !== undefined) setAllDebridKey(keys.allDebridKey || null);
+    if (keys.tmdbKey !== undefined) setTmdbKey(keys.tmdbKey || null);
   }
 
   return { loading, tmdbKey, c411Key, allDebridKey, likes, prefs, applyKeys };

@@ -105,7 +105,7 @@ const KEY_STORE_NAMES: Record<keyof ApiKeys, ApiKeyName> = {
   tmdbKey: "tmdb_api_key",
 };
 
-export function ApiKeysForm({ onSaved }: { onSaved?: (keys: ApiKeys) => void }) {
+export function ApiKeysForm({ onSaved }: { onSaved?: (keys: Partial<ApiKeys>) => void }) {
   const [c411Key, setC411Key] = useState("");
   const [allDebridKey, setAllDebridKey] = useState("");
   const [tmdbKey, setTmdbKey] = useState("");
@@ -140,7 +140,9 @@ export function ApiKeysForm({ onSaved }: { onSaved?: (keys: ApiKeys) => void }) 
     try {
       await setApiKey(KEY_STORE_NAMES[field], value);
       savedRef.current = { ...savedRef.current, [field]: value };
-      onSaved?.(savedRef.current);
+      // Ne propage que le champ modifié : les autres clés de savedRef peuvent
+      // ne pas être encore chargées (keyring lent) et écraseraient l'état app.
+      onSaved?.({ [field]: value });
     } catch (err) {
       toast.error(String(err));
       return;
