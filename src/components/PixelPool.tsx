@@ -23,6 +23,7 @@ import {
   updateBalls,
   updateCannon,
 } from "./cannon";
+import { APP_LAUNCH_TS } from "@/lib/launchTime";
 import { getRarity, randomVariant } from "./duckRandom";
 import { makeDuckSprite, SH, SW, type Effect } from "./duckSprite";
 import type { Variant } from "./duckTypes";
@@ -321,10 +322,13 @@ function enforceLimit() {
 }
 
 // Started once; keeps spawning (up to MAX_DUCKS) even while off the page.
-// The very first duck arrives after FIRST_SPAWN_MS, then one every SPAWN_MS.
+// The very first duck arrives FIRST_SPAWN_MS after app launch (not after this
+// call — mounting can be delayed by splash/network loading), then one every
+// SPAWN_MS.
 function ensureSpawning() {
   if (spawnTimer !== null) return;
-  const firstDelay = pool.length === 0 ? FIRST_SPAWN_MS : SPAWN_MS;
+  const firstDelay =
+    pool.length === 0 ? Math.max(0, FIRST_SPAWN_MS - (Date.now() - APP_LAUNCH_TS)) : SPAWN_MS;
   spawnTimer = window.setTimeout(() => {
     spawnDuck();
     spawnTimer = window.setInterval(spawnDuck, SPAWN_MS);
