@@ -76,6 +76,16 @@ const FEED_LABELS: Record<TmdbFeed, string> = {
 };
 const FEEDS = Object.keys(FEED_LABELS) as TmdbFeed[];
 
+// Filtres d'affinage de la recherche générale : "all" garde le multi
+// films + séries, movie/tv relancent la recherche sur l'endpoint dédié.
+type SearchFilter = MediaType | "all";
+const SEARCH_FILTER_LABELS: Record<SearchFilter, string> = {
+  all: "Tout",
+  movie: "Films",
+  tv: "Séries",
+};
+const SEARCH_FILTERS = Object.keys(SEARCH_FILTER_LABELS) as SearchFilter[];
+
 // Les listes TMDB bougent peu : cache 10 min pour couper les refetch au
 // changement d'onglet / retour sur une recherche deja vue.
 const TMDB_STALE_MS = 10 * 60_000;
@@ -312,6 +322,10 @@ export function DiscoverPage({
   const [items, setItems] = useState<TmdbItem[]>([]);
   const [mode, setMode] = useState<"top" | "search">("top");
   const [searchedQuery, setSearchedQuery] = useState("");
+  const [searchFilter, setSearchFilter] = useState<SearchFilter>("all");
+  // Filtre des résultats actuellement affichés : mis à jour quand la réponse
+  // arrive (comme searchedQuery), pour que la grille n'anime qu'une fois.
+  const [searchedFilter, setSearchedFilter] = useState<SearchFilter>("all");
   const [tmdbPage, setTmdbPage] = useState(1);
   const [tmdbTotalPages, setTmdbTotalPages] = useState(1);
   const [loadingMovies, setLoadingMovies] = useState(false);
@@ -336,6 +350,10 @@ export function DiscoverPage({
   const c411KeyRef = useRef<string>(initialC411Key ?? "");
   const allDebridKeyRef = useRef<string>(initialAllDebridKey ?? "");
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  // Numéro de la dernière requête de grille : les réponses d'une requête
+  // dépassée (frappe rapide, réseau lent) sont ignorées au lieu d'écraser
+  // les résultats plus récents.
+  const fetchSeqRef = useRef(0);
   // Dernier onglet de navigation choisi : sert à revenir au bon feed quand on
   // efface une recherche générale (qui, elle, n'est rattachée à aucun onglet).
   const lastBrowseTypeRef = useRef<MediaType | "animation">("movie");
@@ -526,7 +544,14 @@ export function DiscoverPage({
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          fetchItems(mode, searchedQuery, tmdbPage + 1, tmdbKey, mediaType, feed);
+          fetchItems(
+            mode,
+            searchedQuery,
+            tmdbPage + 1,
+            tmdbKey,
+            mode === "search" ? searchFilter : mediaType,
+            feed,
+          );
         }
       },
       { rootMargin: "400px" },
@@ -539,6 +564,7 @@ export function DiscoverPage({
     feed,
     mode,
     searchedQuery,
+    searchFilter,
     loadingMovies,
     tmdbPage,
     tmdbTotalPages,
@@ -548,11 +574,16 @@ export function DiscoverPage({
   // Affiche une source "top" depuis le cache si elle est chaude (cas normal,
   // préchauffé au démarrage) — sans spinner ni round-trip async. Sinon fetch.
   function showTopFromCacheOrFetch(type: MediaType | "animation", f: TmdbFeed) {
+    setSearchFilter("all");
     const cached = readTopFromCache(type, f);
     if (!cached) {
       fetchItems("top", "", 1, tmdbKey!, type, f);
       return;
     }
+    // Invalide les requêtes en vol : une recherche lente ne doit pas écraser
+    // le feed qu'on vient de restaurer.
+    fetchSeqRef.current++;
+    setLoadingMovies(false);
     setItems(cached.items);
     setMode("top");
     setSearchedQuery("");
@@ -569,6 +600,7 @@ export function DiscoverPage({
     type: BrowseType,
     f: TmdbFeed,
   ) {
+    const seq = ++fetchSeqRef.current;
     setLoadingMovies(true);
     setMoviesError(null);
     try {
@@ -621,19 +653,22 @@ export function DiscoverPage({
         mapped = list.results.map((r) => mapTmdb(r, mt));
         totalPages = list.total_pages;
       }
+      if (seq !== fetchSeqRef.current) return;
       setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
       setMode(m);
       setSearchedQuery(q);
+      if (m === "search") setSearchedFilter(type as SearchFilter);
       setTmdbPage(page);
       setTmdbTotalPages(totalPages);
     } catch (err) {
+      if (seq !== fetchSeqRef.current) return;
       if (err instanceof NetworkError && err.service === "TMDB" && err.status === 401) {
         setTmdbKeyInvalid(true);
       } else {
         setMoviesError(String(err));
       }
     } finally {
-      setLoadingMovies(false);
+      if (seq === fetchSeqRef.current) setLoadingMovies(false);
     }
   }
 
@@ -672,9 +707,18 @@ export function DiscoverPage({
   }
 
   // Recherche générale (films + séries mélangés), quel que soit l'onglet.
+  // Le filtre d'affinage en cours est conservé quand on continue de taper.
   function startGeneralSearch(q: string, key: string) {
     setMediaType("all");
-    fetchItems("search", q, 1, key, "all", feed);
+    fetchItems("search", q, 1, key, searchFilter, feed);
+  }
+
+  // Affine la recherche affichée : movie/tv relancent sur l'endpoint dédié,
+  // "all" revient au multi. Les résultats sont déjà en cache TanStack au retour.
+  function changeSearchFilter(f: SearchFilter) {
+    if (f === searchFilter || !tmdbKey || mode !== "search") return;
+    setSearchFilter(f);
+    fetchItems("search", searchedQuery, 1, tmdbKey, f, feed);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -731,18 +775,23 @@ export function DiscoverPage({
   // (Ma liste, Pour vous) qui affichent une liste deja constituee.
   const feedMode =
     mediaType === "movie" || mediaType === "tv" || mediaType === "animation" || mediaType === "all";
+
+  // Dès la première frappe, la navigation (onglets + sources) se replie sous la
+  // barre ; les filtres d'affinage la remplacent une fois les résultats affichés.
+  const searchUiActive = query.trim().length > 0 || mode === "search";
   const displayItems = mediaType === "likes" ? likes : mediaType === "recos" ? recos : items;
 
   // Signature de la vue courante : le fond de grille se croise en fondu quand on
-  // passe du feed aux resultats (ou d'une recherche a une autre). La pagination
-  // (meme cle) n'anime que les nouvelles cartes, pas toute la grille.
+  // passe du feed aux resultats ou qu'on change de filtre d'affinage. Affiner la
+  // requete au fil de la frappe garde la meme cle : les resultats se remplacent
+  // en place, sans rejouer la transition de toute la grille a chaque debounce.
   const gridKey =
     mediaType === "likes"
       ? "likes"
       : mediaType === "recos"
         ? "recos"
         : mode === "search"
-          ? `search:${searchedQuery}`
+          ? `search:${searchedFilter}`
           : `${mediaType}:${feed}`;
 
   // Stables (useCallback) pour que React.memo sur DiscoverPosterCard tienne
@@ -1068,62 +1117,117 @@ export function DiscoverPage({
             </div>
           </motion.form>
 
-          <div className="mb-6 flex justify-center">
-            <div className="flex rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 p-1">
-              {(["movie", "tv", "animation", "recos", "likes"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => switchType(t)}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
-                    mediaType === t
-                      ? "bg-indigo-600 text-white"
-                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                  }`}
-                >
-                  {t === "movie" ? (
-                    <Clapperboard className="h-3.5 w-3.5" />
-                  ) : t === "tv" ? (
-                    <Tv className="h-3.5 w-3.5" />
-                  ) : t === "animation" ? (
-                    <Sparkles className="h-3.5 w-3.5" />
-                  ) : t === "recos" ? (
-                    <Wand2 className="h-3.5 w-3.5" />
-                  ) : (
-                    <Heart className="h-3.5 w-3.5" />
-                  )}
-                  {t === "movie"
-                    ? "Films"
-                    : t === "tv"
-                      ? "Séries"
-                      : t === "animation"
-                        ? "Animations"
-                        : t === "recos"
-                          ? "Pour vous"
-                          : "Ma liste"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {(mediaType === "movie" || mediaType === "tv") && mode === "top" && (
-            <div className="mb-6 flex justify-center">
-              <div className="flex flex-wrap justify-center gap-1.5">
-                {FEEDS.map((f) => (
+          {/* Navigation (onglets + sources) : repliée pendant la recherche */}
+          <motion.div
+            initial={false}
+            animate={
+              searchUiActive
+                ? { opacity: 0, y: -12, height: 0, marginBottom: 0 }
+                : { opacity: 1, y: 0, height: "auto", marginBottom: 24 }
+            }
+            transition={{
+              type: "spring",
+              stiffness: 220,
+              damping: 26,
+              opacity: { duration: 0.15 },
+            }}
+            className={`overflow-hidden ${searchUiActive ? "pointer-events-none" : ""}`}
+          >
+            <div className="flex justify-center">
+              <div className="flex rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 p-1">
+                {(["movie", "tv", "animation", "recos", "likes"] as const).map((t) => (
                   <button
-                    key={f}
-                    onClick={() => switchFeed(f)}
-                    className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium ring-1 transition-colors ${
-                      feed === f
-                        ? "bg-indigo-600 text-white ring-indigo-500"
-                        : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
+                    key={t}
+                    onClick={() => switchType(t)}
+                    className={`flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                      mediaType === t
+                        ? "bg-indigo-600 text-white"
+                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                     }`}
                   >
-                    {FEED_LABELS[f]}
+                    {t === "movie" ? (
+                      <Clapperboard className="h-3.5 w-3.5" />
+                    ) : t === "tv" ? (
+                      <Tv className="h-3.5 w-3.5" />
+                    ) : t === "animation" ? (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    ) : t === "recos" ? (
+                      <Wand2 className="h-3.5 w-3.5" />
+                    ) : (
+                      <Heart className="h-3.5 w-3.5" />
+                    )}
+                    {t === "movie"
+                      ? "Films"
+                      : t === "tv"
+                        ? "Séries"
+                        : t === "animation"
+                          ? "Animations"
+                          : t === "recos"
+                            ? "Pour vous"
+                            : "Ma liste"}
                   </button>
                 ))}
               </div>
             </div>
-          )}
+
+            {(mediaType === "movie" || mediaType === "tv") && mode === "top" && (
+              <div className="mt-6 flex justify-center">
+                <div className="flex flex-wrap justify-center gap-1.5">
+                  {FEEDS.map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => switchFeed(f)}
+                      className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium ring-1 transition-colors ${
+                        feed === f
+                          ? "bg-indigo-600 text-white ring-indigo-500"
+                          : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
+                      }`}
+                    >
+                      {FEED_LABELS[f]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Filtres d'affinage de la recherche : visibles sur les résultats */}
+          <motion.div
+            initial={false}
+            animate={
+              mode === "search"
+                ? { opacity: 1, y: 0, height: "auto", marginBottom: 24 }
+                : { opacity: 0, y: -12, height: 0, marginBottom: 0 }
+            }
+            transition={{
+              type: "spring",
+              stiffness: 220,
+              damping: 26,
+              opacity: { duration: 0.15 },
+            }}
+            className={`overflow-hidden ${mode === "search" ? "" : "pointer-events-none"}`}
+          >
+            <div className="flex justify-center gap-1.5">
+              {SEARCH_FILTERS.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => changeSearchFilter(f)}
+                  className={`flex cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium ring-1 transition-colors ${
+                    searchFilter === f
+                      ? "bg-indigo-600 text-white ring-indigo-500"
+                      : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
+                  }`}
+                >
+                  {f === "movie" ? (
+                    <Clapperboard className="h-3.5 w-3.5" />
+                  ) : f === "tv" ? (
+                    <Tv className="h-3.5 w-3.5" />
+                  ) : null}
+                  {SEARCH_FILTER_LABELS[f]}
+                </button>
+              ))}
+            </div>
+          </motion.div>
 
           <h2 className="mb-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
             {mediaType === "likes"
