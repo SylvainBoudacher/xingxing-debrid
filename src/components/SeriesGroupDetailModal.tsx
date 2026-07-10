@@ -1,6 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { ChevronDown, Star, Trash2, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Copy,
+  Download,
+  ListChecks,
+  Loader2,
+  Star,
+  Trash2,
+  X,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatSize } from "@/lib/debrid";
 import {
   groupIsWholeWatched,
@@ -10,6 +26,7 @@ import {
   groupSize,
   groupTotalCount,
   groupWatchedCount,
+  removeFilesByLink,
   setSeasonItemsWatched,
   setWholeWatched,
   toggleFile,
@@ -24,6 +41,7 @@ import {
   FileRow,
   ResumeButton,
   type DebridControls,
+  type EpisodeSelection,
 } from "@/components/libraryParts";
 
 interface SeriesGroupDetailModalProps {
@@ -46,6 +64,9 @@ export function SeriesGroupDetailModal({
   autoWatchOnPlay,
 }: SeriesGroupDetailModalProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmDeleteSelection, setConfirmDeleteSelection] = useState(false);
 
   const whole = groupIsWholeWatched(group);
   const ratio = groupProgressRatio(group);
@@ -57,6 +78,53 @@ export function SeriesGroupDetailModal({
   const nextData = groupNextUnwatched(group);
   const size = groupSize(group);
   const seasons = useMemo(() => groupSeasons(group), [group]);
+
+  const selectionKey = `${groupKey}-selection`;
+  const downloadingSelection = debrid.bulkDownloading === selectionKey;
+  const copyingSelection = debrid.bulkCopying === selectionKey;
+  const busySelection = downloadingSelection || copyingSelection;
+  const allSelected = allLinks.length > 0 && selected.size === allLinks.length;
+
+  const selection: EpisodeSelection = {
+    has: (link) => selected.has(link),
+    toggle: (link) =>
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(link)) next.delete(link);
+        else next.add(link);
+        return next;
+      }),
+    setMany: (links, on) =>
+      setSelected((prev) => {
+        const next = new Set(prev);
+        links.forEach((l) => (on ? next.add(l) : next.delete(l)));
+        return next;
+      }),
+  };
+
+  function exitSelectMode() {
+    setSelectMode(false);
+    setSelected(new Set());
+    setConfirmDeleteSelection(false);
+  }
+
+  // Retire les épisodes sélectionnés de la bibliothèque, entrée par entrée.
+  // Une entrée vidée de tous ses fichiers vidéo est supprimée ; si tout le
+  // groupe disparaît, la modale se ferme d'elle-même (le groupe n'existe plus).
+  function handleDeleteSelection() {
+    for (const e of group.entries) {
+      const updated = removeFilesByLink(e, selected);
+      if (updated === null) onRemove(e.infoHash);
+      else if (updated !== e) onChange(updated);
+    }
+    exitSelectMode();
+  }
+
+  useEffect(() => {
+    if (!confirmDeleteSelection) return;
+    const t = setTimeout(() => setConfirmDeleteSelection(false), 3000);
+    return () => clearTimeout(t);
+  }, [confirmDeleteSelection]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -174,29 +242,130 @@ export function SeriesGroupDetailModal({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 border-y border-black/5 bg-black/[0.02] px-5 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
-          <Checkbox checked={whole} onClick={handleAllWatched} />
-          <span className="flex-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">
-            {whole ? "Marqué comme vu" : "Marquer comme vu"}
-          </span>
-          {nextData && (
-            <ResumeButton
-              next={nextData.file}
-              groupKey={`resume-${groupKey}`}
+        {!selectMode && (
+          <div className="flex items-center gap-3 border-y border-black/5 bg-black/[0.02] px-5 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
+            <Checkbox checked={whole} onClick={handleAllWatched} />
+            <span className="flex-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+              {whole ? "Marqué comme vu" : "Marquer comme vu"}
+            </span>
+            {nextData && (
+              <ResumeButton
+                next={nextData.file}
+                groupKey={`resume-${groupKey}`}
+                debrid={debrid}
+                started={groupWatchedCount(group) > 0}
+                onResume={() =>
+                  autoWatchOnPlay && onChange(toggleFile(nextData.entry, nextData.file.name))
+                }
+              />
+            )}
+            {allLinks.length > 1 && (
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setSelectMode(true)}
+                className="flex h-7 flex-none items-center gap-1.5 rounded-lg bg-black/5 px-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+              >
+                <ListChecks className="h-3.5 w-3.5" />
+                Choisir des épisodes
+              </motion.button>
+            )}
+            <DebridActions
+              links={allLinks}
+              groupKey={groupKey}
               debrid={debrid}
-              started={groupWatchedCount(group) > 0}
-              onResume={() =>
-                autoWatchOnPlay && onChange(toggleFile(nextData.entry, nextData.file.name))
-              }
+              onVlcClick={autoWatchOnPlay ? handleAllWatched : undefined}
             />
-          )}
-          <DebridActions
-            links={allLinks}
-            groupKey={groupKey}
-            debrid={debrid}
-            onVlcClick={autoWatchOnPlay ? handleAllWatched : undefined}
-          />
-        </div>
+          </div>
+        )}
+
+        {selectMode && (
+          <div className="flex items-center gap-2 border-y border-black/5 bg-black/[0.02] px-5 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
+            <button
+              onClick={() => selection.setMany(allLinks, !allSelected)}
+              disabled={busySelection}
+              className="flex items-center gap-2 text-xs font-medium text-zinc-600 transition-colors hover:text-zinc-900 disabled:opacity-40 dark:text-zinc-300 dark:hover:text-white"
+            >
+              <span
+                className={`flex h-4 w-4 flex-none items-center justify-center rounded ring-1 transition-colors ${
+                  allSelected
+                    ? "bg-indigo-600 ring-indigo-500"
+                    : "bg-zinc-200 ring-black/10 dark:bg-zinc-800 dark:ring-white/10"
+                }`}
+              >
+                {allSelected && <Check className="h-3 w-3 text-white" />}
+              </span>
+              Tout sélectionner
+            </button>
+            <span className="flex-1 text-right text-xs font-medium text-zinc-600 dark:text-zinc-300">
+              {selected.size} sélectionné{selected.size > 1 ? "s" : ""}
+            </span>
+            <button
+              onClick={exitSelectMode}
+              disabled={busySelection}
+              className="flex h-7 flex-none items-center rounded-lg px-3 text-xs font-medium text-zinc-500 transition-colors hover:bg-black/5 disabled:opacity-40 dark:text-zinc-400 dark:hover:bg-white/10"
+            >
+              Annuler
+            </button>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => {
+                if (confirmDeleteSelection) handleDeleteSelection();
+                else setConfirmDeleteSelection(true);
+              }}
+              disabled={selected.size === 0 || busySelection}
+              title={
+                confirmDeleteSelection ? "Confirmer la suppression" : "Retirer de la bibliothèque"
+              }
+              className={`flex h-7 flex-none items-center gap-1 rounded-lg px-2.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                confirmDeleteSelection
+                  ? "bg-red-600 text-white hover:bg-red-500"
+                  : "bg-red-500/10 text-red-600 ring-1 ring-red-500/20 hover:bg-red-500/20 dark:text-red-400"
+              }`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {confirmDeleteSelection ? "Sûr ?" : `Supprimer (${selected.size})`}
+            </motion.button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <motion.button
+                  whileTap={{ scale: 0.97 }}
+                  disabled={selected.size === 0 || busySelection}
+                  className="flex h-7 flex-none items-center gap-1.5 rounded-lg bg-indigo-600 pl-3 pr-2 transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {busySelection ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5 text-white" />
+                  )}
+                  <span className="text-xs font-medium text-white">
+                    Télécharger ({selected.size})
+                  </span>
+                  <ChevronDown className="h-3 w-3 text-white/70" />
+                </motion.button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={() => debrid.downloadMany([...selected], selectionKey)}
+                  disabled={busySelection}
+                >
+                  <Download className="h-4 w-4" />
+                  Télécharger
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => debrid.copyMany([...selected], selectionKey)}
+                  disabled={busySelection}
+                >
+                  {copyingSelection ? (
+                    <Check className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                  Copier les liens
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
 
         <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-black/5 dark:divide-white/10">
           {seasons.map((season) => (
@@ -208,6 +377,7 @@ export function SeriesGroupDetailModal({
               debrid={debrid}
               simple={simple}
               autoWatchOnPlay={autoWatchOnPlay}
+              selection={selectMode ? selection : undefined}
             />
           ))}
         </div>
@@ -223,6 +393,7 @@ function ModalSeasonSection({
   debrid,
   simple,
   autoWatchOnPlay,
+  selection,
 }: {
   season: GroupSeason;
   groupKey: string;
@@ -230,6 +401,7 @@ function ModalSeasonSection({
   debrid: DebridControls;
   simple: boolean;
   autoWatchOnPlay: boolean;
+  selection?: EpisodeSelection;
 }) {
   const [open, setOpen] = useState(true);
   const items = season.items;
@@ -240,6 +412,7 @@ function ModalSeasonSection({
   const sectionKey = `${groupKey}-s${season.season ?? "x"}`;
   const next = items.find((it) => !it.entry.watched[it.file.name]) ?? null;
   const total = items.length;
+  const allSelected = !!selection && links.every((l) => selection.has(l));
 
   return (
     <div>
@@ -248,10 +421,23 @@ function ModalSeasonSection({
         className="flex cursor-pointer items-center gap-3 bg-black/[0.02] px-5 py-2.5 dark:bg-white/[0.03] transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]"
       >
         <div onClick={(e) => e.stopPropagation()} className="flex flex-none items-center">
-          <Checkbox
-            checked={allSeen}
-            onClick={() => setSeasonItemsWatched(items, !allSeen, onChange)}
-          />
+          {selection ? (
+            <button
+              onClick={() => selection.setMany(links, !allSelected)}
+              className={`flex h-5 w-5 flex-none items-center justify-center rounded-md ring-1 transition-colors ${
+                allSelected
+                  ? "bg-indigo-600 ring-indigo-500"
+                  : "bg-zinc-200 ring-black/10 dark:bg-zinc-800 dark:ring-white/10"
+              }`}
+            >
+              {allSelected && <Check className="h-3 w-3 text-white" />}
+            </button>
+          ) : (
+            <Checkbox
+              checked={allSeen}
+              onClick={() => setSeasonItemsWatched(items, !allSeen, onChange)}
+            />
+          )}
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
           <span
@@ -267,7 +453,7 @@ function ModalSeasonSection({
           />
         </div>
         <div onClick={(e) => e.stopPropagation()} className="flex flex-none items-center gap-3">
-          {next && (
+          {!selection && next && (
             <ResumeButton
               next={next.file}
               groupKey={`resume-${sectionKey}`}
@@ -277,7 +463,7 @@ function ModalSeasonSection({
               onResume={() => autoWatchOnPlay && onChange(toggleFile(next.entry, next.file.name))}
             />
           )}
-          <DebridActions links={links} groupKey={sectionKey} debrid={debrid} />
+          {!selection && <DebridActions links={links} groupKey={sectionKey} debrid={debrid} />}
         </div>
       </div>
       <AnimatePresence initial={false}>
@@ -299,6 +485,7 @@ function ModalSeasonSection({
                   debrid={debrid}
                   simple={simple}
                   autoWatchOnPlay={autoWatchOnPlay}
+                  selection={selection}
                 />
               ))}
             </ul>

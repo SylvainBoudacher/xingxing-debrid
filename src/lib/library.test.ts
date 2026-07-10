@@ -39,6 +39,7 @@ import {
   prefetchLibrary,
   progressRatio,
   recordDownload,
+  removeFilesByLink,
   saveLibrary,
   saveLibraryDebounced,
   seasonOf,
@@ -437,5 +438,26 @@ describe("libraryCounts", () => {
     expect(counts.all).toBe(groupLibraryEntries(entries).length);
     expect(counts.done).toBe(groupLibraryEntries(entries.filter((e) => isWholeWatched(e))).length);
     expect(counts.todo).toBe(groupLibraryEntries(entries.filter((e) => !isWholeWatched(e))).length);
+  });
+});
+
+describe("removeFilesByLink", () => {
+  it("retire les fichiers ciblés et nettoie leur état de visionnage", () => {
+    const e = entry({ files: [ep1, ep2, ep3], watched: { [ep1.name]: true, [ep2.name]: true } });
+    const next = removeFilesByLink(e, new Set([ep1.link]));
+    expect(next).not.toBeNull();
+    expect(next!.files).toEqual([ep2, ep3]);
+    expect(next!.watched).toEqual({ [ep2.name]: true });
+  });
+
+  it("retourne la même référence si aucun lien ne correspond", () => {
+    const e = entry({ files: [ep1, ep2] });
+    expect(removeFilesByLink(e, new Set(["autre"]))).toBe(e);
+  });
+
+  it("retourne null quand plus aucun fichier vidéo ne reste", () => {
+    const nfo = file("Show.nfo");
+    const e = entry({ files: [ep1, nfo] });
+    expect(removeFilesByLink(e, new Set([ep1.link]))).toBeNull();
   });
 });

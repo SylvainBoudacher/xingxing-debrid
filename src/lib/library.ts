@@ -153,6 +153,21 @@ export function applyEnrichment(entry: LibraryEntry, files: DebridFile[]): Libra
   return next;
 }
 
+// Retire des fichiers d'une entrée (par lien) et nettoie leur état de
+// visionnage. Retourne l'entrée telle quelle si aucun lien ne correspond,
+// null s'il ne reste plus aucun fichier vidéo (l'entrée doit être supprimée).
+export function removeFilesByLink(entry: LibraryEntry, links: Set<string>): LibraryEntry | null {
+  if (!entry.files.some((f) => links.has(f.link))) return entry;
+  const watched = { ...entry.watched };
+  const files = entry.files.filter((f) => {
+    if (!links.has(f.link)) return true;
+    delete watched[f.name];
+    return false;
+  });
+  const next = { ...entry, files, watched };
+  return videoFiles(next).length === 0 ? null : next;
+}
+
 // Cache indexé sur le tableau `files` : la référence reste stable tant que
 // l'entrée n'est pas ré-enrichie (cocher un épisode ne touche que `watched`),
 // donc le filtre n'est calculé qu'une fois par liste de fichiers.

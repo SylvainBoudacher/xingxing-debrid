@@ -22,6 +22,7 @@ import {
   isWholeWatched,
   nextUnwatched,
   progressRatio,
+  removeFilesByLink,
   setWholeWatched,
   toggleFile,
   totalCount,
@@ -83,6 +84,7 @@ export function LibraryDetailModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmDeleteSelection, setConfirmDeleteSelection] = useState(false);
   const tmdb = entry.tmdb;
   const series = isSeries(entry);
   const whole = isWholeWatched(entry);
@@ -121,7 +123,27 @@ export function LibraryDetailModal({
   function exitSelectMode() {
     setSelectMode(false);
     setSelected(new Set());
+    setConfirmDeleteSelection(false);
   }
+
+  // Retire les épisodes sélectionnés de la bibliothèque. Si plus aucun fichier
+  // vidéo ne reste, l'entrée entière est supprimée et la modale se ferme.
+  function handleDeleteSelection() {
+    const updated = removeFilesByLink(entry, selected);
+    if (updated === null) {
+      onRemove(entry.infoHash);
+      onClose();
+      return;
+    }
+    if (updated !== entry) onChange(updated);
+    exitSelectMode();
+  }
+
+  useEffect(() => {
+    if (!confirmDeleteSelection) return;
+    const t = setTimeout(() => setConfirmDeleteSelection(false), 3000);
+    return () => clearTimeout(t);
+  }, [confirmDeleteSelection]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && !enrichOpen && onClose();
@@ -328,6 +350,25 @@ export function LibraryDetailModal({
             >
               Annuler
             </button>
+            <motion.button
+              whileTap={{ scale: 0.97 }}
+              onClick={() => {
+                if (confirmDeleteSelection) handleDeleteSelection();
+                else setConfirmDeleteSelection(true);
+              }}
+              disabled={selected.size === 0 || busySelection}
+              title={
+                confirmDeleteSelection ? "Confirmer la suppression" : "Retirer de la bibliothèque"
+              }
+              className={`flex h-7 flex-none items-center gap-1 rounded-lg px-2.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                confirmDeleteSelection
+                  ? "bg-red-600 text-white hover:bg-red-500"
+                  : "bg-red-500/10 text-red-600 ring-1 ring-red-500/20 hover:bg-red-500/20 dark:text-red-400"
+              }`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {confirmDeleteSelection ? "Sûr ?" : `Supprimer (${selected.size})`}
+            </motion.button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <motion.button
