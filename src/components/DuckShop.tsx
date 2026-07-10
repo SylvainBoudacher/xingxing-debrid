@@ -84,7 +84,7 @@ const FILTER_LABELS: Record<Filter, string> = {
   reserve: "En réserve",
 };
 
-type Sort = "default" | "rarity";
+type Sort = "default" | "rarity" | "alpha";
 const RARITY_ORDER: Record<Rarity, number> = {
   god: 0,
   mythic: 1,
@@ -286,8 +286,10 @@ export function DuckShop() {
       return d.name.toLowerCase().includes(q);
     })
     .sort((a, b) => {
-      if (sort !== "rarity") return 0;
-      return RARITY_ORDER[getRarity(a.variant)] - RARITY_ORDER[getRarity(b.variant)];
+      if (sort === "rarity")
+        return RARITY_ORDER[getRarity(a.variant)] - RARITY_ORDER[getRarity(b.variant)];
+      if (sort === "alpha") return a.name.localeCompare(b.name, "fr");
+      return 0;
     });
 
   return (
@@ -366,6 +368,7 @@ export function DuckShop() {
                         <DropdownMenuRadioItem value="default">
                           Ordre par défaut
                         </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="alpha">Par nom (A-Z)</DropdownMenuRadioItem>
                         <DropdownMenuRadioItem value="rarity">Par rareté</DropdownMenuRadioItem>
                       </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
