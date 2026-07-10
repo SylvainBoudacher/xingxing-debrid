@@ -6,6 +6,7 @@ import { DownloadsOverlay } from "@/components/DownloadsOverlay";
 import { SplashScreen } from "@/components/SplashScreen";
 import { SplashTransition } from "@/components/SplashTransition";
 import { useAppInit } from "@/lib/useAppInit";
+import { getApiKey } from "@/lib/apiKeys";
 import { UpdateDialog } from "@/components/UpdateDialog";
 import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
 import { LATEST_VERSION } from "@/lib/patchnotes";
@@ -15,6 +16,7 @@ import { prefetchLibrary } from "@/lib/library";
 import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
 import { useNavShortcuts } from "@/lib/useNavShortcuts";
+import { useActionShortcuts } from "@/lib/useActionShortcuts";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -90,6 +92,7 @@ function App() {
   useNavShortcuts((action) => {
     setPage((p) => (p === null || p === "setup" || p === "boatgame" ? p : action));
   });
+  useActionShortcuts();
 
   useEffect(() => {
     checkForUpdate()
@@ -211,6 +214,14 @@ function App() {
   }
 
   async function handleSetupComplete() {
+    // useAppInit a tourné avant la fin du setup : les clés en mémoire sont
+    // nulles. On les relit du keyring pour les injecter sans redémarrage.
+    const [c411Key, allDebridKey, tmdbKey] = await Promise.all([
+      getApiKey("c411_api_key"),
+      getApiKey("alldebrid_api_key"),
+      getApiKey("tmdb_api_key"),
+    ]);
+    applyKeys({ c411Key, allDebridKey, tmdbKey });
     await store.set("setup_complete", true);
     await store.set("welcome_v1_seen", true);
     await store.save();

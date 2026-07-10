@@ -1,29 +1,27 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { ChevronDown, Star, Trash2, X } from "lucide-react";
 import { formatSize } from "@/lib/debrid";
 import {
-  dominantSeason,
   groupIsWholeWatched,
   groupNextUnwatched,
   groupProgressRatio,
+  groupSeasons,
   groupSize,
   groupTotalCount,
   groupWatchedCount,
-  isWholeWatched,
-  nextUnwatched,
+  setSeasonItemsWatched,
   setWholeWatched,
   toggleFile,
-  totalCount,
   videoFiles,
-  watchedCount,
+  type GroupSeason,
   type LibraryEntry,
   type SeriesGroup,
 } from "@/lib/library";
 import {
   Checkbox,
   DebridActions,
-  EntryEpisodes,
+  FileRow,
   ResumeButton,
   type DebridControls,
 } from "@/components/libraryParts";
@@ -58,6 +56,7 @@ export function SeriesGroupDetailModal({
   const groupKey = `series-${group.tmdbId}`;
   const nextData = groupNextUnwatched(group);
   const size = groupSize(group);
+  const seasons = useMemo(() => groupSeasons(group), [group]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -126,7 +125,9 @@ export function SeriesGroupDetailModal({
                 </span>
               )}
               {size > 0 && <span>{formatSize(size)}</span>}
-              <span>{group.entries.length} saisons</span>
+              <span>
+                {seasons.length} saison{seasons.length > 1 ? "s" : ""}
+              </span>
               <span>
                 {watched}/{total} vus
               </span>
@@ -198,11 +199,11 @@ export function SeriesGroupDetailModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-black/5 dark:divide-white/10">
-          {group.entries.map((entry) => (
+          {seasons.map((season) => (
             <ModalSeasonSection
-              key={entry.infoHash}
-              entry={entry}
-              season={dominantSeason(entry)}
+              key={season.season ?? "other"}
+              season={season}
+              groupKey={groupKey}
               onChange={onChange}
               debrid={debrid}
               simple={simple}
@@ -216,30 +217,29 @@ export function SeriesGroupDetailModal({
 }
 
 function ModalSeasonSection({
-  entry,
   season,
+  groupKey,
   onChange,
   debrid,
   simple,
   autoWatchOnPlay,
 }: {
-  entry: LibraryEntry;
-  season: number | null;
+  season: GroupSeason;
+  groupKey: string;
   onChange: (e: LibraryEntry) => void;
   debrid: DebridControls;
   simple: boolean;
   autoWatchOnPlay: boolean;
 }) {
   const [open, setOpen] = useState(true);
-  const vids = videoFiles(entry);
-  const seenCount = watchedCount(entry);
-  const allSeen = isWholeWatched(entry);
-  const label = season !== null ? `Saison ${season}` : "Saison ?";
-  const links = vids.map((f) => f.link);
-  const sectionKey = entry.infoHash;
-  const next = !allSeen ? nextUnwatched(entry) : null;
-  const resumeKey = `resume-${sectionKey}`;
-  const total = totalCount(entry);
+  const items = season.items;
+  const seenCount = items.filter((it) => it.entry.watched[it.file.name]).length;
+  const allSeen = seenCount === items.length;
+  const label = season.season !== null ? `Saison ${season.season}` : "Saison ?";
+  const links = items.map((it) => it.file.link);
+  const sectionKey = `${groupKey}-s${season.season ?? "x"}`;
+  const next = items.find((it) => !it.entry.watched[it.file.name]) ?? null;
+  const total = items.length;
 
   return (
     <div>
@@ -248,7 +248,10 @@ function ModalSeasonSection({
         className="flex cursor-pointer items-center gap-3 bg-black/[0.02] px-5 py-2.5 dark:bg-white/[0.03] transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]"
       >
         <div onClick={(e) => e.stopPropagation()} className="flex flex-none items-center">
-          <Checkbox checked={allSeen} onClick={() => onChange(setWholeWatched(entry, !allSeen))} />
+          <Checkbox
+            checked={allSeen}
+            onClick={() => setSeasonItemsWatched(items, !allSeen, onChange)}
+          />
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
           <span
@@ -266,12 +269,12 @@ function ModalSeasonSection({
         <div onClick={(e) => e.stopPropagation()} className="flex flex-none items-center gap-3">
           {next && (
             <ResumeButton
-              next={next}
-              groupKey={resumeKey}
+              next={next.file}
+              groupKey={`resume-${sectionKey}`}
               debrid={debrid}
               started={seenCount > 0}
               hideSeason
-              onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
+              onResume={() => autoWatchOnPlay && onChange(toggleFile(next.entry, next.file.name))}
             />
           )}
           <DebridActions links={links} groupKey={sectionKey} debrid={debrid} />
@@ -286,13 +289,19 @@ function ModalSeasonSection({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <EntryEpisodes
-              entry={entry}
-              onChange={onChange}
-              debrid={debrid}
-              simple={simple}
-              autoWatchOnPlay={autoWatchOnPlay}
-            />
+            <ul className="divide-y divide-black/5 dark:divide-white/5">
+              {items.map((it) => (
+                <FileRow
+                  key={`${it.entry.infoHash}-${it.file.name}`}
+                  file={it.file}
+                  entry={it.entry}
+                  onChange={onChange}
+                  debrid={debrid}
+                  simple={simple}
+                  autoWatchOnPlay={autoWatchOnPlay}
+                />
+              ))}
+            </ul>
           </motion.div>
         )}
       </AnimatePresence>

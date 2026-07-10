@@ -220,7 +220,7 @@ export function ResumeButton({
   );
 }
 
-function FileRow({
+export function FileRow({
   file,
   entry,
   onChange,

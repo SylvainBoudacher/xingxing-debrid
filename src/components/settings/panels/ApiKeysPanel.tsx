@@ -2,7 +2,7 @@ import { KeyRound } from "lucide-react";
 import { ApiKeysForm, type ApiKeys } from "@/components/ApiKeysForm";
 import { SettingsPanel } from "../SettingsPanel";
 
-export function ApiKeysPanel({ onSaved }: { onSaved: (keys: ApiKeys) => void }) {
+export function ApiKeysPanel({ onSaved }: { onSaved: (keys: Partial<ApiKeys>) => void }) {
   return (
     <SettingsPanel
       icon={KeyRound}

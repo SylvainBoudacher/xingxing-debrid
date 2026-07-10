@@ -114,6 +114,27 @@ export function releaseDuck(id: string) {
   releaserCb?.(id);
 }
 
+// Capture a duck from the pool into the shop imperatively (keyboard shortcut),
+// doing the same thing as dragging a duck onto the shop. Returns false if there
+// is no duck to capture (pool empty / inactive).
+let captureCb: (() => boolean) | null = null;
+export function registerCapturer(cb: (() => boolean) | null) {
+  captureCb = cb;
+}
+export function captureDuck(): boolean {
+  return captureCb?.() ?? false;
+}
+
+// Toggle the pool-cleaning vacuum on/off imperatively (keyboard shortcut),
+// same as clicking the docked robot. Returns false if the pool is inactive.
+let vacuumToggleCb: (() => boolean) | null = null;
+export function registerVacuumToggle(cb: (() => boolean) | null) {
+  vacuumToggleCb = cb;
+}
+export function toggleVacuum(): boolean {
+  return vacuumToggleCb?.() ?? false;
+}
+
 // Hit-test for the shop icon drawn on the canvas, so the panel's click-outside
 // handler can ignore clicks that land on the icon (which toggles the panel).
 let shopHitCb: ((x: number, y: number) => boolean) | null = null;

@@ -229,18 +229,18 @@ export function randomLegendaryVariant(): Variant {
 }
 
 // chance for any spawn to roll shiny, independent of its rarity tier
-const SHINY_RATE = 0.07;
+const SHINY_RATE = 0.03;
 
 export function randomVariant(): Variant {
   const roll = Math.random();
   let v: Variant;
-  if (roll < 0.01)
-    v = kingVariant(); // 1% ultra-legendary king
-  else if (roll < 0.04)
+  if (roll < 0.005)
+    v = kingVariant(); // 0.5% ultra-legendary king
+  else if (roll < 0.035)
     v = randOf(LEGENDARY)(); // ~3% legendary
-  else if (roll < 0.13)
+  else if (roll < 0.125)
     v = randOf(RARE)(); // ~9% rare
-  else if (roll < 0.41) {
+  else if (roll < 0.405) {
     // ~28% uncommon: simple pattern or a fancier accessory
     v =
       Math.random() < 0.4

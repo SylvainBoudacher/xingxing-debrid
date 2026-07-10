@@ -186,6 +186,21 @@ export function DuckShop() {
     return () => window.removeEventListener("pointerdown", onDown);
   }, [open]);
 
+  // Close on Escape. Let portaled overlays (filter dropdown, release dialog)
+  // consume the key first so Escape dismisses them before the whole panel.
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      if (document.querySelector("[data-radix-popper-content-wrapper]")) return;
+      if (document.querySelector("[role=alertdialog]")) return;
+      e.preventDefault();
+      close();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   function close() {
     droppedRef.current?.release(); // the held duck swims again
     setDropped(null);

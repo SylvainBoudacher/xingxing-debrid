@@ -22,11 +22,9 @@ import {
   Settings,
   Sparkles,
   Sun,
-  Terminal,
   Upload,
   UserRound,
   Wifi,
-  X,
   XCircle,
   Zap,
   type LucideIcon,
@@ -41,6 +39,7 @@ import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey, setApiKey } from "@/lib/apiKeys";
 import { pickBackupFile } from "@/lib/profileBackup";
 import { ImportProfileModal } from "@/components/ImportProfileModal";
+import { DnsGuideModal } from "@/components/DnsGuideModal";
 import { validateKey as validateTmdbKey } from "@/lib/services/tmdb";
 import { applyTheme, type Theme } from "@/lib/theme";
 
@@ -50,11 +49,6 @@ const PixelPool = lazy(() =>
 import type { ViewMode } from "@/lib/viewMode";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
-
-// Applique le DNS Cloudflare a toutes les cartes actives en une fois (utile si VPN
-// ou plusieurs interfaces : changer une seule carte via l'UI ne suffit pas toujours).
-const DNS_PS_COMMAND =
-  'Get-NetAdapter | Where-Object Status -eq "Up" | Set-DnsClientServerAddress -ServerAddresses ("1.1.1.1","1.0.0.1"); ipconfig /flushdns';
 
 const C411_STEPS = [
   "Connectez-vous à votre compte C411.",
@@ -796,7 +790,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                             onClick={() => setShowDnsGuide(true)}
                             className="underline underline-offset-2 text-violet-600 dark:text-violet-400 hover:text-violet-500 transition-colors"
                           >
-                            Voir le guide Windows
+                            Voir le guide DNS
                           </button>
                         </p>
                       </div>
@@ -910,9 +904,8 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 urlLabel="themoviedb.org"
                 steps={TMDB_STEPS}
                 value={tmdbKey}
-                placeholder="Collez votre clé TMDB (optionnel)"
+                placeholder="Collez votre clé TMDB"
                 onChange={setTmdbKey}
-                optional
               />
 
               <motion.div variants={item} className="pt-2">
@@ -1344,226 +1337,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
       </AnimatePresence>
 
       <AnimatePresence>
-        {showDnsGuide && (
-          <motion.div
-            key="dns-guide"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-            onClick={() => setShowDnsGuide(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 8 }}
-              transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md rounded-2xl bg-[#f4f6fc] dark:bg-zinc-900 ring-1 ring-black/8 dark:ring-white/8 shadow-2xl overflow-hidden"
-            >
-              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-black/6 dark:border-white/6">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-500/12 ring-1 ring-violet-500/20">
-                    <Globe className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                      Configurer son DNS sur Windows
-                    </p>
-                    <p className="text-[11px] text-zinc-500 mt-0.5">Cloudflare DNS - 1.1.1.1</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowDnsGuide(false)}
-                  className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-black/6 dark:hover:bg-white/6 transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="px-5 py-4 space-y-3">
-                {[
-                  {
-                    step: 1,
-                    title: "Ouvrir les connexions reseau",
-                    detail: (
-                      <>
-                        Appuyez sur{" "}
-                        <kbd className="inline-flex items-center rounded bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 text-[11px] font-mono font-medium text-zinc-700 dark:text-zinc-200">
-                          <svg
-                            viewBox="0 0 24 24"
-                            className="h-3 w-3"
-                            fill="currentColor"
-                            aria-label="Windows"
-                          >
-                            <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-13.051-1.949" />
-                          </svg>
-                        </kbd>{" "}
-                        +{" "}
-                        <kbd className="rounded bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 text-[11px] font-mono font-medium text-zinc-700 dark:text-zinc-200">
-                          R
-                        </kbd>
-                        , tapez{" "}
-                        <span className="font-mono text-[12px] text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 rounded px-1.5 py-0.5">
-                          ncpa.cpl
-                        </span>{" "}
-                        et appuyez sur Entree.
-                      </>
-                    ),
-                  },
-                  {
-                    step: 2,
-                    title: "Ouvrir les proprietes de votre connexion",
-                    detail: (
-                      <>
-                        Clic droit sur votre connexion active (Wi-Fi ou Ethernet) puis{" "}
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Proprietes
-                        </span>
-                        .
-                      </>
-                    ),
-                  },
-                  {
-                    step: 3,
-                    title: "Selectionner IPv4",
-                    detail: (
-                      <>
-                        Double-cliquez sur{" "}
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Protocole Internet version 4 (TCP/IPv4)
-                        </span>
-                        .
-                      </>
-                    ),
-                  },
-                  {
-                    step: 4,
-                    title: "Saisir les adresses DNS",
-                    detail: (
-                      <>
-                        Cochez{" "}
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Utiliser les adresses de serveurs DNS suivantes
-                        </span>{" "}
-                        puis entrez :
-                        <div className="mt-2 rounded-lg bg-zinc-200/70 dark:bg-zinc-800 px-3 py-2 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] text-zinc-500">DNS principal</span>
-                            <span className="font-mono text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                              1.1.1.1
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] text-zinc-500">DNS secondaire</span>
-                            <span className="font-mono text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                              1.0.0.1
-                            </span>
-                          </div>
-                        </div>
-                      </>
-                    ),
-                  },
-                  {
-                    step: 5,
-                    title: "Valider",
-                    detail: (
-                      <>
-                        Cliquez sur{" "}
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">OK</span>{" "}
-                        dans les deux fenetres, puis utilisez le bouton{" "}
-                        <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                          Reessayer
-                        </span>{" "}
-                        ci-dessous pour verifier l'acces.
-                      </>
-                    ),
-                  },
-                ].map(({ step, title, detail }) => (
-                  <div key={step} className="flex gap-3">
-                    <span className="flex h-5 w-5 shrink-0 mt-0.5 items-center justify-center rounded-full bg-violet-600 text-[10px] font-bold text-white">
-                      {step}
-                    </span>
-                    <div>
-                      <p className="text-xs font-semibold text-zinc-900 dark:text-white mb-0.5">
-                        {title}
-                      </p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                        {detail}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-
-                <div className="rounded-xl bg-amber-500/8 ring-1 ring-amber-500/20 p-3 space-y-3">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-                    <p className="text-xs font-semibold text-zinc-900 dark:text-white">
-                      Si c411.org reste inaccessible
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                      1. Verifier le fichier hosts
-                    </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                      Ouvrez le Bloc-notes en administrateur, puis le fichier{" "}
-                      <span className="font-mono text-[11px] text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 rounded px-1 py-0.5">
-                        C:\Windows\System32\drivers\etc\hosts
-                      </span>
-                      . Si une ligne contenant{" "}
-                      <span className="font-mono text-[11px]">c411.org</span> existe (souvent{" "}
-                      <span className="font-mono text-[11px]">127.0.0.1 c411.org</span>),
-                      supprimez-la et enregistrez. Sinon, passez a l'etape suivante.
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
-                      2. Forcer le DNS sur toutes les cartes
-                    </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                      Utile si vous avez un VPN ou plusieurs connexions. Ouvrez{" "}
-                      <span className="font-medium text-zinc-700 dark:text-zinc-300">
-                        PowerShell en administrateur
-                      </span>{" "}
-                      et collez :
-                    </p>
-                    <div className="mt-2 flex items-start gap-2 rounded-lg bg-zinc-900 dark:bg-black/40 px-3 py-2 ring-1 ring-white/8">
-                      <Terminal className="h-3.5 w-3.5 shrink-0 mt-0.5 text-zinc-500" />
-                      <code className="flex-1 text-[11px] font-mono text-zinc-200 leading-relaxed break-all">
-                        {DNS_PS_COMMAND}
-                      </code>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(DNS_PS_COMMAND);
-                          toast.success("Commande copiee");
-                        }}
-                        className="shrink-0 text-[11px] font-medium text-violet-400 hover:text-violet-300 transition-colors"
-                      >
-                        Copier
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed">
-                      Puis fermez et rouvrez XingXing. Ce reglage reste actif apres redemarrage.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="px-5 pb-5">
-                <button
-                  onClick={() => setShowDnsGuide(false)}
-                  className="w-full h-10 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-sm font-medium text-zinc-700 dark:text-zinc-300 transition-colors"
-                >
-                  Fermer
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
+        {showDnsGuide && <DnsGuideModal onClose={() => setShowDnsGuide(false)} />}
       </AnimatePresence>
     </main>
   );

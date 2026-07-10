@@ -3,10 +3,16 @@ import { useEffect, useState } from "react";
 import { SettingsPanel } from "../SettingsPanel";
 import { FieldTitle, PanelDivider, SettingRow } from "../controls";
 import {
+  ACTION_SHORTCUT_LABELS,
+  DEFAULT_ACTION_SHORTCUTS,
   DEFAULT_NAV_SHORTCUTS,
+  loadActionShortcuts,
   loadNavShortcuts,
   NAV_SHORTCUT_LABELS,
+  saveActionShortcuts,
   saveNavShortcuts,
+  type ActionShortcutAction,
+  type ActionShortcuts,
   type NavShortcutAction,
   type NavShortcuts,
 } from "@/lib/shortcuts";
@@ -15,6 +21,17 @@ const ACTIONS: { action: NavShortcutAction; description: string }[] = [
   { action: "main", description: "Revenir à la page principale." },
   { action: "discover", description: "Ouvrir la page Découverte." },
   { action: "library", description: "Ouvrir votre bibliothèque." },
+];
+
+const POOL_ACTIONS: { action: ActionShortcutAction; description: string }[] = [
+  {
+    action: "capture",
+    description: "Envoyer le canard survolé dans le shop pour le capturer.",
+  },
+  {
+    action: "vacuum",
+    description: "Allumer ou éteindre l'aspirateur de bassin.",
+  },
 ];
 
 function KeyChip({ children }: { children: string }) {
@@ -27,12 +44,17 @@ function KeyChip({ children }: { children: string }) {
 
 export function ShortcutsPanel() {
   const [shortcuts, setShortcuts] = useState<NavShortcuts>(DEFAULT_NAV_SHORTCUTS);
+  const [actionShortcuts, setActionShortcuts] = useState<ActionShortcuts>(DEFAULT_ACTION_SHORTCUTS);
   const [recording, setRecording] = useState<NavShortcutAction | null>(null);
+  const [recordingAction, setRecordingAction] = useState<ActionShortcutAction | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadNavShortcuts()
       .then(setShortcuts)
+      .catch(() => {});
+    loadActionShortcuts()
+      .then(setActionShortcuts)
       .catch(() => {});
   }, []);
 
@@ -67,18 +89,54 @@ export function ShortcutsPanel() {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [recording, shortcuts]);
 
+  useEffect(() => {
+    if (!recordingAction) return;
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.key === "Escape") {
+        setRecordingAction(null);
+        return;
+      }
+      const key = e.key.toLowerCase();
+      if (key.length !== 1 || key === " ") return;
+      const conflict = (Object.entries(actionShortcuts) as [ActionShortcutAction, string][]).find(
+        ([action, k]) => k === key && action !== recordingAction,
+      );
+      if (conflict) {
+        setError(
+          `${key.toUpperCase()} est déjà utilisé pour "${ACTION_SHORTCUT_LABELS[conflict[0]]}".`,
+        );
+        setRecordingAction(null);
+        return;
+      }
+      const next = { ...actionShortcuts, [recordingAction]: key };
+      setActionShortcuts(next);
+      setError(null);
+      setRecordingAction(null);
+      saveActionShortcuts(next).catch(() => {});
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [recordingAction, actionShortcuts]);
+
   async function handleReset() {
     setShortcuts(DEFAULT_NAV_SHORTCUTS);
+    setActionShortcuts(DEFAULT_ACTION_SHORTCUTS);
     setError(null);
     setRecording(null);
-    await saveNavShortcuts(DEFAULT_NAV_SHORTCUTS);
+    setRecordingAction(null);
+    await Promise.all([
+      saveNavShortcuts(DEFAULT_NAV_SHORTCUTS),
+      saveActionShortcuts(DEFAULT_ACTION_SHORTCUTS),
+    ]);
   }
 
   return (
     <SettingsPanel
       icon={Keyboard}
       title="Raccourcis clavier"
-      subtitle="Naviguer entre les pages au clavier."
+      subtitle="Naviguer entre les pages et agir sur le bassin au clavier."
     >
       <FieldTitle
         title="Navigation"
@@ -110,6 +168,40 @@ export function ShortcutsPanel() {
                   <span className="text-xs text-zinc-400">+</span>
                   <KeyChip>{shortcuts[action].toUpperCase()}</KeyChip>
                 </>
+              )}
+            </button>
+          </SettingRow>
+        ))}
+      </div>
+
+      <PanelDivider />
+
+      <FieldTitle
+        title="Bassin"
+        hint="Appuyez sur la touche associée pour effectuer l'action. Cliquez sur un raccourci pour le modifier, puis appuyez sur la nouvelle touche."
+      />
+
+      <div className="flex flex-col gap-3">
+        {POOL_ACTIONS.map(({ action, description }) => (
+          <SettingRow key={action} title={ACTION_SHORTCUT_LABELS[action]} description={description}>
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                setRecordingAction(action);
+              }}
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 transition-colors ${
+                recordingAction === action
+                  ? "bg-indigo-500/10 ring-2 ring-indigo-500"
+                  : "hover:bg-black/4 dark:hover:bg-white/5 ring-1 ring-transparent"
+              }`}
+            >
+              {recordingAction === action ? (
+                <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400">
+                  Appuyez sur une touche…
+                </span>
+              ) : (
+                <KeyChip>{actionShortcuts[action].toUpperCase()}</KeyChip>
               )}
             </button>
           </SettingRow>

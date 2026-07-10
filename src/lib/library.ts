@@ -192,6 +192,16 @@ export function episodeLabel(name: string): string | null {
   return null;
 }
 
+// Numéro d'épisode déduit du nom de fichier. Null si rien détecté.
+export function episodeOf(name: string): number | null {
+  const base = name.split("/").pop() ?? name;
+  const m =
+    base.match(/\bS\d{1,2}[ ._-]?E(\d{1,3})\b/i) ??
+    base.match(/\b(?:E|Ep|Episode)[ ._]?(\d{1,3})\b/i) ??
+    base.match(/[ ._]-[ ._](\d{1,3})(?=[ ._]|$)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
 // Numéro de saison déduit du nom de fichier (S01E02, Saison 1, Season 1...).
 // Retourne null si aucun marqueur de saison n'est trouvé.
 export function seasonOf(name: string): number | null {
@@ -293,10 +303,12 @@ export type DisplayItem =
   { type: "single"; entry: LibraryEntry } | { type: "group"; group: SeriesGroup };
 
 // Best-guess season number for an entry: the season that has the most files.
+// Falls back to the torrent title when no file name carries a season marker
+// (single-episode files like "Rick and Morty - E06.mkv").
 export function dominantSeason(entry: LibraryEntry): number | null {
   const groups = groupBySeason(videoFiles(entry));
   const withSeason = groups.filter((g) => g.season !== null);
-  if (withSeason.length === 0) return null;
+  if (withSeason.length === 0) return seasonOf(entry.title);
   return withSeason.reduce(
     (best, g) => (g.files.length >= best.files.length ? g : best),
     withSeason[0],
@@ -305,7 +317,8 @@ export function dominantSeason(entry: LibraryEntry): number | null {
 
 // Groups entries sharing the same TMDB TV series id. Preserves relative order
 // of first appearance; entries within each group are sorted by season.
-// Single-entry groups are collapsed back to singles.
+// A single-entry group stays a group: la structure série existe dès le premier
+// épisode ajouté, les saisons/épisodes suivants s'y rangent automatiquement.
 export function groupLibraryEntries(entries: LibraryEntry[]): DisplayItem[] {
   const seen = new Map<number, SeriesGroup>();
   const items: DisplayItem[] = [];
@@ -331,11 +344,56 @@ export function groupLibraryEntries(entries: LibraryEntry[]): DisplayItem[] {
     }
   }
 
-  return items.map((item) =>
-    item.type === "group" && item.group.entries.length === 1
-      ? { type: "single" as const, entry: item.group.entries[0] }
-      : item,
-  );
+  return items;
+}
+
+export interface SeasonItem {
+  entry: LibraryEntry;
+  file: DebridFile;
+}
+
+export interface GroupSeason {
+  season: number | null;
+  items: SeasonItem[];
+}
+
+// Ventile tous les fichiers vidéo du groupe par saison, toutes entrées
+// confondues : des épisodes téléchargés séparément rejoignent la même section
+// de saison. Saison du nom de fichier, sinon saison dominante de l'entrée,
+// sinon null (section "?"). Épisodes triés par numéro dans chaque saison.
+export function groupSeasons(group: SeriesGroup): GroupSeason[] {
+  const map = new Map<number | null, SeasonItem[]>();
+  for (const entry of group.entries) {
+    const fallback = dominantSeason(entry);
+    for (const file of videoFiles(entry)) {
+      const s = seasonOf(file.name) ?? fallback;
+      if (!map.has(s)) map.set(s, []);
+      map.get(s)!.push({ entry, file });
+    }
+  }
+  for (const items of map.values()) {
+    items.sort(
+      (a, b) => (episodeOf(a.file.name) ?? Infinity) - (episodeOf(b.file.name) ?? Infinity),
+    );
+  }
+  return [...map.entries()]
+    .sort((a, b) => (a[0] ?? Infinity) - (b[0] ?? Infinity))
+    .map(([season, items]) => ({ season, items }));
+}
+
+// Marque tous les fichiers d'une liste saison comme vus (ou non), entrée par
+// entrée puisque l'état de visionnage vit sur chaque LibraryEntry.
+export function setSeasonItemsWatched(
+  items: SeasonItem[],
+  value: boolean,
+  onChange: (entry: LibraryEntry) => void,
+): void {
+  const byEntry = new Map<LibraryEntry, string[]>();
+  for (const { entry, file } of items) {
+    if (!byEntry.has(entry)) byEntry.set(entry, []);
+    byEntry.get(entry)!.push(file.name);
+  }
+  for (const [entry, names] of byEntry) onChange(setFilesWatched(entry, names, value));
 }
 
 export interface LibraryCounts {
@@ -392,12 +450,10 @@ export function groupIsWholeWatched(group: SeriesGroup): boolean {
   return group.entries.every((e) => isWholeWatched(e));
 }
 
-export function groupNextUnwatched(
-  group: SeriesGroup,
-): { entry: LibraryEntry; file: DebridFile } | null {
-  for (const entry of group.entries) {
-    const f = nextUnwatched(entry);
-    if (f) return { entry, file: f };
+export function groupNextUnwatched(group: SeriesGroup): SeasonItem | null {
+  for (const season of groupSeasons(group)) {
+    const item = season.items.find((it) => !it.entry.watched[it.file.name]);
+    if (item) return item;
   }
   return null;
 }

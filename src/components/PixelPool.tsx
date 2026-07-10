@@ -23,6 +23,7 @@ import {
   updateBalls,
   updateCannon,
 } from "./cannon";
+import { APP_LAUNCH_TS } from "@/lib/launchTime";
 import { getRarity, randomVariant } from "./duckRandom";
 import { makeDuckSprite, SH, SW, type Effect } from "./duckSprite";
 import type { Variant } from "./duckTypes";
@@ -63,11 +64,13 @@ import {
   emitDuckDrop,
   emitDucksReserved,
   emitShopOpen,
+  registerCapturer,
   registerCounter,
   registerInjector,
   registerReleaser,
   registerRemover,
   registerShopHitTest,
+  registerVacuumToggle,
   registerVariantSpawner,
 } from "./duckShopBridge";
 
@@ -148,6 +151,10 @@ const vacuum: VacuumState = makeVacuum();
 const boat: BoatState = makeBoat();
 // boat caught by the drain whirlpool: spirals in, then warps to the minigame
 let boatWarp: { start: number; x: number; y: number } | null = null;
+// last time the user steered the boat: the whirlpool only grabs a boat that
+// was piloted recently, never one idly drifting on its own
+let boatPilotedAt = -Infinity;
+const PILOT_GRACE_MS = 2000;
 const suckPulses: SuckPulse[] = [];
 // ducks currently travelling the hose (FIFO, mirrors vacuum.bulges); spat into
 // the drain when their bulge reaches the dock
@@ -317,10 +324,13 @@ function enforceLimit() {
 }
 
 // Started once; keeps spawning (up to MAX_DUCKS) even while off the page.
-// The very first duck arrives after FIRST_SPAWN_MS, then one every SPAWN_MS.
+// The very first duck arrives FIRST_SPAWN_MS after app launch (not after this
+// call — mounting can be delayed by splash/network loading), then one every
+// SPAWN_MS.
 function ensureSpawning() {
   if (spawnTimer !== null) return;
-  const firstDelay = pool.length === 0 ? FIRST_SPAWN_MS : SPAWN_MS;
+  const firstDelay =
+    pool.length === 0 ? Math.max(0, FIRST_SPAWN_MS - (Date.now() - APP_LAUNCH_TS)) : SPAWN_MS;
   spawnTimer = window.setTimeout(() => {
     spawnDuck();
     spawnTimer = window.setInterval(spawnDuck, SPAWN_MS);
@@ -611,6 +621,32 @@ export function PixelPool({
       dragging.y = e.clientY + dragDY;
     }
 
+    // Freeze + hide a duck and open the shop panel with it (capture). Shared by
+    // the drag-into-shop drop and the "Capturer un canard" keyboard shortcut.
+    function sendToShop(d: Duck) {
+      d.inShop = true;
+      d.vx = 0;
+      d.vy = 0;
+      emitDuckDrop({
+        id: d.id,
+        variant: d.variant,
+        scale: d.scale,
+        saved: d.saved ?? false,
+        name: d.name ?? "",
+        release: () => {
+          d.inShop = false;
+          const a = Math.random() * Math.PI * 2;
+          d.vx = Math.cos(a) * 14;
+          d.vy = Math.sin(a) * 14;
+          d.entering = false;
+        },
+        markSaved: (name: string) => {
+          d.name = name;
+          d.saved = true;
+        },
+      });
+    }
+
     function onPointerUp(e: PointerEvent) {
       sucking = false;
       if (!dragging) return;
@@ -639,29 +675,8 @@ export function PixelPool({
       // dropped into the shop: freeze + hide the duck and open the panel. It
       // stays in the pool so it can swim again when the panel closes.
       if (overShop(dragging.x, dragging.y)) {
-        const d = dragging;
-        d.inShop = true;
-        d.vx = 0;
-        d.vy = 0;
+        sendToShop(dragging);
         dragging = null;
-        emitDuckDrop({
-          id: d.id,
-          variant: d.variant,
-          scale: d.scale,
-          saved: d.saved ?? false,
-          name: d.name ?? "",
-          release: () => {
-            d.inShop = false;
-            const a = Math.random() * Math.PI * 2;
-            d.vx = Math.cos(a) * 14;
-            d.vy = Math.sin(a) * 14;
-            d.entering = false;
-          },
-          markSaved: (name: string) => {
-            d.name = name;
-            d.saved = true;
-          },
-        });
         updateHoverCursor(e);
         return;
       }
@@ -701,6 +716,7 @@ export function PixelPool({
       const control = boatControlOf(e.code);
       if (control && activeRef.current && !typing(e)) {
         boat.keys.add(control);
+        boatPilotedAt = performance.now();
         e.preventDefault();
       }
       if (import.meta.env.DEV && e.shiftKey && e.code === "KeyS" && activeRef.current && !typing(e))
@@ -1994,7 +2010,11 @@ export function PixelPool({
       // XingXing's boat: steer it, then plough through ducks — they get shoved
       // aside like a duck-duck collision where the boat never yields (except to
       // the ranked ducks, who hold their ground against everything)
-      if (boatWarp === null && boatDrainDist < drainGeo.r * 0.9) {
+      if (
+        boatWarp === null &&
+        boatDrainDist < drainGeo.r * 0.9 &&
+        now - boatPilotedAt < PILOT_GRACE_MS
+      ) {
         // drove into the typhoon: the whirlpool takes over
         boatWarp = { start: now, x: boat.x, y: boat.y };
         boat.keys.clear();
@@ -2139,6 +2159,29 @@ export function PixelPool({
     registerCounter(() => pool.filter((d) => !leaving(d) && !d.inShop).length);
     registerShopHitTest((x, y) => overShop(x, y));
     registerVariantSpawner((v) => enterPool(v, scaleFor(v)));
+    registerCapturer(() => {
+      if (!activeRef.current) return false;
+      // capture the hovered duck, else the topmost duck currently swimming
+      let d = duckAt(pointerX, pointerY);
+      if (!d) {
+        for (let i = pool.length - 1; i >= 0; i--) {
+          const c = pool[i];
+          if (c.inShop || leaving(c) || c.draining) continue;
+          d = c;
+          break;
+        }
+      }
+      if (!d) return false;
+      sendToShop(d);
+      return true;
+    });
+    registerVacuumToggle(() => {
+      if (!activeRef.current) return false;
+      vacuum.loaded = !vacuum.loaded;
+      if (vacuum.loaded) cannon.loaded = false;
+      else sucking = false;
+      return true;
+    });
     window.addEventListener("resize", resize);
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("pointermove", onPointerMove);
@@ -2167,6 +2210,8 @@ export function PixelPool({
       registerCounter(null);
       registerShopHitTest(null);
       registerVariantSpawner(null);
+      registerCapturer(null);
+      registerVacuumToggle(null);
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);

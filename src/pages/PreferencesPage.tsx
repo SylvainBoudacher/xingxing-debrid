@@ -30,7 +30,7 @@ interface PreferencesPageProps {
   onSetSummerMaxDucks: (v: number) => void;
   idleAutoHide: boolean;
   onSetIdleAutoHide: (v: boolean) => void;
-  onKeysSaved: (keys: ApiKeys) => void;
+  onKeysSaved: (keys: Partial<ApiKeys>) => void;
 }
 
 export function PreferencesPage({
