@@ -403,7 +403,7 @@ function ModalSeasonSection({
   autoWatchOnPlay: boolean;
   selection?: EpisodeSelection;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const items = season.items;
   const seenCount = items.filter((it) => it.entry.watched[it.file.name]).length;
   const allSeen = seenCount === items.length;
