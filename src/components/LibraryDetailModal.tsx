@@ -30,6 +30,8 @@ import {
   type LibraryEntry,
 } from "@/lib/library";
 import { parseRelease } from "@/lib/parseRelease";
+import { MagnetProgress } from "@/components/MagnetProgress";
+import type { MagnetEntry } from "@/lib/services/allDebrid";
 import {
   Check,
   ChevronDown,
@@ -58,6 +60,10 @@ interface LibraryDetailModalProps {
   onEnrichTmdb?: () => void;
   // Vrai quand la recherche TMDB est ouverte par-dessus : neutralise Escape ici.
   enrichOpen?: boolean;
+  // Statut AllDebrid si le magnet est encore en cours de débridage.
+  magnet?: MagnetEntry;
+  onCancelDebrid?: (entry: LibraryEntry) => void;
+  cancellingDebrid?: boolean;
 }
 
 export function LibraryDetailModal({
@@ -70,6 +76,9 @@ export function LibraryDetailModal({
   autoWatchOnPlay,
   onEnrichTmdb,
   enrichOpen,
+  magnet,
+  onCancelDebrid,
+  cancellingDebrid,
 }: LibraryDetailModalProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
@@ -197,6 +206,14 @@ export function LibraryDetailModal({
                 <Clapperboard className="h-3.5 w-3.5" />
                 Compléter via TMDB
               </button>
+            )}
+            {magnet && (
+              <MagnetProgress
+                magnet={magnet}
+                className="mt-2.5"
+                onCancel={onCancelDebrid && (() => onCancelDebrid(entry))}
+                cancelling={cancellingDebrid}
+              />
             )}
             {series && (
               <div className="relative mt-2.5 h-3.5 w-full overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.08]">

@@ -10,6 +10,8 @@ import {
   totalCount,
   type LibraryEntry,
 } from "@/lib/library";
+import { MagnetProgress } from "@/components/MagnetProgress";
+import type { MagnetEntry } from "@/lib/services/allDebrid";
 
 interface LibraryPosterCardProps {
   entry: LibraryEntry;
@@ -23,6 +25,10 @@ interface LibraryPosterCardProps {
   // Mode sélection multiple : le clic coche la carte au lieu de l'ouvrir.
   selectMode?: boolean;
   selected?: boolean;
+  // Statut AllDebrid si le magnet est encore en cours de débridage.
+  magnet?: MagnetEntry;
+  onCancelDebrid?: (entry: LibraryEntry) => void;
+  cancellingDebrid?: boolean;
 }
 
 export const LibraryPosterCard = memo(function LibraryPosterCard({
@@ -34,6 +40,9 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
   onRemove,
   selectMode = false,
   selected = false,
+  magnet,
+  onCancelDebrid,
+  cancellingDebrid,
 }: LibraryPosterCardProps) {
   const tmdb = entry.tmdb;
   const series = isSeries(entry);
@@ -156,6 +165,15 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
               style={{ width: `${Math.round(ratio * 100)}%` }}
             />
           </div>
+        )}
+        {magnet && (
+          <MagnetProgress
+            magnet={magnet}
+            onPoster
+            className="relative mt-1"
+            onCancel={onCancelDebrid && (() => onCancelDebrid(entry))}
+            cancelling={cancellingDebrid}
+          />
         )}
       </div>
     </motion.button>

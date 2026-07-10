@@ -30,7 +30,16 @@ import {
   type DisplayItem,
   type LibraryEntry,
 } from "@/lib/library";
+import { toastNetworkError } from "@/lib/networkError";
+import { queryClient } from "@/lib/queryClient";
+import {
+  allDebridKeys,
+  deleteMagnet,
+  isMagnetReady,
+  type MagnetEntry,
+} from "@/lib/services/allDebrid";
 import { useDebridActions } from "@/lib/useDebridActions";
+import { useLibraryMagnetStatus } from "@/lib/useLibraryMagnetStatus";
 import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -46,7 +55,7 @@ import {
   Search,
 } from "lucide-react";
 import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 interface LibraryPageProps {
@@ -108,6 +117,16 @@ export function LibraryPage({
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
   const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
   const debrid = useDebridActions(() => initialAllDebridKey ?? "");
+
+  // Statut AllDebrid des magnets encore en cours de débridage (poll tant
+  // qu'un magnet suivi est actif).
+  const magnetStatuses = useLibraryMagnetStatus(entries, initialAllDebridKey);
+  const magnetFor = (e: LibraryEntry): MagnetEntry | undefined =>
+    !e.enriched && e.magnetId != null ? magnetStatuses.get(e.magnetId) : undefined;
+
+  // Annulation d'un débridage : supprime le magnet côté AllDebrid puis retire
+  // l'entrée de la bibliothèque (sans fichiers, elle n'a plus de raison d'être).
+  const [cancellingHash, setCancellingHash] = useState<string | null>(null);
 
   // Récupère la liste des fichiers depuis AllDebrid pour les entrées non encore
   // enrichies (torrent envoyé pendant le débridage). Best-effort, échec silencieux.
@@ -185,6 +204,21 @@ export function LibraryPage({
   // Flushe l'écriture en attente quand on quitte la page.
   useEffect(() => flushLibrary, []);
 
+  // Dès qu'un magnet suivi passe à « Prêt », récupère ses fichiers pour
+  // enrichir l'entrée sans attendre la prochaine ouverture de la page.
+  const enrichTried = useRef(new Set<number>());
+  useEffect(() => {
+    const ready = entries.filter((e) => {
+      const m = magnetFor(e);
+      return m && isMagnetReady(m) && !enrichTried.current.has(m.id);
+    });
+    if (ready.length === 0) return;
+    for (const e of ready) enrichTried.current.add(e.magnetId!);
+    void enrichMissing(ready);
+    // magnetFor / enrichMissing sont recréés à chaque rendu : deps sur les données.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entries, magnetStatuses]);
+
   // Escape : retour à l'accueil, sauf si une modale est ouverte (elle gère
   // elle-même sa fermeture sur Escape).
   useEffect(() => {
@@ -219,6 +253,24 @@ export function LibraryPage({
       return next;
     });
   }, []);
+
+  const cancelDebrid = useCallback(
+    async function cancelDebrid(entry: LibraryEntry) {
+      if (!initialAllDebridKey || entry.magnetId == null) return;
+      setCancellingHash(entry.infoHash);
+      try {
+        await deleteMagnet(initialAllDebridKey, entry.magnetId);
+        handleRemove(entry.infoHash);
+        queryClient.invalidateQueries({ queryKey: allDebridKeys.magnets() });
+        toast.success("Débridage annulé");
+      } catch (err) {
+        toastNetworkError(err, () => cancelDebrid(entry));
+      } finally {
+        setCancellingHash(null);
+      }
+    },
+    [initialAllDebridKey, handleRemove],
+  );
 
   const removeHashes = useCallback((hashes: string[]) => {
     const set = new Set(hashes);
@@ -379,6 +431,9 @@ export function LibraryPage({
         }
         onEnrichTmdb={enrichHandler(item.entry)}
         onRemove={() => handleRemove(item.entry.infoHash)}
+        magnet={magnetFor(item.entry)}
+        onCancelDebrid={cancelDebrid}
+        cancellingDebrid={cancellingHash === item.entry.infoHash}
       />
     ) : (
       <SeriesGroupPosterCard
@@ -587,6 +642,9 @@ export function LibraryPage({
                 debrid={debrid}
                 simple={viewMode === "simple"}
                 autoWatchOnPlay={autoWatchOnPlay}
+                magnet={magnetFor(e)}
+                onCancelDebrid={cancelDebrid}
+                cancellingDebrid={cancellingHash === e.infoHash}
               />
             ))}
           </Reorder.Group>
@@ -606,6 +664,9 @@ export function LibraryPage({
                         debrid={debrid}
                         simple={viewMode === "simple"}
                         autoWatchOnPlay={autoWatchOnPlay}
+                        magnet={magnetFor(item.entry)}
+                        onCancelDebrid={cancelDebrid}
+                        cancellingDebrid={cancellingHash === item.entry.infoHash}
                       />
                     ) : (
                       <SeriesGroupCard
@@ -635,6 +696,9 @@ export function LibraryPage({
                   debrid={debrid}
                   simple={viewMode === "simple"}
                   autoWatchOnPlay={autoWatchOnPlay}
+                  magnet={magnetFor(item.entry)}
+                  onCancelDebrid={cancelDebrid}
+                  cancellingDebrid={cancellingHash === item.entry.infoHash}
                 />
               ) : (
                 <SeriesGroupCard
@@ -666,6 +730,9 @@ export function LibraryPage({
               initialTmdbKey ? () => setMatchingHash(expandedEntry.infoHash) : undefined
             }
             enrichOpen={matchingHash !== null}
+            magnet={magnetFor(expandedEntry)}
+            onCancelDebrid={cancelDebrid}
+            cancellingDebrid={cancellingHash === expandedEntry.infoHash}
           />
         )}
       </AnimatePresence>
@@ -720,6 +787,9 @@ interface ReorderableCardProps {
   debrid: DebridControls;
   simple: boolean;
   autoWatchOnPlay?: boolean;
+  magnet?: MagnetEntry;
+  onCancelDebrid?: (entry: LibraryEntry) => void;
+  cancellingDebrid?: boolean;
 }
 
 function SectionHeader({ label, count }: { label: string; count: number }) {

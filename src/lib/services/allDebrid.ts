@@ -15,9 +15,31 @@ export interface MagnetEntry {
   completionDate: number;
 }
 
+// Codes AllDebrid : 0-3 = en cours (queue/download/compress/upload),
+// 4 = prêt, >= 5 = erreur.
+export function isMagnetActive(m: MagnetEntry): boolean {
+  return m.statusCode >= 0 && m.statusCode <= 3;
+}
+
+export function isMagnetReady(m: MagnetEntry): boolean {
+  return m.statusCode === 4;
+}
+
+export function isMagnetError(m: MagnetEntry): boolean {
+  return m.statusCode >= 5;
+}
+
 export const allDebridKeys = {
   magnets: () => ["alldebrid", "magnets"] as const,
 };
+
+export async function deleteMagnet(apiKey: string, id: number): Promise<void> {
+  const res = await fetchWithTimeout("AllDebrid", `${AD_BASE}/magnet/delete?agent=c411&id=${id}`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+  });
+  const json = (await res.json()) as { status: string };
+  if (json.status !== "success") throw new NetworkError("AllDebrid", "http");
+}
 
 export async function fetchMagnets(apiKey: string): Promise<MagnetEntry[]> {
   const res = await fetchWithTimeout("AllDebrid", `${AD_BASE}.1/magnet/status?agent=c411`, {

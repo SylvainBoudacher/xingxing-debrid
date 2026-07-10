@@ -52,3 +52,9 @@ export function formatSize(bytes: number): string {
   if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} Go`;
   return `${(bytes / 1_048_576).toFixed(0)} Mo`;
 }
+
+export function formatSpeed(bps: number): string {
+  if (!bps) return "";
+  if (bps >= 1_048_576) return `${(bps / 1_048_576).toFixed(1)} Mo/s`;
+  return `${(bps / 1024).toFixed(0)} Ko/s`;
+}

@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey } from "@/lib/apiKeys";
-import { flattenFiles, formatSize, isVideoFile } from "@/lib/debrid";
+import { flattenFiles, formatSize, formatSpeed, isVideoFile } from "@/lib/debrid";
 import { type ViewMode, resolvePageViewMode } from "@/lib/viewMode";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
@@ -45,7 +45,12 @@ import {
   isBulkCancelled,
 } from "@/lib/downloads";
 import { queryClient } from "@/lib/queryClient";
-import { allDebridKeys, fetchMagnets, type MagnetEntry } from "@/lib/services/allDebrid";
+import {
+  allDebridKeys,
+  deleteMagnet,
+  fetchMagnets,
+  type MagnetEntry,
+} from "@/lib/services/allDebrid";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 const AD_BASE = "https://api.alldebrid.com/v4";
@@ -80,12 +85,6 @@ async function forEachLimit<T>(
 
 function isNfoFile(name: string): boolean {
   return name.toLowerCase().endsWith(".nfo");
-}
-
-function formatSpeed(bps: number): string {
-  if (!bps) return "";
-  if (bps >= 1_048_576) return `${(bps / 1_048_576).toFixed(1)} Mo/s`;
-  return `${(bps / 1024).toFixed(0)} Ko/s`;
 }
 
 function formatDate(ts: number): string {
@@ -772,13 +771,7 @@ export function MagnetsPage({
     const deleted: number[] = [];
     try {
       await forEachLimit(ids, CONCURRENCY, async (id) => {
-        const res = await fetchWithTimeout(
-          "AllDebrid",
-          `${AD_BASE}/magnet/delete?agent=c411&id=${id}`,
-          { headers: { Authorization: `Bearer ${apiKeyRef.current}` } },
-        );
-        const json = (await res.json()) as { status: string };
-        if (json.status !== "success") throw new Error("Suppression echouee");
+        await deleteMagnet(apiKeyRef.current, id);
         deleted.push(id);
       });
       toast.success(ids.length > 1 ? `${ids.length} magnets supprimes` : "Magnet supprime");

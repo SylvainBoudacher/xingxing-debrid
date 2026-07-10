@@ -1,277 +1,28 @@
-import vlcLogo from "@/assets/vlc.png";
-import c411Logo from "@/assets/sources/C411.webp";
-import nyaaLogo from "@/assets/sources/nyaa.webp";
 import { AppMenu, type Page } from "@/components/AppMenu";
+import { DebridFilesModal } from "@/components/DebridFilesModal";
 import { DiscoverPosterCard } from "@/components/DiscoverPosterCard";
-import { mapTmdb, type MediaType, type TmdbItem } from "@/lib/tmdbItem";
-import { NetworkErrorState } from "@/components/NetworkErrorState";
-import { NetworkError, networkErrorMessage, toastNetworkError } from "@/lib/networkError";
+import { DiscoverReleasesModal } from "@/components/DiscoverReleasesModal";
+import { DiscoverSearchBar } from "@/components/DiscoverSearchBar";
+import { DiscoverSearchFilters } from "@/components/DiscoverSearchFilters";
+import { DiscoverTabs } from "@/components/DiscoverTabs";
 import { getApiKey } from "@/lib/apiKeys";
+import {
+  filterTvReleases,
+  releasesQueryKey,
+  searchC411,
+  sortOccupants,
+} from "@/lib/discoverReleases";
+import { getCachedLibrary, loadLibrary } from "@/lib/library";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
-import { parseRelease, parseReleaseScope, type ReleaseScope } from "@/lib/parseRelease";
-import { flattenFiles, formatSize, isVideoFile, type DebridModal } from "@/lib/debrid";
-import { recordDownload, getCachedLibrary, loadLibrary } from "@/lib/library";
-import {
-  pickSeeds,
-  scoreRecommendations,
-  ownedTmdbKeys,
-  type SeedList,
-} from "@/lib/recommendations";
-import type { C411Torrent } from "@/lib/c411";
-import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
-import { c411Keys, searchTorrents } from "@/lib/services/c411";
-import { useDebridActions } from "@/lib/useDebridActions";
-import { useDragScroll } from "@/lib/useDragScroll";
-import {
-  ANIMATION_GENRE_ID,
-  tmdbKeys,
-  type TmdbRawResult,
-  type TmdbListResponse,
-  type TmdbFeed,
-  feed as tmdbFeed,
-  search as tmdbSearch,
-  discoverAnimation as tmdbDiscoverAnimation,
-  searchMulti as tmdbSearchMulti,
-  findByImdb as tmdbFindByImdb,
-  tvDetail as tmdbTvDetail,
-  recommendations as tmdbRecommendations,
-} from "@/lib/services/tmdb";
-import { invoke } from "@tauri-apps/api/core";
-import {
-  ArrowDown,
-  ArrowLeft,
-  ArrowUp,
-  BookmarkPlus,
-  Check,
-  Clapperboard,
-  Copy,
-  Download,
-  Heart,
-  KeyRound,
-  Loader2,
-  Search,
-  SlidersHorizontal,
-  Sparkles,
-  Star,
-  Tv,
-  Wand2,
-  X,
-} from "lucide-react";
+import { ownedTmdbKeys } from "@/lib/recommendations";
+import type { TmdbItem } from "@/lib/tmdbItem";
+import { FEED_LABELS, useDiscoverFeed, type DiscoverTab } from "@/lib/useDiscoverFeed";
+import { useRecommendations } from "@/lib/useRecommendations";
+import { useSendToDebrid } from "@/lib/useSendToDebrid";
+import { ArrowLeft, KeyRound, Loader2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
-
-// "all" = état de recherche générale (multi films + séries). Ce n'est pas un
-// onglet cliquable : les onglets restent dédiés à la navigation de découverte.
-type BrowseType = MediaType | "animation" | "all";
-type DiscoverTab = BrowseType | "likes" | "recos";
-
-// Sources proposées sous les onglets Films / Séries, dans l'ordre d'affichage.
-const FEED_LABELS: Record<TmdbFeed, string> = {
-  top_rated: "Mieux notés",
-  trending: "Tendances",
-  popular: "Populaires",
-  now_playing: "Sorties récentes",
-};
-const FEEDS = Object.keys(FEED_LABELS) as TmdbFeed[];
-
-// Filtres d'affinage de la recherche générale : "all" garde le multi
-// films + séries, movie/tv relancent la recherche sur l'endpoint dédié.
-type SearchFilter = MediaType | "all";
-const SEARCH_FILTER_LABELS: Record<SearchFilter, string> = {
-  all: "Tout",
-  movie: "Films",
-  tv: "Séries",
-};
-const SEARCH_FILTERS = Object.keys(SEARCH_FILTER_LABELS) as SearchFilter[];
-
-// Les listes TMDB bougent peu : cache 10 min pour couper les refetch au
-// changement d'onglet / retour sur une recherche deja vue.
-const TMDB_STALE_MS = 10 * 60_000;
-
-// Live-search de la grille : la recherche se lance pendant la frappe (debounce),
-// les resultats remplissent le quadrillage des jaquettes. Passer sous le seuil
-// restaure le feed de navigation en cours.
-const LIVE_SEARCH_MIN = 3;
-const LIVE_SEARCH_DEBOUNCE_MS = 300;
-
-function cachedTmdb<T>(queryKey: readonly unknown[], queryFn: () => Promise<T>): Promise<T> {
-  return queryClient.fetchQuery({ queryKey, queryFn, staleTime: TMDB_STALE_MS });
-}
-
-// Lecture synchrone du cache TanStack pour une source "top" (préchauffée au
-// démarrage par useAppInit). Renvoie null si froid → l'appelant retombe sur un
-// fetch réseau. Évite le flash de spinner et le re-render asynchrone au switch.
-function readTopFromCache(
-  type: MediaType | "animation",
-  f: TmdbFeed,
-): { items: TmdbItem[]; totalPages: number } | null {
-  if (type === "animation") {
-    const movies = queryClient.getQueryData<TmdbListResponse>(
-      tmdbKeys.discoverAnimation("movie", 1),
-    );
-    const tvs = queryClient.getQueryData<TmdbListResponse>(tmdbKeys.discoverAnimation("tv", 1));
-    if (!movies || !tvs) return null;
-    return {
-      items: [
-        ...movies.results.map((r) => mapTmdb(r, "movie")),
-        ...tvs.results.map((r) => mapTmdb(r, "tv")),
-      ].sort((a, b) => b.voteAverage - a.voteAverage),
-      totalPages: Math.max(movies.total_pages, tvs.total_pages),
-    };
-  }
-  const cached = queryClient.getQueryData<TmdbListResponse>(tmdbKeys.feed(f, type, 1));
-  if (!cached) return null;
-  return {
-    items: cached.results.map((r) => mapTmdb(r, type)),
-    totalPages: cached.total_pages,
-  };
-}
-
-interface TmdbSeason {
-  number: number;
-  episodeCount: number;
-}
-
-interface Occupant {
-  infoHash: string;
-  languages: string[];
-  fileSize: number;
-  seeders: number;
-  source: string | null;
-  videoCodec: string | null;
-  audioCodec: string | null;
-  audioChannels: string | null;
-  resolution: string | null;
-  torrentName: string;
-  specialVersion: string | null;
-  scope: ReleaseScope | null;
-}
-
-function scopeLabel(scope: ReleaseScope): string {
-  if (scope.kind === "episode")
-    return `S${scope.season} E${String(scope.episode).padStart(2, "0")}`;
-  if (scope.kind === "season") return `Saison ${scope.season}`;
-  return "Intégrale";
-}
-
-const SERIES_SLUGS = new Set(["serie-tv", "serie-documentaire", "emission-tv", "animation-serie"]);
-
-function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-const LANG_TOKENS = ["MULTI", "VFF", "VFQ", "VF2", "VOSTFR", "TRUEFRENCH", "FRENCH", "VF", "VO"];
-
-function parseLanguages(name: string): string[] {
-  const up = ` ${name.toUpperCase().replace(/[._-]/g, " ")} `;
-  return LANG_TOKENS.filter((t) => up.includes(` ${t} `));
-}
-
-const SOURCE_RE = /\b(remux|blu-?ray|bdrip|brrip|web-?dl|webrip|web|hdtv|dvdrip|hdlight)\b/i;
-const SOURCE_LABELS: Record<string, string> = {
-  remux: "REMUX",
-  bluray: "BluRay",
-  bdrip: "BDRip",
-  brrip: "BRRip",
-  webdl: "WEB-DL",
-  webrip: "WEBRip",
-  web: "WEB",
-  hdtv: "HDTV",
-  dvdrip: "DVDRip",
-  hdlight: "HDLight",
-};
-const SPECIAL_RE = /\b(extended|remastered|unrated|imax|uncut|director'?s[ ._-]?cut)\b/i;
-const AUDIO_RE = /\b(dts[ ._-]?hd[ ._-]?ma|dts|truehd|atmos|eac3|ddp|ac3|aac|flac|opus)\b/i;
-const CHANNELS_RE = /\b(7\.1|5\.1|2\.0)\b/;
-
-function toOccupant(t: C411Torrent): Occupant {
-  const flat = t.name.replace(/[._]/g, " ");
-  const parsed = parseRelease(t.name);
-  const sourceMatch = flat.match(SOURCE_RE)?.[1];
-  return {
-    infoHash: t.infoHash,
-    torrentName: t.name,
-    fileSize: t.size,
-    seeders: t.seeders,
-    resolution: parsed.quality,
-    videoCodec: parsed.codec,
-    languages: parseLanguages(t.name),
-    source: sourceMatch ? SOURCE_LABELS[sourceMatch.toLowerCase().replace(/[^a-z]/g, "")] : null,
-    audioCodec: flat.match(AUDIO_RE)?.[1].toUpperCase().replace(/[._-]/g, " ") ?? null,
-    audioChannels: flat.match(CHANNELS_RE)?.[1] ?? null,
-    specialVersion: flat.match(SPECIAL_RE)?.[1].toUpperCase() ?? null,
-    scope: parseReleaseScope(t.name),
-  };
-}
-
-const RESOLUTION_RANK: Record<string, number> = {
-  "4320p": 5,
-  "4K": 4,
-  "2160p": 4,
-  "1080p": 3,
-  "720p": 2,
-  "480p": 1,
-};
-
-const IMDB_ID_RE = /^tt\d{5,10}$/i;
-
-function sortOccupants(occupants: Occupant[]): Occupant[] {
-  return [...occupants].sort(
-    (a, b) =>
-      (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) - (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) ||
-      b.fileSize - a.fileSize,
-  );
-}
-
-function filterMovieReleases(
-  torrents: C411Torrent[],
-  nTitles: string[],
-  item: TmdbItem,
-): Occupant[] {
-  const nextYear = item.year ? String(Number(item.year) + 1) : "";
-  const occupants: Occupant[] = [];
-  for (const t of torrents) {
-    if (t.category?.id !== 1) continue;
-    if (SERIES_SLUGS.has(t.subcategory?.slug ?? "")) continue;
-    const nName = normalize(t.name);
-    if (!nTitles.some((nt) => nName.includes(nt))) continue;
-    if (item.year && !nName.includes(item.year) && !nName.includes(nextYear)) continue;
-    occupants.push(toOccupant(t));
-  }
-  return occupants;
-}
-
-function filterTvReleases(
-  torrents: C411Torrent[],
-  nTitles: string[],
-  season: number | null,
-): Occupant[] {
-  // Matche "S01", "S01E05", "Saison 1", ou une integrale sans numero de saison
-  const seasonRe =
-    season !== null
-      ? new RegExp(`\\bs0*${season}(?:e\\d+)?\\b|\\bsaison 0*${season}\\b|\\bseason 0*${season}\\b`)
-      : null;
-  const anySeasonRe = /\bs\d{1,2}(?:e\d+)?\b|\bsaison \d+\b|\bseason \d+\b/;
-  const completeRe = /\bintegrale\b|\bcomplete\b|\bcomplet\b/;
-  const occupants: Occupant[] = [];
-  for (const t of torrents) {
-    if (t.category?.id !== 1) continue;
-    if (!SERIES_SLUGS.has(t.subcategory?.slug ?? "")) continue;
-    const nName = normalize(t.name);
-    if (!nTitles.some((nt) => nName.includes(nt))) continue;
-    if (seasonRe && !seasonRe.test(nName) && !(completeRe.test(nName) && !anySeasonRe.test(nName)))
-      continue;
-    occupants.push(toOccupant(t));
-  }
-  return occupants;
-}
 
 interface DiscoverPageProps {
   onBack: () => void;
@@ -311,154 +62,57 @@ export function DiscoverPage({
   const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(
     initialTmdbKey !== undefined ? initialTmdbKey : undefined,
   );
-  const [query, setQuery] = useState(initialQuery ?? "");
-  const [mediaType, setMediaType] = useState<DiscoverTab>("movie");
-  const [feed, setFeed] = useState<TmdbFeed>("top_rated");
   const [likes, setLikes] = useState<LikedItem[]>(initialLikes ?? []);
-  const [recos, setRecos] = useState<TmdbItem[]>([]);
-  const [recosBecause, setRecosBecause] = useState<Map<string, string>>(new Map());
-  const [recosLoading, setRecosLoading] = useState(false);
-  const [recosError, setRecosError] = useState<string | null>(null);
-  const [items, setItems] = useState<TmdbItem[]>([]);
-  const [mode, setMode] = useState<"top" | "search">("top");
-  const [searchedQuery, setSearchedQuery] = useState("");
-  const [searchFilter, setSearchFilter] = useState<SearchFilter>("all");
-  // Filtre des résultats actuellement affichés : mis à jour quand la réponse
-  // arrive (comme searchedQuery), pour que la grille n'anime qu'une fois.
-  const [searchedFilter, setSearchedFilter] = useState<SearchFilter>("all");
-  const [tmdbPage, setTmdbPage] = useState(1);
-  const [tmdbTotalPages, setTmdbTotalPages] = useState(1);
-  const [loadingMovies, setLoadingMovies] = useState(false);
-  const [moviesError, setMoviesError] = useState<string | null>(null);
-  // Clé présente mais refusée par TMDB (401) : même écran que la clé
-  // manquante, avec un message adapté, au lieu d'une erreur brute dans la grille.
-  const [tmdbKeyInvalid, setTmdbKeyInvalid] = useState(false);
-
-  const seasonScroll = useDragScroll<HTMLDivElement>();
-
   const [selected, setSelected] = useState<TmdbItem | null>(null);
-  const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
-  const [releaseSort, setReleaseSort] = useState<"seeders" | "size" | "resolution">("seeders");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
-  const [resFilter, setResFilter] = useState<string | null>(null);
-  const [langFilter, setLangFilter] = useState<string | null>(null);
-
-  const [sendingHash, setSendingHash] = useState<string | null>(null);
-  const [libraryHash, setLibraryHash] = useState<string | null>(null);
-  const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
 
   const c411KeyRef = useRef<string>(initialC411Key ?? "");
   const allDebridKeyRef = useRef<string>(initialAllDebridKey ?? "");
-  const loadMoreRef = useRef<HTMLDivElement>(null);
-  // Numéro de la dernière requête de grille : les réponses d'une requête
-  // dépassée (frappe rapide, réseau lent) sont ignorées au lieu d'écraser
-  // les résultats plus récents.
-  const fetchSeqRef = useRef(0);
-  // Dernier onglet de navigation choisi : sert à revenir au bon feed quand on
-  // efface une recherche générale (qui, elle, n'est rattachée à aucun onglet).
-  const lastBrowseTypeRef = useRef<MediaType | "animation">("movie");
-
-  const {
-    downloadingLink,
-    copiedLink,
-    vlcLink,
-    copyLink: handleCopyLink,
-    openVlc: handleOpenVlc,
-    downloadFile: handleDownloadFile,
-  } = useDebridActions(() => allDebridKeyRef.current);
   const prefersReducedMotion = useReducedMotion();
 
-  // Detail TV (saisons) : sert a peupler le selecteur de saison et a defaut
-  // d'une saison choisie, la premiere.
-  const tvDetailQuery = useQuery({
-    queryKey: tmdbKeys.tvDetail(selected?.id ?? 0),
-    enabled: !!selected && selected.mediaType === "tv",
-    staleTime: TMDB_STALE_MS,
-    queryFn: () => tmdbTvDetail(selected!.id, tmdbKey!),
+  const {
+    query,
+    setQuery,
+    mediaType,
+    feed,
+    items,
+    mode,
+    searchedQuery,
+    searchFilter,
+    tmdbPage,
+    tmdbTotalPages,
+    loadingMovies,
+    moviesError,
+    tmdbKeyInvalid,
+    loadMoreRef,
+    feedMode,
+    searchUiActive,
+    gridKey,
+    showTop,
+    startGeneralSearch,
+    changeSearchFilter,
+    handleSubmit,
+    clearSearch,
+    switchType,
+    switchFeed,
+  } = useDiscoverFeed(tmdbKey, initialQuery);
+
+  const recosApi = useRecommendations(tmdbKey, likes);
+
+  // Ids TMDB deja presents dans la bibliotheque : badge "Dans la bibliotheque"
+  // sur les affiches. Rafraichi apres chaque ajout depuis cette page.
+  const [ownedKeys, setOwnedKeys] = useState<Set<string>>(() =>
+    ownedTmdbKeys(getCachedLibrary() ?? []),
+  );
+  useEffect(() => {
+    void loadLibrary().then((lib) => setOwnedKeys(ownedTmdbKeys(lib)));
+  }, []);
+
+  const { sendingHash, libraryHash, debridModal, setDebridModal, sendToDebrid } = useSendToDebrid({
+    getC411Key: () => c411KeyRef.current,
+    getAllDebridKey: () => allDebridKeyRef.current,
+    onOpenLibrary: () => onNavigate("library"),
+    onLibraryChange: () => setOwnedKeys(ownedTmdbKeys(getCachedLibrary() ?? [])),
   });
-
-  const seasons = useMemo<TmdbSeason[] | null>(() => {
-    if (selected?.mediaType !== "tv" || !tvDetailQuery.data) return null;
-    return (tvDetailQuery.data.seasons ?? [])
-      .filter((s) => s.season_number > 0)
-      .map((s) => ({ number: s.season_number, episodeCount: s.episode_count }));
-  }, [selected, tvDetailQuery.data]);
-
-  const activeSeason = selectedSeason ?? seasons?.[0]?.number ?? null;
-
-  // Releases C411 du film / de la saison selectionnee. TanStack gere la course
-  // (les resultats perimes sont ignores) et le cache (re-ouverture, switch saison).
-  //
-  // Pour les series TV, le prefetch C411 est lance dans openItem() en parallele
-  // du tvDetailQuery, donc les torrents sont souvent deja en cache quand
-  // tvDetailQuery.isSuccess devient true — le waterfall est elimine.
-  const releasesQuery = useQuery({
-    queryKey: [
-      "c411-releases",
-      selected?.mediaType,
-      selected?.id,
-      selected?.mediaType === "tv" ? activeSeason : null,
-    ],
-    enabled: !!selected && (selected.mediaType === "movie" || tvDetailQuery.isSuccess),
-    staleTime: 60_000,
-    queryFn: async () => {
-      const item = selected!;
-      const { torrents, nTitles } = await searchC411(item);
-      return item.mediaType === "movie"
-        ? sortOccupants(filterMovieReleases(torrents, nTitles, item))
-        : sortOccupants(filterTvReleases(torrents, nTitles, activeSeason));
-    },
-  });
-
-  const releases = releasesQuery.data ?? null;
-  const releasesError = tvDetailQuery.isError
-    ? networkErrorMessage(tvDetailQuery.error)
-    : releasesQuery.isError
-      ? networkErrorMessage(releasesQuery.error)
-      : null;
-
-  function retryReleases() {
-    if (tvDetailQuery.isError) tvDetailQuery.refetch();
-    if (releasesQuery.isError) releasesQuery.refetch();
-  }
-
-  const resOptions = useMemo(
-    () =>
-      releases
-        ? [...new Set(releases.map((o) => o.resolution).filter((r): r is string => !!r))].sort(
-            (a, b) => (RESOLUTION_RANK[b] ?? 0) - (RESOLUTION_RANK[a] ?? 0),
-          )
-        : [],
-    [releases],
-  );
-
-  const langOptions = useMemo(
-    () => (releases ? [...new Set(releases.flatMap((o) => o.languages))] : []),
-    [releases],
-  );
-
-  const visibleReleases = useMemo(
-    () =>
-      releases
-        ? [...releases]
-            .filter(
-              (o) =>
-                (!resFilter || o.resolution === resFilter) &&
-                (!langFilter || o.languages.includes(langFilter)),
-            )
-            .sort((a, b) => {
-              const cmp =
-                releaseSort === "size"
-                  ? b.fileSize - a.fileSize
-                  : releaseSort === "resolution"
-                    ? (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) -
-                        (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) || b.seeders - a.seeders
-                    : b.seeders - a.seeders;
-              return sortDir === "asc" ? -cmp : cmp;
-            })
-        : null,
-    [releases, resFilter, langFilter, releaseSort, sortDir],
-  );
 
   useEffect(() => {
     // Ne re-fetch les clés que si elles n'ont pas été injectées par useAppInit.
@@ -482,13 +136,40 @@ export function DiscoverPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Selection d'un item : les saisons (TV) et les releases sont chargees par
+  // les queries reactives de DiscoverReleasesModal.
+  // Pour les series TV, on lance immediatement un prefetch C411 en fire-and-forget
+  // (le titre est connu des maintenant) en parallele du tvDetailQuery TMDB.
+  // Quand tvDetailQuery revient et active releasesQuery, les torrents sont
+  // souvent deja en cache → affichage quasi-instantane.
+  const openItem = useCallback((item: TmdbItem) => {
+    setSelected(item);
+
+    if (item.mediaType === "tv") {
+      // Prefetch C411 : saison null = tous les torrents bruts, la saison sera
+      // filtree plus tard par releasesQuery.queryFn quand activeSeason est connu.
+      // On utilise la meme queryKey que releasesQuery avec saison null pour que
+      // le cache soit reutilise directement (la saison par defaut est la 1 et
+      // filterTvReleases sera applique dans queryFn une seule fois).
+      queryClient.prefetchQuery({
+        queryKey: releasesQueryKey(item.mediaType, item.id, null),
+        queryFn: () =>
+          searchC411(item, c411KeyRef.current).then(({ torrents, nTitles }) =>
+            sortOccupants(filterTvReleases(torrents, nTitles, null)),
+          ),
+        staleTime: 60_000,
+      });
+    }
+    // searchC411 ne depend que de refs et d'aides module-level : stable.
+  }, []);
+
   useEffect(() => {
     if (!tmdbKey) return;
     // Arrivée depuis la barre de MainPage : on lance directement la recherche
     // TMDB sur l'onglet Films (le terme est conservé si on bascule vers Séries).
     const q = initialQuery?.trim();
     if (q) {
-      startGeneralSearch(q, tmdbKey);
+      startGeneralSearch(q);
       // Suggestion d'auto-complete : on ouvre la fiche du titre APRÈS la
       // transition d'entrée de la page, pour éviter que les deux animations se
       // superposent (ouverture "brutale"). La recherche générale reste en fond.
@@ -500,299 +181,23 @@ export function DiscoverPage({
       return;
     }
     // Données préchauffées au démarrage : lecture directe du cache, sans spinner.
-    showTopFromCacheOrFetch("movie", "top_rated");
+    showTop("movie", "top_rated");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tmdbKey]);
-
-  // Live-search : chaque frappe relance la recherche generale (debounce) et
-  // remplit la grille. Sous le seuil, on restaure le feed de navigation.
-  useEffect(() => {
-    if (!tmdbKey) return;
-    const q = query.trim();
-    if (q.length >= LIVE_SEARCH_MIN) {
-      // Deja affiche (recherche en cours ou terminee) : rien a relancer.
-      if (mode === "search" && q === searchedQuery) return;
-      const t = setTimeout(() => startGeneralSearch(q, tmdbKey), LIVE_SEARCH_DEBOUNCE_MS);
-      return () => clearTimeout(t);
-    }
-    if (mode === "search") {
-      const back = lastBrowseTypeRef.current;
-      setMediaType(back);
-      showTopFromCacheOrFetch(back, feed);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, tmdbKey, mode, searchedQuery, feed]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (debridModal) setDebridModal(null);
-      else if (selected) closeMovie();
+      else if (selected) setSelected(null);
       else onBack();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debridModal, selected, onBack]);
 
-  // Scroll infini : charge la page suivante quand la sentinelle entre dans le
-  // viewport. Le garde `loadingMovies` évite les déclenchements multiples (la
-  // requête en cours coupe l'observer, qui se reconnecte une fois finie).
-  useEffect(() => {
-    const el = loadMoreRef.current;
-    if (!el || !tmdbKey || mediaType === "likes" || mediaType === "recos") return;
-    if (loadingMovies || items.length === 0 || tmdbPage >= tmdbTotalPages) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          fetchItems(
-            mode,
-            searchedQuery,
-            tmdbPage + 1,
-            tmdbKey,
-            mode === "search" ? searchFilter : mediaType,
-            feed,
-          );
-        }
-      },
-      { rootMargin: "400px" },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [
-    tmdbKey,
-    mediaType,
-    feed,
-    mode,
-    searchedQuery,
-    searchFilter,
-    loadingMovies,
-    tmdbPage,
-    tmdbTotalPages,
-    items.length,
-  ]);
-
-  // Affiche une source "top" depuis le cache si elle est chaude (cas normal,
-  // préchauffé au démarrage) — sans spinner ni round-trip async. Sinon fetch.
-  function showTopFromCacheOrFetch(type: MediaType | "animation", f: TmdbFeed) {
-    setSearchFilter("all");
-    const cached = readTopFromCache(type, f);
-    if (!cached) {
-      fetchItems("top", "", 1, tmdbKey!, type, f);
-      return;
-    }
-    // Invalide les requêtes en vol : une recherche lente ne doit pas écraser
-    // le feed qu'on vient de restaurer.
-    fetchSeqRef.current++;
-    setLoadingMovies(false);
-    setItems(cached.items);
-    setMode("top");
-    setSearchedQuery("");
-    setTmdbPage(1);
-    setTmdbTotalPages(cached.totalPages);
-    setMoviesError(null);
-  }
-
-  async function fetchItems(
-    m: "top" | "search",
-    q: string,
-    page: number,
-    key: string,
-    type: BrowseType,
-    f: TmdbFeed,
-  ) {
-    const seq = ++fetchSeqRef.current;
-    setLoadingMovies(true);
-    setMoviesError(null);
-    try {
-      let mapped: TmdbItem[];
-      let totalPages: number;
-      if (m === "search" && IMDB_ID_RE.test(q)) {
-        const found = await cachedTmdb(tmdbKeys.find(q), () => tmdbFindByImdb(q, key));
-        mapped =
-          type === "tv"
-            ? found.tv_results.map((r) => mapTmdb(r, "tv"))
-            : type === "movie"
-              ? found.movie_results.map((r) => mapTmdb(r, "movie"))
-              : [
-                  ...found.movie_results.map((r) => mapTmdb(r, "movie")),
-                  ...found.tv_results.map((r) => mapTmdb(r, "tv")),
-                ];
-        totalPages = 1;
-      } else if (m === "search" && type === "all") {
-        // Recherche générale : films + séries mélangés en un appel, on écarte
-        // les résultats "person".
-        const list = await cachedTmdb(tmdbKeys.searchMulti(q, page), () =>
-          tmdbSearchMulti(q, page, key),
-        );
-        mapped = list.results
-          .filter((r) => r.media_type === "movie" || r.media_type === "tv")
-          .map((r) => mapTmdb(r, r.media_type as MediaType));
-        totalPages = list.total_pages;
-      } else if (type === "animation") {
-        const fetchFor = (mt: MediaType) =>
-          m === "search"
-            ? cachedTmdb(tmdbKeys.search(mt, q, page), () => tmdbSearch(mt, q, page, key))
-            : cachedTmdb(tmdbKeys.discoverAnimation(mt, page), () =>
-                tmdbDiscoverAnimation(mt, page, key),
-              );
-        const [movies, tvs] = await Promise.all([fetchFor("movie"), fetchFor("tv")]);
-        const animOnly = (rs: TmdbRawResult[]) =>
-          m === "search" ? rs.filter((r) => r.genre_ids?.includes(ANIMATION_GENRE_ID)) : rs;
-        mapped = [
-          ...animOnly(movies.results).map((r) => mapTmdb(r, "movie")),
-          ...animOnly(tvs.results).map((r) => mapTmdb(r, "tv")),
-        ].sort((a, b) => b.voteAverage - a.voteAverage);
-        totalPages = Math.max(movies.total_pages, tvs.total_pages);
-      } else {
-        // "all" et "animation" sont traités plus haut : ici type vaut movie|tv.
-        const mt = type as MediaType;
-        const list =
-          m === "search"
-            ? await cachedTmdb(tmdbKeys.search(mt, q, page), () => tmdbSearch(mt, q, page, key))
-            : await cachedTmdb(tmdbKeys.feed(f, mt, page), () => tmdbFeed(f, mt, page, key));
-        mapped = list.results.map((r) => mapTmdb(r, mt));
-        totalPages = list.total_pages;
-      }
-      if (seq !== fetchSeqRef.current) return;
-      setItems((prev) => (page === 1 ? mapped : [...prev, ...mapped]));
-      setMode(m);
-      setSearchedQuery(q);
-      if (m === "search") setSearchedFilter(type as SearchFilter);
-      setTmdbPage(page);
-      setTmdbTotalPages(totalPages);
-    } catch (err) {
-      if (seq !== fetchSeqRef.current) return;
-      if (err instanceof NetworkError && err.service === "TMDB" && err.status === 401) {
-        setTmdbKeyInvalid(true);
-      } else {
-        setMoviesError(String(err));
-      }
-    } finally {
-      if (seq === fetchSeqRef.current) setLoadingMovies(false);
-    }
-  }
-
-  // Recommandations "Pour vous" : graines = likes + bibliotheque, un appel
-  // /recommendations par graine (mis en cache TanStack), puis scoring croise.
-  async function loadRecommendations() {
-    if (!tmdbKey) return;
-    setRecosLoading(true);
-    setRecosError(null);
-    try {
-      const library = getCachedLibrary() ?? (await loadLibrary());
-      const seeds = pickSeeds(likes, library);
-      if (seeds.length === 0) {
-        setRecos([]);
-        setRecosBecause(new Map());
-        return;
-      }
-      const lists: SeedList[] = await Promise.all(
-        seeds.map(async (seed) => ({
-          seed,
-          results: (
-            await cachedTmdb(tmdbKeys.recommendations(seed.mediaType, seed.id), () =>
-              tmdbRecommendations(seed.mediaType, seed.id, tmdbKey),
-            )
-          ).results,
-        })),
-      );
-      const scored = scoreRecommendations(lists, ownedTmdbKeys(library));
-      setRecos(scored.map((s) => mapTmdb(s.result, s.mediaType)));
-      setRecosBecause(new Map(scored.map((s) => [`${s.mediaType}-${s.result.id}`, s.becauseOf])));
-    } catch (err) {
-      setRecosError(String(err));
-    } finally {
-      setRecosLoading(false);
-    }
-  }
-
-  // Recherche générale (films + séries mélangés), quel que soit l'onglet.
-  // Le filtre d'affinage en cours est conservé quand on continue de taper.
-  function startGeneralSearch(q: string, key: string) {
-    setMediaType("all");
-    fetchItems("search", q, 1, key, searchFilter, feed);
-  }
-
-  // Affine la recherche affichée : movie/tv relancent sur l'endpoint dédié,
-  // "all" revient au multi. Les résultats sont déjà en cache TanStack au retour.
-  function changeSearchFilter(f: SearchFilter) {
-    if (f === searchFilter || !tmdbKey || mode !== "search") return;
-    setSearchFilter(f);
-    fetchItems("search", searchedQuery, 1, tmdbKey, f, feed);
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!tmdbKey) return;
-    const q = query.trim();
-    if (!q) return;
-    startGeneralSearch(q, tmdbKey);
-  }
-
-  function switchType(type: Exclude<DiscoverTab, "all">) {
-    if (type === mediaType || !tmdbKey) return;
-    setMediaType(type);
-    if (type === "likes") return;
-    if (type === "recos") {
-      if (!recosLoading) loadRecommendations();
-      return;
-    }
-    // Onglet de navigation : on quitte toujours la recherche pour parcourir le
-    // feed de découverte de la catégorie (la recherche, elle, reste générale).
-    lastBrowseTypeRef.current = type;
-    setQuery("");
-    showTopFromCacheOrFetch(type, feed);
-  }
-
-  // Change la source (Tendances, Populaires…) — onglets Films / Séries uniquement.
-  function switchFeed(f: TmdbFeed) {
-    if (
-      f === feed ||
-      !tmdbKey ||
-      mediaType === "likes" ||
-      mediaType === "recos" ||
-      mediaType === "animation" ||
-      mediaType === "all"
-    )
-      return;
-    setFeed(f);
-    setQuery("");
-    showTopFromCacheOrFetch(mediaType, f);
-  }
-
   const likedKeys = useMemo(() => new Set(likes.map((l) => `${l.mediaType}-${l.id}`)), [likes]);
-
-  // Ids TMDB deja presents dans la bibliotheque : badge "Dans la bibliotheque"
-  // sur les affiches. Rafraichi apres chaque ajout depuis cette page.
-  const [ownedKeys, setOwnedKeys] = useState<Set<string>>(() =>
-    ownedTmdbKeys(getCachedLibrary() ?? []),
-  );
-  useEffect(() => {
-    void loadLibrary().then((lib) => setOwnedKeys(ownedTmdbKeys(lib)));
-  }, []);
-
-  // Onglets "feed" (recherche + scroll infini + sources) vs onglets curatifs
-  // (Ma liste, Pour vous) qui affichent une liste deja constituee.
-  const feedMode =
-    mediaType === "movie" || mediaType === "tv" || mediaType === "animation" || mediaType === "all";
-
-  // Dès la première frappe, la navigation (onglets + sources) se replie sous la
-  // barre ; les filtres d'affinage la remplacent une fois les résultats affichés.
-  const searchUiActive = query.trim().length > 0 || mode === "search";
-  const displayItems = mediaType === "likes" ? likes : mediaType === "recos" ? recos : items;
-
-  // Signature de la vue courante : le fond de grille se croise en fondu quand on
-  // passe du feed aux resultats ou qu'on change de filtre d'affinage. Affiner la
-  // requete au fil de la frappe garde la meme cle : les resultats se remplacent
-  // en place, sans rejouer la transition de toute la grille a chaque debounce.
-  const gridKey =
-    mediaType === "likes"
-      ? "likes"
-      : mediaType === "recos"
-        ? "recos"
-        : mode === "search"
-          ? `search:${searchedFilter}`
-          : `${mediaType}:${feed}`;
 
   // Stables (useCallback) pour que React.memo sur DiscoverPosterCard tienne
   // quand la grille grossit au scroll infini.
@@ -808,187 +213,13 @@ export function DiscoverPage({
     [likes, likedKeys],
   );
 
-  function closeMovie() {
-    setSelected(null);
-    setSelectedSeason(null);
-    setReleaseSort("seeders");
-    setSortDir("desc");
-    setResFilter(null);
-    setLangFilter(null);
+  function switchTab(t: Exclude<DiscoverTab, "all">) {
+    if (t === "recos" && mediaType !== "recos" && !recosApi.loading) recosApi.load();
+    switchType(t);
   }
 
-  // Recherche C411 par titre francais et titre original, dedupliquee par infoHash
-  async function searchC411(item: TmdbItem): Promise<{
-    torrents: C411Torrent[];
-    nTitles: string[];
-  }> {
-    const titles = [item.title, item.originalTitle].filter(Boolean);
-    const queries = [...new Map(titles.map((t) => [normalize(t), t])).values()];
-    const results = await Promise.allSettled(
-      queries.map((q) => {
-        const params = {
-          name: q,
-          page: 1,
-          perPage: 50,
-          sortBy: "seeders",
-          sortOrder: "desc" as const,
-        };
-        return queryClient.fetchQuery({
-          queryKey: c411Keys.search(params),
-          queryFn: () => searchTorrents(params, c411KeyRef.current),
-          staleTime: 60_000,
-        });
-      }),
-    );
-    const byHash = new Map<string, C411Torrent>();
-    for (const r of results) {
-      if (r.status === "rejected") throw new Error(r.reason);
-      for (const t of r.value.data) {
-        if (!byHash.has(t.infoHash)) byHash.set(t.infoHash, t);
-      }
-    }
-    return { torrents: [...byHash.values()], nTitles: queries.map(normalize) };
-  }
-
-  // Selection d'un item : les saisons (TV) et les releases sont chargees par
-  // les queries reactives ci-dessus, qui reagissent a `selected`/`activeSeason`.
-  // Pour les series TV, on lance immediatement un prefetch C411 en fire-and-forget
-  // (le titre est connu des maintenant) en parallele du tvDetailQuery TMDB.
-  // Quand tvDetailQuery revient et active releasesQuery, les torrents sont
-  // souvent deja en cache → affichage quasi-instantane.
-  const openItem = useCallback((item: TmdbItem) => {
-    setSelected(item);
-    setSelectedSeason(null);
-    setResFilter(null);
-    setLangFilter(null);
-
-    if (item.mediaType === "tv") {
-      // Prefetch C411 : saison null = tous les torrents bruts, la saison sera
-      // filtree plus tard par releasesQuery.queryFn quand activeSeason est connu.
-      // On utilise la meme queryKey que releasesQuery avec saison null pour que
-      // le cache soit reutilise directement (la saison par defaut est la 1 et
-      // filterTvReleases sera applique dans queryFn une seule fois).
-      queryClient.prefetchQuery({
-        queryKey: ["c411-releases", item.mediaType, item.id, null],
-        queryFn: () =>
-          searchC411(item).then(({ torrents, nTitles }) =>
-            sortOccupants(filterTvReleases(torrents, nTitles, null)),
-          ),
-        staleTime: 60_000,
-      });
-    }
-    // searchC411 ne depend que de refs et d'aides module-level : stable.
-  }, []);
-
-  function changeSeason(season: number) {
-    if (!selected || season === activeSeason) return;
-    setSelectedSeason(season);
-    setResFilter(null);
-    setLangFilter(null);
-  }
-
-  async function handleSendToDebrid(occ: Occupant, addToLibrary = false) {
-    if (sendingHash !== null || libraryHash !== null) return;
-    if (!allDebridKeyRef.current) {
-      toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
-      return;
-    }
-    const torrentUrl = `https://c411.org/api?t=get&id=${encodeURIComponent(occ.infoHash)}&apikey=${c411KeyRef.current}`;
-
-    const tmdbMeta = selected
-      ? {
-          id: selected.id,
-          mediaType: selected.mediaType,
-          title: selected.title,
-          posterPath: selected.posterPath,
-          year: selected.year,
-          voteAverage: selected.voteAverage,
-          overview: selected.overview,
-        }
-      : undefined;
-
-    const setBusy = addToLibrary ? setLibraryHash : setSendingHash;
-    setBusy(occ.infoHash);
-    try {
-      const json = await invoke<{
-        status: string;
-        data?: { files?: Array<{ id: number; name: string }> };
-        error?: { message: string };
-      }>("upload_torrent_to_debrid", {
-        torrentUrl,
-        alldebridKey: allDebridKeyRef.current,
-      });
-
-      if (json.status !== "success")
-        throw new Error(json.error?.message ?? "Erreur AllDebrid inconnue");
-
-      const uploaded = json.data?.files?.[0] as
-        { id: number; name: string; ready: boolean } | undefined;
-      if (!uploaded) throw new Error("Reponse AllDebrid inattendue");
-
-      if (uploaded.ready) {
-        const filesJson = await invoke<{
-          status: string;
-          data?: { magnets?: Array<{ files?: unknown[] }> };
-        }>("get_magnet_files", {
-          id: uploaded.id,
-          alldebridKey: allDebridKeyRef.current,
-        });
-        const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
-        const files = flattenFiles(rawFiles);
-        const hasVideo = files.some((f) => isVideoFile(f.name));
-        if (addToLibrary) {
-          toast.success(`Ajoute a la bibliotheque : ${uploaded.name ?? occ.torrentName}`, {
-            action: { label: "Voir", onClick: () => onNavigate("library") },
-          });
-        } else {
-          setDebridModal({
-            torrentName: uploaded.name ?? occ.torrentName,
-            files,
-          });
-        }
-        if (hasVideo) {
-          await recordDownload({
-            infoHash: occ.infoHash,
-            title: uploaded.name ?? occ.torrentName,
-            provider: "discover",
-            category: 0,
-            size: occ.fileSize,
-            magnetId: uploaded.id,
-            files,
-            enriched: true,
-            tmdb: tmdbMeta,
-          });
-          setOwnedKeys(ownedTmdbKeys(getCachedLibrary() ?? []));
-        }
-      } else {
-        toast.success(
-          addToLibrary
-            ? `Ajoute a la bibliotheque : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`
-            : `Envoye vers AllDebrid : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`,
-          addToLibrary
-            ? { action: { label: "Voir", onClick: () => onNavigate("library") } }
-            : undefined,
-        );
-        await recordDownload({
-          infoHash: occ.infoHash,
-          title: uploaded.name ?? occ.torrentName,
-          provider: "discover",
-          category: 0,
-          size: occ.fileSize,
-          magnetId: uploaded.id,
-          files: [],
-          enriched: false,
-          tmdb: tmdbMeta,
-        });
-        setOwnedKeys(ownedTmdbKeys(getCachedLibrary() ?? []));
-      }
-    } catch (err) {
-      toastNetworkError(err, () => handleSendToDebrid(occ, addToLibrary));
-    } finally {
-      setBusy(null);
-    }
-  }
+  const displayItems =
+    mediaType === "likes" ? likes : mediaType === "recos" ? recosApi.recos : items;
 
   return (
     <main
@@ -1061,173 +292,30 @@ export function DiscoverPage({
 
       {tmdbKey && !tmdbKeyInvalid && (
         <div className="mx-auto w-full max-w-5xl flex-1 px-6 pt-8 pb-10 sm:px-8">
-          {/* Search bar */}
-          <motion.form
-            initial={false}
-            animate={
-              feedMode
-                ? { opacity: 1, y: 0, height: "auto", marginBottom: 32 }
-                : { opacity: 0, y: -12, height: 0, marginBottom: 0 }
-            }
-            transition={{
-              type: "spring",
-              stiffness: 220,
-              damping: 26,
-              opacity: { duration: 0.15 },
-            }}
+          <DiscoverSearchBar
+            visible={feedMode}
+            query={query}
+            loading={loadingMovies}
+            showClear={!!query.trim() || mode === "search"}
+            onQueryChange={setQuery}
+            onClear={clearSearch}
             onSubmit={handleSubmit}
-            className={`mx-auto max-w-2xl ${feedMode ? "" : "pointer-events-none"}`}
-          >
-            <div className="relative flex items-center gap-3 rounded-full bg-white/90 dark:bg-zinc-800/80 px-5 py-3.5 shadow-[0_8px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)]">
-              <span className="relative h-5 w-5 shrink-0">
-                <Search
-                  className={`absolute inset-0 h-5 w-5 text-zinc-500 dark:text-zinc-400 transition-opacity duration-200 ${
-                    loadingMovies ? "opacity-0 delay-150" : "opacity-100"
-                  }`}
-                />
-                <Loader2
-                  className={`absolute inset-0 h-5 w-5 text-zinc-500 dark:text-zinc-400 animate-spin transition-opacity duration-200 ${
-                    loadingMovies ? "opacity-100 delay-150" : "opacity-0"
-                  }`}
-                />
-              </span>
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Rechercher un film ou une série"
-                className="flex-1 bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-500 outline-none text-base pr-8"
-              />
-              {(query.trim() || mode === "search") && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuery("");
-                    if (mode === "search") {
-                      const back = lastBrowseTypeRef.current;
-                      setMediaType(back);
-                      showTopFromCacheOrFetch(back, feed);
-                    }
-                  }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200/90 dark:bg-zinc-700/80 hover:bg-zinc-300 dark:hover:bg-zinc-600/80 transition-colors"
-                >
-                  <X className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
-                </button>
-              )}
-            </div>
-          </motion.form>
+          />
 
-          {/* Navigation (onglets + sources) : repliée pendant la recherche */}
-          <motion.div
-            initial={false}
-            animate={
-              searchUiActive
-                ? { opacity: 0, y: -12, height: 0, marginBottom: 0 }
-                : { opacity: 1, y: 0, height: "auto", marginBottom: 24 }
-            }
-            transition={{
-              type: "spring",
-              stiffness: 220,
-              damping: 26,
-              opacity: { duration: 0.15 },
-            }}
-            className={`overflow-hidden ${searchUiActive ? "pointer-events-none" : ""}`}
-          >
-            <div className="flex justify-center">
-              <div className="flex rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 p-1">
-                {(["movie", "tv", "animation", "recos", "likes"] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => switchType(t)}
-                    className={`flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
-                      mediaType === t
-                        ? "bg-indigo-600 text-white"
-                        : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                    }`}
-                  >
-                    {t === "movie" ? (
-                      <Clapperboard className="h-3.5 w-3.5" />
-                    ) : t === "tv" ? (
-                      <Tv className="h-3.5 w-3.5" />
-                    ) : t === "animation" ? (
-                      <Sparkles className="h-3.5 w-3.5" />
-                    ) : t === "recos" ? (
-                      <Wand2 className="h-3.5 w-3.5" />
-                    ) : (
-                      <Heart className="h-3.5 w-3.5" />
-                    )}
-                    {t === "movie"
-                      ? "Films"
-                      : t === "tv"
-                        ? "Séries"
-                        : t === "animation"
-                          ? "Animations"
-                          : t === "recos"
-                            ? "Pour vous"
-                            : "Ma liste"}
-                  </button>
-                ))}
-              </div>
-            </div>
+          <DiscoverTabs
+            collapsed={searchUiActive}
+            mediaType={mediaType}
+            feed={feed}
+            mode={mode}
+            onSwitchType={switchTab}
+            onSwitchFeed={switchFeed}
+          />
 
-            {(mediaType === "movie" || mediaType === "tv") && mode === "top" && (
-              <div className="mt-6 flex justify-center">
-                <div className="flex flex-wrap justify-center gap-1.5">
-                  {FEEDS.map((f) => (
-                    <button
-                      key={f}
-                      onClick={() => switchFeed(f)}
-                      className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium ring-1 transition-colors ${
-                        feed === f
-                          ? "bg-indigo-600 text-white ring-indigo-500"
-                          : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                      }`}
-                    >
-                      {FEED_LABELS[f]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </motion.div>
-
-          {/* Filtres d'affinage de la recherche : visibles sur les résultats */}
-          <motion.div
-            initial={false}
-            animate={
-              mode === "search"
-                ? { opacity: 1, y: 0, height: "auto", marginBottom: 24 }
-                : { opacity: 0, y: -12, height: 0, marginBottom: 0 }
-            }
-            transition={{
-              type: "spring",
-              stiffness: 220,
-              damping: 26,
-              opacity: { duration: 0.15 },
-            }}
-            className={`overflow-hidden ${mode === "search" ? "" : "pointer-events-none"}`}
-          >
-            <div className="flex justify-center gap-1.5">
-              {SEARCH_FILTERS.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => changeSearchFilter(f)}
-                  className={`flex cursor-pointer items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-medium ring-1 transition-colors ${
-                    searchFilter === f
-                      ? "bg-indigo-600 text-white ring-indigo-500"
-                      : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                  }`}
-                >
-                  {f === "movie" ? (
-                    <Clapperboard className="h-3.5 w-3.5" />
-                  ) : f === "tv" ? (
-                    <Tv className="h-3.5 w-3.5" />
-                  ) : null}
-                  {SEARCH_FILTER_LABELS[f]}
-                </button>
-              ))}
-            </div>
-          </motion.div>
+          <DiscoverSearchFilters
+            visible={mode === "search"}
+            active={searchFilter}
+            onChange={changeSearchFilter}
+          />
 
           <h2 className="mb-4 text-sm font-semibold text-zinc-600 dark:text-zinc-300">
             {mediaType === "likes"
@@ -1256,22 +344,25 @@ export function DiscoverPage({
             </p>
           )}
 
-          {mediaType === "recos" && recosLoading && (
+          {mediaType === "recos" && recosApi.loading && (
             <div className="flex justify-center py-10">
               <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
             </div>
           )}
 
-          {mediaType === "recos" && recosError && (
-            <p className="text-sm text-red-600 dark:text-red-400">{recosError}</p>
+          {mediaType === "recos" && recosApi.error && (
+            <p className="text-sm text-red-600 dark:text-red-400">{recosApi.error}</p>
           )}
 
-          {mediaType === "recos" && !recosLoading && !recosError && recos.length === 0 && (
-            <p className="text-sm text-zinc-500">
-              Ajoutez des titres à votre liste ou à votre bibliothèque pour obtenir des
-              recommandations personnalisées.
-            </p>
-          )}
+          {mediaType === "recos" &&
+            !recosApi.loading &&
+            !recosApi.error &&
+            recosApi.recos.length === 0 && (
+              <p className="text-sm text-zinc-500">
+                Ajoutez des titres à votre liste ou à votre bibliothèque pour obtenir des
+                recommandations personnalisées.
+              </p>
+            )}
 
           {/* Poster grid */}
           <AnimatePresence mode="popLayout" initial={false}>
@@ -1285,7 +376,7 @@ export function DiscoverPage({
             >
               {displayItems.map((m, i) => {
                 const key = `${m.mediaType}-${m.id}`;
-                const because = mediaType === "recos" ? recosBecause.get(key) : undefined;
+                const because = mediaType === "recos" ? recosApi.because.get(key) : undefined;
                 return (
                   <DiscoverPosterCard
                     key={`${key}-${i}`}
@@ -1312,504 +403,30 @@ export function DiscoverPage({
 
       {/* Movie releases modal */}
       <AnimatePresence>
-        {selected && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
-            className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-            onClick={closeMovie}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.97, y: 8 }}
-              transition={{ type: "spring", stiffness: 260, damping: 26, mass: 0.9 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-2xl rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
-            >
-              <div className="flex items-start gap-4 px-5 pt-5 pb-4">
-                {selected.posterPath && (
-                  <img
-                    src={`https://image.tmdb.org/t/p/w154${selected.posterPath}`}
-                    alt=""
-                    className="h-24 w-16 shrink-0 rounded-lg object-cover ring-1 ring-black/10 dark:ring-white/10"
-                  />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">
-                    Versions disponibles
-                  </p>
-                  <p className="text-base font-semibold text-zinc-900 dark:text-white leading-snug">
-                    {selected.title}
-                  </p>
-                  <div className="mt-1 flex items-center gap-3 text-xs text-zinc-500">
-                    <span>{selected.year}</span>
-                    {selected.voteAverage > 0 && (
-                      <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                        <Star className="h-3 w-3 fill-amber-400" />
-                        {selected.voteAverage.toFixed(1)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => toggleLike(selected)}
-                  className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-                >
-                  <Heart
-                    className={`h-3.5 w-3.5 transition-colors ${
-                      likedKeys.has(`${selected.mediaType}-${selected.id}`)
-                        ? "fill-rose-500 text-rose-500"
-                        : "text-zinc-500 dark:text-zinc-400"
-                    }`}
-                  />
-                </button>
-                <button
-                  onClick={closeMovie}
-                  className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-                >
-                  <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
-                </button>
-              </div>
-
-              {selected.overview && (
-                <p className="mx-5 mb-4 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed line-clamp-4">
-                  {selected.overview}
-                </p>
-              )}
-
-              {selected.mediaType === "tv" && (
-                <div
-                  ref={seasonScroll.ref}
-                  {...seasonScroll.dragProps}
-                  className="flex gap-1.5 overflow-x-auto px-5 pt-0.5 pb-3 cursor-grab select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                >
-                  {seasons === null
-                    ? Array.from({ length: 4 }, (_, i) => (
-                        <div
-                          key={i}
-                          className="h-[26px] w-24 shrink-0 rounded-full bg-white/80 dark:bg-zinc-800/60 animate-pulse"
-                        />
-                      ))
-                    : seasons.map((s) => (
-                        <button
-                          key={s.number}
-                          onClick={() => changeSeason(s.number)}
-                          className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-medium leading-normal ring-1 transition-colors ${
-                            activeSeason === s.number
-                              ? "bg-indigo-600 text-white ring-indigo-500"
-                              : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                          }`}
-                        >
-                          Saison {s.number}
-                          <span
-                            className={`ml-1 ${activeSeason === s.number ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"}`}
-                          >
-                            {s.episodeCount} ép.
-                          </span>
-                        </button>
-                      ))}
-                </div>
-              )}
-
-              {releases === null && !releasesError && (
-                <div className="flex flex-wrap items-center gap-1.5 px-5 pb-3">
-                  <SlidersHorizontal className="mr-0.5 h-3.5 w-3.5 text-zinc-400 dark:text-zinc-600" />
-                  {[64, 48, 56, 52, 44, 48].map((w, i) => (
-                    <div
-                      key={i}
-                      className="h-6 animate-pulse rounded-full bg-white/80 dark:bg-zinc-800/60"
-                      style={{ width: w }}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {releases !== null && releases.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 px-5 pb-3">
-                  <SlidersHorizontal className="mr-0.5 h-3.5 w-3.5 text-zinc-500" />
-                  {(
-                    [
-                      ["seeders", "Seeders"],
-                      ["size", "Taille"],
-                      ["resolution", "Qualité"],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <button
-                      key={key}
-                      onClick={() => {
-                        if (releaseSort === key) {
-                          setSortDir(sortDir === "desc" ? "asc" : "desc");
-                        } else {
-                          setReleaseSort(key);
-                          setSortDir("desc");
-                        }
-                      }}
-                      className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ring-1 transition-colors ${
-                        releaseSort === key
-                          ? "bg-indigo-600 text-white ring-indigo-500"
-                          : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                      }`}
-                    >
-                      {label}
-                      {releaseSort === key &&
-                        (sortDir === "desc" ? (
-                          <ArrowDown className="h-3 w-3" />
-                        ) : (
-                          <ArrowUp className="h-3 w-3" />
-                        ))}
-                    </button>
-                  ))}
-                  {(resOptions.length > 1 || langOptions.length > 1) && (
-                    <span className="mx-1 h-4 w-px bg-black/10 dark:bg-white/10" />
-                  )}
-                  {resOptions.length > 1 &&
-                    resOptions.map((r) => (
-                      <button
-                        key={r}
-                        onClick={() => setResFilter(resFilter === r ? null : r)}
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase ring-1 transition-colors ${
-                          resFilter === r
-                            ? "bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 ring-indigo-500/50"
-                            : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                        }`}
-                      >
-                        {r}
-                      </button>
-                    ))}
-                  {langOptions.length > 1 &&
-                    langOptions.map((l) => (
-                      <button
-                        key={l}
-                        onClick={() => setLangFilter(langFilter === l ? null : l)}
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase ring-1 transition-colors ${
-                          langFilter === l
-                            ? "bg-green-500/15 text-green-600 dark:text-green-400 ring-green-500/40"
-                            : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                        }`}
-                      >
-                        {l}
-                      </button>
-                    ))}
-                </div>
-              )}
-
-              <div className="h-[32rem] max-h-[65vh] overflow-y-auto px-3 pb-3 space-y-1.5">
-                {releases === null &&
-                  !releasesError &&
-                  Array.from({ length: 6 }, (_, i) => (
-                    <motion.div
-                      key={`skeleton-${i}`}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.25, delay: i * 0.07 }}
-                      className="flex items-center gap-4 rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3"
-                    >
-                      <div className="min-w-0 flex-1 animate-pulse">
-                        <div className="mb-2 flex items-center gap-1.5">
-                          <div className="h-[18px] w-12 rounded-md bg-zinc-300/70 dark:bg-zinc-700/70" />
-                          <div className="h-[18px] w-10 rounded-md bg-zinc-300/70 dark:bg-zinc-700/70" />
-                          <div className="h-[18px] w-12 rounded-md bg-zinc-300/70 dark:bg-zinc-700/70" />
-                          <div className="h-[18px] w-9 rounded-md bg-zinc-300/70 dark:bg-zinc-700/70" />
-                        </div>
-                        <div className="mb-2 flex items-center gap-3">
-                          <div className="h-3 w-14 rounded bg-zinc-300/70 dark:bg-zinc-700/70" />
-                          <div className="h-3 w-20 rounded bg-zinc-300/70 dark:bg-zinc-700/70" />
-                          <div className="h-3 w-16 rounded bg-zinc-300/60 dark:bg-zinc-700/50" />
-                        </div>
-                        <div className="h-2.5 w-3/4 rounded bg-zinc-300/40 dark:bg-zinc-700/40" />
-                      </div>
-                      <div className="h-8 w-8 shrink-0 rounded-full bg-zinc-300/70 dark:bg-zinc-700/70 animate-pulse" />
-                    </motion.div>
-                  ))}
-                {releasesError && (
-                  <div className="flex h-full items-center justify-center">
-                    <NetworkErrorState message={releasesError} onRetry={retryReleases} />
-                  </div>
-                )}
-                {releases !== null && releases.length === 0 && (
-                  <div className="flex h-full flex-col items-center justify-center gap-5 px-6">
-                    <p className="text-center text-sm text-zinc-500">
-                      {selected.mediaType === "tv"
-                        ? "Aucune version disponible pour cette saison."
-                        : "Aucune version disponible pour ce film."}
-                    </p>
-                    <div className="flex flex-col items-center gap-3">
-                      <p className="max-w-xs text-center text-xs text-zinc-400 dark:text-zinc-500">
-                        Peut-être juste mal répertorié entre TMDB et C411. Cherchez directement sur
-                        un tracker :
-                      </p>
-                      <div className="flex items-center gap-2.5">
-                        <button
-                          onClick={() => onSearchTracker(selected.title, "c411")}
-                          className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-medium text-zinc-700 ring-1 ring-black/10 transition-colors hover:bg-zinc-100 dark:bg-zinc-800/80 dark:text-zinc-200 dark:ring-white/10 dark:hover:bg-zinc-700/80"
-                        >
-                          <img
-                            src={c411Logo}
-                            alt=""
-                            className="h-5 w-5 rounded-full object-cover bg-white"
-                          />
-                          Chercher sur C411
-                        </button>
-                        <button
-                          onClick={() =>
-                            onSearchTracker(selected.originalTitle || selected.title, "nyaa")
-                          }
-                          className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-medium text-zinc-700 ring-1 ring-black/10 transition-colors hover:bg-zinc-100 dark:bg-zinc-800/80 dark:text-zinc-200 dark:ring-white/10 dark:hover:bg-zinc-700/80"
-                        >
-                          <img
-                            src={nyaaLogo}
-                            alt=""
-                            className="h-5 w-5 rounded-full object-cover bg-white"
-                          />
-                          Chercher sur Nyaa
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {releases !== null && releases.length > 0 && visibleReleases?.length === 0 && (
-                  <div className="flex h-full items-center justify-center">
-                    <p className="text-center text-sm text-zinc-500">
-                      Aucune version ne correspond aux filtres.
-                    </p>
-                  </div>
-                )}
-                {visibleReleases?.map((occ, i) => (
-                  <motion.div
-                    key={occ.infoHash}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{
-                      duration: 0.25,
-                      delay: Math.min(i * 0.04, 0.3),
-                      ease: [0.22, 1, 0.36, 1],
-                    }}
-                    className="flex items-center gap-4 rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                        {selected?.mediaType === "tv" && occ.scope && (
-                          <span
-                            className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                              occ.scope.kind === "episode"
-                                ? "bg-sky-500/12 text-sky-600 dark:text-sky-400"
-                                : "bg-fuchsia-500/12 text-fuchsia-700 dark:text-fuchsia-400"
-                            }`}
-                          >
-                            {scopeLabel(occ.scope)}
-                          </span>
-                        )}
-                        {occ.resolution && (
-                          <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
-                            {occ.resolution}
-                          </span>
-                        )}
-                        {occ.videoCodec && (
-                          <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                            {occ.videoCodec}
-                          </span>
-                        )}
-                        {occ.specialVersion && (
-                          <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                            {occ.specialVersion}
-                          </span>
-                        )}
-                        {occ.languages.map((l) => (
-                          <span
-                            key={l}
-                            className="rounded-md bg-green-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-600 dark:text-green-400"
-                          >
-                            {l}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-500">
-                        <span className="text-zinc-600 dark:text-zinc-300 font-medium">
-                          {formatSize(occ.fileSize)}
-                        </span>
-                        <span className="text-green-500">{occ.seeders} Seeders</span>
-                        {occ.source && <span>{occ.source}</span>}
-                        {occ.audioCodec && (
-                          <span>
-                            {occ.audioCodec}
-                            {occ.audioChannels ? ` ${occ.audioChannels}` : ""}
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-600 truncate">
-                        {occ.torrentName}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <div className="group relative">
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => handleSendToDebrid(occ, true)}
-                          disabled={sendingHash !== null || libraryHash !== null}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-black/8 hover:bg-black/15 dark:bg-white/10 dark:hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {libraryHash === occ.infoHash ? (
-                            <Loader2 className="h-4 w-4 text-indigo-600 dark:text-indigo-300 animate-spin" />
-                          ) : (
-                            <BookmarkPlus className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
-                          )}
-                        </motion.button>
-                        <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
-                          Ajouter à la bibliothèque
-                        </span>
-                      </div>
-                      <div className="group relative">
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => handleSendToDebrid(occ)}
-                          disabled={sendingHash !== null || libraryHash !== null}
-                          className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {sendingHash === occ.infoHash ? (
-                            <Loader2 className="h-4 w-4 text-white animate-spin" />
-                          ) : (
-                            <Download className="h-4 w-4 text-white" />
-                          )}
-                        </motion.button>
-                        <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
-                          Télécharger
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
+        {selected && tmdbKey && (
+          <DiscoverReleasesModal
+            item={selected}
+            tmdbKey={tmdbKey}
+            getC411Key={() => c411KeyRef.current}
+            liked={likedKeys.has(`${selected.mediaType}-${selected.id}`)}
+            sendingHash={sendingHash}
+            libraryHash={libraryHash}
+            onToggleLike={toggleLike}
+            onClose={() => setSelected(null)}
+            onSend={(occ, addToLibrary) => sendToDebrid(occ, selected, addToLibrary)}
+            onSearchTracker={onSearchTracker}
+          />
         )}
       </AnimatePresence>
 
       {/* Debrid files modal */}
       <AnimatePresence>
         {debridModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-            onClick={() => setDebridModal(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 8 }}
-              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
-            >
-              <div className="px-5 pt-5 pb-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">
-                      Fichiers disponibles
-                    </p>
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">
-                      {debridModal.torrentName}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setDebridModal(null)}
-                    className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="max-h-80 overflow-y-auto px-3 pb-3 space-y-1.5">
-                {debridModal.files.map((file, i) => {
-                  const fileName = file.name.split("/").pop() ?? file.name;
-                  const showName = fileName !== debridModal.torrentName;
-                  return (
-                    <div key={i} className="rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3">
-                      <div className="mb-3">
-                        {showName && (
-                          <p className="text-sm font-medium text-zinc-900 dark:text-white leading-snug line-clamp-2 mb-0.5">
-                            {fileName}
-                          </p>
-                        )}
-                        <p className="text-xs text-zinc-500">{formatSize(file.size)}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => handleOpenVlc(file.link)}
-                          disabled={
-                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
-                          }
-                          className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {vlcLink === file.link ? (
-                            <Loader2 className="h-3.5 w-3.5 text-zinc-900 dark:text-white animate-spin" />
-                          ) : (
-                            <img src={vlcLogo} className="h-4 w-4" />
-                          )}
-                          <span className="text-xs font-medium text-zinc-900 dark:text-white">
-                            Lire avec VLC
-                          </span>
-                        </motion.button>
-                        <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => handleCopyLink(file.link)}
-                          disabled={
-                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
-                          }
-                          className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {copiedLink === file.link ? (
-                            <>
-                              <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-                              <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                                Copie !
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-300" />
-                              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                                Copier le lien
-                              </span>
-                            </>
-                          )}
-                        </motion.button>
-                        <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => handleDownloadFile(file.link)}
-                          disabled={
-                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
-                          }
-                          className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {downloadingLink === file.link ? (
-                            <>
-                              <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
-                              <span className="text-xs font-medium text-white">Ouverture...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Download className="h-3.5 w-3.5 text-white" />
-                              <span className="text-xs font-medium text-white">Telecharger</span>
-                            </>
-                          )}
-                        </motion.button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          </motion.div>
+          <DebridFilesModal
+            modal={debridModal}
+            getAllDebridKey={() => allDebridKeyRef.current}
+            onClose={() => setDebridModal(null)}
+          />
         )}
       </AnimatePresence>
     </main>

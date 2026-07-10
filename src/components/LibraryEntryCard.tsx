@@ -26,6 +26,8 @@ import {
   ResumeButton,
   type DebridControls,
 } from "@/components/libraryParts";
+import { MagnetProgress } from "@/components/MagnetProgress";
+import type { MagnetEntry } from "@/lib/services/allDebrid";
 
 export type { DebridControls };
 
@@ -37,6 +39,10 @@ interface LibraryEntryCardProps {
   simple: boolean;
   autoWatchOnPlay?: boolean;
   defaultExpanded?: boolean;
+  // Statut AllDebrid si le magnet est encore en cours de débridage.
+  magnet?: MagnetEntry;
+  onCancelDebrid?: (entry: LibraryEntry) => void;
+  cancellingDebrid?: boolean;
 }
 
 export const LibraryEntryCard = memo(function LibraryEntryCard({
@@ -47,6 +53,9 @@ export const LibraryEntryCard = memo(function LibraryEntryCard({
   simple,
   autoWatchOnPlay = false,
   defaultExpanded = false,
+  magnet,
+  onCancelDebrid,
+  cancellingDebrid,
 }: LibraryEntryCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -120,6 +129,14 @@ export const LibraryEntryCard = memo(function LibraryEntryCard({
                   style={{ width: `${Math.round(ratio * 100)}%` }}
                 />
               </div>
+            )}
+            {magnet && (
+              <MagnetProgress
+                magnet={magnet}
+                className="mt-1.5"
+                onCancel={onCancelDebrid && (() => onCancelDebrid(entry))}
+                cancelling={cancellingDebrid}
+              />
             )}
           </div>
           {series && (
