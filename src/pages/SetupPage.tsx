@@ -30,13 +30,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
-import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
 import { parseRelease } from "@/lib/parseRelease";
 import { getApiKey, setApiKey } from "@/lib/apiKeys";
+import { httpFetch } from "@/lib/networkError";
 import { pickBackupFile } from "@/lib/profileBackup";
 import { ImportProfileModal } from "@/components/ImportProfileModal";
 import { DnsGuideModal } from "@/components/DnsGuideModal";
@@ -365,7 +365,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   async function checkDns() {
     setDnsStatus("checking");
     try {
-      await tauriFetch("https://c411.org", { method: "HEAD", connectTimeout: 6000 });
+      await httpFetch("https://c411.org", { method: "HEAD", signal: AbortSignal.timeout(6000) });
       setDnsStatus("ok");
     } catch {
       setDnsStatus("fail");

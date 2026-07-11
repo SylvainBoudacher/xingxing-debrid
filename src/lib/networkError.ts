@@ -1,5 +1,12 @@
-import { fetch } from "@tauri-apps/plugin-http";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { toast } from "sonner";
+import { isBrowserPreview } from "@/lib/devTauriShim";
+
+// En preview navigateur (pas de shell Tauri), le fetch du plugin est
+// indisponible : on retombe sur le fetch natif (sujet au CORS, dev only).
+export const httpFetch: typeof globalThis.fetch = isBrowserPreview
+  ? globalThis.fetch.bind(globalThis)
+  : tauriFetch;
 
 // Délai au-delà duquel un appel réseau est considéré comme un timeout. Aligné
 // sur le timeout du client reqwest côté Rust (voir http_client dans lib.rs).
@@ -55,7 +62,7 @@ export async function fetchWithTimeout(
 ): Promise<Response> {
   let res: Response;
   try {
-    res = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+    res = await httpFetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
   } catch (err) {
     throw classify(service, err);
   }

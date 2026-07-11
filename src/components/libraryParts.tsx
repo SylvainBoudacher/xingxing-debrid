@@ -349,7 +349,9 @@ function SeasonSection({
               className={`flex h-5 flex-none items-center gap-1 rounded-md px-1.5 text-[11px] font-medium transition-colors ${
                 open
                   ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300"
-                  : "bg-black/5 text-zinc-500 dark:bg-white/10 dark:text-zinc-400"
+                  : seenCount > 0 && !allSeen
+                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                    : "bg-black/5 text-zinc-500 dark:bg-white/10 dark:text-zinc-400"
               }`}
             >
               {seenCount}/{names.length}
