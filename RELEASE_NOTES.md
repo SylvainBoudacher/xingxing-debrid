@@ -1,3 +1,3 @@
-- Fix de bug mineur
-- Support de Apple Silicon !
-- Meilleurs resultats les series.
+- Fix de bug
+- Rajoute de fonctionnalité dans la Bibliotheque
+- Canards !

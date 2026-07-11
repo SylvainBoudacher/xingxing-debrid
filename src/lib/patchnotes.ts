@@ -42,6 +42,50 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.5.2",
+    date: "11 juillet 2026",
+    intro:
+      "La 1.5.2 enrichit la gestion des dossiers de serie dans la bibliotheque, ajoute des raccourcis clavier pour le Coin des Canards, corrige un bug sur les cles API, et equilibre les taux de drop des canards rares.",
+    sections: [
+      {
+        title: "Bibliotheque : gestion avancee des dossiers de serie",
+        items: [
+          "Ajoutez un seul episode d'une saison dans la bibliotheque : l'application cree automatiquement le bon dossier de saison et y place l'episode.",
+          "Ajoutez une autre saison de la meme serie : les deux saisons se regroupent automatiquement sous une seule oeuvre, sans intervention.",
+          "Personnalisez entierement la structure de vos dossiers : ajout, suppression et renommage de saisons directement depuis la bibliotheque.",
+        ],
+      },
+      {
+        title: "Bibliotheque : debridage et selection avancee",
+        items: [
+          "Les films et series en cours de debridage sont desormais visibles et gerable directement depuis la bibliotheque.",
+          "Les saisons et episodes d'une serie peuvent etre selectionnes et supprimes depuis la bibliotheque.",
+        ],
+      },
+      {
+        title: "Coin des Canards : raccourcis clavier",
+        items: [
+          "Un raccourci clavier permet desormais de capturer un canard directement au clavier. Par defaut : C.",
+          "Un deuxieme raccourci permet d'activer l'aspirateur sans passer par la souris. Par defaut : V.",
+          "Les deux raccourcis sont entierement configurables depuis la page Parametres.",
+        ],
+      },
+      {
+        title: "Corrections",
+        items: [
+          "Correction d'un bug ou les canards pouvaient ne pas apparaitre si des appels API etaient encore en cours ou bloques au demarrage. Le spawn des canards se base desormais uniquement sur le lancement de l'application.",
+          "Correction d'un bug ou certaines cles API pouvaient etre mal enregistrees au lancement de l'application et depuis la page Reglages.",
+        ],
+      },
+      {
+        title: "Equilibrage : canards rares",
+        items: [
+          "Le Roi des Canards et les versions shiny etaient apparus un peu trop souvent. Leurs taux de drop ont ete divises par deux pour retrouver leur caractere exceptionnel.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.5.1",
     date: "8 juillet 2026",
     intro:
@@ -887,4 +931,4 @@ export const PATCH_NOTES: PatchNote[] = [
   },
 ];
 
-export const LATEST_VERSION = "1.5.1";
+export const LATEST_VERSION = "1.5.2";
