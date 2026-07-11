@@ -7,6 +7,7 @@ import {
   Download,
   ListChecks,
   Loader2,
+  Pencil,
   Star,
   Trash2,
   X,
@@ -52,6 +53,10 @@ interface SeriesGroupDetailModalProps {
   debrid: DebridControls;
   simple: boolean;
   autoWatchOnPlay: boolean;
+  // Présent uniquement si une clé TMDB existe.
+  onEnrichTmdb?: () => void;
+  // Vrai quand la recherche TMDB est ouverte par-dessus : neutralise Escape ici.
+  enrichOpen?: boolean;
 }
 
 export function SeriesGroupDetailModal({
@@ -62,6 +67,8 @@ export function SeriesGroupDetailModal({
   debrid,
   simple,
   autoWatchOnPlay,
+  onEnrichTmdb,
+  enrichOpen,
 }: SeriesGroupDetailModalProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
@@ -127,10 +134,10 @@ export function SeriesGroupDetailModal({
   }, [confirmDeleteSelection]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !enrichOpen && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, enrichOpen]);
 
   useEffect(() => {
     if (!confirmDelete) return;
@@ -217,6 +224,15 @@ export function SeriesGroupDetailModal({
           </div>
 
           <div className="flex flex-none items-center gap-1.5">
+            {onEnrichTmdb && (
+              <button
+                onClick={onEnrichTmdb}
+                title="Changer les informations TMDB"
+                className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => {

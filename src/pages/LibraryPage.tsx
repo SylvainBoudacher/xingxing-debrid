@@ -115,6 +115,7 @@ export function LibraryPage({
   const [expandedHash, setExpandedHash] = useState<string | null>(null);
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
+  const [matchingGroupId, setMatchingGroupId] = useState<number | null>(null);
   const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
   const debrid = useDebridActions(() => initialAllDebridKey ?? "");
 
@@ -224,12 +225,12 @@ export function LibraryPage({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      if (expandedHash || expandedGroupId || matchingHash) return;
+      if (expandedHash || expandedGroupId || matchingHash || matchingGroupId !== null) return;
       onBack();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [expandedHash, expandedGroupId, matchingHash, onBack]);
+  }, [expandedHash, expandedGroupId, matchingHash, matchingGroupId, onBack]);
 
   // Updaters fonctionnels : identité stable (deps vides) pour ne pas casser le
   // React.memo des cartes, tout en lisant le dernier état via `prev`.
@@ -397,6 +398,12 @@ export function LibraryPage({
         ) ?? null)
       : null;
   const matchingEntry = entries.find((e) => e.infoHash === matchingHash) ?? null;
+  // Entrées d'un groupe série en cours de ré-association TMDB : le nouveau
+  // choix s'applique à toutes les entrées du groupe.
+  const matchingGroupEntries =
+    matchingGroupId !== null
+      ? entries.filter((e) => e.tmdb?.mediaType === "tv" && e.tmdb.id === matchingGroupId)
+      : [];
 
   // Bouton « Compléter via TMDB » : seulement si une clé est configurée et que
   // l'entrée (C411 / Nyaa) n'a pas encore de métadonnées.
@@ -747,6 +754,10 @@ export function LibraryPage({
             debrid={debrid}
             simple={viewMode === "simple"}
             autoWatchOnPlay={autoWatchOnPlay}
+            onEnrichTmdb={
+              initialTmdbKey ? () => setMatchingGroupId(expandedGroup.group.tmdbId) : undefined
+            }
+            enrichOpen={matchingGroupId !== null}
           />
         )}
       </AnimatePresence>
@@ -773,6 +784,28 @@ export function LibraryPage({
               setMatchingHash(null);
             }}
             onClose={() => setMatchingHash(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {matchingGroupEntries.length > 0 && initialTmdbKey && (
+          <TmdbMatchModal
+            entry={matchingGroupEntries[0]}
+            tmdbKey={initialTmdbKey}
+            onPick={(meta) => {
+              const hashes = new Set(matchingGroupEntries.map((e) => e.infoHash));
+              setEntries((prev) => {
+                const next = prev.map((e) => (hashes.has(e.infoHash) ? { ...e, tmdb: meta } : e));
+                saveLibraryDebounced(next);
+                return next;
+              });
+              setMatchingGroupId(null);
+              // Le groupe est identifié par son id TMDB : après changement,
+              // l'ancien groupe n'existe plus, on ferme la modale de détail.
+              setExpandedGroupId(meta.mediaType === "tv" ? meta.id : null);
+            }}
+            onClose={() => setMatchingGroupId(null)}
           />
         )}
       </AnimatePresence>
