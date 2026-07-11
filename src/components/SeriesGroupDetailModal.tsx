@@ -445,7 +445,13 @@ function ModalSeasonSection({
           >
             {label}
           </span>
-          <span className="flex-none text-[11px] text-zinc-400">
+          <span
+            className={`flex h-5 flex-none items-center rounded-md px-1.5 text-[11px] font-medium ${
+              seenCount > 0 && !allSeen
+                ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                : "bg-black/5 text-zinc-500 dark:bg-white/10 dark:text-zinc-400"
+            }`}
+          >
             {seenCount}/{total}
           </span>
           <ChevronDown
