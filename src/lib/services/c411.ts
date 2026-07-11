@@ -1,7 +1,10 @@
 import { fetchWithTimeout } from "@/lib/networkError";
+import { isBrowserPreview } from "@/lib/devTauriShim";
 import type { C411Torrent } from "@/lib/c411";
 
-const BASE = "https://c411.org";
+// En preview navigateur, C411 n'autorise pas le CORS : on passe par le proxy
+// Vite /c411-proxy (voir vite.config.ts), dev uniquement.
+const BASE = isBrowserPreview ? "/c411-proxy" : "https://c411.org";
 
 export interface C411SearchResponse {
   data: C411Torrent[];

@@ -25,6 +25,8 @@ bun run dev
 bunx tsc --noEmit
 ```
 
+**Browser preview (testing without the Tauri shell)**: `bun run dev` opened in a plain browser activates `src/lib/devTauriShim.ts` (dev-only): tauri-plugin-store is backed by localStorage, API keys come from `VITE_DEV_*` variables in `.env.local` (copy `.env.example`), and HTTP falls back to native fetch. If the C411 dev key is present, setup is skipped on first load. Splash/transition animations are also skipped in this mode (they freeze in background tabs).
+
 Rust compilation happens automatically inside `tauri dev` / `tauri build`. Run `cargo check` inside `src-tauri/` for a faster Rust-only type check.
 
 **Publishing an update**: before tagging, update `RELEASE_NOTES.md` with the notes for the release (2-4 lines max) — the CI copies this file verbatim into `latest.json`, which is what the in-app update modal displays. Then bump the version in `tauri.conf.json`, `package.json`, and `src-tauri/Cargo.toml`. Full process in `RELEASING.md`.

@@ -50,5 +50,14 @@ export default defineConfig(async () => ({
       // 3. tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
     },
+    // Proxy dev pour la preview navigateur : C411 n'autorise pas le CORS.
+    // Utilisé uniquement quand devTauriShim est actif (voir c411.ts).
+    proxy: {
+      "/c411-proxy": {
+        target: "https://c411.org",
+        changeOrigin: true,
+        rewrite: (p: string) => p.replace(/^\/c411-proxy/, ""),
+      },
+    },
   },
 }));

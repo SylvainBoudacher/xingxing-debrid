@@ -15,6 +15,7 @@ import type { TmdbItem } from "@/lib/tmdbItem";
 import { prefetchLibrary } from "@/lib/library";
 import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
+import { isBrowserPreview } from "@/lib/devTauriShim";
 import { useNavShortcuts } from "@/lib/useNavShortcuts";
 import { useActionShortcuts } from "@/lib/useActionShortcuts";
 
@@ -77,7 +78,9 @@ function App() {
   const [summerFps, setSummerFps] = useState<30 | 60>(60);
   const [summerMaxDucks, setSummerMaxDucks] = useState(15);
   const [idleAutoHide, setIdleAutoHide] = useState(true);
-  const [startPhase, setStartPhase] = useState<StartPhase>("splash");
+  // En preview navigateur, les animations rAF gèlent quand l'onglet est en
+  // arrière-plan : on saute splash + transition pour ne pas bloquer dessus.
+  const [startPhase, setStartPhase] = useState<StartPhase>(isBrowserPreview ? "done" : "splash");
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const [pendingUpdate, setPendingUpdate] = useState<UpdateInfo | null>(null);
   const fakeUpdate: UpdateInfo = {
@@ -344,7 +347,7 @@ function App() {
                 initialTmdbKey={initTmdbKey}
                 initialPatchnotesSeen={patchnotesSeenVersion ?? initPrefs.patchnotesSeen}
                 initialSearchViewMode={initPrefs.searchViewMode}
-                initialIdleAutoHide={idleAutoHide && summerEnabled}
+                initialIdleAutoHide={idleAutoHide && summerEnabled && !isBrowserPreview}
                 initialSearch={mainSearch}
                 onSearchConsumed={() => setMainSearch(null)}
               />
