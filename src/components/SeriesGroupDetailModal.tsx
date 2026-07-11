@@ -1,17 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { SeriesFolderOrganizer } from "@/components/SeriesFolderOrganizer";
 import {
-  Check,
-  ChevronDown,
-  Copy,
-  Download,
-  ListChecks,
-  Loader2,
-  Pencil,
-  Star,
-  Trash2,
-  X,
-} from "lucide-react";
+  Checkbox,
+  DebridActions,
+  FileRow,
+  ResumeButton,
+  type DebridControls,
+  type EpisodeSelection,
+} from "@/components/libraryParts";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,7 +16,6 @@ import {
 import { formatSize } from "@/lib/debrid";
 import {
   groupIsWholeWatched,
-  groupNextUnwatched,
   groupProgressRatio,
   groupSeasons,
   groupSize,
@@ -32,18 +26,41 @@ import {
   setWholeWatched,
   toggleFile,
   videoFiles,
-  type GroupSeason,
   type LibraryEntry,
+  type SeasonItem,
   type SeriesGroup,
 } from "@/lib/library";
 import {
-  Checkbox,
-  DebridActions,
-  FileRow,
-  ResumeButton,
-  type DebridControls,
-  type EpisodeSelection,
-} from "@/components/libraryParts";
+  getCachedSeriesFolders,
+  groupFolderSections,
+  loadSeriesFolders,
+  materializeFolders,
+  saveSeriesFolderConfig,
+  type SeriesFolderConfig,
+} from "@/lib/seriesFolders";
+import {
+  Check,
+  ChevronDown,
+  Copy,
+  Download,
+  FolderCog,
+  ListChecks,
+  Loader2,
+  Pencil,
+  Star,
+  Trash2,
+  X,
+} from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
+
+// Section affichable : un dossier configuré, ou une saison auto-détectée
+// quand la série n'a pas encore de config de dossiers.
+interface DisplaySection {
+  key: string;
+  label: string;
+  items: SeasonItem[];
+}
 
 interface SeriesGroupDetailModalProps {
   group: SeriesGroup;
@@ -74,6 +91,21 @@ export function SeriesGroupDetailModal({
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmDeleteSelection, setConfirmDeleteSelection] = useState(false);
+  const [organize, setOrganize] = useState(false);
+  const [folderConfig, setFolderConfig] = useState<SeriesFolderConfig | null>(
+    () => getCachedSeriesFolders()?.[String(group.tmdbId)] ?? null,
+  );
+
+  useEffect(() => {
+    if (getCachedSeriesFolders()) return;
+    let active = true;
+    void loadSeriesFolders().then((map) => {
+      if (active) setFolderConfig(map[String(group.tmdbId)] ?? null);
+    });
+    return () => {
+      active = false;
+    };
+  }, [group.tmdbId]);
 
   const whole = groupIsWholeWatched(group);
   const ratio = groupProgressRatio(group);
@@ -82,9 +114,57 @@ export function SeriesGroupDetailModal({
   const total = groupTotalCount(group);
   const allLinks = group.entries.flatMap((e) => videoFiles(e).map((f) => f.link));
   const groupKey = `series-${group.tmdbId}`;
-  const nextData = groupNextUnwatched(group);
   const size = groupSize(group);
-  const seasons = useMemo(() => groupSeasons(group), [group]);
+
+  const sections = useMemo<DisplaySection[]>(() => {
+    if (folderConfig) {
+      return groupFolderSections(group, folderConfig)
+        .filter((s) => s.items.length > 0)
+        .map((s) => ({
+          key: s.folder?.id ?? "orphans",
+          label: s.folder?.name ?? "Non classés",
+          items: s.items,
+        }));
+    }
+    return groupSeasons(group).map((s) => ({
+      key: `s${s.season ?? "x"}`,
+      label: s.season !== null ? `Saison ${s.season}` : "Saison ?",
+      items: s.items,
+    }));
+  }, [group, folderConfig]);
+
+  // Prochain épisode non vu en suivant l'ordre des sections affichées.
+  const nextData = useMemo(() => {
+    for (const s of sections) {
+      const item = s.items.find((it) => !it.entry.watched[it.file.name]);
+      if (item) return item;
+    }
+    return null;
+  }, [sections]);
+
+  function updateFolderConfig(config: SeriesFolderConfig) {
+    setFolderConfig(config);
+    void saveSeriesFolderConfig(group.tmdbId, config);
+  }
+
+  // Première ouverture du mode organisation : fige le regroupement auto en
+  // dossiers explicites pour qu'ils deviennent éditables.
+  function enterOrganize() {
+    exitSelectMode();
+    if (!folderConfig) updateFolderConfig(materializeFolders(group));
+    setOrganize(true);
+  }
+
+  // Retire des fichiers (par lien) de la bibliothèque, entrée par entrée.
+  // Une entrée vidée de tous ses fichiers vidéo est supprimée ; si tout le
+  // groupe disparaît, la modale se ferme d'elle-même (le groupe n'existe plus).
+  function deleteFilesByLink(links: Set<string>) {
+    for (const e of group.entries) {
+      const updated = removeFilesByLink(e, links);
+      if (updated === null) onRemove(e.infoHash);
+      else if (updated !== e) onChange(updated);
+    }
+  }
 
   const selectionKey = `${groupKey}-selection`;
   const downloadingSelection = debrid.bulkDownloading === selectionKey;
@@ -115,15 +195,8 @@ export function SeriesGroupDetailModal({
     setConfirmDeleteSelection(false);
   }
 
-  // Retire les épisodes sélectionnés de la bibliothèque, entrée par entrée.
-  // Une entrée vidée de tous ses fichiers vidéo est supprimée ; si tout le
-  // groupe disparaît, la modale se ferme d'elle-même (le groupe n'existe plus).
   function handleDeleteSelection() {
-    for (const e of group.entries) {
-      const updated = removeFilesByLink(e, selected);
-      if (updated === null) onRemove(e.infoHash);
-      else if (updated !== e) onChange(updated);
-    }
+    deleteFilesByLink(selected);
     exitSelectMode();
   }
 
@@ -134,10 +207,14 @@ export function SeriesGroupDetailModal({
   }, [confirmDeleteSelection]);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !enrichOpen && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || enrichOpen) return;
+      if (organize) setOrganize(false);
+      else onClose();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, enrichOpen]);
+  }, [onClose, enrichOpen, organize]);
 
   useEffect(() => {
     if (!confirmDelete) return;
@@ -201,7 +278,8 @@ export function SeriesGroupDetailModal({
               )}
               {size > 0 && <span>{formatSize(size)}</span>}
               <span>
-                {seasons.length} saison{seasons.length > 1 ? "s" : ""}
+                {sections.length} {folderConfig ? "dossier" : "saison"}
+                {sections.length > 1 ? "s" : ""}
               </span>
               <span>
                 {watched}/{total} vus
@@ -224,6 +302,17 @@ export function SeriesGroupDetailModal({
           </div>
 
           <div className="flex flex-none items-center gap-1.5">
+            <button
+              onClick={() => (organize ? setOrganize(false) : enterOrganize())}
+              title="Gérer les dossiers (saisons)"
+              className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
+                organize
+                  ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                  : "bg-zinc-200 text-zinc-500 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+              }`}
+            >
+              <FolderCog className="h-3.5 w-3.5" />
+            </button>
             {onEnrichTmdb && (
               <button
                 onClick={onEnrichTmdb}
@@ -258,7 +347,7 @@ export function SeriesGroupDetailModal({
           </div>
         </div>
 
-        {!selectMode && (
+        {!selectMode && !organize && (
           <div className="flex items-center gap-3 border-y border-black/5 bg-black/[0.02] px-5 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
             <Checkbox checked={whole} onClick={handleAllWatched} />
             <span className="flex-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">
@@ -383,27 +472,37 @@ export function SeriesGroupDetailModal({
           </div>
         )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-black/5 dark:divide-white/10">
-          {seasons.map((season) => (
-            <ModalSeasonSection
-              key={season.season ?? "other"}
-              season={season}
-              groupKey={groupKey}
-              onChange={onChange}
-              debrid={debrid}
-              simple={simple}
-              autoWatchOnPlay={autoWatchOnPlay}
-              selection={selectMode ? selection : undefined}
-            />
-          ))}
-        </div>
+        {organize && folderConfig ? (
+          <SeriesFolderOrganizer
+            group={group}
+            config={folderConfig}
+            onConfigChange={updateFolderConfig}
+            onDeleteFiles={deleteFilesByLink}
+            onExit={() => setOrganize(false)}
+          />
+        ) : (
+          <div className="min-h-0 flex-1 overflow-y-auto divide-y divide-black/5 dark:divide-white/10">
+            {sections.map((section) => (
+              <ModalSeasonSection
+                key={section.key}
+                section={section}
+                groupKey={groupKey}
+                onChange={onChange}
+                debrid={debrid}
+                simple={simple}
+                autoWatchOnPlay={autoWatchOnPlay}
+                selection={selectMode ? selection : undefined}
+              />
+            ))}
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );
 }
 
 function ModalSeasonSection({
-  season,
+  section,
   groupKey,
   onChange,
   debrid,
@@ -411,7 +510,7 @@ function ModalSeasonSection({
   autoWatchOnPlay,
   selection,
 }: {
-  season: GroupSeason;
+  section: DisplaySection;
   groupKey: string;
   onChange: (e: LibraryEntry) => void;
   debrid: DebridControls;
@@ -420,12 +519,12 @@ function ModalSeasonSection({
   selection?: EpisodeSelection;
 }) {
   const [open, setOpen] = useState(false);
-  const items = season.items;
+  const items = section.items;
   const seenCount = items.filter((it) => it.entry.watched[it.file.name]).length;
   const allSeen = seenCount === items.length;
-  const label = season.season !== null ? `Saison ${season.season}` : "Saison ?";
+  const label = section.label;
   const links = items.map((it) => it.file.link);
-  const sectionKey = `${groupKey}-s${season.season ?? "x"}`;
+  const sectionKey = `${groupKey}-${section.key}`;
   const next = items.find((it) => !it.entry.watched[it.file.name]) ?? null;
   const total = items.length;
   const allSelected = !!selection && links.every((l) => selection.has(l));

@@ -1,23 +1,26 @@
-import { lazy, Suspense, useEffect, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { LazyStore } from "@tauri-apps/plugin-store";
-import { Toaster } from "@/components/ui/sonner";
-import { DownloadsOverlay } from "@/components/DownloadsOverlay";
-import { SplashScreen } from "@/components/SplashScreen";
-import { SplashTransition } from "@/components/SplashTransition";
-import { useAppInit } from "@/lib/useAppInit";
-import { getApiKey } from "@/lib/apiKeys";
-import { UpdateDialog } from "@/components/UpdateDialog";
-import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
-import { LATEST_VERSION } from "@/lib/patchnotes";
 import type { Page } from "@/components/AppMenu";
-import type { TmdbItem } from "@/lib/tmdbItem";
-import { prefetchLibrary } from "@/lib/library";
+import { DownloadsOverlay } from "@/components/DownloadsOverlay";
 import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
+import { SplashScreen } from "@/components/SplashScreen";
+import { SplashTransition } from "@/components/SplashTransition";
+import { Toaster } from "@/components/ui/sonner";
+import { UpdateDialog } from "@/components/UpdateDialog";
+import { getApiKey } from "@/lib/apiKeys";
 import { isBrowserPreview } from "@/lib/devTauriShim";
-import { useNavShortcuts } from "@/lib/useNavShortcuts";
+import { prefetchLibrary } from "@/lib/library";
+import { LATEST_VERSION } from "@/lib/patchnotes";
+import { loadSeriesFolders } from "@/lib/seriesFolders";
+import type { TmdbItem } from "@/lib/tmdbItem";
+import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
 import { useActionShortcuts } from "@/lib/useActionShortcuts";
+import { useAppInit } from "@/lib/useAppInit";
+import { useNavShortcuts } from "@/lib/useNavShortcuts";
+import { DiscoverPage } from "@/pages/DiscoverPage";
+import { LibraryPage } from "@/pages/LibraryPage";
+import { LazyStore } from "@tauri-apps/plugin-store";
+import { AnimatePresence, motion } from "motion/react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -29,7 +32,6 @@ const MainPage = lazy(() => import("@/pages/MainPage").then((m) => ({ default: m
 const MagnetsPage = lazy(() =>
   import("@/pages/MagnetsPage").then((m) => ({ default: m.MagnetsPage })),
 );
-import { DiscoverPage } from "@/pages/DiscoverPage";
 // Page de test dev uniquement : exclue du bundle de production.
 const NyaaTestPage = import.meta.env.DEV
   ? lazy(() => import("@/pages/NyaaTestPage").then((m) => ({ default: m.NyaaTestPage })))
@@ -43,7 +45,6 @@ const PatchnotesPage = lazy(() =>
 const BoatGamePage = lazy(() =>
   import("@/pages/BoatGamePage").then((m) => ({ default: m.BoatGamePage })),
 );
-import { LibraryPage } from "@/pages/LibraryPage";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
@@ -118,8 +119,10 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Réchauffe le cache bibliothèque pendant le splash (best-effort).
+    // Réchauffe les caches bibliothèque et dossiers de séries pendant le
+    // splash (best-effort).
     prefetchLibrary().catch(() => {});
+    loadSeriesFolders().catch(() => {});
 
     Promise.all([store.get<boolean>("setup_complete"), store.get<boolean>("welcome_v1_seen")])
       .then(([done, welcomeSeen]) => {
