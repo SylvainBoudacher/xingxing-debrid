@@ -321,6 +321,15 @@ export function LibraryPage({
     });
   }
 
+  function toggleWatched(entry: LibraryEntry) {
+    setEntries((prev) => {
+      const value = !isWholeWatched(entry);
+      const next = prev.map((e) => (e.infoHash === entry.infoHash ? setWholeWatched(e, value) : e));
+      saveLibraryDebounced(next);
+      return next;
+    });
+  }
+
   function bulkRemove() {
     const removed = entries.filter((e) => selected.has(e.infoHash));
     if (removed.length === 0) return;
@@ -438,6 +447,7 @@ export function LibraryPage({
         }
         onEnrichTmdb={enrichHandler(item.entry)}
         onRemove={() => handleRemove(item.entry.infoHash)}
+        onToggleWatched={() => toggleWatched(item.entry)}
         magnet={magnetFor(item.entry)}
         onCancelDebrid={cancelDebrid}
         cancellingDebrid={cancellingHash === item.entry.infoHash}

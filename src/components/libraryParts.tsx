@@ -148,13 +148,21 @@ export function Checkbox({ checked, onClick }: { checked: boolean; onClick: () =
     <motion.button
       whileTap={{ scale: 0.85 }}
       onClick={onClick}
-      className={`flex h-5 w-5 flex-none items-center justify-center rounded-md ring-1 transition-colors ${
+      title={checked ? "Marquer comme non vu" : "Marquer comme vu"}
+      className={`group flex h-5 w-5 flex-none items-center justify-center rounded-md ring-1 transition-colors ${
         checked
           ? "bg-emerald-500 ring-emerald-500 text-white"
-          : "bg-transparent ring-black/20 dark:ring-white/20 text-transparent hover:ring-emerald-400"
+          : "bg-transparent ring-black/20 hover:bg-emerald-500/15 hover:ring-emerald-400 dark:ring-white/20"
       }`}
     >
-      <Check className="h-3.5 w-3.5" strokeWidth={3} />
+      <Check
+        className={`h-3.5 w-3.5 transition-opacity ${
+          checked
+            ? "opacity-100"
+            : "text-emerald-500 opacity-0 group-hover:opacity-60 dark:text-emerald-400"
+        }`}
+        strokeWidth={3}
+      />
     </motion.button>
   );
 }

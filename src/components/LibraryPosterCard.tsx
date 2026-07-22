@@ -22,6 +22,8 @@ interface LibraryPosterCardProps {
   onEnrichTmdb?: () => void;
   // Suppression directe au survol (retire l'entrée de la bibliothèque).
   onRemove?: () => void;
+  // Bascule « vu / non vu » directement au survol de la jacquette.
+  onToggleWatched?: () => void;
   // Mode sélection multiple : le clic coche la carte au lieu de l'ouvrir.
   selectMode?: boolean;
   selected?: boolean;
@@ -38,6 +40,7 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
   onToggle,
   onEnrichTmdb,
   onRemove,
+  onToggleWatched,
   selectMode = false,
   selected = false,
   magnet,
@@ -115,12 +118,32 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
         </span>
       )}
 
-      {/* Pastille « vu » */}
-      {whole && !selectMode && (
-        <span className="absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow">
-          <Check className="h-3.5 w-3.5" strokeWidth={3} />
-        </span>
-      )}
+      {/* Pastille « vu » : cochage direct au survol de la jacquette */}
+      {!selectMode &&
+        (onToggleWatched ? (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleWatched();
+            }}
+            title={whole ? "Marquer comme non vu" : "Marquer comme vu"}
+            className={`absolute left-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full text-white shadow backdrop-blur-sm transition-opacity ${
+              whole
+                ? "bg-emerald-500 hover:bg-emerald-600"
+                : "bg-black/40 opacity-0 hover:bg-emerald-500 group-hover:opacity-100 focus:opacity-100"
+            }`}
+          >
+            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+          </span>
+        ) : (
+          whole && (
+            <span className="absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow">
+              <Check className="h-3.5 w-3.5" strokeWidth={3} />
+            </span>
+          )
+        ))}
 
       {/* Suppression directe au survol */}
       {onRemove && !selectMode && (

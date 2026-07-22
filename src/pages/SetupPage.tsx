@@ -755,6 +755,18 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                       <span className="font-mono text-zinc-600 dark:text-zinc-300">8.8.8.8</span>{" "}
                       (Google).
                     </p>
+                    <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                      Changer le DNS pour l'
+                      <span className="font-semibold text-zinc-600 dark:text-zinc-300">
+                        IPv4
+                      </span>{" "}
+                      peut ne pas suffire : pensez a faire de meme pour l'
+                      <span className="font-semibold text-zinc-600 dark:text-zinc-300">IPv6</span>,
+                      sinon votre systeme peut continuer a utiliser l'ancien DNS. Par ailleurs,
+                      certains logiciels de securite (antivirus, pare-feu, VPN) peuvent bloquer
+                      l'application au niveau reseau : verifiez leurs reglages si l'acces echoue
+                      malgre un DNS correct.
+                    </p>
                   </div>
                 </div>
 
@@ -831,16 +843,29 @@ export function SetupPage({ onComplete }: SetupPageProps) {
 
               <motion.div variants={item} className="pt-2">
                 <motion.button
-                  whileTap={{ scale: 0.98 }}
+                  whileTap={{ scale: dnsStatus === "ok" ? 0.98 : 1 }}
                   onClick={() => setStep("keys")}
-                  className="flex w-full items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors"
+                  disabled={dnsStatus !== "ok"}
+                  className="flex w-full items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-indigo-600 text-sm font-semibold text-white transition-colors"
                 >
-                  Continuer
-                  <ArrowRight className="h-4 w-4" />
+                  {dnsStatus === "checking" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      Continuer
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
                 </motion.button>
                 {dnsStatus === "fail" && (
+                  <p className="mt-2 text-center text-[11px] text-red-500 dark:text-red-400">
+                    c411.org doit etre accessible pour continuer. Sans cela, l'application ne pourra
+                    pas fonctionner. Suivez le guide DNS puis reessayez.
+                  </p>
+                )}
+                {dnsStatus === "idle" && (
                   <p className="mt-2 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
-                    Vous pouvez continuer et configurer votre DNS plus tard.
+                    Verifiez l'acces a c411.org pour continuer.
                   </p>
                 )}
               </motion.div>
@@ -900,7 +925,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               <KeyCard
                 number={3}
                 title="Clé API TMDB"
-                url="https://www.themoviedb.org/settings/api"
+                url="https://www.themoviedb.org"
                 urlLabel="themoviedb.org"
                 steps={TMDB_STEPS}
                 value={tmdbKey}

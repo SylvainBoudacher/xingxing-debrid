@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { AlertTriangle, Globe, Terminal, X } from "lucide-react";
+import { AlertTriangle, Copy, Globe, Terminal, X } from "lucide-react";
 import { toast } from "sonner";
 
 // Applique le DNS Cloudflare a toutes les cartes actives en une fois (utile si VPN
@@ -28,6 +28,23 @@ function WinKey() {
 
 function Strong({ children }: { children: React.ReactNode }) {
   return <span className="font-medium text-zinc-700 dark:text-zinc-300">{children}</span>;
+}
+
+function CopyChip({ value }: { value: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard.writeText(value);
+        toast.success("Commande copiee");
+      }}
+      title="Copier"
+      className="group inline-flex items-center align-baseline font-sans tracking-wide text-[12px] font-semibold text-zinc-700 dark:text-zinc-300 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded px-1.5 py-0.5 transition-colors"
+    >
+      {value}
+      <Copy className="h-3 w-0 ml-0 opacity-0 text-zinc-500 dark:text-zinc-400 transition-all group-hover:w-3 group-hover:ml-1 group-hover:opacity-100" />
+    </button>
+  );
 }
 
 function Mono({ children }: { children: React.ReactNode }) {
@@ -86,7 +103,7 @@ const WINDOWS_STEPS = [
         <kbd className="rounded bg-zinc-200 dark:bg-zinc-700 px-1.5 py-0.5 text-[11px] font-mono font-medium text-zinc-700 dark:text-zinc-200">
           R
         </kbd>
-        , tapez <Mono>ncpa.cpl</Mono> et appuyez sur Entree.
+        , tapez <CopyChip value="ncpa.cpl" /> et appuyez sur Entree.
       </>
     ),
   },
@@ -328,6 +345,29 @@ export function DnsGuideModal({ onClose }: { onClose: () => void }) {
                 </div>
               </>
             )}
+
+            <div>
+              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                3. Ne pas oublier l'IPv6
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Changer le DNS de l'<Strong>IPv4</Strong> peut ne pas suffire : si votre connexion
+                utilise l'<Strong>IPv6</Strong>, appliquez le meme DNS alternatif la aussi (
+                <Mono>2606:4700:4700::1111</Mono> pour Cloudflare), sinon l'ancien DNS reste
+                utilise.
+              </p>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">
+                4. Verifier vos logiciels de securite
+              </p>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                Un antivirus, un pare-feu ou un VPN peut bloquer XingXing au niveau reseau, meme
+                avec un DNS correct. Autorisez l'application (ou desactivez temporairement le
+                filtrage) et reessayez.
+              </p>
+            </div>
           </div>
         </div>
 
