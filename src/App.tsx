@@ -126,7 +126,7 @@ function App() {
 
     Promise.all([store.get<boolean>("setup_complete"), store.get<boolean>("welcome_v1_seen")])
       .then(([done, welcomeSeen]) => {
-        setPage(done && welcomeSeen ? "main" : "setup");
+        setPage(done && welcomeSeen ? "library" : "setup");
       })
       .catch((err) => {
         console.error("Store read failed:", err);

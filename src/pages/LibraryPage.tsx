@@ -1,6 +1,11 @@
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { LibraryDetailModal } from "@/components/LibraryDetailModal";
+import { LibraryBlocks } from "@/components/LibraryBlocks";
 import { LibraryEntryCard, type DebridControls } from "@/components/LibraryEntryCard";
+import { LibraryGenreFilter } from "@/components/LibraryGenreFilter";
+import { LibraryCategoryMenu } from "@/components/LibraryCategoryMenu";
+import { LibraryCustomBar } from "@/components/LibraryCustomBar";
+import { LibraryListNameModal } from "@/components/LibraryListNameModal";
 import { LibraryPosterCard } from "@/components/LibraryPosterCard";
 import { LibrarySelectionBar } from "@/components/LibrarySelectionBar";
 import { SeriesGroupCard } from "@/components/SeriesGroupCard";
@@ -30,6 +35,29 @@ import {
   type DisplayItem,
   type LibraryEntry,
 } from "@/lib/library";
+import {
+  buildLibraryBlocks,
+  filterByGenres,
+  genreOptions,
+  type GroupMode,
+  type LibraryBlock,
+} from "@/lib/librarySections";
+import {
+  assignHashes,
+  categoryOf,
+  createCategory,
+  deleteCategory,
+  EMPTY_CATEGORIES,
+  itemHashes,
+  loadCategories,
+  moveCategory,
+  pruneCategories,
+  renameCategory,
+  saveCategories,
+  UNCLASSIFIED,
+  type CategoryConfig,
+  type LibraryCategory,
+} from "@/lib/libraryCategories";
 import { toastNetworkError } from "@/lib/networkError";
 import { queryClient } from "@/lib/queryClient";
 import {
@@ -39,6 +67,8 @@ import {
   type MagnetEntry,
 } from "@/lib/services/allDebrid";
 import { useDebridActions } from "@/lib/useDebridActions";
+import { useDragScroll } from "@/lib/useDragScroll";
+import { useLibraryGenres } from "@/lib/useLibraryGenres";
 import { useLibraryMagnetStatus } from "@/lib/useLibraryMagnetStatus";
 import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
 import { invoke } from "@tauri-apps/api/core";
@@ -53,9 +83,10 @@ import {
   Library as LibraryIcon,
   List,
   Search,
+  Tags,
 } from "lucide-react";
-import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, Reorder, useDragControls, type PanInfo } from "motion/react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 interface LibraryPageProps {
@@ -89,6 +120,13 @@ const SORTS: { id: Sort; label: string }[] = [
   { id: "progress", label: "À finir" },
 ];
 
+const GROUP_MODES: { id: GroupMode; label: string }[] = [
+  { id: "none", label: "Aucun" },
+  { id: "type", label: "Type" },
+  { id: "genre", label: "Genre" },
+  { id: "category", label: "Personnalisé" },
+];
+
 const SORTERS: Record<Exclude<Sort, "manual">, (a: LibraryEntry, b: LibraryEntry) => number> = {
   recent: (a, b) => b.addedAt - a.addedAt,
   title: (a, b) => a.title.localeCompare(b.title),
@@ -111,7 +149,23 @@ export function LibraryPage({
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? "simple");
   const [layout, setLayout] = useState<Layout>("grid");
-  const [split, setSplit] = useState(true);
+  const [grouping, setGrouping] = useState<GroupMode>("type");
+  const [genreFilter, setGenreFilter] = useState<Set<string>>(new Set());
+  const [genreBarOpen, setGenreBarOpen] = useState(false);
+  const [categories, setCategories] = useState<CategoryConfig>(EMPTY_CATEGORIES);
+  // Titre en cours de glissement : dataTransfer ne se lit pas pendant dragover,
+  // et une ref suffit puisque le glisser-déposer reste dans la page.
+  const draggedHashes = useRef<string[]>([]);
+  const [hoveredDrop, setHoveredDrop] = useState<string | null>(null);
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
+  // Le relâchement d'un drag émet un click sur le bouton de la carte, qui
+  // ouvrirait la modale de détail : on l'avale en phase capture.
+  const suppressClick = useRef(false);
+  const { ref: toolbarRef, dragProps: toolbarDrag } = useDragScroll<HTMLDivElement>();
+  // Modale de nom : création simple, création depuis une sélection, renommage.
+  const [naming, setNaming] = useState<
+    { mode: "create"; hashes: string[] } | { mode: "rename"; category: LibraryCategory } | null
+  >(null);
   const [expandedHash, setExpandedHash] = useState<string | null>(null);
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
@@ -186,11 +240,48 @@ export function LibraryPage({
     store.get<Layout>("library_layout").then((v) => {
       if (v) setLayout(v);
     });
-    store.get<boolean>("library_split").then((v) => {
-      if (v !== null && v !== undefined) setSplit(v);
+    store.get<boolean>("library_genre_bar").then((v) => {
+      if (v !== null && v !== undefined) setGenreBarOpen(v);
+    });
+    // Purge des références mortes au chargement seulement : pendant la session,
+    // une suppression reste annulable, et son appartenance aux listes avec.
+    void Promise.all([loadLibrary(), loadCategories()]).then(([loaded, stored]) => {
+      const pruned = pruneCategories(stored, new Set(loaded.map((e) => e.infoHash)));
+      setCategories(pruned);
+      if (pruned !== stored) void saveCategories(pruned);
+    });
+    // "library_split" (booléen) est l'ancien réglage films/séries : conservé
+    // comme valeur de repli tant que le nouveau mode n'a pas été choisi.
+    store.get<GroupMode>("library_grouping").then((v) => {
+      if (v) return setGrouping(v);
+      void store.get<boolean>("library_split").then((old) => {
+        if (old !== null && old !== undefined) setGrouping(old ? "type" : "none");
+      });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Replier la barre efface la sélection : un filtre actif mais invisible
+  // donnerait une bibliothèque incomplète sans raison apparente.
+  function toggleGenreBar() {
+    const next = !genreBarOpen;
+    setGenreBarOpen(next);
+    if (!next) setGenreFilter(new Set());
+    void store.set("library_genre_bar", next).then(() => store.save());
+  }
+
+  // Le rangement par sélection n'existe qu'en vue grille : on y bascule plutôt
+  // que de laisser un bouton sans effet en vue liste.
+  function startClassifying() {
+    if (selectMode) return exitSelect();
+    if (layout === "list") changeLayout("grid");
+    setSelectMode(true);
+  }
+
+  function changeGrouping(next: GroupMode) {
+    setGrouping(next);
+    void store.set("library_grouping", next).then(() => store.save());
+  }
 
   function changeLayout(next: Layout) {
     setLayout(next);
@@ -367,35 +458,101 @@ export function LibraryPage({
   }, [entries, filter, sort, q]);
 
   // Le glisser-déposer ne réordonne que la liste complète (sans filtre ni recherche).
-  const canReorder = !split && sort === "manual" && filter === "all" && q === "";
+  const canReorder =
+    grouping === "none" &&
+    sort === "manual" &&
+    filter === "all" &&
+    q === "" &&
+    genreFilter.size === 0;
+
+  const grouped = useMemo<DisplayItem[]>(() => groupLibraryEntries(visible), [visible]);
+
+  // Options du filtre : calculées avant filtrage, sinon décocher un genre
+  // deviendrait impossible (sa puce disparaîtrait avec les titres).
+  const genreOpts = useMemo(() => genreOptions(grouped), [grouped]);
 
   const displayItems = useMemo<DisplayItem[]>(
-    () => (canReorder ? [] : groupLibraryEntries(visible)),
-    [canReorder, visible],
+    () => (canReorder ? [] : filterByGenres(grouped, genreFilter)),
+    [canReorder, grouped, genreFilter],
   );
 
-  const splitSections = useMemo<{ label: string; items: DisplayItem[] }[] | null>(() => {
-    if (!split) return null;
-    const noInfo: DisplayItem[] = [];
-    const movies: DisplayItem[] = [];
-    const series: DisplayItem[] = [];
-    for (const item of displayItems) {
-      if (item.type === "group") {
-        series.push(item);
-      } else if (!item.entry.tmdb) {
-        noInfo.push(item);
-      } else if (item.entry.tmdb.mediaType === "movie") {
-        movies.push(item);
-      } else {
-        series.push(item);
-      }
+  const blocks = useMemo(
+    () => buildLibraryBlocks(displayItems, grouping, categories),
+    [displayItems, grouping, categories],
+  );
+
+  function persistCategories(next: CategoryConfig) {
+    setCategories(next);
+    void saveCategories(next);
+  }
+
+  // Les hashes des titres sélectionnés (une série regroupée en fournit un par
+  // saison, cf. itemHashes).
+  function selectedHashes(): string[] {
+    return displayItems
+      .filter((i) => itemHashes(i).some((h) => selected.has(h)))
+      .flatMap(itemHashes);
+  }
+
+  function handleNameConfirm(name: string) {
+    if (naming === null) return;
+    if (naming.mode === "rename") {
+      persistCategories(renameCategory(categories, naming.category.id, name));
+    } else {
+      const created = createCategory(categories, name);
+      const category = created.categories[created.categories.length - 1];
+      persistCategories(
+        naming.hashes.length > 0 ? assignHashes(created, naming.hashes, category.id) : created,
+      );
+      if (naming.hashes.length > 0) exitSelect();
+      setGrouping("category");
     }
-    const sections: { label: string; items: DisplayItem[] }[] = [];
-    if (noInfo.length > 0) sections.push({ label: "Sans info TMDB", items: noInfo });
-    if (movies.length > 0) sections.push({ label: "Films", items: movies });
-    if (series.length > 0) sections.push({ label: "Séries", items: series });
-    return sections;
-  }, [split, displayItems]);
+    setNaming(null);
+  }
+
+  // La catégorie disparaît, ses titres redeviennent non classés.
+  function handleDeleteCategory(category: LibraryCategory) {
+    const before = categories;
+    persistCategories(deleteCategory(categories, category.id));
+    toast.success(`Catégorie « ${category.name} » supprimée`, {
+      action: { label: "Annuler", onClick: () => persistCategories(before) },
+    });
+  }
+
+  // Dépôt d'un titre (glisser-déposer) ou de la sélection sur une catégorie.
+  function classify(hashes: string[], dropId: string) {
+    if (hashes.length === 0) return;
+    persistCategories(assignHashes(categories, hashes, dropId === UNCLASSIFIED ? null : dropId));
+  }
+
+  function handleClassifySelection(dropId: string) {
+    classify(selectedHashes(), dropId);
+    exitSelect();
+  }
+
+  function toggleGenre(name: string) {
+    setGenreFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
+  // Les genres alimentent le filtre comme le regroupement : ceux qui manquent
+  // sont récupérés une fois puis écrits dans la bibliothèque.
+  const applyGenres = useCallback((genresById: Map<string, number[]>) => {
+    setEntries((prev) => {
+      const next = prev.map((e) => {
+        const ids = e.tmdb && genresById.get(`${e.tmdb.mediaType}:${e.tmdb.id}`);
+        return ids ? { ...e, tmdb: { ...e.tmdb!, genreIds: ids } } : e;
+      });
+      saveLibraryDebounced(next);
+      return next;
+    });
+  }, []);
+
+  useLibraryGenres(entries, initialTmdbKey, true, applyGenres);
 
   // Entrée affichée dans le panneau latéral (vue grille). Null si l'entrée
   // sélectionnée n'est plus visible après un changement de filtre/recherche.
@@ -433,39 +590,162 @@ export function LibraryPage({
     return n;
   }, [selectMode, displayItems, selected]);
 
+  const itemKey = (item: DisplayItem) =>
+    item.type === "group" ? `g${item.group.tmdbId}` : item.entry.infoHash;
+
+  // Menu d'un bloc catégorie (les non classés n'en ont pas : rien à renommer).
+  const categoryBlockMenu = (block: LibraryBlock) => {
+    const index = categories.categories.findIndex((c) => c.id === block.dropId);
+    if (index === -1) return null;
+    const category = categories.categories[index];
+    return (
+      <LibraryCategoryMenu
+        onRename={() => setNaming({ mode: "rename", category })}
+        onDelete={() => handleDeleteCategory(category)}
+        onMoveUp={() => persistCategories(moveCategory(categories, category.id, -1))}
+        onMoveDown={() => persistCategories(moveCategory(categories, category.id, 1))}
+        canMoveUp={index > 0}
+        canMoveDown={index < categories.categories.length - 1}
+      />
+    );
+  };
+
+  // Bloc catégorie sous le curseur. `elementsFromPoint` traverse la pile :
+  // la carte en cours de glissement, au-dessus, n'occulte pas la cible.
+  //
+  // L'événement pointeur donne des coordonnées écran directement ; `info.point`
+  // est relatif à la page et sert de repli (tactile).
+  function dropIdAt(event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo): string | null {
+    const native = event as PointerEvent;
+    const x = typeof native.clientX === "number" ? native.clientX : info.point.x - window.scrollX;
+    const y = typeof native.clientY === "number" ? native.clientY : info.point.y - window.scrollY;
+    for (const el of document.elementsFromPoint(x, y)) {
+      // La carte glissée est sous le curseur : remonter son DOM mènerait à son
+      // bloc d'origine, jamais à la cible. On saute tous ses éléments.
+      if ((el as HTMLElement).closest("[data-dragging]")) continue;
+      const dropId = (el as HTMLElement).closest<HTMLElement>("[data-drop-id]")?.dataset.dropId;
+      if (dropId) return dropId;
+    }
+    return null;
+  }
+
+  // En mode Personnalisé, chaque carte se glisse dans un bloc catégorie.
+  // Le glisser passe par motion (pointer events) et non par le drag HTML5 :
+  // dans le WebView, l'image de la jaquette et le bouton de la carte captent
+  // le geste natif, et le dépôt n'arrive jamais.
+  const draggableCard = (item: DisplayItem, card: ReactNode) => {
+    if (grouping !== "category") return card;
+    return (
+      <motion.div
+        key={itemKey(item)}
+        drag
+        dragSnapToOrigin
+        dragMomentum={false}
+        dragElastic={0.2}
+        whileDrag={{ scale: 0.92, zIndex: 30, cursor: "grabbing" }}
+        data-dragging={draggingKey === itemKey(item) ? "" : undefined}
+        onDragStart={() => {
+          draggedHashes.current = itemHashes(item);
+          setDraggingKey(itemKey(item));
+          suppressClick.current = true;
+        }}
+        onDrag={(event, info) => setHoveredDrop(dropIdAt(event, info))}
+        onDragEnd={(event, info) => {
+          const dropId = dropIdAt(event, info);
+          setHoveredDrop(null);
+          setDraggingKey(null);
+          if (dropId && categoryOf(categories, item) !== (dropId === UNCLASSIFIED ? null : dropId))
+            classify(draggedHashes.current, dropId);
+          draggedHashes.current = [];
+          // Le click éventuel arrive juste après le pointerup, avant ce timeout :
+          // on ne bloque donc jamais un vrai clic ultérieur.
+          setTimeout(() => {
+            suppressClick.current = false;
+          }, 0);
+        }}
+        onClickCapture={(e) => {
+          if (suppressClick.current) {
+            suppressClick.current = false;
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        className="relative cursor-grab touch-none select-none active:cursor-grabbing [&_img]:[-webkit-user-drag:none]"
+      >
+        {card}
+      </motion.div>
+    );
+  };
+
+  const renderCard = (item: DisplayItem) =>
+    draggableCard(
+      item,
+      item.type === "single" ? (
+        <LibraryEntryCard
+          key={item.entry.infoHash}
+          entry={item.entry}
+          onChange={handleChange}
+          onRemove={handleRemove}
+          debrid={debrid}
+          simple={viewMode === "simple"}
+          autoWatchOnPlay={autoWatchOnPlay}
+          magnet={magnetFor(item.entry)}
+          onCancelDebrid={cancelDebrid}
+          cancellingDebrid={cancellingHash === item.entry.infoHash}
+        />
+      ) : (
+        <SeriesGroupCard
+          key={item.group.tmdbId}
+          group={item.group}
+          onChange={handleChange}
+          onRemove={handleRemove}
+          debrid={debrid}
+          simple={viewMode === "simple"}
+          autoWatchOnPlay={autoWatchOnPlay}
+        />
+      ),
+    );
+
   const renderPoster = (item: DisplayItem) =>
-    item.type === "single" ? (
-      <LibraryPosterCard
-        key={item.entry.infoHash}
-        entry={item.entry}
-        simple={viewMode === "simple"}
-        expanded={expandedHash === item.entry.infoHash}
-        selectMode={selectMode}
-        selected={selected.has(item.entry.infoHash)}
-        onToggle={() =>
-          selectMode ? toggleSelected([item.entry.infoHash]) : setExpandedHash(item.entry.infoHash)
-        }
-        onEnrichTmdb={enrichHandler(item.entry)}
-        onRemove={() => handleRemove(item.entry.infoHash)}
-        onToggleWatched={() => toggleWatched(item.entry)}
-        magnet={magnetFor(item.entry)}
-        onCancelDebrid={cancelDebrid}
-        cancellingDebrid={cancellingHash === item.entry.infoHash}
-      />
-    ) : (
-      <SeriesGroupPosterCard
-        key={item.group.tmdbId}
-        group={item.group}
-        expanded={expandedGroupId === item.group.tmdbId}
-        selectMode={selectMode}
-        selected={item.group.entries.every((e) => selected.has(e.infoHash))}
-        onToggle={() =>
-          selectMode
-            ? toggleSelected(item.group.entries.map((e) => e.infoHash))
-            : setExpandedGroupId(item.group.tmdbId)
-        }
-        onRemove={() => removeHashes(item.group.entries.map((e) => e.infoHash))}
-      />
+    draggableCard(
+      item,
+      item.type === "single" ? (
+        <LibraryPosterCard
+          key={item.entry.infoHash}
+          layoutId={`poster-${item.entry.infoHash}`}
+          entry={item.entry}
+          simple={viewMode === "simple"}
+          expanded={expandedHash === item.entry.infoHash}
+          selectMode={selectMode}
+          selected={selected.has(item.entry.infoHash)}
+          onToggle={() =>
+            selectMode
+              ? toggleSelected([item.entry.infoHash])
+              : setExpandedHash(item.entry.infoHash)
+          }
+          onEnrichTmdb={enrichHandler(item.entry)}
+          onRemove={() => handleRemove(item.entry.infoHash)}
+          onToggleWatched={() => toggleWatched(item.entry)}
+          magnet={magnetFor(item.entry)}
+          onCancelDebrid={cancelDebrid}
+          cancellingDebrid={cancellingHash === item.entry.infoHash}
+        />
+      ) : (
+        <SeriesGroupPosterCard
+          key={item.group.tmdbId}
+          layoutId={`poster-series-${item.group.tmdbId}`}
+          group={item.group}
+          expanded={expandedGroupId === item.group.tmdbId}
+          selectMode={selectMode}
+          selected={item.group.entries.every((e) => selected.has(e.infoHash))}
+          onToggle={() =>
+            selectMode
+              ? toggleSelected(item.group.entries.map((e) => e.infoHash))
+              : setExpandedGroupId(item.group.tmdbId)
+          }
+          onRemove={() => removeHashes(item.group.entries.map((e) => e.infoHash))}
+        />
+      ),
     );
 
   return (
@@ -516,93 +796,150 @@ export function LibraryPage({
           />
         </div>
 
-        {/* Filtres + tri */}
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            {FILTERS.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setFilter(f.id)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  filter === f.id
-                    ? "bg-indigo-600 text-white"
-                    : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                }`}
-              >
-                {f.label} ({counts[f.id]})
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {layout === "grid" && (
-              <button
-                onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
-                title="Sélection multiple"
-                className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
-                  selectMode
-                    ? "bg-indigo-600 text-white"
-                    : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                }`}
-              >
-                <CheckSquare className="h-3.5 w-3.5" />
-                Sélection
-              </button>
-            )}
-
-            <button
-              onClick={() => {
-                const next = !split;
-                setSplit(next);
-                void store.set("library_split", next).then(() => store.save());
-              }}
-              title="Séparer films / séries"
-              className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
-                split
-                  ? "bg-indigo-600 text-white"
-                  : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-              }`}
-            >
-              <Layers className="h-3.5 w-3.5" />
-              Trier
-            </button>
-
-            <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
-              {(
-                [
-                  ["list", List],
-                  ["grid", LayoutGrid],
-                ] as const
-              ).map(([id, Icon]) => (
+        {/* Filtres + tri. La barre défile horizontalement plutôt que d'écraser
+            ses libellés quand elle déborde (min-w-max), le glisser reproduit le
+            défilement là où la molette horizontale manque. */}
+        <div
+          ref={toolbarRef}
+          {...toolbarDrag}
+          className="mb-4 cursor-grab overflow-x-auto select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div className="flex w-full min-w-max items-center justify-between gap-2">
+            <div className="flex flex-none items-center gap-1.5">
+              {FILTERS.map((f) => (
                 <button
-                  key={id}
-                  onClick={() => changeLayout(id)}
-                  title={id === "list" ? "Vue liste" : "Vue grille"}
-                  className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                    layout === id
-                      ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-700 dark:text-indigo-300"
-                      : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
+                  key={f.id}
+                  onClick={() => setFilter(f.id)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    filter === f.id
+                      ? "bg-indigo-600 text-white"
+                      : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
+                  {f.label} ({counts[f.id]})
                 </button>
               ))}
             </div>
 
-            <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>
-              <SelectTrigger className="h-8 w-auto gap-1 rounded-full px-3 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SORTS.filter((s) => s.id !== "manual" || layout === "list").map((s) => (
-                  <SelectItem key={s.id} value={s.id} className="text-xs">
-                    {s.label}
-                  </SelectItem>
+            <div className="flex flex-none items-center gap-2">
+              {layout === "grid" && (
+                <button
+                  onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+                  title="Sélection multiple"
+                  className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
+                    selectMode
+                      ? "bg-indigo-600 text-white"
+                      : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                  }`}
+                >
+                  <CheckSquare className="h-3.5 w-3.5" />
+                  Sélection
+                </button>
+              )}
+
+              {genreOpts.length > 0 && (
+                <button
+                  onClick={toggleGenreBar}
+                  title={genreBarOpen ? "Masquer les filtres de genre" : "Filtrer par genre"}
+                  className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
+                    genreBarOpen || genreFilter.size > 0
+                      ? "bg-indigo-600 text-white"
+                      : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                  }`}
+                >
+                  <Tags className="h-3.5 w-3.5" />
+                  Genres
+                  {genreFilter.size > 0 && (
+                    <span className="rounded-full bg-white/25 px-1.5 text-[10px] leading-4">
+                      {genreFilter.size}
+                    </span>
+                  )}
+                </button>
+              )}
+
+              <div className="flex items-center gap-1 rounded-full bg-black/5 p-0.5 dark:bg-white/10">
+                <Layers className="ml-2 mr-0.5 h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+                {GROUP_MODES.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => changeGrouping(m.id)}
+                    title={
+                      m.id === "genre"
+                        ? "Grouper par genre (films et séries séparés)"
+                        : m.id === "type"
+                          ? "Séparer films / séries"
+                          : "Aucun regroupement"
+                    }
+                    className={`flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-colors ${
+                      grouping === m.id
+                        ? "bg-indigo-600 text-white"
+                        : "text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
+                    }`}
+                  >
+                    {m.label}
+                  </button>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+
+              <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
+                {(
+                  [
+                    ["list", List],
+                    ["grid", LayoutGrid],
+                  ] as const
+                ).map(([id, Icon]) => (
+                  <button
+                    key={id}
+                    onClick={() => changeLayout(id)}
+                    title={id === "list" ? "Vue liste" : "Vue grille"}
+                    className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                      layout === id
+                        ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-700 dark:text-indigo-300"
+                        : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </button>
+                ))}
+              </div>
+
+              <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>
+                <SelectTrigger className="h-8 w-auto gap-1 rounded-full px-3 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SORTS.filter((s) => s.id !== "manual" || layout === "list").map((s) => (
+                    <SelectItem key={s.id} value={s.id} className="text-xs">
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
+
+        <AnimatePresence>
+          {grouping === "category" && (
+            <LibraryCustomBar
+              categoryCount={categories.categories.length}
+              selectMode={selectMode}
+              onCreate={() => setNaming({ mode: "create", hashes: [] })}
+              onToggleSelect={startClassifying}
+            />
+          )}
+        </AnimatePresence>
+
+        {genreBarOpen && genreOpts.length > 0 && (
+          <div className="mb-4">
+            <LibraryGenreFilter
+              options={genreOpts}
+              selected={genreFilter}
+              onToggle={toggleGenre}
+              onClear={() => setGenreFilter(new Set())}
+            />
+          </div>
+        )}
 
         {visible.length === 0 ? (
           <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
@@ -631,23 +968,25 @@ export function LibraryPage({
               </div>
             )}
           </div>
+        ) : displayItems.length === 0 && genreFilter.size > 0 ? (
+          <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
+            <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
+            <p className="text-sm">Aucun titre dans ces genres.</p>
+            <button
+              onClick={() => setGenreFilter(new Set())}
+              className="mt-1 flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+            >
+              Effacer les genres
+            </button>
+          </div>
         ) : layout === "grid" ? (
-          splitSections ? (
-            <div className="space-y-6">
-              {splitSections.map((section) => (
-                <div key={section.label}>
-                  <SectionHeader label={section.label} count={section.items.length} />
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-                    {section.items.map(renderPoster)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-              {displayItems.map(renderPoster)}
-            </div>
-          )
+          <LibraryBlocks blocks={blocks} blockMenu={categoryBlockMenu} activeDropId={hoveredDrop}>
+            {(items) => (
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+                {items.map(renderPoster)}
+              </div>
+            )}
+          </LibraryBlocks>
         ) : canReorder ? (
           <Reorder.Group axis="y" values={visible} onReorder={persist} className="space-y-2">
             {visible.map((e) => (
@@ -665,71 +1004,10 @@ export function LibraryPage({
               />
             ))}
           </Reorder.Group>
-        ) : splitSections ? (
-          <div className="space-y-6">
-            {splitSections.map((section) => (
-              <div key={section.label}>
-                <SectionHeader label={section.label} count={section.items.length} />
-                <div className="space-y-2">
-                  {section.items.map((item) =>
-                    item.type === "single" ? (
-                      <LibraryEntryCard
-                        key={item.entry.infoHash}
-                        entry={item.entry}
-                        onChange={handleChange}
-                        onRemove={handleRemove}
-                        debrid={debrid}
-                        simple={viewMode === "simple"}
-                        autoWatchOnPlay={autoWatchOnPlay}
-                        magnet={magnetFor(item.entry)}
-                        onCancelDebrid={cancelDebrid}
-                        cancellingDebrid={cancellingHash === item.entry.infoHash}
-                      />
-                    ) : (
-                      <SeriesGroupCard
-                        key={item.group.tmdbId}
-                        group={item.group}
-                        onChange={handleChange}
-                        onRemove={handleRemove}
-                        debrid={debrid}
-                        simple={viewMode === "simple"}
-                        autoWatchOnPlay={autoWatchOnPlay}
-                      />
-                    ),
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
         ) : (
-          <div className="space-y-2">
-            {displayItems.map((item) =>
-              item.type === "single" ? (
-                <LibraryEntryCard
-                  key={item.entry.infoHash}
-                  entry={item.entry}
-                  onChange={handleChange}
-                  onRemove={handleRemove}
-                  debrid={debrid}
-                  simple={viewMode === "simple"}
-                  autoWatchOnPlay={autoWatchOnPlay}
-                  magnet={magnetFor(item.entry)}
-                  onCancelDebrid={cancelDebrid}
-                  cancellingDebrid={cancellingHash === item.entry.infoHash}
-                />
-              ) : (
-                <SeriesGroupCard
-                  key={item.group.tmdbId}
-                  group={item.group}
-                  onChange={handleChange}
-                  onRemove={handleRemove}
-                  debrid={debrid}
-                  simple={viewMode === "simple"}
-                  autoWatchOnPlay={autoWatchOnPlay}
-                />
-              ),
-            )}
-          </div>
+          <LibraryBlocks blocks={blocks} blockMenu={categoryBlockMenu} activeDropId={hoveredDrop}>
+            {(items) => <div className="space-y-2">{items.map(renderCard)}</div>}
+          </LibraryBlocks>
         )}
       </div>
 
@@ -746,6 +1024,7 @@ export function LibraryPage({
             onEnrichTmdb={
               initialTmdbKey ? () => setMatchingHash(expandedEntry.infoHash) : undefined
             }
+            tmdbKey={initialTmdbKey ?? undefined}
             enrichOpen={matchingHash !== null}
             magnet={magnetFor(expandedEntry)}
             onCancelDebrid={cancelDebrid}
@@ -767,7 +1046,26 @@ export function LibraryPage({
             onEnrichTmdb={
               initialTmdbKey ? () => setMatchingGroupId(expandedGroup.group.tmdbId) : undefined
             }
+            tmdbKey={initialTmdbKey ?? undefined}
             enrichOpen={matchingGroupId !== null}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {naming && (
+          <LibraryListNameModal
+            title={
+              naming.mode === "rename"
+                ? "Renommer la catégorie"
+                : naming.hashes.length > 0
+                  ? "Nouvelle catégorie avec la sélection"
+                  : "Nouvelle catégorie"
+            }
+            initialName={naming.mode === "rename" ? naming.category.name : ""}
+            confirmLabel={naming.mode === "rename" ? "Renommer" : "Créer"}
+            onConfirm={handleNameConfirm}
+            onClose={() => setNaming(null)}
           />
         )}
       </AnimatePresence>
@@ -776,10 +1074,15 @@ export function LibraryPage({
         {selectMode && (
           <LibrarySelectionBar
             count={selectedCount}
+            categories={categories.categories}
             onMarkWatched={() => bulkSetWatched(true)}
             onMarkUnwatched={() => bulkSetWatched(false)}
             onDelete={bulkRemove}
             onCancel={exitSelect}
+            onClassify={handleClassifySelection}
+            onCreateCategoryWithSelection={() =>
+              setNaming({ mode: "create", hashes: selectedHashes() })
+            }
           />
         )}
       </AnimatePresence>
@@ -833,18 +1136,6 @@ interface ReorderableCardProps {
   magnet?: MagnetEntry;
   onCancelDebrid?: (entry: LibraryEntry) => void;
   cancellingDebrid?: boolean;
-}
-
-function SectionHeader({ label, count }: { label: string; count: number }) {
-  return (
-    <div className="mb-3 flex items-center gap-2">
-      <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">{label}</span>
-      <span className="rounded-full bg-black/8 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-white/10 dark:text-zinc-400">
-        {count}
-      </span>
-      <div className="h-px flex-1 bg-black/8 dark:bg-white/10" />
-    </div>
-  );
 }
 
 function ReorderableCard({ entry, ...props }: ReorderableCardProps) {

@@ -11,6 +11,8 @@ export interface TmdbItem {
   year: string;
   voteAverage: number;
   overview: string;
+  // Absent des items restaures depuis les likes enregistres avant les genres.
+  genreIds?: number[];
 }
 
 export function mapTmdb(r: TmdbRawResult, mediaType: MediaType): TmdbItem {
@@ -23,5 +25,6 @@ export function mapTmdb(r: TmdbRawResult, mediaType: MediaType): TmdbItem {
     year: (mediaType === "movie" ? r.release_date : r.first_air_date)?.slice(0, 4) ?? "",
     voteAverage: r.vote_average,
     overview: r.overview ?? "",
+    genreIds: r.genre_ids ?? [],
   };
 }

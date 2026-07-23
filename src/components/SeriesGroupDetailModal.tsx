@@ -7,6 +7,7 @@ import {
   type DebridControls,
   type EpisodeSelection,
 } from "@/components/libraryParts";
+import { TmdbGenres } from "@/components/TmdbGenres";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,6 +73,8 @@ interface SeriesGroupDetailModalProps {
   autoWatchOnPlay: boolean;
   // Présent uniquement si une clé TMDB existe.
   onEnrichTmdb?: () => void;
+  // Permet de récupérer les genres des entrées enregistrées sans genreIds.
+  tmdbKey?: string;
   // Vrai quand la recherche TMDB est ouverte par-dessus : neutralise Escape ici.
   enrichOpen?: boolean;
 }
@@ -85,6 +88,7 @@ export function SeriesGroupDetailModal({
   simple,
   autoWatchOnPlay,
   onEnrichTmdb,
+  tmdbKey,
   enrichOpen,
 }: SeriesGroupDetailModalProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -285,6 +289,13 @@ export function SeriesGroupDetailModal({
                 {watched}/{total} vus
               </span>
             </div>
+            <TmdbGenres
+              mediaType={group.tmdb.mediaType}
+              id={group.tmdb.id}
+              genreIds={group.tmdb.genreIds}
+              tmdbKey={tmdbKey}
+              className="mt-1.5"
+            />
             {group.tmdb.overview && (
               <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
                 {group.tmdb.overview}

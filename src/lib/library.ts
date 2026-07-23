@@ -13,6 +13,9 @@ export interface TmdbMeta {
   year: string;
   voteAverage: number;
   overview: string;
+  // Absent des entrées enregistrées avant l'ajout des genres : les modales
+  // retombent alors sur la fiche TMDB.
+  genreIds?: number[];
 }
 
 export interface LibraryEntry {

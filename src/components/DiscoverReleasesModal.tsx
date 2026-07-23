@@ -3,6 +3,7 @@ import nyaaLogo from "@/assets/sources/nyaa.webp";
 import { DiscoverReleaseFilters, type ReleaseSort } from "@/components/DiscoverReleaseFilters";
 import { DiscoverReleaseRow } from "@/components/DiscoverReleaseRow";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
+import { TmdbGenres } from "@/components/TmdbGenres";
 import {
   filterMovieReleases,
   filterTvReleases,
@@ -210,6 +211,13 @@ export function DiscoverReleasesModal({
                 </span>
               )}
             </div>
+            <TmdbGenres
+              mediaType={item.mediaType}
+              id={item.id}
+              genreIds={item.genreIds}
+              tmdbKey={tmdbKey}
+              className="mt-1.5"
+            />
           </div>
           <button
             onClick={() => onToggleLike(item)}

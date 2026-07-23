@@ -9,6 +9,7 @@ export interface LikedItem {
   year: string;
   voteAverage: number;
   overview: string;
+  genreIds?: number[];
   likedAt: number;
 }
 
@@ -44,6 +45,9 @@ export function parseLikesJson(raw: string): LikedItem[] {
       year: typeof e.year === "string" ? e.year : "",
       voteAverage: typeof e.voteAverage === "number" ? e.voteAverage : 0,
       overview: typeof e.overview === "string" ? e.overview : "",
+      genreIds: Array.isArray(e.genreIds)
+        ? e.genreIds.filter((g: unknown) => typeof g === "number")
+        : undefined,
       likedAt: typeof e.likedAt === "number" ? e.likedAt : Date.now(),
     }));
 }

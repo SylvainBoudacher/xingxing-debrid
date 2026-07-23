@@ -31,6 +31,9 @@ interface LibraryPosterCardProps {
   magnet?: MagnetEntry;
   onCancelDebrid?: (entry: LibraryEntry) => void;
   cancellingDebrid?: boolean;
+  // Identité partagée pour l'animation de position quand la carte change de
+  // section (regroupement Type / Genre, filtre par genres).
+  layoutId?: string;
 }
 
 export const LibraryPosterCard = memo(function LibraryPosterCard({
@@ -46,6 +49,7 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
   magnet,
   onCancelDebrid,
   cancellingDebrid,
+  layoutId,
 }: LibraryPosterCardProps) {
   const tmdb = entry.tmdb;
   const series = isSeries(entry);
@@ -65,6 +69,7 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
   return (
     <motion.button
       layout
+      layoutId={layoutId}
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
       onClick={onToggle}
@@ -83,6 +88,8 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
           height={513}
           loading="lazy"
           decoding="async"
+          // Sans ceci, le WebView démarre son propre glisser d'image et vole le geste.
+          draggable={false}
           className={`block h-full w-full object-cover transition-[filter] duration-300 ${whole ? "brightness-50" : "group-hover:brightness-105"}`}
         />
       ) : (
