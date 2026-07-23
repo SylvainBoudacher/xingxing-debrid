@@ -520,6 +520,7 @@ export function LibraryPage({
     item.type === "single" ? (
       <LibraryPosterCard
         key={item.entry.infoHash}
+        layoutId={`poster-${item.entry.infoHash}`}
         entry={item.entry}
         simple={viewMode === "simple"}
         expanded={expandedHash === item.entry.infoHash}
@@ -538,6 +539,7 @@ export function LibraryPage({
     ) : (
       <SeriesGroupPosterCard
         key={item.group.tmdbId}
+        layoutId={`poster-series-${item.group.tmdbId}`}
         group={item.group}
         expanded={expandedGroupId === item.group.tmdbId}
         selectMode={selectMode}

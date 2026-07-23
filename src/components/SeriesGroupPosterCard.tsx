@@ -7,6 +7,7 @@ import {
   type SeriesGroup,
 } from "@/lib/library";
 import { Check, Trash2 } from "lucide-react";
+import { motion } from "motion/react";
 import { memo, useEffect, useState } from "react";
 
 interface SeriesGroupPosterCardProps {
@@ -18,6 +19,9 @@ interface SeriesGroupPosterCardProps {
   // Mode sélection multiple : le clic coche la série au lieu de l'ouvrir.
   selectMode?: boolean;
   selected?: boolean;
+  // Identité partagée pour l'animation de position quand la carte change de
+  // section (regroupement Type / Genre, filtre par genres).
+  layoutId?: string;
 }
 
 export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
@@ -27,6 +31,7 @@ export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
   onRemove,
   selectMode = false,
   selected = false,
+  layoutId,
 }: SeriesGroupPosterCardProps) {
   const whole = groupIsWholeWatched(group);
   const ratio = groupProgressRatio(group);
@@ -44,10 +49,14 @@ export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
   }, [confirmDelete]);
 
   return (
-    <button
+    <motion.button
+      layout
+      layoutId={layoutId}
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.98 }}
       onClick={onToggle}
       onMouseLeave={() => setConfirmDelete(false)}
-      className={`group relative block aspect-[2/3] cursor-pointer overflow-hidden rounded-xl text-left ring-2 transition-[box-shadow,ring-color,transform] duration-200 hover:-translate-y-1 active:scale-[0.98] ${
+      className={`group relative block aspect-[2/3] cursor-pointer overflow-hidden rounded-xl text-left ring-2 transition-[box-shadow,ring-color] duration-200 ${
         active
           ? "ring-indigo-500"
           : "ring-black/8 dark:ring-white/10 hover:ring-indigo-400/50 dark:hover:ring-indigo-400/40 hover:shadow-[0_18px_40px_-14px_rgba(0,0,0,0.45)]"
@@ -142,6 +151,6 @@ export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
           />
         </div>
       </div>
-    </button>
+    </motion.button>
   );
 });

@@ -31,6 +31,9 @@ interface LibraryPosterCardProps {
   magnet?: MagnetEntry;
   onCancelDebrid?: (entry: LibraryEntry) => void;
   cancellingDebrid?: boolean;
+  // Identité partagée pour l'animation de position quand la carte change de
+  // section (regroupement Type / Genre, filtre par genres).
+  layoutId?: string;
 }
 
 export const LibraryPosterCard = memo(function LibraryPosterCard({
@@ -46,6 +49,7 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
   magnet,
   onCancelDebrid,
   cancellingDebrid,
+  layoutId,
 }: LibraryPosterCardProps) {
   const tmdb = entry.tmdb;
   const series = isSeries(entry);
@@ -65,6 +69,7 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
   return (
     <motion.button
       layout
+      layoutId={layoutId}
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
       onClick={onToggle}
