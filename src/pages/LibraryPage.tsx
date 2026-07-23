@@ -157,6 +157,10 @@ export function LibraryPage({
   // et une ref suffit puisque le glisser-déposer reste dans la page.
   const draggedHashes = useRef<string[]>([]);
   const [hoveredDrop, setHoveredDrop] = useState<string | null>(null);
+  const [draggingKey, setDraggingKey] = useState<string | null>(null);
+  // Le relâchement d'un drag émet un click sur le bouton de la carte, qui
+  // ouvrirait la modale de détail : on l'avale en phase capture.
+  const suppressClick = useRef(false);
   const { ref: toolbarRef, dragProps: toolbarDrag } = useDragScroll<HTMLDivElement>();
   // Modale de nom : création simple, création depuis une sélection, renommage.
   const [naming, setNaming] = useState<
@@ -616,6 +620,9 @@ export function LibraryPage({
     const x = typeof native.clientX === "number" ? native.clientX : info.point.x - window.scrollX;
     const y = typeof native.clientY === "number" ? native.clientY : info.point.y - window.scrollY;
     for (const el of document.elementsFromPoint(x, y)) {
+      // La carte glissée est sous le curseur : remonter son DOM mènerait à son
+      // bloc d'origine, jamais à la cible. On saute tous ses éléments.
+      if ((el as HTMLElement).closest("[data-dragging]")) continue;
       const dropId = (el as HTMLElement).closest<HTMLElement>("[data-drop-id]")?.dataset.dropId;
       if (dropId) return dropId;
     }
@@ -636,18 +643,34 @@ export function LibraryPage({
         dragMomentum={false}
         dragElastic={0.2}
         whileDrag={{ scale: 0.92, zIndex: 30, cursor: "grabbing" }}
+        data-dragging={draggingKey === itemKey(item) ? "" : undefined}
         onDragStart={() => {
           draggedHashes.current = itemHashes(item);
+          setDraggingKey(itemKey(item));
+          suppressClick.current = true;
         }}
         onDrag={(event, info) => setHoveredDrop(dropIdAt(event, info))}
         onDragEnd={(event, info) => {
           const dropId = dropIdAt(event, info);
           setHoveredDrop(null);
+          setDraggingKey(null);
           if (dropId && categoryOf(categories, item) !== (dropId === UNCLASSIFIED ? null : dropId))
             classify(draggedHashes.current, dropId);
           draggedHashes.current = [];
+          // Le click éventuel arrive juste après le pointerup, avant ce timeout :
+          // on ne bloque donc jamais un vrai clic ultérieur.
+          setTimeout(() => {
+            suppressClick.current = false;
+          }, 0);
         }}
-        className="relative cursor-grab touch-none active:cursor-grabbing"
+        onClickCapture={(e) => {
+          if (suppressClick.current) {
+            suppressClick.current = false;
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }}
+        className="relative cursor-grab touch-none select-none active:cursor-grabbing [&_img]:[-webkit-user-drag:none]"
       >
         {card}
       </motion.div>
