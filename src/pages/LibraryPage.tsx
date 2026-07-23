@@ -4,6 +4,7 @@ import { LibraryBlocks } from "@/components/LibraryBlocks";
 import { LibraryEntryCard, type DebridControls } from "@/components/LibraryEntryCard";
 import { LibraryGenreFilter } from "@/components/LibraryGenreFilter";
 import { LibraryCategoryMenu } from "@/components/LibraryCategoryMenu";
+import { LibraryCustomBar } from "@/components/LibraryCustomBar";
 import { LibraryListNameModal } from "@/components/LibraryListNameModal";
 import { LibraryPosterCard } from "@/components/LibraryPosterCard";
 import { LibrarySelectionBar } from "@/components/LibrarySelectionBar";
@@ -43,6 +44,7 @@ import {
 } from "@/lib/librarySections";
 import {
   assignHashes,
+  categoryOf,
   createCategory,
   deleteCategory,
   EMPTY_CATEGORIES,
@@ -75,7 +77,6 @@ import {
   ArrowLeft,
   CheckSquare,
   Compass,
-  FolderPlus,
   GripVertical,
   Layers,
   LayoutGrid,
@@ -84,7 +85,7 @@ import {
   Search,
   Tags,
 } from "lucide-react";
-import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
+import { AnimatePresence, motion, Reorder, useDragControls, type PanInfo } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -123,7 +124,7 @@ const GROUP_MODES: { id: GroupMode; label: string }[] = [
   { id: "none", label: "Aucun" },
   { id: "type", label: "Type" },
   { id: "genre", label: "Genre" },
-  { id: "category", label: "Catégorie" },
+  { id: "category", label: "Personnalisé" },
 ];
 
 const SORTERS: Record<Exclude<Sort, "manual">, (a: LibraryEntry, b: LibraryEntry) => number> = {
@@ -155,6 +156,7 @@ export function LibraryPage({
   // Titre en cours de glissement : dataTransfer ne se lit pas pendant dragover,
   // et une ref suffit puisque le glisser-déposer reste dans la page.
   const draggedHashes = useRef<string[]>([]);
+  const [hoveredDrop, setHoveredDrop] = useState<string | null>(null);
   const { ref: toolbarRef, dragProps: toolbarDrag } = useDragScroll<HTMLDivElement>();
   // Modale de nom : création simple, création depuis une sélection, renommage.
   const [naming, setNaming] = useState<
@@ -262,6 +264,14 @@ export function LibraryPage({
     setGenreBarOpen(next);
     if (!next) setGenreFilter(new Set());
     void store.set("library_genre_bar", next).then(() => store.save());
+  }
+
+  // Le rangement par sélection n'existe qu'en vue grille : on y bascule plutôt
+  // que de laisser un bouton sans effet en vue liste.
+  function startClassifying() {
+    if (selectMode) return exitSelect();
+    if (layout === "list") changeLayout("grid");
+    setSelectMode(true);
   }
 
   function changeGrouping(next: GroupMode) {
@@ -511,12 +521,6 @@ export function LibraryPage({
     persistCategories(assignHashes(categories, hashes, dropId === UNCLASSIFIED ? null : dropId));
   }
 
-  function handleDropOnBlock(dropId: string) {
-    const hashes = draggedHashes.current;
-    draggedHashes.current = [];
-    classify(hashes, dropId);
-  }
-
   function handleClassifySelection(dropId: string) {
     classify(selectedHashes(), dropId);
     exitSelect();
@@ -602,26 +606,56 @@ export function LibraryPage({
     );
   };
 
-  // En mode catégorie, chaque carte devient déplaçable : le HTML5 drag natif
-  // évite d'interférer avec les animations de layout des jaquettes.
-  const draggable = (item: DisplayItem, card: ReactNode) =>
-    grouping === "category" ? (
-      <div
+  // Bloc catégorie sous le curseur. `elementsFromPoint` traverse la pile :
+  // la carte en cours de glissement, au-dessus, n'occulte pas la cible.
+  //
+  // L'événement pointeur donne des coordonnées écran directement ; `info.point`
+  // est relatif à la page et sert de repli (tactile).
+  function dropIdAt(event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo): string | null {
+    const native = event as PointerEvent;
+    const x = typeof native.clientX === "number" ? native.clientX : info.point.x - window.scrollX;
+    const y = typeof native.clientY === "number" ? native.clientY : info.point.y - window.scrollY;
+    for (const el of document.elementsFromPoint(x, y)) {
+      const dropId = (el as HTMLElement).closest<HTMLElement>("[data-drop-id]")?.dataset.dropId;
+      if (dropId) return dropId;
+    }
+    return null;
+  }
+
+  // En mode Personnalisé, chaque carte se glisse dans un bloc catégorie.
+  // Le glisser passe par motion (pointer events) et non par le drag HTML5 :
+  // dans le WebView, l'image de la jaquette et le bouton de la carte captent
+  // le geste natif, et le dépôt n'arrive jamais.
+  const draggableCard = (item: DisplayItem, card: ReactNode) => {
+    if (grouping !== "category") return card;
+    return (
+      <motion.div
         key={itemKey(item)}
-        draggable
+        drag
+        dragSnapToOrigin
+        dragMomentum={false}
+        dragElastic={0.2}
+        whileDrag={{ scale: 0.92, zIndex: 30, cursor: "grabbing" }}
         onDragStart={() => {
           draggedHashes.current = itemHashes(item);
         }}
-        className="cursor-grab active:cursor-grabbing"
+        onDrag={(event, info) => setHoveredDrop(dropIdAt(event, info))}
+        onDragEnd={(event, info) => {
+          const dropId = dropIdAt(event, info);
+          setHoveredDrop(null);
+          if (dropId && categoryOf(categories, item) !== (dropId === UNCLASSIFIED ? null : dropId))
+            classify(draggedHashes.current, dropId);
+          draggedHashes.current = [];
+        }}
+        className="relative cursor-grab touch-none active:cursor-grabbing"
       >
         {card}
-      </div>
-    ) : (
-      card
+      </motion.div>
     );
+  };
 
   const renderCard = (item: DisplayItem) =>
-    draggable(
+    draggableCard(
       item,
       item.type === "single" ? (
         <LibraryEntryCard
@@ -650,7 +684,7 @@ export function LibraryPage({
     );
 
   const renderPoster = (item: DisplayItem) =>
-    draggable(
+    draggableCard(
       item,
       item.type === "single" ? (
         <LibraryPosterCard
@@ -824,16 +858,6 @@ export function LibraryPage({
                 ))}
               </div>
 
-              {grouping === "category" && (
-                <button
-                  onClick={() => setNaming({ mode: "create", hashes: [] })}
-                  title="Nouvelle catégorie"
-                  className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-black/5 text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                >
-                  <FolderPlus className="h-4 w-4" />
-                </button>
-              )}
-
               <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
                 {(
                   [
@@ -871,6 +895,17 @@ export function LibraryPage({
             </div>
           </div>
         </div>
+
+        <AnimatePresence>
+          {grouping === "category" && (
+            <LibraryCustomBar
+              categoryCount={categories.categories.length}
+              selectMode={selectMode}
+              onCreate={() => setNaming({ mode: "create", hashes: [] })}
+              onToggleSelect={startClassifying}
+            />
+          )}
+        </AnimatePresence>
 
         {genreBarOpen && genreOpts.length > 0 && (
           <div className="mb-4">
@@ -922,11 +957,7 @@ export function LibraryPage({
             </button>
           </div>
         ) : layout === "grid" ? (
-          <LibraryBlocks
-            blocks={blocks}
-            blockMenu={categoryBlockMenu}
-            onDropOnBlock={grouping === "category" ? handleDropOnBlock : undefined}
-          >
+          <LibraryBlocks blocks={blocks} blockMenu={categoryBlockMenu} activeDropId={hoveredDrop}>
             {(items) => (
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
                 {items.map(renderPoster)}
@@ -951,11 +982,7 @@ export function LibraryPage({
             ))}
           </Reorder.Group>
         ) : (
-          <LibraryBlocks
-            blocks={blocks}
-            blockMenu={categoryBlockMenu}
-            onDropOnBlock={grouping === "category" ? handleDropOnBlock : undefined}
-          >
+          <LibraryBlocks blocks={blocks} blockMenu={categoryBlockMenu} activeDropId={hoveredDrop}>
             {(items) => <div className="space-y-2">{items.map(renderCard)}</div>}
           </LibraryBlocks>
         )}

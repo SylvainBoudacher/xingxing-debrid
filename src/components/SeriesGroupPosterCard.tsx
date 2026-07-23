@@ -70,6 +70,8 @@ export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
           height={513}
           loading="lazy"
           decoding="async"
+          // Sans ceci, le WebView démarre son propre glisser d'image et vole le geste.
+          draggable={false}
           className={`block h-full w-full object-cover transition-[filter] duration-300 ${whole ? "brightness-50" : "group-hover:brightness-105"}`}
         />
       ) : (

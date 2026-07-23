@@ -1,7 +1,7 @@
 import type { DisplayItem } from "@/lib/library";
 import type { LibraryBlock } from "@/lib/librarySections";
 import { LayoutGroup, motion } from "motion/react";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 interface LibraryBlocksProps {
   blocks: LibraryBlock[];
@@ -9,8 +9,8 @@ interface LibraryBlocksProps {
   children: (items: DisplayItem[]) => ReactNode;
   /** Actions du bloc (renommer, supprimer...), à droite de son titre. */
   blockMenu?: (block: LibraryBlock) => ReactNode;
-  /** Dépôt d'un titre sur un bloc : reçoit le dropId du bloc survolé. */
-  onDropOnBlock?: (dropId: string) => void;
+  /** Bloc actuellement survolé par un titre en cours de glissement. */
+  activeDropId?: string | null;
 }
 
 // Rend les blocs (Films / Séries, ou catégories) et leurs rangées.
@@ -19,39 +19,18 @@ interface LibraryBlocksProps {
 // son identité (layoutId) et glisse jusqu'à sa nouvelle place au lieu de
 // disparaître / réapparaître. `layout="position"` sur les conteneurs déplace
 // les titres sans étirer leur contenu.
-export function LibraryBlocks({ blocks, children, blockMenu, onDropOnBlock }: LibraryBlocksProps) {
-  const [hovered, setHovered] = useState<string | null>(null);
-
+export function LibraryBlocks({ blocks, children, blockMenu, activeDropId }: LibraryBlocksProps) {
   return (
     <LayoutGroup>
       <div className="space-y-8">
         {blocks.map((block) => {
-          const droppable = onDropOnBlock !== undefined && block.dropId !== undefined;
-          const active = droppable && hovered === block.dropId;
+          const droppable = block.dropId !== undefined;
+          const active = droppable && activeDropId === block.dropId;
           return (
             <motion.div
               layout="position"
               key={block.key}
-              onDragOver={droppable ? (e) => e.preventDefault() : undefined}
-              onDragEnter={droppable ? () => setHovered(block.dropId!) : undefined}
-              onDragLeave={
-                droppable
-                  ? (e) => {
-                      // Ignore les passages d'un enfant à l'autre du même bloc.
-                      if (!e.currentTarget.contains(e.relatedTarget as Node | null))
-                        setHovered(null);
-                    }
-                  : undefined
-              }
-              onDrop={
-                droppable
-                  ? (e) => {
-                      e.preventDefault();
-                      setHovered(null);
-                      onDropOnBlock!(block.dropId!);
-                    }
-                  : undefined
-              }
+              data-drop-id={block.dropId}
               className={
                 droppable
                   ? `rounded-2xl p-3 ring-1 transition-colors ${
