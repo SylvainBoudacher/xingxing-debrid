@@ -1,3 +1,3 @@
-- Fix de bug
-- Rajoute de fonctionnalité dans la Bibliotheque
-- Canards !
+- Nouveaux types et catégories dans sa bibliotheque
+- Nouveaux tries
+- Bug fix mineurs

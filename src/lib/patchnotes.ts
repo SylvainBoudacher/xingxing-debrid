@@ -42,6 +42,44 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.5.3",
+    date: "23 juillet 2026",
+    intro:
+      "La 1.5.3 renforce la page de bienvenue avec une protection contre les problemes de connexion a C411, et enrichit la Bibliotheque avec des genres automatiques issus de TMDB, un systeme de tri et de filtrage par genre, ainsi qu'une vue personnalisee pour creer ses propres categories.",
+    sections: [
+      {
+        title: "Page de bienvenue : protection connexion C411",
+        items: [
+          "Les utilisateurs qui n'ont pas acces a C411 sont desormais bloques sur la page de verification de connexion, avec un message clair expliquant la situation.",
+          "Un guide integre explique les causes possibles : probleme DNS, IPv6 actif sur le reseau, ou autre complexite reseau pouvant empecher l'acces au site.",
+          "Des solutions sont proposees directement dans l'interface pour aider a resoudre ces problemes sans quitter l'application.",
+        ],
+      },
+      {
+        title: "Bibliotheque : genres automatiques depuis TMDB",
+        items: [
+          "Chaque titre de votre bibliotheque affiche maintenant ses genres (Action, Horreur, Comedie, etc.) recuperes automatiquement depuis TMDB.",
+          "Les genres apparaissent directement sur les cartes pour identifier le type de contenu en un coup d'oeil.",
+        ],
+      },
+      {
+        title: "Bibliotheque : tri et filtrage par genre",
+        items: [
+          "Triez votre bibliotheque par genre pour regrouper automatiquement les contenus de meme type.",
+          "Filtrez l'integralite de votre bibliotheque par genre pour n'afficher que les titres correspondant a la categorie choisie.",
+        ],
+      },
+      {
+        title: "Bibliotheque : vue personnalisee",
+        items: [
+          "Une nouvelle vue de tri « Personnalise » est disponible pour ceux qui souhaitent organiser leur bibliotheque a leur facon.",
+          "Creez vos propres categories, donnez-leur le nom que vous voulez, et classez vos titres selon votre propre logique.",
+          "Cette vue coexiste avec les tris automatiques existants et se sauvegarde entre les sessions.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.5.2",
     date: "11 juillet 2026",
     intro:
@@ -931,4 +969,4 @@ export const PATCH_NOTES: PatchNote[] = [
   },
 ];
 
-export const LATEST_VERSION = "1.5.2";
+export const LATEST_VERSION = "1.5.3";
