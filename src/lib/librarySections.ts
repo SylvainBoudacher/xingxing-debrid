@@ -1,7 +1,13 @@
 import type { DisplayItem, TmdbMeta } from "@/lib/library";
+import {
+  categoryOf,
+  UNCLASSIFIED,
+  UNCLASSIFIED_LABEL,
+  type CategoryConfig,
+} from "@/lib/libraryCategories";
 import { genreNames } from "@/lib/tmdbGenres";
 
-export type GroupMode = "none" | "type" | "genre";
+export type GroupMode = "none" | "type" | "genre" | "category";
 
 // Une rangée à l'intérieur d'un bloc. `label` nul = pas de sous-titre (modes
 // "none" et "type", où le bloc porte déjà le seul titre utile).
@@ -11,14 +17,18 @@ export interface LibrarySection {
   items: DisplayItem[];
 }
 
-// Un bloc = un type de média (Films / Séries), ou tout la bibliothèque en
-// mode "none". Les blocs ne sont jamais fusionnés : films et séries restent
-// séparés quel que soit le mode.
+// Un bloc = un type de média (Films / Séries), une catégorie de l'utilisateur,
+// ou toute la bibliothèque en mode "none". Films et séries restent séparés :
+// au premier niveau dans les modes "type" et "genre", en rangées à l'intérieur
+// de chaque catégorie dans le mode "category".
 export interface LibraryBlock {
   key: string;
   label: string | null;
   count: number;
   sections: LibrarySection[];
+  // Mode "category" : cible du glisser-déposer (id de catégorie, ou
+  // UNCLASSIFIED pour le bloc des non classés).
+  dropId?: string;
 }
 
 const MOVIES = "Films";
@@ -97,7 +107,46 @@ function genreRows(label: string, items: DisplayItem[]): LibrarySection[] {
     .map(([name, list]) => ({ key: `${label}-${name}`, label: name, items: list }));
 }
 
-export function buildLibraryBlocks(items: DisplayItem[], mode: GroupMode): LibraryBlock[] {
+// Un bloc par catégorie, dans l'ordre choisi par l'utilisateur, puis les non
+// classés. Les catégories vides restent affichées : ce sont des cibles de
+// dépôt, les masquer rendrait le rangement impossible.
+function categoryBlocks(items: DisplayItem[], config: CategoryConfig): LibraryBlock[] {
+  const buckets = new Map<string, DisplayItem[]>(config.categories.map((c) => [c.id, []]));
+  buckets.set(UNCLASSIFIED, []);
+  for (const item of items) {
+    const id = categoryOf(config, item) ?? UNCLASSIFIED;
+    (buckets.get(id) ?? buckets.get(UNCLASSIFIED)!).push(item);
+  }
+
+  const blocks = config.categories.map((c) => toBlock(c.id, c.name, buckets.get(c.id) ?? []));
+  // Toujours affiché, même vide : c'est la cible pour sortir un titre d'une
+  // catégorie.
+  blocks.push(toBlock(UNCLASSIFIED, UNCLASSIFIED_LABEL, buckets.get(UNCLASSIFIED)!));
+  return blocks;
+}
+
+function toBlock(id: string, label: string, items: DisplayItem[]): LibraryBlock {
+  return {
+    key: id,
+    label,
+    count: items.length,
+    dropId: id,
+    sections: byMedia(items).map(([media, list]) => ({
+      key: `${id}-${media}`,
+      label: media,
+      items: list,
+    })),
+  };
+}
+
+export function buildLibraryBlocks(
+  items: DisplayItem[],
+  mode: GroupMode,
+  categories?: CategoryConfig,
+): LibraryBlock[] {
+  if (mode === "category")
+    return categoryBlocks(items, categories ?? { categories: [], assign: {} });
+
   if (mode === "none")
     return [
       {

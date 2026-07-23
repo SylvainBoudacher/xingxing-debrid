@@ -141,3 +141,43 @@ describe("filterByGenres", () => {
     expect(filterByGenres([...items, raw("x")], new Set(["Drame"]))).toEqual([items[0]]);
   });
 });
+
+describe("buildLibraryBlocks — mode catégorie", () => {
+  const config = {
+    categories: [
+      { id: "c1", name: "Soirée", createdAt: 0 },
+      { id: "c2", name: "Vide", createdAt: 1 },
+    ],
+    assign: { m1: "c1" },
+  };
+  const items = [movie(1, [28]), movie(2, [18]), series(3, [16])];
+  const withHash = [
+    { ...items[0], entry: { ...(items[0] as { entry: object }).entry, infoHash: "m1" } },
+    items[1],
+    items[2],
+  ] as typeof items;
+
+  it("fait un bloc par catégorie, puis les non classés", () => {
+    const blocks = buildLibraryBlocks(withHash, "category", config);
+    expect(blocks.map((b) => b.label)).toEqual(["Soirée", "Vide", "Non classés"]);
+    expect(blocks[0].count).toBe(1);
+    expect(blocks[2].count).toBe(2);
+  });
+
+  it("garde les catégories vides comme cible de dépôt", () => {
+    const blocks = buildLibraryBlocks(withHash, "category", config);
+    expect(blocks[1].count).toBe(0);
+    expect(blocks[1].dropId).toBe("c2");
+  });
+
+  it("sépare films et séries à l'intérieur d'une catégorie", () => {
+    const blocks = buildLibraryBlocks(withHash, "category", config);
+    expect(blocks[2].sections.map((s) => s.label)).toEqual(["Films", "Séries"]);
+  });
+
+  it("affiche le bloc des non classés même quand la bibliothèque est vide", () => {
+    const blocks = buildLibraryBlocks([], "category", { categories: [], assign: {} });
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].dropId).toBe("__none__");
+  });
+});

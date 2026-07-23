@@ -1,20 +1,34 @@
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { UNCLASSIFIED, type LibraryCategory } from "@/lib/libraryCategories";
 import { motion } from "motion/react";
-import { Eye, EyeOff, Trash2, X, type LucideIcon } from "lucide-react";
+import { Eye, EyeOff, FolderInput, Plus, Trash2, X, type LucideIcon } from "lucide-react";
 
 interface LibrarySelectionBarProps {
   count: number;
+  categories: LibraryCategory[];
   onMarkWatched: () => void;
   onMarkUnwatched: () => void;
   onDelete: () => void;
   onCancel: () => void;
+  /** Range la sélection dans une catégorie (UNCLASSIFIED pour l'en sortir). */
+  onClassify: (dropId: string) => void;
+  onCreateCategoryWithSelection: () => void;
 }
 
 export function LibrarySelectionBar({
   count,
+  categories,
   onMarkWatched,
   onMarkUnwatched,
   onDelete,
   onCancel,
+  onClassify,
+  onCreateCategoryWithSelection,
 }: LibrarySelectionBarProps) {
   const disabled = count === 0;
   return (
@@ -31,6 +45,35 @@ export function LibrarySelectionBar({
         </span>
         <BarButton icon={Eye} label="Vu" onClick={onMarkWatched} disabled={disabled} />
         <BarButton icon={EyeOff} label="Non vu" onClick={onMarkUnwatched} disabled={disabled} />
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              disabled={disabled}
+              className="flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium text-zinc-700 transition-colors hover:bg-black/5 disabled:opacity-40 dark:text-zinc-200 dark:hover:bg-white/10"
+            >
+              <FolderInput className="h-3.5 w-3.5" />
+              Classer dans
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center">
+            {categories.map((c) => (
+              <DropdownMenuItem key={c.id} onClick={() => onClassify(c.id)}>
+                {c.name}
+              </DropdownMenuItem>
+            ))}
+            {categories.length > 0 && (
+              <DropdownMenuItem onClick={() => onClassify(UNCLASSIFIED)}>
+                Non classés
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={onCreateCategoryWithSelection}>
+              <Plus className="h-4 w-4" />
+              Nouvelle catégorie...
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <BarButton icon={Trash2} label="Supprimer" onClick={onDelete} disabled={disabled} danger />
         <button
           onClick={onCancel}
