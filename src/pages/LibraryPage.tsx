@@ -848,7 +848,7 @@ export function LibraryPage({
                   }`}
                 >
                   <Tags className="h-3.5 w-3.5" />
-                  Genres
+                  Types
                   {genreFilter.size > 0 && (
                     <span className="rounded-full bg-white/25 px-1.5 text-[10px] leading-4">
                       {genreFilter.size}
