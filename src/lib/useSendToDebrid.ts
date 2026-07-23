@@ -46,6 +46,7 @@ export function useSendToDebrid({
       year: item.year,
       voteAverage: item.voteAverage,
       overview: item.overview,
+      genreIds: item.genreIds,
     };
 
     const setBusy = addToLibrary ? setLibraryHash : setSendingHash;

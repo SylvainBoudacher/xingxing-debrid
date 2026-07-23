@@ -36,6 +36,7 @@ function toMeta(r: TmdbRawResult, mediaType: TmdbMediaType): TmdbMeta {
     year: (mediaType === "movie" ? r.release_date : r.first_air_date)?.slice(0, 4) ?? "",
     voteAverage: r.vote_average,
     overview: r.overview ?? "",
+    genreIds: r.genre_ids ?? [],
   };
 }
 

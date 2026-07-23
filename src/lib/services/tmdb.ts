@@ -58,6 +58,10 @@ export interface TmdbTvDetail {
   seasons?: Array<{ season_number: number; episode_count: number }>;
 }
 
+export interface TmdbDetail {
+  genres?: Array<{ id: number; name: string }>;
+}
+
 // queryKeys sans la cle API : rotation sans invalidation, secret hors du cache.
 export const tmdbKeys = {
   feed: (f: TmdbFeed, mt: TmdbMediaType, page: number) => ["tmdb", "feed", f, mt, page] as const,
@@ -68,6 +72,7 @@ export const tmdbKeys = {
     ["tmdb", "discover", "animation", mt, page] as const,
   find: (imdbId: string) => ["tmdb", "find", imdbId.toLowerCase()] as const,
   tvDetail: (id: number) => ["tmdb", "tv", id] as const,
+  detail: (mt: TmdbMediaType, id: number) => ["tmdb", "detail", mt, id] as const,
   recommendations: (mt: TmdbMediaType, id: number) => ["tmdb", "recommendations", mt, id] as const,
 };
 
@@ -126,6 +131,12 @@ export function findByImdb(imdbId: string, apiKey: string) {
   return get<TmdbFindResponse>(
     `${BASE}/find/${imdbId.toLowerCase()}?api_key=${apiKey}&external_source=imdb_id&language=fr-FR`,
   );
+}
+
+// Fiche complete d'un film / d'une serie : sert a recuperer les genres des
+// entrees de bibliotheque enregistrees avant que genreIds ne soit stocke.
+export function detail(mt: TmdbMediaType, id: number, apiKey: string) {
+  return get<TmdbDetail>(`${BASE}/${mt}/${id}?api_key=${apiKey}&language=fr-FR`);
 }
 
 export function tvDetail(id: number, apiKey: string) {

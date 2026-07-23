@@ -1,6 +1,8 @@
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { LibraryDetailModal } from "@/components/LibraryDetailModal";
+import { LibraryBlocks } from "@/components/LibraryBlocks";
 import { LibraryEntryCard, type DebridControls } from "@/components/LibraryEntryCard";
+import { LibraryGenreFilter } from "@/components/LibraryGenreFilter";
 import { LibraryPosterCard } from "@/components/LibraryPosterCard";
 import { LibrarySelectionBar } from "@/components/LibrarySelectionBar";
 import { SeriesGroupCard } from "@/components/SeriesGroupCard";
@@ -30,6 +32,12 @@ import {
   type DisplayItem,
   type LibraryEntry,
 } from "@/lib/library";
+import {
+  buildLibraryBlocks,
+  filterByGenres,
+  genreOptions,
+  type GroupMode,
+} from "@/lib/librarySections";
 import { toastNetworkError } from "@/lib/networkError";
 import { queryClient } from "@/lib/queryClient";
 import {
@@ -39,6 +47,7 @@ import {
   type MagnetEntry,
 } from "@/lib/services/allDebrid";
 import { useDebridActions } from "@/lib/useDebridActions";
+import { useLibraryGenres } from "@/lib/useLibraryGenres";
 import { useLibraryMagnetStatus } from "@/lib/useLibraryMagnetStatus";
 import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
 import { invoke } from "@tauri-apps/api/core";
@@ -53,6 +62,7 @@ import {
   Library as LibraryIcon,
   List,
   Search,
+  Tags,
 } from "lucide-react";
 import { AnimatePresence, motion, Reorder, useDragControls } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -89,6 +99,12 @@ const SORTS: { id: Sort; label: string }[] = [
   { id: "progress", label: "À finir" },
 ];
 
+const GROUP_MODES: { id: GroupMode; label: string }[] = [
+  { id: "none", label: "Aucun" },
+  { id: "type", label: "Type" },
+  { id: "genre", label: "Genre" },
+];
+
 const SORTERS: Record<Exclude<Sort, "manual">, (a: LibraryEntry, b: LibraryEntry) => number> = {
   recent: (a, b) => b.addedAt - a.addedAt,
   title: (a, b) => a.title.localeCompare(b.title),
@@ -111,7 +127,9 @@ export function LibraryPage({
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? "simple");
   const [layout, setLayout] = useState<Layout>("grid");
-  const [split, setSplit] = useState(true);
+  const [grouping, setGrouping] = useState<GroupMode>("type");
+  const [genreFilter, setGenreFilter] = useState<Set<string>>(new Set());
+  const [genreBarOpen, setGenreBarOpen] = useState(false);
   const [expandedHash, setExpandedHash] = useState<string | null>(null);
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
@@ -186,11 +204,33 @@ export function LibraryPage({
     store.get<Layout>("library_layout").then((v) => {
       if (v) setLayout(v);
     });
-    store.get<boolean>("library_split").then((v) => {
-      if (v !== null && v !== undefined) setSplit(v);
+    store.get<boolean>("library_genre_bar").then((v) => {
+      if (v !== null && v !== undefined) setGenreBarOpen(v);
+    });
+    // "library_split" (booléen) est l'ancien réglage films/séries : conservé
+    // comme valeur de repli tant que le nouveau mode n'a pas été choisi.
+    store.get<GroupMode>("library_grouping").then((v) => {
+      if (v) return setGrouping(v);
+      void store.get<boolean>("library_split").then((old) => {
+        if (old !== null && old !== undefined) setGrouping(old ? "type" : "none");
+      });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Replier la barre efface la sélection : un filtre actif mais invisible
+  // donnerait une bibliothèque incomplète sans raison apparente.
+  function toggleGenreBar() {
+    const next = !genreBarOpen;
+    setGenreBarOpen(next);
+    if (!next) setGenreFilter(new Set());
+    void store.set("library_genre_bar", next).then(() => store.save());
+  }
+
+  function changeGrouping(next: GroupMode) {
+    setGrouping(next);
+    void store.set("library_grouping", next).then(() => store.save());
+  }
 
   function changeLayout(next: Layout) {
     setLayout(next);
@@ -367,35 +407,52 @@ export function LibraryPage({
   }, [entries, filter, sort, q]);
 
   // Le glisser-déposer ne réordonne que la liste complète (sans filtre ni recherche).
-  const canReorder = !split && sort === "manual" && filter === "all" && q === "";
+  const canReorder =
+    grouping === "none" &&
+    sort === "manual" &&
+    filter === "all" &&
+    q === "" &&
+    genreFilter.size === 0;
+
+  const grouped = useMemo<DisplayItem[]>(() => groupLibraryEntries(visible), [visible]);
+
+  // Options du filtre : calculées avant filtrage, sinon décocher un genre
+  // deviendrait impossible (sa puce disparaîtrait avec les titres).
+  const genreOpts = useMemo(() => genreOptions(grouped), [grouped]);
 
   const displayItems = useMemo<DisplayItem[]>(
-    () => (canReorder ? [] : groupLibraryEntries(visible)),
-    [canReorder, visible],
+    () => (canReorder ? [] : filterByGenres(grouped, genreFilter)),
+    [canReorder, grouped, genreFilter],
   );
 
-  const splitSections = useMemo<{ label: string; items: DisplayItem[] }[] | null>(() => {
-    if (!split) return null;
-    const noInfo: DisplayItem[] = [];
-    const movies: DisplayItem[] = [];
-    const series: DisplayItem[] = [];
-    for (const item of displayItems) {
-      if (item.type === "group") {
-        series.push(item);
-      } else if (!item.entry.tmdb) {
-        noInfo.push(item);
-      } else if (item.entry.tmdb.mediaType === "movie") {
-        movies.push(item);
-      } else {
-        series.push(item);
-      }
-    }
-    const sections: { label: string; items: DisplayItem[] }[] = [];
-    if (noInfo.length > 0) sections.push({ label: "Sans info TMDB", items: noInfo });
-    if (movies.length > 0) sections.push({ label: "Films", items: movies });
-    if (series.length > 0) sections.push({ label: "Séries", items: series });
-    return sections;
-  }, [split, displayItems]);
+  const blocks = useMemo(
+    () => buildLibraryBlocks(displayItems, grouping),
+    [displayItems, grouping],
+  );
+
+  function toggleGenre(name: string) {
+    setGenreFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
+  // Les genres alimentent le filtre comme le regroupement : ceux qui manquent
+  // sont récupérés une fois puis écrits dans la bibliothèque.
+  const applyGenres = useCallback((genresById: Map<string, number[]>) => {
+    setEntries((prev) => {
+      const next = prev.map((e) => {
+        const ids = e.tmdb && genresById.get(`${e.tmdb.mediaType}:${e.tmdb.id}`);
+        return ids ? { ...e, tmdb: { ...e.tmdb!, genreIds: ids } } : e;
+      });
+      saveLibraryDebounced(next);
+      return next;
+    });
+  }, []);
+
+  useLibraryGenres(entries, initialTmdbKey, true, applyGenres);
 
   // Entrée affichée dans le panneau latéral (vue grille). Null si l'entrée
   // sélectionnée n'est plus visible après un changement de filtre/recherche.
@@ -432,6 +489,32 @@ export function LibraryPage({
     }
     return n;
   }, [selectMode, displayItems, selected]);
+
+  const renderCard = (item: DisplayItem) =>
+    item.type === "single" ? (
+      <LibraryEntryCard
+        key={item.entry.infoHash}
+        entry={item.entry}
+        onChange={handleChange}
+        onRemove={handleRemove}
+        debrid={debrid}
+        simple={viewMode === "simple"}
+        autoWatchOnPlay={autoWatchOnPlay}
+        magnet={magnetFor(item.entry)}
+        onCancelDebrid={cancelDebrid}
+        cancellingDebrid={cancellingHash === item.entry.infoHash}
+      />
+    ) : (
+      <SeriesGroupCard
+        key={item.group.tmdbId}
+        group={item.group}
+        onChange={handleChange}
+        onRemove={handleRemove}
+        debrid={debrid}
+        simple={viewMode === "simple"}
+        autoWatchOnPlay={autoWatchOnPlay}
+      />
+    );
 
   const renderPoster = (item: DisplayItem) =>
     item.type === "single" ? (
@@ -550,22 +633,49 @@ export function LibraryPage({
               </button>
             )}
 
-            <button
-              onClick={() => {
-                const next = !split;
-                setSplit(next);
-                void store.set("library_split", next).then(() => store.save());
-              }}
-              title="Séparer films / séries"
-              className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
-                split
-                  ? "bg-indigo-600 text-white"
-                  : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-              }`}
-            >
-              <Layers className="h-3.5 w-3.5" />
-              Trier
-            </button>
+            {genreOpts.length > 0 && (
+              <button
+                onClick={toggleGenreBar}
+                title={genreBarOpen ? "Masquer les filtres de genre" : "Filtrer par genre"}
+                className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
+                  genreBarOpen || genreFilter.size > 0
+                    ? "bg-indigo-600 text-white"
+                    : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                }`}
+              >
+                <Tags className="h-3.5 w-3.5" />
+                Genres
+                {genreFilter.size > 0 && (
+                  <span className="rounded-full bg-white/25 px-1.5 text-[10px] leading-4">
+                    {genreFilter.size}
+                  </span>
+                )}
+              </button>
+            )}
+
+            <div className="flex items-center gap-1 rounded-full bg-black/5 p-0.5 dark:bg-white/10">
+              <Layers className="ml-2 mr-0.5 h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+              {GROUP_MODES.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => changeGrouping(m.id)}
+                  title={
+                    m.id === "genre"
+                      ? "Grouper par genre (films et séries séparés)"
+                      : m.id === "type"
+                        ? "Séparer films / séries"
+                        : "Aucun regroupement"
+                  }
+                  className={`flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-colors ${
+                    grouping === m.id
+                      ? "bg-indigo-600 text-white"
+                      : "text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
 
             <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
               {(
@@ -604,6 +714,17 @@ export function LibraryPage({
           </div>
         </div>
 
+        {genreBarOpen && genreOpts.length > 0 && (
+          <div className="mb-4">
+            <LibraryGenreFilter
+              options={genreOpts}
+              selected={genreFilter}
+              onToggle={toggleGenre}
+              onClear={() => setGenreFilter(new Set())}
+            />
+          </div>
+        )}
+
         {visible.length === 0 ? (
           <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
             <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
@@ -631,23 +752,25 @@ export function LibraryPage({
               </div>
             )}
           </div>
+        ) : displayItems.length === 0 && genreFilter.size > 0 ? (
+          <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
+            <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
+            <p className="text-sm">Aucun titre dans ces genres.</p>
+            <button
+              onClick={() => setGenreFilter(new Set())}
+              className="mt-1 flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+            >
+              Effacer les genres
+            </button>
+          </div>
         ) : layout === "grid" ? (
-          splitSections ? (
-            <div className="space-y-6">
-              {splitSections.map((section) => (
-                <div key={section.label}>
-                  <SectionHeader label={section.label} count={section.items.length} />
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-                    {section.items.map(renderPoster)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-              {displayItems.map(renderPoster)}
-            </div>
-          )
+          <LibraryBlocks blocks={blocks}>
+            {(items) => (
+              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+                {items.map(renderPoster)}
+              </div>
+            )}
+          </LibraryBlocks>
         ) : canReorder ? (
           <Reorder.Group axis="y" values={visible} onReorder={persist} className="space-y-2">
             {visible.map((e) => (
@@ -665,71 +788,10 @@ export function LibraryPage({
               />
             ))}
           </Reorder.Group>
-        ) : splitSections ? (
-          <div className="space-y-6">
-            {splitSections.map((section) => (
-              <div key={section.label}>
-                <SectionHeader label={section.label} count={section.items.length} />
-                <div className="space-y-2">
-                  {section.items.map((item) =>
-                    item.type === "single" ? (
-                      <LibraryEntryCard
-                        key={item.entry.infoHash}
-                        entry={item.entry}
-                        onChange={handleChange}
-                        onRemove={handleRemove}
-                        debrid={debrid}
-                        simple={viewMode === "simple"}
-                        autoWatchOnPlay={autoWatchOnPlay}
-                        magnet={magnetFor(item.entry)}
-                        onCancelDebrid={cancelDebrid}
-                        cancellingDebrid={cancellingHash === item.entry.infoHash}
-                      />
-                    ) : (
-                      <SeriesGroupCard
-                        key={item.group.tmdbId}
-                        group={item.group}
-                        onChange={handleChange}
-                        onRemove={handleRemove}
-                        debrid={debrid}
-                        simple={viewMode === "simple"}
-                        autoWatchOnPlay={autoWatchOnPlay}
-                      />
-                    ),
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
         ) : (
-          <div className="space-y-2">
-            {displayItems.map((item) =>
-              item.type === "single" ? (
-                <LibraryEntryCard
-                  key={item.entry.infoHash}
-                  entry={item.entry}
-                  onChange={handleChange}
-                  onRemove={handleRemove}
-                  debrid={debrid}
-                  simple={viewMode === "simple"}
-                  autoWatchOnPlay={autoWatchOnPlay}
-                  magnet={magnetFor(item.entry)}
-                  onCancelDebrid={cancelDebrid}
-                  cancellingDebrid={cancellingHash === item.entry.infoHash}
-                />
-              ) : (
-                <SeriesGroupCard
-                  key={item.group.tmdbId}
-                  group={item.group}
-                  onChange={handleChange}
-                  onRemove={handleRemove}
-                  debrid={debrid}
-                  simple={viewMode === "simple"}
-                  autoWatchOnPlay={autoWatchOnPlay}
-                />
-              ),
-            )}
-          </div>
+          <LibraryBlocks blocks={blocks}>
+            {(items) => <div className="space-y-2">{items.map(renderCard)}</div>}
+          </LibraryBlocks>
         )}
       </div>
 
@@ -746,6 +808,7 @@ export function LibraryPage({
             onEnrichTmdb={
               initialTmdbKey ? () => setMatchingHash(expandedEntry.infoHash) : undefined
             }
+            tmdbKey={initialTmdbKey ?? undefined}
             enrichOpen={matchingHash !== null}
             magnet={magnetFor(expandedEntry)}
             onCancelDebrid={cancelDebrid}
@@ -767,6 +830,7 @@ export function LibraryPage({
             onEnrichTmdb={
               initialTmdbKey ? () => setMatchingGroupId(expandedGroup.group.tmdbId) : undefined
             }
+            tmdbKey={initialTmdbKey ?? undefined}
             enrichOpen={matchingGroupId !== null}
           />
         )}
@@ -833,18 +897,6 @@ interface ReorderableCardProps {
   magnet?: MagnetEntry;
   onCancelDebrid?: (entry: LibraryEntry) => void;
   cancellingDebrid?: boolean;
-}
-
-function SectionHeader({ label, count }: { label: string; count: number }) {
-  return (
-    <div className="mb-3 flex items-center gap-2">
-      <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-200">{label}</span>
-      <span className="rounded-full bg-black/8 px-2 py-0.5 text-xs font-medium text-zinc-500 dark:bg-white/10 dark:text-zinc-400">
-        {count}
-      </span>
-      <div className="h-px flex-1 bg-black/8 dark:bg-white/10" />
-    </div>
-  );
 }
 
 function ReorderableCard({ entry, ...props }: ReorderableCardProps) {

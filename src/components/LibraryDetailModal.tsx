@@ -8,6 +8,7 @@ import {
   type DebridControls,
   type EpisodeSelection,
 } from "@/components/libraryParts";
+import { TmdbGenres } from "@/components/TmdbGenres";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -59,6 +60,8 @@ interface LibraryDetailModalProps {
   autoWatchOnPlay: boolean;
   // Présent uniquement si l'entrée peut être complétée et qu'une clé TMDB existe.
   onEnrichTmdb?: () => void;
+  // Permet de récupérer les genres des entrées enregistrées sans genreIds.
+  tmdbKey?: string;
   // Vrai quand la recherche TMDB est ouverte par-dessus : neutralise Escape ici.
   enrichOpen?: boolean;
   // Statut AllDebrid si le magnet est encore en cours de débridage.
@@ -76,6 +79,7 @@ export function LibraryDetailModal({
   simple,
   autoWatchOnPlay,
   onEnrichTmdb,
+  tmdbKey,
   enrichOpen,
   magnet,
   onCancelDebrid,
@@ -215,6 +219,15 @@ export function LibraryDetailModal({
                 </span>
               )}
             </div>
+            {tmdb && (
+              <TmdbGenres
+                mediaType={tmdb.mediaType}
+                id={tmdb.id}
+                genreIds={tmdb.genreIds}
+                tmdbKey={tmdbKey}
+                className="mt-1.5"
+              />
+            )}
             {tmdb?.overview && (
               <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
                 {tmdb.overview}
