@@ -34,6 +34,7 @@ import {
   type SavedDuck,
 } from "@/lib/savedDucks";
 import { recordDiscovery } from "@/lib/duckDex";
+import { familyRewardAt } from "@/lib/duckRewards";
 import { getRarity, type Rarity } from "./duckRandom";
 import { SPECIES_BY_ID, speciesOf } from "./duckSpecies";
 import { DuckPreview } from "./DuckPreview";
@@ -229,6 +230,14 @@ export function DuckShop() {
         description: complete
           ? "Canardex complet ! Ouvre le pokédex pour réclamer ta récompense."
           : `Canardex : ${disc.discoveredSpecies}/${disc.totalSpecies} espèces`,
+        duration: 6000,
+      });
+    } else if (disc.newColor && disc.familyComplete) {
+      const reward = familyRewardAt(disc.familiesComplete);
+      toast.success(`Famille complète : ${disc.species.name} !`, {
+        description: reward
+          ? `${reward.name} t'attend dans le pokédex.`
+          : `${disc.familiesComplete} familles complètes`,
         duration: 6000,
       });
     } else if (disc.newColor) {
