@@ -9,6 +9,8 @@ import { UpdateDialog } from "@/components/UpdateDialog";
 import { getApiKey } from "@/lib/apiKeys";
 import { isBrowserPreview } from "@/lib/devTauriShim";
 import { prefetchLibrary } from "@/lib/library";
+import { loadCategories } from "@/lib/libraryCategories";
+import { loadLibraryPrefs } from "@/lib/libraryPrefs";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import { loadSeriesFolders } from "@/lib/seriesFolders";
 import type { TmdbItem } from "@/lib/tmdbItem";
@@ -123,10 +125,14 @@ function App() {
     // splash (best-effort).
     prefetchLibrary().catch(() => {});
     loadSeriesFolders().catch(() => {});
+    // Réglages d'affichage et catégories : la bibliothèque s'ouvre déjà triée,
+    // rangée et filtrée, sans recalcul visible au premier rendu.
+    loadLibraryPrefs().catch(() => {});
+    loadCategories().catch(() => {});
 
     Promise.all([store.get<boolean>("setup_complete"), store.get<boolean>("welcome_v1_seen")])
       .then(([done, welcomeSeen]) => {
-        setPage(done && welcomeSeen ? "library" : "setup");
+        setPage(done && welcomeSeen ? "main" : "setup");
       })
       .catch((err) => {
         console.error("Store read failed:", err);
