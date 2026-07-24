@@ -4,6 +4,10 @@ import { makeDuckSprite } from "./duckSprite";
 import {
   createChameleonSkinner,
   drawChameleonHalo,
+  drawGodlyAura,
+  drawGodlyBolts,
+  drawNovaAura,
+  drawNovaOrbit,
   drawPeacockFan,
   drawPhoenixEmbers,
   drawPhoenixWings,
@@ -22,7 +26,7 @@ export function DuckRewardPreview({ reward, size = 52 }: { reward: DuckReward; s
     const skin = createChameleonSkinner();
 
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const box = size * 1.35;
+    const box = size * 1.7;
     canvas.width = Math.floor(box * dpr);
     canvas.height = Math.floor(box * dpr);
     canvas.style.width = `${box}px`;
@@ -31,23 +35,34 @@ export function DuckRewardPreview({ reward, size = 52 }: { reward: DuckReward; s
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = true;
 
-    const dh = size * 0.62;
+    // le halo, les rayons et les éclairs rayonnent tout autour du canard: plutôt
+    // que de rapetisser le canard pour les faire tenir, on resserre l'effet
+    // autour de lui (la roue du paon et les ailes du phénix, elles, ne débordent
+    // que vers le haut et tiennent déjà).
+    const radial = variant.effect === "nova" || variant.effect === "godly";
+    const dh = size * 0.9;
     const dw = dh * (sprite.width / sprite.height);
     const cx = box / 2;
-    const cy = box * 0.64;
+    const cy = box * (radial ? 0.5 : 0.64);
+    const ew = dw * (radial ? 0.62 : 1);
+    const eh = dh * (radial ? 0.62 : 1);
 
     let raf = 0;
     const start = performance.now();
     const draw = (now: number) => {
       const t = now - start;
-      const frame = { ctx, cx, cy, dw, dh, t, phase: 0 };
+      const frame = { ctx, cx, cy, dw: ew, dh: eh, t, phase: 0 };
       ctx.clearRect(0, 0, box, box);
       if (variant.effect === "chameleon") drawChameleonHalo(frame);
       else if (variant.effect === "peacock") drawPeacockFan(frame);
       else if (variant.effect === "phoenix") drawPhoenixWings(frame);
+      else if (variant.effect === "nova") drawNovaAura(frame);
+      else if (variant.effect === "godly") drawGodlyAura(frame);
       const img = variant.effect === "chameleon" ? skin(sprite, dw, dh, t, 0) : sprite;
       ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
       if (variant.effect === "phoenix") drawPhoenixEmbers(frame);
+      else if (variant.effect === "nova") drawNovaOrbit(frame);
+      else if (variant.effect === "godly") drawGodlyBolts(frame);
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);

@@ -1,6 +1,6 @@
-// Les effets des trois canards de récompense de couleurs, partagés entre la
-// piscine et les vignettes du Canardex: une carte doit montrer exactement ce
-// que le joueur verra à l'eau.
+// Les effets des canards de récompense, partagés entre la piscine et les
+// vignettes du Canardex: une carte doit montrer exactement ce que le joueur
+// verra à l'eau.
 
 export interface EffectFrame {
   ctx: CanvasRenderingContext2D;
@@ -169,5 +169,153 @@ export function drawPhoenixEmbers({ ctx, cx, cy, dw, dh, t, phase }: EffectFrame
     ctx.beginPath();
     ctx.arc(ax, ay, r, 0, Math.PI * 2);
     ctx.fill();
+  }
+}
+
+// --- Supernova ------------------------------------------------------------
+
+// Les tailles fixes ci-dessous ont été réglées sur le canard de la piscine:
+// on les rapporte à sa hauteur pour que la vignette, plus petite, garde les
+// mêmes proportions.
+const NOVA_REF_H = 119 * 1.15;
+const GODLY_REF_H = 119 * 1.7;
+
+// Aura pulsante qui balaie les teintes, derrière lui.
+export function drawNovaAura({ ctx, cx, cy, dw, t, phase }: EffectFrame) {
+  const hue = (t * 0.05) % 360;
+  const pulse = 0.4 + Math.sin(t * 0.005 + phase) * 0.12;
+  const gr = ctx.createRadialGradient(cx, cy, dw * 0.1, cx, cy, dw);
+  gr.addColorStop(0, `hsla(${hue},95%,70%,${pulse})`);
+  gr.addColorStop(1, `hsla(${hue},95%,70%,0)`);
+  ctx.fillStyle = gr;
+  ctx.beginPath();
+  ctx.arc(cx, cy, dw, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Anneau d'éclats prismatiques incliné + trois comètes à traînée, devant lui.
+export function drawNovaOrbit({ ctx, cx, cy, dw, dh, t, phase }: EffectFrame) {
+  const s = dh / NOVA_REF_H;
+  const hue = (t * 0.05) % 360;
+  const shards = 14;
+  for (let i = 0; i < shards; i++) {
+    const a = t * 0.0012 + (i / shards) * Math.PI * 2;
+    const sx = cx + Math.cos(a) * dw * 0.72;
+    const sy = cy + Math.sin(a) * dh * 0.32;
+    const tw = (Math.sin(t * 0.006 + i * 1.3) + 1) / 2;
+    const r = (1.4 + tw * 2.2) * s;
+    ctx.fillStyle = `hsla(${(hue + i * 26) % 360},100%,72%,${0.35 + tw * 0.55})`;
+    ctx.fillRect(sx - r, sy - 0.7 * s, r * 2, 1.4 * s);
+    ctx.fillRect(sx - 0.7 * s, sy - r, 1.4 * s, r * 2);
+  }
+  for (let i = 0; i < 3; i++) {
+    const a = -t * (0.0018 + i * 0.0004) + i * ((Math.PI * 2) / 3) + phase;
+    for (let k = 1; k <= 4; k++) {
+      const ta = a + k * 0.09;
+      const txx = cx + Math.cos(ta) * dw * 0.95;
+      const tyy = cy + Math.sin(ta) * dh * 0.8;
+      ctx.fillStyle = `hsla(${(hue + i * 120) % 360},100%,75%,${0.5 * (1 - k / 5)})`;
+      ctx.beginPath();
+      ctx.arc(txx, tyy, 2.2 * s * (1 - k / 6), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(a) * dw * 0.95, cy + Math.sin(a) * dh * 0.8, 2.4 * s, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// --- Zeus -----------------------------------------------------------------
+
+// Rayons blanc-or tournants, anneau de nuages d'orage et halo divin, derrière lui.
+export function drawGodlyAura({ ctx, cx, cy, dw, dh, t, phase }: EffectFrame) {
+  const s = dh / GODLY_REF_H;
+
+  const rot = -t * 0.0003;
+  const rays = 16;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  for (let i = 0; i < rays; i++) {
+    const a = (i / rays) * Math.PI * 2;
+    const long = i % 2 === 0;
+    const len = (long ? dw * 1.45 : dw * 1.0) * (0.95 + Math.sin(t * 0.004 + i) * 0.05);
+    const grad = ctx.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
+    grad.addColorStop(0, "rgba(255,250,210,0.6)");
+    grad.addColorStop(1, "rgba(255,250,210,0)");
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = (long ? 3.5 : 1.8) * s;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  for (let i = 0; i < 6; i++) {
+    const a = t * 0.0005 + i * (Math.PI / 3);
+    const sx = cx + Math.cos(a) * dw * 0.92;
+    const sy = cy + Math.sin(a) * dh * 0.62;
+    const puff = (0.9 + Math.sin(t * 0.002 + i * 2.3) * 0.12) * s;
+    ctx.fillStyle = "rgba(70,82,104,0.34)";
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, 13 * puff, 6.5 * puff, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx - 9 * puff, sy + 2 * s, 8 * puff, 4.6 * puff, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx + 9 * puff, sy + 2 * s, 8 * puff, 4.6 * puff, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const pulse = 0.45 + Math.sin(t * 0.005 + phase) * 0.15;
+  const gr = ctx.createRadialGradient(cx, cy, dw * 0.1, cx, cy, dw * 1.1);
+  gr.addColorStop(0, `rgba(255,245,190,${pulse})`);
+  gr.addColorStop(1, "rgba(255,245,190,0)");
+  ctx.fillStyle = gr;
+  ctx.beginPath();
+  ctx.arc(cx, cy, dw * 1.1, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Éclairs jetés par rafales (jitter haché, donc déterministe) et étincelles en
+// orbite, devant lui.
+export function drawGodlyBolts({ ctx, cx, cy, dw, dh, t, phase }: EffectFrame) {
+  const s = dh / GODLY_REF_H;
+  const tick = (t * 0.004 + phase * 10) | 0;
+  for (let i = 0; i < 3; i++) {
+    const h0 = Math.sin(tick * 113.9 + i * 71.3);
+    if (h0 < 0.35) continue;
+    const h1 = Math.sin(tick * 271.7 + i * 53.9);
+    const bx = cx + h1 * dw * 0.85;
+    const top = cy - dh * 1.05;
+    const bottom = cy + dh * 0.25;
+    const seg = (bottom - top) / 4;
+    ctx.strokeStyle = `rgba(255,255,220,${0.55 + h0 * 0.4})`;
+    ctx.lineWidth = 2.2 * s;
+    ctx.beginPath();
+    ctx.moveTo(bx, top);
+    let px = bx;
+    for (let k = 1; k <= 4; k++) {
+      px += Math.sin(tick * 197.3 + i * 31.7 + k * 87.1) * 9 * s;
+      ctx.lineTo(px, top + seg * k);
+    }
+    ctx.stroke();
+    const flash = 10 * s;
+    const fg = ctx.createRadialGradient(px, bottom, 0, px, bottom, flash);
+    fg.addColorStop(0, `rgba(255,255,240,${0.6 * h0})`);
+    fg.addColorStop(1, "rgba(255,255,240,0)");
+    ctx.fillStyle = fg;
+    ctx.beginPath();
+    ctx.arc(px, bottom, flash, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  for (let i = 0; i < 10; i++) {
+    const a = t * 0.0016 + i * ((Math.PI * 2) / 10) + phase;
+    const tw = (Math.sin(t * 0.007 + i * 1.9) + 1) / 2;
+    const sx = cx + Math.cos(a) * dw * 0.6;
+    const sy = cy + Math.sin(a) * dh * 0.52;
+    const r = (1.4 + tw * 3.2) * s;
+    ctx.fillStyle = `rgba(255,250,200,${0.35 + tw * 0.6})`;
+    ctx.fillRect(sx - r, sy - 0.7 * s, r * 2, 1.4 * s);
+    ctx.fillRect(sx - 0.7 * s, sy - r, 1.4 * s, r * 2);
   }
 }

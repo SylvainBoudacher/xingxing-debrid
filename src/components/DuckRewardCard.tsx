@@ -28,8 +28,8 @@ export function DuckRewardCard({
         <DuckRewardPreview reward={reward} size={52} />
       ) : (
         // verrouillée: silhouette figée, ni effet ni boucle d'animation
-        <span className="flex h-[70px] items-center brightness-0 opacity-25 dark:invert">
-          <DuckPreview variant={reward.variant()} size={52} />
+        <span className="flex h-[88px] items-center brightness-0 opacity-25 dark:invert">
+          <DuckPreview variant={reward.variant()} size={47} />
         </span>
       )}
       <p className="w-full truncate text-center text-[11px] font-medium text-zinc-800 dark:text-zinc-200">

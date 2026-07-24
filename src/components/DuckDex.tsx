@@ -274,11 +274,14 @@ export function DuckDex() {
                           <p className="w-full truncate text-center text-[11px] font-medium text-zinc-800 dark:text-zinc-200">
                             {found ? s.name : "???"}
                           </p>
-                          {found && s.maxColors > 1 && (
-                            <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                              {colors.length}/{s.maxColors} couleurs
-                            </p>
-                          )}
+                          {/* emplacement réservé: sans lui les espèces à une
+                              seule couleur (les légendaires) font des cases plus
+                              courtes que les autres sections */}
+                          <p className="h-[13px] text-[10px] leading-[13px] text-zinc-400 dark:text-zinc-500">
+                            {found && s.maxColors > 1
+                              ? `${colors.length}/${s.maxColors} couleurs`
+                              : ""}
+                          </p>
                         </motion.div>
                       );
                     })}
