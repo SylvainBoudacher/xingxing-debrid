@@ -9,6 +9,7 @@ import { DiscoverPanel } from "@/components/settings/panels/DiscoverPanel";
 import { DisplayPanel } from "@/components/settings/panels/DisplayPanel";
 import { LibraryPanel } from "@/components/settings/panels/LibraryPanel";
 import { DownloadsPanel } from "@/components/settings/panels/DownloadsPanel";
+import { PlaybackPanel } from "@/components/settings/panels/PlaybackPanel";
 import { MagnetsPanel } from "@/components/settings/panels/MagnetsPanel";
 import { NyaaPanel } from "@/components/settings/panels/NyaaPanel";
 import { ShortcutsPanel } from "@/components/settings/panels/ShortcutsPanel";
@@ -75,6 +76,8 @@ export function PreferencesPage({
         return <DisplayPanel />;
       case "magnets":
         return <MagnetsPanel />;
+      case "playback":
+        return <PlaybackPanel />;
       case "downloads":
         return <DownloadsPanel />;
       case "library":
