@@ -43,6 +43,13 @@ import {
   type ParadeState,
   paradeSlot,
 } from "./parade";
+import {
+  createChameleonSkinner,
+  drawChameleonHalo,
+  drawPeacockFan,
+  drawPhoenixEmbers,
+  drawPhoenixWings,
+} from "./duckRewardEffects";
 import { drawDex, overDex } from "./dexIcon";
 import { dexStatusOf, syncDexWithCollection } from "@/lib/duckDex";
 import {
@@ -130,49 +137,7 @@ function pushRank(d: Duck): number {
   return 0;
 }
 
-// Le Caméléon: sa peau est un arc-en-ciel qui défile, une boucle complète
-// toutes les ~48s. Le sprite étant cuit une fois pour toutes, on le recolore
-// dans un canvas tampon à chaque frame. Le mode "color" garde la luminosité du
-// sprite, donc tout l'ombrage et les écailles restent lisibles; le
-// "destination-in" final redécoupe la silhouette que le dégradé a débordée.
-let chameleonScratch: HTMLCanvasElement | null = null;
-
-function chameleonShift(t: number, phase: number): number {
-  return (t * 0.00035 + phase * 0.1) % 1;
-}
-
-function chameleonSkin(
-  sprite: HTMLCanvasElement,
-  dw: number,
-  dh: number,
-  t: number,
-  phase: number,
-): HTMLCanvasElement {
-  const w = Math.max(1, Math.ceil(dw));
-  const h = Math.max(1, Math.ceil(dh));
-  if (!chameleonScratch) chameleonScratch = document.createElement("canvas");
-  if (chameleonScratch.width !== w || chameleonScratch.height !== h) {
-    chameleonScratch.width = w;
-    chameleonScratch.height = h;
-  }
-  const c = chameleonScratch.getContext("2d")!;
-  c.clearRect(0, 0, w, h);
-  c.globalCompositeOperation = "source-over";
-  c.drawImage(sprite, 0, 0, w, h);
-  c.globalCompositeOperation = "color";
-  const shift = chameleonShift(t, phase);
-  const g = c.createLinearGradient(0, h, w, 0);
-  for (let k = 0; k <= 6; k++) {
-    const p = k / 6;
-    g.addColorStop(p, `hsl(${((shift + p * 0.85) * 360) % 360},92%,55%)`);
-  }
-  c.fillStyle = g;
-  c.fillRect(0, 0, w, h);
-  c.globalCompositeOperation = "destination-in";
-  c.drawImage(sprite, 0, 0, w, h);
-  c.globalCompositeOperation = "source-over";
-  return chameleonScratch;
-}
+const chameleonSkin = createChameleonSkinner();
 
 // The king and the god duck hold the centre of the parade.
 function holdsParadeCentre(d: Duck) {
@@ -1132,94 +1097,13 @@ export function PixelPool({
         }
       }
 
-      // chameleon (1 family reward): a soft halo in the hue currently running
-      // through its skin
-      if (d.effect === "chameleon") {
-        const hue = chameleonShift(t, d.phase) * 360;
-        const gr = ctx.createRadialGradient(d.x, d.y + bob, dw * 0.1, d.x, d.y + bob, dw * 0.9);
-        gr.addColorStop(0, `hsla(${hue},95%,65%,0.28)`);
-        gr.addColorStop(1, `hsla(${hue},95%,65%,0)`);
-        ctx.fillStyle = gr;
-        ctx.beginPath();
-        ctx.arc(d.x, d.y + bob, dw * 0.9, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // peacock (5 families reward): a fan of ocellated feathers opening behind
-      // the duck, breathing slowly while it idles
-      if (d.effect === "peacock") {
-        const cx = d.x;
-        const cy = d.y + bob + dh * 0.12;
-        const open = 0.72 + Math.sin(t * 0.0012 + d.phase) * 0.28;
-        const feathers = 11;
-        const spread = Math.PI * 0.9 * open;
-        for (let i = 0; i < feathers; i++) {
-          const a = -Math.PI / 2 + (i / (feathers - 1) - 0.5) * spread;
-          const len = dh * (0.95 + Math.sin(i * 1.1) * 0.06);
-          const tx = cx + Math.cos(a) * len;
-          const ty = cy + Math.sin(a) * len;
-          ctx.strokeStyle = `hsla(${170 + i * 9},68%,42%,0.85)`;
-          ctx.lineWidth = 2.4;
-          ctx.beginPath();
-          ctx.moveTo(cx, cy);
-          ctx.lineTo(tx, ty);
-          ctx.stroke();
-          const tw = (Math.sin(t * 0.004 + i * 1.3 + d.phase) + 1) / 2;
-          ctx.fillStyle = `rgba(232,190,60,${0.6 + tw * 0.4})`;
-          ctx.beginPath();
-          ctx.arc(tx, ty, 4.2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = `rgba(40,90,180,${0.75 + tw * 0.25})`;
-          ctx.beginPath();
-          ctx.arc(tx, ty, 2.2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-
-      // phoenix (10 families reward): deux ailes de flammes arc-en-ciel qui
-      // battent lentement, sur un halo de chaleur. Toutes les ~20s il s'embrase:
-      // les ailes s'ouvrent en grand et le halo double.
-      if (d.effect === "phoenix") {
-        const cx = d.x;
-        const cy = d.y + bob;
-        const cycle = (t * 0.00005 + d.phase * 0.1) % 1;
-        const burn = cycle > 0.9 ? Math.sin(((cycle - 0.9) / 0.1) * Math.PI) : 0;
-
-        const haloR = dw * (1.1 + burn * 0.5);
-        const gr = ctx.createRadialGradient(cx, cy, dw * 0.1, cx, cy, haloR);
-        gr.addColorStop(0, `rgba(255,190,90,${0.25 + burn * 0.4})`);
-        gr.addColorStop(1, "rgba(255,140,40,0)");
-        ctx.fillStyle = gr;
-        ctx.beginPath();
-        ctx.arc(cx, cy, haloR, 0, Math.PI * 2);
-        ctx.fill();
-
-        const flap = 0.5 + Math.sin(t * 0.0016 + d.phase) * 0.5;
-        const open = 0.62 + flap * 0.38 + burn * 0.5;
-        for (const side of [-1, 1]) {
-          for (let f = 0; f < 6; f++) {
-            const k = f / 5;
-            const a = (-0.26 - k * 1.35) * open;
-            const len = dh * (0.62 + k * 0.5) * (0.9 + burn * 0.45);
-            const bx = cx - side * dw * 0.06;
-            const by = cy + dh * 0.04;
-            const tx = bx - side * Math.cos(a) * len;
-            const ty = by + Math.sin(a) * len;
-            const wob = Math.sin(t * 0.005 + f * 1.4 + d.phase) * len * 0.09;
-            const hue = (t * 0.05 + f * 22 + (side > 0 ? 12 : 0)) % 360;
-            const g = ctx.createLinearGradient(bx, by, tx, ty);
-            g.addColorStop(0, `hsla(${hue},100%,72%,0.85)`);
-            g.addColorStop(0.6, `hsla(${(hue + 28) % 360},100%,58%,0.6)`);
-            g.addColorStop(1, `hsla(${(hue + 55) % 360},100%,52%,0)`);
-            ctx.fillStyle = g;
-            const w = dh * 0.1 * (1 - k * 0.35);
-            ctx.beginPath();
-            ctx.moveTo(bx, by);
-            ctx.quadraticCurveTo(bx - side * len * 0.45 + wob, by - len * 0.28 - w, tx, ty);
-            ctx.quadraticCurveTo(bx - side * len * 0.4, by - len * 0.1 + w, bx, by);
-            ctx.fill();
-          }
-        }
+      // récompenses de couleurs: halo du Caméléon, roue du Paon, ailes du
+      // Phénix — mêmes routines que les vignettes du Canardex
+      if (d.effect === "chameleon" || d.effect === "peacock" || d.effect === "phoenix") {
+        const frame = { ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase };
+        if (d.effect === "chameleon") drawChameleonHalo(frame);
+        else if (d.effect === "peacock") drawPeacockFan(frame);
+        else drawPhoenixWings(frame);
       }
 
       // supernova (dex completion reward): pulsing aura cycling through hues
@@ -1383,22 +1267,9 @@ export function PixelPool({
         ctx.fillRect(gx - 0.8, gy - 5, 1.6, 10);
       }
 
-      // phoenix ashes: coloured embers drifting up in front of the duck
-      if (d.effect === "phoenix") {
-        const cycle = (t * 0.00005 + d.phase * 0.1) % 1;
-        const burn = cycle > 0.9 ? Math.sin(((cycle - 0.9) / 0.1) * Math.PI) : 0;
-        for (let i = 0; i < 14; i++) {
-          const p = (t * 0.0006 + d.phase + i * 0.071) % 1;
-          const ax = d.x + Math.sin(t * 0.0015 + i * 2.3 + d.phase) * dw * 0.6;
-          const ay = d.y + bob + dh * 0.3 - p * dh * 1.5;
-          const hue = (t * 0.05 + i * 40) % 360;
-          const r = (0.9 + (1 - p) * 1.5) * (1 + burn * 0.6);
-          ctx.fillStyle = `hsla(${hue},100%,72%,${0.8 * (1 - p)})`;
-          ctx.beginPath();
-          ctx.arc(ax, ay, r, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
+      // braises du Phénix, devant lui
+      if (d.effect === "phoenix")
+        drawPhoenixEmbers({ ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase });
 
       // godly foreground: lightning bolts hurled down around the god — jagged,
       // deterministic (hashed ticks like the electric arcs), with a flash tip

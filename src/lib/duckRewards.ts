@@ -1,3 +1,4 @@
+import type { Rarity } from "@/components/duckRandom";
 import { SPECIES } from "@/components/duckSpecies";
 import type { Effect, Variant } from "@/components/duckTypes";
 
@@ -9,10 +10,21 @@ import type { Effect, Variant } from "@/components/duckTypes";
 export interface DexProgress {
   species: number; // espèces découvertes
   shiny: number; // espèces collectionnées en shiny
-  families: number; // espèces colorables dont toutes les couleurs sont prises
+  // espèces colorables dont toutes les couleurs sont prises, par rareté
+  familiesCommon: number;
+  familiesUncommon: number;
+  familiesRare: number;
 }
 
 export type RewardMetric = keyof DexProgress;
+
+// Les récompenses de couleurs se gagnent rareté par rareté: chaque palier ne
+// compte que les familles complètes de sa propre rareté.
+export const FAMILY_METRIC: Partial<Record<Rarity, RewardMetric>> = {
+  common: "familiesCommon",
+  uncommon: "familiesUncommon",
+  rare: "familiesRare",
+};
 
 // Les récompenses de couleurs et celles de collection ne se gagnent pas de la
 // même façon: le Canardex les affiche dans deux sections distinctes.
@@ -39,10 +51,10 @@ export const REWARDS: DuckReward[] = [
     name: "Canard Caméléon",
     scale: 1,
     storeKey: "chameleon_claimed",
-    metric: "families",
-    threshold: 1,
-    unit: "famille",
-    lockedHint: "Collectionne toutes les couleurs d'une même espèce.",
+    metric: "familiesCommon",
+    threshold: 5,
+    unit: "familles communes",
+    lockedHint: "Complète les couleurs de 5 espèces communes.",
     claimToast: "Canard Caméléon a rejoint ta collection !",
     variant: () => ({
       body: "#8FD14F",
@@ -58,10 +70,10 @@ export const REWARDS: DuckReward[] = [
     name: "Canard Paon",
     scale: 1.2,
     storeKey: "peacock_claimed",
-    metric: "families",
+    metric: "familiesUncommon",
     threshold: 5,
-    unit: "familles",
-    lockedHint: "Complète les couleurs de 5 espèces.",
+    unit: "familles peu communes",
+    lockedHint: "Complète les couleurs de 5 espèces peu communes.",
     claimToast: "Canard Paon déploie sa roue !",
     variant: () => ({ body: "#2E6B5E", beak: "#F5811F", acc: "none", effect: "peacock" }),
   },
@@ -71,10 +83,10 @@ export const REWARDS: DuckReward[] = [
     name: "Canard Phénix Chromatique",
     scale: 1.7,
     storeKey: "phoenix_claimed",
-    metric: "families",
-    threshold: 10,
-    unit: "familles",
-    lockedHint: "Complète les couleurs de 10 espèces.",
+    metric: "familiesRare",
+    threshold: 5,
+    unit: "familles rares",
+    lockedHint: "Complète les couleurs de 5 espèces rares.",
     claimToast: "Le Phénix Chromatique renaît de ses cendres !",
     variant: () => ({
       body: "#FFF3D6",
@@ -123,14 +135,16 @@ export const COLOR_REWARDS = REWARDS.filter((r) => r.group === "colors");
 export const COLLECTION_REWARDS = REWARDS.filter((r) => r.group === "collection");
 
 // Progression affichée sur une carte, plafonnée au seuil: le compteur de
-// familles peut dépasser 10 sans que la carte affiche 15/10.
+// familles peut dépasser 5 sans que la carte affiche 8/5.
 export function rewardProgress(r: DuckReward, p: DexProgress): { done: number; total: number } {
   return { done: Math.min(p[r.metric], r.threshold), total: r.threshold };
 }
 
-// La récompense que ce nombre exact de familles vient de débloquer, s'il y en a.
-export function familyRewardAt(families: number): DuckReward | undefined {
-  return REWARDS.find((r) => r.metric === "families" && r.threshold === families);
+// La récompense que ce nombre exact de familles complètes dans cette rareté
+// vient de débloquer, s'il y en a.
+export function familyRewardAt(rarity: Rarity, families: number): DuckReward | undefined {
+  const metric = FAMILY_METRIC[rarity];
+  return metric ? REWARDS.find((r) => r.metric === metric && r.threshold === families) : undefined;
 }
 
 const REWARD_EFFECTS = new Set<Effect>(REWARDS.map((r) => r.variant().effect!));

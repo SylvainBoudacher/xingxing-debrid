@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { rewardProgress, type DexProgress, type DuckReward } from "@/lib/duckRewards";
 import { DuckPreview } from "./DuckPreview";
+import { DuckRewardPreview } from "./DuckRewardPreview";
 
 // Carte d'une récompense dans le Canardex: silhouette et compteur tant qu'elle
 // est verrouillée, bouton Réclamer une fois le seuil atteint, nom une fois prise.
@@ -23,9 +24,14 @@ export function DuckRewardCard({
       title={claimed ? reward.name : reward.lockedHint}
       className={`relative flex flex-col items-center gap-1 rounded-xl bg-white/70 dark:bg-zinc-800/60 px-2 py-3 ring-1 ${claimed ? "ring-yellow-300/50" : unlocked ? "ring-amber-400/70" : "ring-black/5 dark:ring-white/5"}`}
     >
-      <span className={claimed ? "" : "brightness-0 opacity-25 dark:invert"}>
-        <DuckPreview variant={reward.variant()} size={52} />
-      </span>
+      {claimed ? (
+        <DuckRewardPreview reward={reward} size={52} />
+      ) : (
+        // verrouillée: silhouette figée, ni effet ni boucle d'animation
+        <span className="flex h-[70px] items-center brightness-0 opacity-25 dark:invert">
+          <DuckPreview variant={reward.variant()} size={52} />
+        </span>
+      )}
       <p className="w-full truncate text-center text-[11px] font-medium text-zinc-800 dark:text-zinc-200">
         {claimed ? reward.name : "???"}
       </p>

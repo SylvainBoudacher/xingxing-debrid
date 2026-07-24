@@ -233,11 +233,11 @@ export function DuckShop() {
         duration: 6000,
       });
     } else if (disc.newColor && disc.familyComplete) {
-      const reward = familyRewardAt(disc.familiesComplete);
+      const reward = familyRewardAt(disc.species.rarity, disc.familiesComplete);
       toast.success(`Famille complète : ${disc.species.name} !`, {
         description: reward
           ? `${reward.name} t'attend dans le pokédex.`
-          : `${disc.familiesComplete} familles complètes`,
+          : `${disc.familiesComplete} familles complètes dans cette rareté`,
         duration: 6000,
       });
     } else if (disc.newColor) {

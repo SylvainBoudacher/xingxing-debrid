@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { FlaskConical } from "lucide-react";
+import type { Rarity } from "./duckRandom";
 
 // Outils de triche du Canardex, réservés au mode dev: un seul menu plutôt qu'une
 // rangée de boutons qui déborde de l'en-tête. Menu maison plutôt que Radix: le
@@ -19,7 +20,7 @@ export function DuckDexDevMenu({
 }: {
   onCompleteDex: () => void;
   onCompleteShiny: () => void;
-  onCompleteFamilies: (count: number) => void;
+  onCompleteFamilies: (rarity: Rarity, count: number) => void;
   onReset: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -45,9 +46,9 @@ export function DuckDexDevMenu({
     {
       title: "Familles de couleurs",
       actions: [
-        { label: "Compléter 1 famille", run: () => onCompleteFamilies(1) },
-        { label: "Compléter 5 familles", run: () => onCompleteFamilies(5) },
-        { label: "Compléter 10 familles", run: () => onCompleteFamilies(10) },
+        { label: "5 familles communes", run: () => onCompleteFamilies("common", 5) },
+        { label: "5 familles peu communes", run: () => onCompleteFamilies("uncommon", 5) },
+        { label: "5 familles rares", run: () => onCompleteFamilies("rare", 5) },
       ],
     },
     {

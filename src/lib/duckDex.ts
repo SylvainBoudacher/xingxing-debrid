@@ -1,4 +1,5 @@
 import { LazyStore } from "@tauri-apps/plugin-store";
+import type { Rarity } from "@/components/duckRandom";
 import type { Variant } from "@/components/duckTypes";
 import { SPECIES, SPECIES_BY_ID, speciesOf, type DuckSpecies } from "@/components/duckSpecies";
 import { getSavedDucks } from "./savedDucks";
@@ -17,8 +18,19 @@ const store = new LazyStore("duckdex.json", { defaults: {}, autoSave: false });
 // complètes dès leur découverte et videraient les paliers de leur sens.
 export const COLOR_SPECIES = SPECIES.filter((s) => s.maxColors > 1);
 
-export function completedFamilies(entries: DexEntries): number {
-  return COLOR_SPECIES.filter((s) => (entries[s.id]?.length ?? 0) >= s.maxColors).length;
+export function completedFamilies(entries: DexEntries, rarity?: Rarity): number {
+  return COLOR_SPECIES.filter(
+    (s) => (!rarity || s.rarity === rarity) && (entries[s.id]?.length ?? 0) >= s.maxColors,
+  ).length;
+}
+
+// Les trois compteurs de familles que les récompenses de couleurs consomment.
+export function familyProgress(entries: DexEntries) {
+  return {
+    familiesCommon: completedFamilies(entries, "common"),
+    familiesUncommon: completedFamilies(entries, "uncommon"),
+    familiesRare: completedFamilies(entries, "rare"),
+  };
 }
 
 // In-memory mirror of the entries, so the pool canvas can check a hovered
@@ -85,7 +97,7 @@ export interface DiscoveryResult {
   colorCount: number; // colors collected for this species, after the save
   shinyCount: number; // species whose shiny version was collected, after the save
   familyComplete: boolean; // cette prise vient de compléter les couleurs de l'espèce
-  familiesComplete: number; // familles complètes après la prise
+  familiesComplete: number; // familles complètes dans la rareté de l'espèce, après la prise
 }
 
 export async function recordDiscovery(v: Variant): Promise<DiscoveryResult> {
@@ -112,7 +124,7 @@ export async function recordDiscovery(v: Variant): Promise<DiscoveryResult> {
     colorCount,
     shinyCount: shiny.length,
     familyComplete: unlocked === "color" && sp.maxColors > 1 && colorCount === sp.maxColors,
-    familiesComplete: completedFamilies(entries),
+    familiesComplete: completedFamilies(entries, sp.rarity),
   };
 }
 
@@ -153,11 +165,11 @@ export async function debugCompleteDex(): Promise<DexEntries> {
   return entries;
 }
 
-// Remplit toutes les couleurs des `count` premières espèces colorables. Les
-// teintes sont factices: seul leur nombre compte pour les paliers de familles.
-export async function debugCompleteFamilies(count: number): Promise<DexEntries> {
+// Remplit toutes les couleurs des `count` premières espèces colorables de cette
+// rareté. Les teintes sont factices: seul leur nombre compte pour les paliers.
+export async function debugCompleteFamilies(rarity: Rarity, count: number): Promise<DexEntries> {
   const entries = await getDex();
-  for (const s of COLOR_SPECIES.slice(0, count)) {
+  for (const s of COLOR_SPECIES.filter((s) => s.rarity === rarity).slice(0, count)) {
     entries[s.id] = Array.from(
       { length: s.maxColors },
       (_, i) => `#0000${i.toString(16).padStart(2, "0")}`,

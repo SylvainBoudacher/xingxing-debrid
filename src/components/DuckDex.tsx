@@ -3,8 +3,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
 import {
-  COLOR_SPECIES,
   completedFamilies,
+  familyProgress,
   debugCompleteDex,
   debugCompleteFamilies,
   debugCompleteShinyDex,
@@ -124,8 +124,8 @@ export function DuckDex() {
     setEntries(await debugCompleteDex());
   }
 
-  async function devCompleteFamilies(count: number) {
-    setEntries(await debugCompleteFamilies(count));
+  async function devCompleteFamilies(rarity: Rarity, count: number) {
+    setEntries(await debugCompleteFamilies(rarity, count));
   }
 
   async function devCompleteShiny() {
@@ -141,7 +141,11 @@ export function DuckDex() {
 
   const discovered = SPECIES.filter((s) => (entries[s.id]?.length ?? 0) > 0).length;
   const families = completedFamilies(entries);
-  const progress: DexProgress = { species: discovered, shiny: shiny.length, families };
+  const progress: DexProgress = {
+    species: discovered,
+    shiny: shiny.length,
+    ...familyProgress(entries),
+  };
   const complete = discovered === SPECIES.length;
 
   return (
@@ -284,7 +288,7 @@ export function DuckDex() {
 
               <DuckRewardSection
                 title="Récompenses de couleurs"
-                hint={`Une famille, c'est toutes les teintes d'une même espèce. ${families}/${COLOR_SPECIES.length} familles complètes.`}
+                hint={`Une famille, c'est toutes les teintes d'une même espèce. Chaque palier compte les familles de sa rareté. ${families} familles complètes.`}
                 rewards={COLOR_REWARDS}
                 progress={progress}
                 claimed={claimed}

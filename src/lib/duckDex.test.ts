@@ -268,6 +268,17 @@ describe("completedFamilies", () => {
     expect(completedFamilies(await getDex())).toBe(2);
   });
 
+  it("counts families of one rarity only when asked", async () => {
+    const shades = SPECIES_BY_ID.get("shades")!;
+    const wizard = SPECIES_BY_ID.get("wizard")!;
+    await fillFamily(SHADES, shades.maxColors);
+    await fillFamily(WIZARD, wizard.maxColors);
+    const entries = await getDex();
+    expect(completedFamilies(entries, "common")).toBe(1);
+    expect(completedFamilies(entries, "rare")).toBe(1);
+    expect(completedFamilies(entries, "uncommon")).toBe(0);
+  });
+
   it("exposes 27 colorable species", () => {
     expect(COLOR_SPECIES).toHaveLength(27);
     expect(COLOR_SPECIES.every((s) => s.maxColors > 1)).toBe(true);
@@ -319,14 +330,17 @@ describe("rewards", () => {
   });
 
   it("splits the catalog into three colour rewards and two collection ones", () => {
-    expect(COLOR_REWARDS.map((r) => r.metric)).toEqual(["families", "families", "families"]);
+    expect(COLOR_REWARDS.map((r) => r.metric)).toEqual([
+      "familiesCommon",
+      "familiesUncommon",
+      "familiesRare",
+    ]);
     expect(COLLECTION_REWARDS.map((r) => r.metric)).toEqual(["species", "shiny"]);
     expect(COLOR_REWARDS.length + COLLECTION_REWARDS.length).toBe(REWARDS.length);
   });
 
-  it("sets the family thresholds to 1, 5 and 10", () => {
-    const families = REWARDS.filter((r) => r.metric === "families").map((r) => r.threshold);
-    expect(families).toEqual([1, 5, 10]);
+  it("sets every family threshold to 5", () => {
+    expect(COLOR_REWARDS.map((r) => r.threshold)).toEqual([5, 5, 5]);
   });
 
   it("ranks the reward variants above the ordinary tiers", () => {
@@ -346,22 +360,24 @@ describe("rewards", () => {
   });
 
   it("caps the displayed progress at the threshold", () => {
-    const phoenix = REWARDS.find((r) => r.metric === "families" && r.threshold === 10)!;
-    expect(rewardProgress(phoenix, { species: 0, shiny: 0, families: 3 })).toEqual({
+    const phoenix = REWARDS.find((r) => r.id === "canardex-phoenix")!;
+    const base = { species: 0, shiny: 0, familiesCommon: 0, familiesUncommon: 0 };
+    expect(rewardProgress(phoenix, { ...base, familiesRare: 3 })).toEqual({
       done: 3,
-      total: 10,
+      total: 5,
     });
-    expect(rewardProgress(phoenix, { species: 0, shiny: 0, families: 15 })).toEqual({
-      done: 10,
-      total: 10,
+    expect(rewardProgress(phoenix, { ...base, familiesRare: 8 })).toEqual({
+      done: 5,
+      total: 5,
     });
   });
 
-  it("maps a family count to the reward it unlocks", () => {
-    expect(familyRewardAt(1)!.name).toBe("Canard Caméléon");
-    expect(familyRewardAt(5)!.name).toBe("Canard Paon");
-    expect(familyRewardAt(10)!.name).toBe("Canard Phénix Chromatique");
-    expect(familyRewardAt(2)).toBeUndefined();
+  it("maps a family count and rarity to the reward it unlocks", () => {
+    expect(familyRewardAt("common", 5)!.name).toBe("Canard Caméléon");
+    expect(familyRewardAt("uncommon", 5)!.name).toBe("Canard Paon");
+    expect(familyRewardAt("rare", 5)!.name).toBe("Canard Phénix Chromatique");
+    expect(familyRewardAt("common", 4)).toBeUndefined();
+    expect(familyRewardAt("legendary", 5)).toBeUndefined();
   });
 
   it("claim flags persist independently per store key", async () => {
