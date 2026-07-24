@@ -53,7 +53,13 @@ import {
   recordDiscovery,
   syncDexWithCollection,
 } from "./duckDex";
-import { familyRewardAt, REWARDS, rewardProgress } from "./duckRewards";
+import {
+  COLLECTION_REWARDS,
+  COLOR_REWARDS,
+  familyRewardAt,
+  REWARDS,
+  rewardProgress,
+} from "./duckRewards";
 
 const SHADES: Variant = { body: "#FFD21E", beak: "#F5811F", acc: "shades" };
 const SHADES_PINK: Variant = { body: "#FB7AA8", beak: "#F5811F", acc: "shades" };
@@ -310,6 +316,12 @@ describe("rewards", () => {
     expect(new Set(REWARDS.map((r) => r.id)).size).toBe(5);
     expect(new Set(REWARDS.map((r) => r.storeKey)).size).toBe(5);
     expect(new Set(REWARDS.map((r) => r.variant().effect)).size).toBe(5);
+  });
+
+  it("splits the catalog into three colour rewards and two collection ones", () => {
+    expect(COLOR_REWARDS.map((r) => r.metric)).toEqual(["families", "families", "families"]);
+    expect(COLLECTION_REWARDS.map((r) => r.metric)).toEqual(["species", "shiny"]);
+    expect(COLOR_REWARDS.length + COLLECTION_REWARDS.length).toBe(REWARDS.length);
   });
 
   it("sets the family thresholds to 1, 5 and 10", () => {

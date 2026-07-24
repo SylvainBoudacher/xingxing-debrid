@@ -14,11 +14,16 @@ export interface DexProgress {
 
 export type RewardMetric = keyof DexProgress;
 
+// Les récompenses de couleurs et celles de collection ne se gagnent pas de la
+// même façon: le Canardex les affiche dans deux sections distinctes.
+export type RewardGroup = "colors" | "collection";
+
 export interface DuckReward {
   id: string;
   name: string;
   scale: number;
   storeKey: string;
+  group: RewardGroup;
   metric: RewardMetric;
   threshold: number;
   unit: string; // libellé du compteur de progression
@@ -30,6 +35,7 @@ export interface DuckReward {
 export const REWARDS: DuckReward[] = [
   {
     id: "canardex-chameleon",
+    group: "colors",
     name: "Canard Caméléon",
     scale: 1,
     storeKey: "chameleon_claimed",
@@ -42,6 +48,7 @@ export const REWARDS: DuckReward[] = [
   },
   {
     id: "canardex-peacock",
+    group: "colors",
     name: "Canard Paon",
     scale: 1.2,
     storeKey: "peacock_claimed",
@@ -54,6 +61,7 @@ export const REWARDS: DuckReward[] = [
   },
   {
     id: "canardex-phoenix",
+    group: "colors",
     name: "Canard Phénix Chromatique",
     scale: 1.7,
     storeKey: "phoenix_claimed",
@@ -66,6 +74,7 @@ export const REWARDS: DuckReward[] = [
   },
   {
     id: "canardex-reward",
+    group: "collection",
     name: "Canard Supernova",
     scale: 1.15,
     storeKey: "reward_claimed",
@@ -84,6 +93,7 @@ export const REWARDS: DuckReward[] = [
   },
   {
     id: "canardex-god",
+    group: "collection",
     name: "Zeus, le Dieu Canard",
     scale: 1.7,
     storeKey: "god_claimed",
@@ -95,6 +105,9 @@ export const REWARDS: DuckReward[] = [
     variant: () => ({ body: "#F4EFE4", beak: "#E8B93C", acc: "laurel", effect: "godly" }),
   },
 ];
+
+export const COLOR_REWARDS = REWARDS.filter((r) => r.group === "colors");
+export const COLLECTION_REWARDS = REWARDS.filter((r) => r.group === "collection");
 
 // Progression affichée sur une carte, plafonnée au seuil: le compteur de
 // familles peut dépasser 10 sans que la carte affiche 15/10.
