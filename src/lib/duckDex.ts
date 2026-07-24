@@ -2,6 +2,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import type { Variant } from "@/components/duckTypes";
 import { SPECIES, SPECIES_BY_ID, speciesOf, type DuckSpecies } from "@/components/duckSpecies";
 import { getSavedDucks } from "./savedDucks";
+import { isRewardEffect, REWARDS } from "./duckRewards";
 
 // Canardex progress: which species were discovered and with which body colors.
 // A species is discovered the first time a duck of that species is saved to
@@ -41,7 +42,7 @@ export async function getShinyDex(): Promise<ShinyEntries> {
 // (also null before the first store read, when the cache is cold).
 export function dexStatusOf(v: Variant): "species" | "color" | "shiny" | null {
   if (!cache) return null;
-  if (v.effect === "nova" || v.effect === "godly") return null; // rewards unlock nothing
+  if (isRewardEffect(v.effect)) return null; // les récompenses ne débloquent rien
 
   const id = speciesOf(v);
   if (v.shiny && shinyCache && !shinyCache.includes(id)) return "shiny";
@@ -52,7 +53,7 @@ export function dexStatusOf(v: Variant): "species" | "color" | "shiny" | null {
 
 function merge(entries: DexEntries, v: Variant): "species" | "color" | null {
   // completion rewards are not species: don't pollute the dex when re-saved
-  if (v.effect === "nova" || v.effect === "godly") return null;
+  if (isRewardEffect(v.effect)) return null;
   const id = speciesOf(v);
   const color = v.body.toLowerCase();
   const colors = entries[id];
@@ -66,7 +67,7 @@ function merge(entries: DexEntries, v: Variant): "species" | "color" | null {
 }
 
 function mergeShiny(shiny: ShinyEntries, v: Variant): boolean {
-  if (!v.shiny || v.effect === "nova" || v.effect === "godly") return false;
+  if (!v.shiny || isRewardEffect(v.effect)) return false;
   const id = speciesOf(v);
   if (shiny.includes(id)) return false;
   shiny.push(id);
@@ -141,36 +142,6 @@ export function isShinyDexComplete(shiny: ShinyEntries): boolean {
   return SPECIES.every((s) => shiny.includes(s.id));
 }
 
-// Completion reward: the only mythic besides the king. Its "nova" effect
-// (hue-cycling aura, prismatic orbit ring, comets) can never roll randomly.
-export const REWARD_DUCK_ID = "canardex-reward";
-export const REWARD_DUCK_NAME = "Canard Supernova";
-export const REWARD_DUCK_SCALE = 1.15;
-export function rewardVariant(): Variant {
-  return {
-    body: "#1B1035",
-    beak: "#FFD21E",
-    acc: "halo",
-    pattern: "galaxy",
-    effect: "nova",
-  };
-}
-
-// Ultimate reward, unlocked by also collecting the shiny version of every
-// species: the god of ducks, in the image of Zeus. Its "godly" effect (divine
-// sunburst, storm ring, lightning strikes) can never roll randomly.
-export const GOD_DUCK_ID = "canardex-god";
-export const GOD_DUCK_NAME = "Zeus, le Dieu Canard";
-export const GOD_DUCK_SCALE = 1.7;
-export function godVariant(): Variant {
-  return {
-    body: "#F4EFE4",
-    beak: "#E8B93C",
-    acc: "laurel",
-    effect: "godly",
-  };
-}
-
 // Dev-only helpers behind the DuckDex debug buttons: mark every species as
 // discovered (or shiny-discovered), or wipe the whole dex (including rewards).
 export async function debugCompleteDex(): Promise<DexEntries> {
@@ -196,25 +167,15 @@ export async function debugResetDex(): Promise<void> {
   shinyCache = [];
   await store.set("entries", {});
   await store.set("shiny", []);
-  await store.set("reward_claimed", false);
-  await store.set("god_claimed", false);
+  for (const r of REWARDS) await store.set(r.storeKey, false);
   await store.save();
 }
 
-export async function isRewardClaimed(): Promise<boolean> {
-  return (await store.get<boolean>("reward_claimed")) ?? false;
+export async function isClaimed(storeKey: string): Promise<boolean> {
+  return (await store.get<boolean>(storeKey)) ?? false;
 }
 
-export async function markRewardClaimed(): Promise<void> {
-  await store.set("reward_claimed", true);
-  await store.save();
-}
-
-export async function isGodRewardClaimed(): Promise<boolean> {
-  return (await store.get<boolean>("god_claimed")) ?? false;
-}
-
-export async function markGodRewardClaimed(): Promise<void> {
-  await store.set("god_claimed", true);
+export async function markClaimed(storeKey: string): Promise<void> {
+  await store.set(storeKey, true);
   await store.save();
 }

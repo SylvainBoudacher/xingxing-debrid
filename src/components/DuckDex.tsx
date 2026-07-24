@@ -1,32 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Lock, Sparkles, X } from "lucide-react";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
+  completedFamilies,
   debugCompleteDex,
   debugCompleteShinyDex,
   debugResetDex,
-  getDex,
   getShinyDex,
-  GOD_DUCK_ID,
-  GOD_DUCK_NAME,
-  GOD_DUCK_SCALE,
-  godVariant,
-  isDexComplete,
-  isGodRewardClaimed,
-  isRewardClaimed,
-  isShinyDexComplete,
-  markGodRewardClaimed,
-  markRewardClaimed,
-  REWARD_DUCK_ID,
-  REWARD_DUCK_NAME,
-  REWARD_DUCK_SCALE,
-  rewardVariant,
+  isClaimed,
+  markClaimed,
   syncDexWithCollection,
   type DexEntries,
   type ShinyEntries,
 } from "@/lib/duckDex";
+import { REWARDS, rewardProgress, type DexProgress, type DuckReward } from "@/lib/duckRewards";
 import { upsertSavedDuck } from "@/lib/savedDucks";
 import type { Rarity } from "./duckRandom";
 import { SPECIES } from "./duckSpecies";
@@ -50,6 +39,17 @@ const RARITY_RING: Record<Rarity, string> = {
   common: "ring-black/10 dark:ring-white/10",
 };
 
+// hors du composant: Date.now() ne doit pas être appelé pendant un rendu
+function rewardDuck(reward: DuckReward) {
+  return {
+    id: reward.id,
+    name: reward.name,
+    variant: reward.variant(),
+    scale: reward.scale,
+    savedAt: Date.now(),
+  };
+}
+
 // Canardex overlay, toggled by the pixel-art pokedex drawn on the pool canvas.
 // Discoveries are synced from the saved collection every time the panel opens,
 // so ducks saved before the dex existed count retroactively.
@@ -57,9 +57,8 @@ export function DuckDex() {
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<DexEntries>({});
   const [shiny, setShiny] = useState<ShinyEntries>([]);
-  const [claimed, setClaimed] = useState(false);
+  const [claimed, setClaimed] = useState<Record<string, boolean>>({});
   const [shinyShown, setShinyShown] = useState<Set<string>>(new Set());
-  const [godClaimed, setGodClaimed] = useState(false);
 
   const openRef = useRef(false);
   useEffect(() => {
@@ -67,15 +66,13 @@ export function DuckDex() {
   }, [open]);
 
   async function openDex() {
-    const [synced, rewardClaimed, god] = await Promise.all([
-      syncDexWithCollection(),
-      isRewardClaimed(),
-      isGodRewardClaimed(),
-    ]);
+    const synced = await syncDexWithCollection();
+    const flags = await Promise.all(
+      REWARDS.map(async (r) => [r.id, await isClaimed(r.storeKey)] as const),
+    );
     setEntries(synced);
     setShiny(await getShinyDex());
-    setClaimed(rewardClaimed);
-    setGodClaimed(god);
+    setClaimed(Object.fromEntries(flags));
     setOpen(true);
   }
 
@@ -96,35 +93,13 @@ export function DuckDex() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  async function claim() {
-    const duck = {
-      id: REWARD_DUCK_ID,
-      name: REWARD_DUCK_NAME,
-      variant: rewardVariant(),
-      scale: REWARD_DUCK_SCALE,
-      savedAt: Date.now(),
-    };
+  async function claim(reward: DuckReward) {
+    const duck = rewardDuck(reward);
     await upsertSavedDuck(duck);
     injectDuck({ id: duck.id, name: duck.name, variant: duck.variant, scale: duck.scale });
-    await markRewardClaimed();
-    setEntries(await getDex());
-    setClaimed(true);
-    toast.success(`${REWARD_DUCK_NAME} a rejoint ta collection !`);
-  }
-
-  async function claimGod() {
-    const duck = {
-      id: GOD_DUCK_ID,
-      name: GOD_DUCK_NAME,
-      variant: godVariant(),
-      scale: GOD_DUCK_SCALE,
-      savedAt: Date.now(),
-    };
-    await upsertSavedDuck(duck);
-    injectDuck({ id: duck.id, name: duck.name, variant: duck.variant, scale: duck.scale });
-    await markGodRewardClaimed();
-    setGodClaimed(true);
-    toast.success(`${GOD_DUCK_NAME} descend de l'Olympe !`);
+    await markClaimed(reward.storeKey);
+    setClaimed((prev) => ({ ...prev, [reward.id]: true }));
+    toast.success(reward.claimToast);
   }
 
   function toggleShinyShown(id: string) {
@@ -148,13 +123,13 @@ export function DuckDex() {
     await debugResetDex();
     setEntries({});
     setShiny([]);
-    setClaimed(false);
-    setGodClaimed(false);
+    setClaimed({});
   }
 
   const discovered = SPECIES.filter((s) => (entries[s.id]?.length ?? 0) > 0).length;
-  const complete = isDexComplete(entries);
-  const shinyComplete = isShinyDexComplete(shiny);
+  const families = completedFamilies(entries);
+  const progress: DexProgress = { species: discovered, shiny: shiny.length, families };
+  const complete = discovered === SPECIES.length;
 
   return (
     <AnimatePresence>
@@ -307,75 +282,52 @@ export function DuckDex() {
                   </div>
                 </motion.div>
               ))}
-            </div>
 
-            <div className="space-y-3 border-t border-black/10 dark:border-white/10 px-5 py-4">
-              {claimed ? (
-                <div className="flex items-center gap-3">
-                  <DuckPreview variant={rewardVariant()} size={48} />
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                      {REWARD_DUCK_NAME}
-                    </p>
-                    <p className="text-xs text-zinc-500">Récompense de complétion obtenue</p>
-                  </div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.4, ease: "easeOut" }}
+              >
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+                  Récompenses · {families} familles complètes
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {REWARDS.map((r) => {
+                    const { done, total } = rewardProgress(r, progress);
+                    const unlocked = done >= total;
+                    const got = claimed[r.id];
+                    return (
+                      <div
+                        key={r.id}
+                        title={got ? r.name : r.lockedHint}
+                        className={`relative flex flex-col items-center gap-1 rounded-xl bg-white/70 dark:bg-zinc-800/60 px-2 py-3 ring-1 ${got ? "ring-yellow-300/50" : unlocked ? "ring-amber-400/70" : "ring-black/5 dark:ring-white/5"}`}
+                      >
+                        <span className={got ? "" : "brightness-0 opacity-25 dark:invert"}>
+                          <DuckPreview variant={r.variant()} size={52} />
+                        </span>
+                        <p className="w-full truncate text-center text-[11px] font-medium text-zinc-800 dark:text-zinc-200">
+                          {got ? r.name : "???"}
+                        </p>
+                        {got ? (
+                          <p className="text-[10px] text-zinc-400 dark:text-zinc-500">Obtenu</p>
+                        ) : unlocked ? (
+                          <Button
+                            size="sm"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={() => claim(r)}
+                          >
+                            Réclamer
+                          </Button>
+                        ) : (
+                          <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
+                            {done}/{total} {r.unit}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              ) : complete ? (
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
-                    <p className="text-sm text-zinc-700 dark:text-zinc-200">
-                      Canardex complet ! Une récompense t'attend.
-                    </p>
-                  </div>
-                  <Button size="sm" onClick={claim}>
-                    Réclamer
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-zinc-500">
-                  <Lock className="h-3.5 w-3.5" />
-                  <p className="text-xs">
-                    Découvre les {SPECIES.length} espèces pour débloquer un canard exclusif.
-                  </p>
-                </div>
-              )}
-
-              {/* ultimate tier: only surfaces once the base dex is complete */}
-              {complete &&
-                (godClaimed ? (
-                  <div className="flex items-center gap-3">
-                    <DuckPreview variant={godVariant()} size={48} />
-                    <div>
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                        {GOD_DUCK_NAME}
-                      </p>
-                      <p className="text-xs text-zinc-500">
-                        Récompense ultime obtenue. Rien ne t'échappe.
-                      </p>
-                    </div>
-                  </div>
-                ) : shinyComplete ? (
-                  <div className="flex items-center justify-between gap-3 rounded-lg bg-gradient-to-r from-fuchsia-500/10 to-amber-400/10 px-3 py-2 ring-1 ring-fuchsia-400/30">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-fuchsia-500 dark:text-fuchsia-400" />
-                      <p className="text-sm text-zinc-700 dark:text-zinc-200">
-                        Collection shiny complète ! Le Dieu Canard t'attend.
-                      </p>
-                    </div>
-                    <Button size="sm" onClick={claimGod}>
-                      Réclamer
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-zinc-500">
-                    <Lock className="h-3.5 w-3.5" />
-                    <p className="text-xs">
-                      Collectionne la version ✦ shiny des {SPECIES.length} espèces pour éveiller le
-                      Dieu Canard.
-                    </p>
-                  </div>
-                ))}
+              </motion.div>
             </div>
           </motion.div>
         </motion.div>

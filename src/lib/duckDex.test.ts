@@ -38,7 +38,7 @@ vi.mock("@tauri-apps/plugin-store", () => {
 import { LazyStore } from "@tauri-apps/plugin-store";
 import type { Variant } from "@/components/duckTypes";
 import { getRarity } from "@/components/duckRandom";
-import { SPECIES, SPECIES_BY_ID, speciesOf } from "@/components/duckSpecies";
+import { SPECIES, SPECIES_BY_ID } from "@/components/duckSpecies";
 import { upsertSavedDuck } from "./savedDucks";
 import {
   COLOR_SPECIES,
@@ -46,17 +46,14 @@ import {
   dexStatusOf,
   getDex,
   getShinyDex,
-  godVariant,
+  isClaimed,
   isDexComplete,
-  isGodRewardClaimed,
-  isRewardClaimed,
   isShinyDexComplete,
-  markGodRewardClaimed,
-  markRewardClaimed,
+  markClaimed,
   recordDiscovery,
-  rewardVariant,
   syncDexWithCollection,
 } from "./duckDex";
+import { familyRewardAt, REWARDS, rewardProgress } from "./duckRewards";
 
 const SHADES: Variant = { body: "#FFD21E", beak: "#F5811F", acc: "shades" };
 const SHADES_PINK: Variant = { body: "#FB7AA8", beak: "#F5811F", acc: "shades" };
@@ -302,28 +299,63 @@ describe("recordDiscovery family flags", () => {
   });
 });
 
-describe("reward", () => {
-  it("reward variant is mythic and maps to a cataloged species", () => {
-    const v = rewardVariant();
-    expect(getRarity(v)).toBe("mythic");
-    expect(SPECIES.some((s) => s.id === speciesOf(v))).toBe(true);
+describe("rewards", () => {
+  it("keeps the legacy store keys of the two existing rewards", () => {
+    expect(REWARDS.find((r) => r.id === "canardex-reward")!.storeKey).toBe("reward_claimed");
+    expect(REWARDS.find((r) => r.id === "canardex-god")!.storeKey).toBe("god_claimed");
   });
 
-  it("god variant is god-tier and unlocks nothing in the dex", async () => {
-    const v = godVariant();
-    expect(getRarity(v)).toBe("god");
-    const disc = await recordDiscovery(v);
-    expect(disc.newSpecies).toBe(false);
-    expect(disc.newColor).toBe(false);
-    expect(dexStatusOf(v)).toBe(null);
+  it("catalogs five rewards with distinct ids, keys and effects", () => {
+    expect(REWARDS).toHaveLength(5);
+    expect(new Set(REWARDS.map((r) => r.id)).size).toBe(5);
+    expect(new Set(REWARDS.map((r) => r.storeKey)).size).toBe(5);
+    expect(new Set(REWARDS.map((r) => r.variant().effect)).size).toBe(5);
   });
 
-  it("claim flags persist independently", async () => {
-    expect(await isRewardClaimed()).toBe(false);
-    await markRewardClaimed();
-    expect(await isRewardClaimed()).toBe(true);
-    expect(await isGodRewardClaimed()).toBe(false);
-    await markGodRewardClaimed();
-    expect(await isGodRewardClaimed()).toBe(true);
+  it("sets the family thresholds to 1, 5 and 10", () => {
+    const families = REWARDS.filter((r) => r.metric === "families").map((r) => r.threshold);
+    expect(families).toEqual([1, 5, 10]);
+  });
+
+  it("ranks the reward variants above the ordinary tiers", () => {
+    expect(getRarity(REWARDS.find((r) => r.id === "canardex-god")!.variant())).toBe("god");
+    expect(getRarity(REWARDS.find((r) => r.id === "canardex-reward")!.variant())).toBe("mythic");
+  });
+
+  it("no reward variant unlocks anything in the dex", async () => {
+    for (const r of REWARDS) {
+      const disc = await recordDiscovery(r.variant());
+      expect(disc.newSpecies).toBe(false);
+      expect(disc.newColor).toBe(false);
+      expect(disc.familyComplete).toBe(false);
+      expect(dexStatusOf(r.variant())).toBe(null);
+    }
+    expect(await getDex()).toEqual({});
+  });
+
+  it("caps the displayed progress at the threshold", () => {
+    const phoenix = REWARDS.find((r) => r.metric === "families" && r.threshold === 10)!;
+    expect(rewardProgress(phoenix, { species: 0, shiny: 0, families: 3 })).toEqual({
+      done: 3,
+      total: 10,
+    });
+    expect(rewardProgress(phoenix, { species: 0, shiny: 0, families: 15 })).toEqual({
+      done: 10,
+      total: 10,
+    });
+  });
+
+  it("maps a family count to the reward it unlocks", () => {
+    expect(familyRewardAt(1)!.name).toBe("Canard Caméléon");
+    expect(familyRewardAt(5)!.name).toBe("Canard Paon");
+    expect(familyRewardAt(10)!.name).toBe("Canard Phénix Chromatique");
+    expect(familyRewardAt(2)).toBeUndefined();
+  });
+
+  it("claim flags persist independently per store key", async () => {
+    expect(await isClaimed("reward_claimed")).toBe(false);
+    await markClaimed("reward_claimed");
+    expect(await isClaimed("reward_claimed")).toBe(true);
+    expect(await isClaimed("god_claimed")).toBe(false);
   });
 });
