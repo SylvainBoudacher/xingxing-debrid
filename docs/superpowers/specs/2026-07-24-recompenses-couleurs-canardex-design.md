@@ -3,7 +3,7 @@
 Date : 2026-07-24
 
 Trois nouvelles récompenses de canard, décernées pour la collection exhaustive des
-couleurs de corps d'une espèce, de cinq espèces, puis de toutes.
+couleurs de corps d'une espèce, de cinq espèces, puis de dix.
 
 ## Contexte
 
@@ -35,7 +35,12 @@ premiers paliers de leur sens ; elles sont donc ignorées par ce système.
 | ------ | --------------------- | ------------------------- |
 | 1      | 1 famille complète    | Canard Caméléon           |
 | 2      | 5 familles complètes  | Canard Paon               |
-| 3      | 27 familles complètes | Canard Phénix Chromatique |
+| 3      | 10 familles complètes | Canard Phénix Chromatique |
+
+Le dernier palier s'arrête à 10 familles sur les 27 éligibles, et non à la
+totalité : les 457 couleurs auraient représenté un objectif plus long que le
+Canardex complet. Le compteur de familles peut donc dépasser le seuil ; toute
+progression au-delà de 10 est affichée plafonnée à `10/10`.
 
 Les paliers sont cumulatifs et indépendants des deux récompenses existantes. Comme
 elles, chaque récompense se réclame manuellement dans le Canardex : elle rejoint la
@@ -57,7 +62,7 @@ lui. Les ocelles bleu, vert et doré scintillent en décalé, et la roue s'ouvre
 referme lentement au repos. Échelle 1.2, nouvel effet `peacock`, rareté affichée
 mythique.
 
-### Canard Phénix Chromatique (27 familles)
+### Canard Phénix Chromatique (10 familles)
 
 Corps braise blanc doré, ailes de flammes qui cyclent en arc-en-ciel au lieu de
 l'orange classique, cendres colorées montant en volutes. Toutes les vingt secondes
@@ -130,7 +135,7 @@ section Mythique. Les cinq récompenses y sont affichées en grille, au format d
 cartes d'espèces :
 
 - verrouillée : silhouette noire, nom masqué, compteur de progression sous la carte
-  (par exemple `3/27 familles`)
+  (par exemple `3/10 familles`), plafonné au seuil de la récompense
 - débloquée non réclamée : anneau doré et bouton Réclamer
 - réclamée : carte normale avec son nom
 
@@ -145,8 +150,9 @@ Dans `DuckShop.tsx`, la branche `newColor` se dédouble. Si la prise complète l
 famille, le `toast.info` devient un `toast.success` :
 
 - titre : `Famille complète : Canard Classique !`
-- sous-titre : `3/27 familles complètes`, ou la mention d'une récompense à réclamer
-  quand la prise franchit un palier
+- sous-titre : `3 familles complètes`, sans total puisque le compteur peut dépasser
+  le dernier seuil, ou la mention d'une récompense à réclamer quand la prise
+  franchit un palier
 
 Sinon le toast actuel `Nouvelle couleur pour X` est conservé tel quel.
 
@@ -156,7 +162,8 @@ Ajouts dans `src/lib/duckDex.test.ts` :
 
 - une espèce à apparence fixe ne compte jamais comme famille complète
 - une espèce colorable ne compte qu'une fois sa dernière couleur enregistrée
-- les seuils 1, 5 et 27 se déclenchent au bon moment
+- les seuils 1, 5 et 10 se déclenchent au bon moment
+- au-delà de 10 familles, la progression affichée reste plafonnée à `10/10`
 - les effets `chameleon`, `peacock` et `phoenix` n'entrent pas dans le dex quand la
   récompense est re-sauvegardée
 - les clés de store `reward_claimed` et `god_claimed` restent lues correctement
