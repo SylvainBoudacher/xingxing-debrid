@@ -44,7 +44,13 @@ export const REWARDS: DuckReward[] = [
     unit: "famille",
     lockedHint: "Collectionne toutes les couleurs d'une même espèce.",
     claimToast: "Canard Caméléon a rejoint ta collection !",
-    variant: () => ({ body: "#8FD14F", beak: "#F5811F", acc: "none", effect: "chameleon" }),
+    variant: () => ({
+      body: "#8FD14F",
+      beak: "#F5811F",
+      acc: "none",
+      pattern: "scales",
+      effect: "chameleon",
+    }),
   },
   {
     id: "canardex-peacock",

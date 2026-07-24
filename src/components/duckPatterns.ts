@@ -121,6 +121,25 @@ export function paintPattern(
     ]) {
       fillEll(c, bx, by, 1.6, 1.6, "rgba(255,255,255,0.5)");
     }
+  } else if (v.pattern === "scales") {
+    // peau de reptile: rangées d'écailles en arcs, décalées d'une rangée à
+    // l'autre, avec un liseré clair au-dessus pour le relief
+    const step = 9;
+    c.lineWidth = 1.2;
+    for (let py = y0; py < y0 + ry * 2 + step; py += step * 0.62) {
+      const row = Math.round((py - y0) / (step * 0.62));
+      for (let px = x0 - step; px < x0 + rx * 2 + step; px += step) {
+        const ox = px + (row % 2 ? step / 2 : 0);
+        c.strokeStyle = "rgba(0,0,0,0.3)";
+        c.beginPath();
+        c.arc(ox, py, step * 0.5, Math.PI * 0.15, Math.PI * 0.85);
+        c.stroke();
+        c.strokeStyle = "rgba(255,255,255,0.3)";
+        c.beginPath();
+        c.arc(ox, py - 1.3, step * 0.5, Math.PI * 0.2, Math.PI * 0.8);
+        c.stroke();
+      }
+    }
   } else if (v.pattern === "abyss") {
     // bioluminescent spots drifting in the deep
     const bioColors = ["rgba(0,255,180,0.75)", "rgba(0,200,255,0.65)", "rgba(120,255,200,0.55)"];

@@ -1088,6 +1088,29 @@ export function PixelPool({
         }
       }
 
+      // chameleon (1 family reward): ghost copies lagging behind the duck, still
+      // wearing the hues it wore a moment ago — the whole palette at once
+      if (d.effect === "chameleon") {
+        const speed = Math.hypot(d.vx, d.vy);
+        const ux = speed > 0.02 ? d.vx / speed : -1;
+        const uy = speed > 0.02 ? d.vy / speed : 0;
+        const hue = (t * 0.015) % 360;
+        for (let i = 3; i >= 1; i--) {
+          const lag = dw * 0.22 * i;
+          ctx.save();
+          ctx.globalAlpha = 0.5 - (i - 1) * 0.13;
+          // écart de teinte large et saturation poussée: sinon les fantômes
+          // se lisent comme de simples taches grises sur l'eau sombre
+          ctx.filter = `hue-rotate(${hue - i * 62}deg) saturate(2) brightness(1.15)`;
+          ctx.translate(d.x - ux * lag, d.y + bob - uy * lag);
+          ctx.rotate(tilt);
+          ctx.scale(flip, 1);
+          ctx.imageSmoothingEnabled = true;
+          ctx.drawImage(d.sprite, -dw / 2, -dh / 2, dw, dh);
+          ctx.restore();
+        }
+      }
+
       // peacock (5 families reward): a fan of ocellated feathers opening behind
       // the duck, breathing slowly while it idles
       if (d.effect === "peacock") {
@@ -1269,7 +1292,8 @@ export function PixelPool({
       // chameleon (1 family reward): the sprite is baked once, so the body can
       // only change colour at draw time — one full hue cycle every ~24s, beak
       // and accessory included
-      if (d.effect === "chameleon") ctx.filter = `hue-rotate(${(t * 0.015) % 360}deg)`;
+      if (d.effect === "chameleon")
+        ctx.filter = `hue-rotate(${(t * 0.015) % 360}deg) saturate(1.25)`;
       ctx.translate(d.x, d.y + bob);
       ctx.rotate(tilt);
       ctx.scale(flip, 1);
