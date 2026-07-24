@@ -7,6 +7,7 @@ use std::sync::{Mutex, OnceLock};
 use tauri::{Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 
+mod player;
 mod profile;
 
 pub(crate) const KEYRING_SERVICE: &str = "com.sulyk.c411-debrid-app";
