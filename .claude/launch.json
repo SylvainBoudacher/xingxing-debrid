@@ -12,6 +12,12 @@
       "runtimeExecutable": "bun",
       "runtimeArgs": ["run", "dev", "--", "--port", "4180"],
       "port": 4180
+    },
+    {
+      "name": "vite-alt2",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "dev", "--", "--port", "4181"],
+      "port": 4181
     }
   ]
 }
