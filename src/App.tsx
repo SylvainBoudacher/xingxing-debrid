@@ -13,6 +13,7 @@ import { loadCategories } from "@/lib/libraryCategories";
 import { loadLibraryPrefs } from "@/lib/libraryPrefs";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import { loadSeriesFolders } from "@/lib/seriesFolders";
+import { loadStartupPage } from "@/lib/startupPage";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
 import { useActionShortcuts } from "@/lib/useActionShortcuts";
@@ -132,9 +133,13 @@ function App() {
     loadLibraryPrefs().catch(() => {});
     loadCategories().catch(() => {});
 
-    Promise.all([store.get<boolean>("setup_complete"), store.get<boolean>("welcome_v1_seen")])
-      .then(([done, welcomeSeen]) => {
-        setPage(done && welcomeSeen ? "main" : "setup");
+    Promise.all([
+      store.get<boolean>("setup_complete"),
+      store.get<boolean>("welcome_v1_seen"),
+      loadStartupPage(store),
+    ])
+      .then(([done, welcomeSeen, startupPage]) => {
+        setPage(done && welcomeSeen ? startupPage : "setup");
       })
       .catch((err) => {
         console.error("Store read failed:", err);

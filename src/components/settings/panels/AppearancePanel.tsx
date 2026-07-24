@@ -1,14 +1,17 @@
-import { Maximize2, Monitor } from "lucide-react";
+import { Compass, Home, Library, Maximize2, Monitor } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { DEFAULT_STARTUP_PAGE, loadStartupPage, STARTUP_PAGE_KEY } from "@/lib/startupPage";
+import type { StartupPage } from "@/lib/startupPage";
 import type { WindowLaunchMode } from "@/lib/useAppInit";
 import { SettingsPanel } from "../SettingsPanel";
-import { FieldTitle, ViewOptionCard } from "../controls";
+import { FieldTitle, PanelDivider, ViewOptionCard } from "../controls";
 import { settingsStore as store } from "../store";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export function AppearancePanel() {
   const [windowMode, setWindowMode] = useState<WindowLaunchMode | null>(null);
   const [customSize, setCustomSize] = useState<{ width: number; height: number } | null>(null);
+  const [startupPage, setStartupPage] = useState<StartupPage>(DEFAULT_STARTUP_PAGE);
   const unlistenRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
@@ -16,7 +19,14 @@ export function AppearancePanel() {
     store
       .get<{ width: number; height: number }>("window_custom_size")
       .then((v) => setCustomSize(v ?? null));
+    loadStartupPage(store).then(setStartupPage);
   }, []);
+
+  async function handleStartupPageChange(p: StartupPage) {
+    setStartupPage(p);
+    await store.set(STARTUP_PAGE_KEY, p);
+    await store.save();
+  }
 
   useEffect(() => {
     return () => {
@@ -75,8 +85,53 @@ export function AppearancePanel() {
     <SettingsPanel
       icon={Monitor}
       title="Apparence et fenêtre"
-      subtitle="Taille de la fenêtre au lancement."
+      subtitle="Taille de la fenêtre et page d'ouverture au lancement."
     >
+      <FieldTitle title="Page d'ouverture" hint="La page affichée quand l'application démarre." />
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <ViewOptionCard
+          label="Accueil"
+          selected={startupPage === "main"}
+          onClick={() => handleStartupPageChange("main")}
+        >
+          <div className="flex flex-col items-center text-center">
+            <div className="flex items-end justify-center h-10">
+              <Home className="h-8 w-8 opacity-60" />
+            </div>
+            <p className="text-xs text-zinc-500 mt-2">Recherche</p>
+          </div>
+        </ViewOptionCard>
+
+        <ViewOptionCard
+          label="Découverte"
+          selected={startupPage === "discover"}
+          onClick={() => handleStartupPageChange("discover")}
+        >
+          <div className="flex flex-col items-center text-center">
+            <div className="flex items-end justify-center h-10">
+              <Compass className="h-8 w-8 opacity-60" />
+            </div>
+            <p className="text-xs text-zinc-500 mt-2">Feed TMDB</p>
+          </div>
+        </ViewOptionCard>
+
+        <ViewOptionCard
+          label="Bibliothèque"
+          selected={startupPage === "library"}
+          onClick={() => handleStartupPageChange("library")}
+        >
+          <div className="flex flex-col items-center text-center">
+            <div className="flex items-end justify-center h-10">
+              <Library className="h-8 w-8 opacity-60" />
+            </div>
+            <p className="text-xs text-zinc-500 mt-2">Vos contenus</p>
+          </div>
+        </ViewOptionCard>
+      </div>
+
+      <PanelDivider />
+
       <FieldTitle
         title="Taille au lancement"
         hint="Choisissez comment l'application s'ouvre au démarrage. Prend effet au prochain lancement."
