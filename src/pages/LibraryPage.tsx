@@ -188,10 +188,8 @@ export function LibraryPage({
   const [naming, setNaming] = useState<
     { mode: "create"; hashes: string[] } | { mode: "rename"; category: LibraryCategory } | null
   >(null);
-  const [expandedHash, setExpandedHash] = useState<string | null>(initialExpandedHash ?? null);
-  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(
-    initialExpandedGroupId ?? null,
-  );
+  const [expandedHash, setExpandedHash] = useState<string | null>(null);
+  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
   const [matchingGroupId, setMatchingGroupId] = useState<number | null>(null);
   const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
@@ -279,6 +277,19 @@ export function LibraryPage({
       setCategories(pruned);
       if (pruned !== stored) void saveCategories(pruned);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fiche pré-sélectionnée (action "Voir" d'un toast d'ajout) : on attend la fin
+  // de la transition d'entrée de la page avant d'ouvrir la modale, sinon les
+  // deux animations se chevauchent et l'ouverture paraît précipitée.
+  useEffect(() => {
+    if (!initialExpandedHash && initialExpandedGroupId == null) return;
+    const timer = setTimeout(() => {
+      setExpandedHash(initialExpandedHash ?? null);
+      setExpandedGroupId(initialExpandedGroupId ?? null);
+    }, 420);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
