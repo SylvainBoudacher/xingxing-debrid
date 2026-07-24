@@ -10,8 +10,8 @@ import { toast } from "sonner";
 interface UseSendToDebridOptions {
   getC411Key: () => string;
   getAllDebridKey: () => string;
-  /** Ouvre la page bibliothèque (action "Voir" des toasts) */
-  onOpenLibrary: () => void;
+  /** Ouvre la fiche bibliothèque du titre ajouté (action "Voir" des toasts) */
+  onOpenLibrary: (item: TmdbItem, infoHash: string) => void;
   /** Un téléchargement vient d'être enregistré dans la bibliothèque */
   onLibraryChange: () => void;
 }
@@ -81,7 +81,7 @@ export function useSendToDebrid({
         const hasVideo = files.some((f) => isVideoFile(f.name));
         if (addToLibrary) {
           toast.success(`Ajoute a la bibliotheque : ${uploaded.name ?? occ.torrentName}`, {
-            action: { label: "Voir", onClick: onOpenLibrary },
+            action: { label: "Voir", onClick: () => onOpenLibrary(item, occ.infoHash) },
           });
         } else {
           setDebridModal({
@@ -108,7 +108,9 @@ export function useSendToDebrid({
           addToLibrary
             ? `Ajoute a la bibliotheque : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`
             : `Envoye vers AllDebrid : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`,
-          addToLibrary ? { action: { label: "Voir", onClick: onOpenLibrary } } : undefined,
+          addToLibrary
+            ? { action: { label: "Voir", onClick: () => onOpenLibrary(item, occ.infoHash) } }
+            : undefined,
         );
         await recordDownload({
           infoHash: occ.infoHash,

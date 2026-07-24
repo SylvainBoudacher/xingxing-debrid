@@ -107,6 +107,9 @@ interface LibraryPageProps {
   initialAllDebridKey?: string | null;
   initialTmdbKey?: string | null;
   initialViewMode?: ViewMode;
+  /** Fiche à ouvrir directement (venant de l'action "Voir" d'un toast) */
+  initialExpandedHash?: string | null;
+  initialExpandedGroupId?: number | null;
 }
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
@@ -151,6 +154,8 @@ export function LibraryPage({
   initialAllDebridKey,
   initialTmdbKey,
   initialViewMode,
+  initialExpandedHash,
+  initialExpandedGroupId,
 }: LibraryPageProps) {
   // Réglages lus au lancement (splash) : le premier rendu est déjà le bon,
   // sans re-tri ni re-groupement visible. Le cache n'est vide que si la page
@@ -183,8 +188,10 @@ export function LibraryPage({
   const [naming, setNaming] = useState<
     { mode: "create"; hashes: string[] } | { mode: "rename"; category: LibraryCategory } | null
   >(null);
-  const [expandedHash, setExpandedHash] = useState<string | null>(null);
-  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
+  const [expandedHash, setExpandedHash] = useState<string | null>(initialExpandedHash ?? null);
+  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(
+    initialExpandedGroupId ?? null,
+  );
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
   const [matchingGroupId, setMatchingGroupId] = useState<number | null>(null);
   const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
