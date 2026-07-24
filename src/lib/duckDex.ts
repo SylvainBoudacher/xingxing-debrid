@@ -153,6 +153,22 @@ export async function debugCompleteDex(): Promise<DexEntries> {
   return entries;
 }
 
+// Remplit toutes les couleurs des `count` premières espèces colorables. Les
+// teintes sont factices: seul leur nombre compte pour les paliers de familles.
+export async function debugCompleteFamilies(count: number): Promise<DexEntries> {
+  const entries = await getDex();
+  for (const s of COLOR_SPECIES.slice(0, count)) {
+    entries[s.id] = Array.from(
+      { length: s.maxColors },
+      (_, i) => `#0000${i.toString(16).padStart(2, "0")}`,
+    );
+  }
+  cache = entries;
+  await store.set("entries", entries);
+  await store.save();
+  return entries;
+}
+
 export async function debugCompleteShinyDex(): Promise<ShinyEntries> {
   const shiny = await getShinyDex();
   for (const s of SPECIES) if (!shiny.includes(s.id)) shiny.push(s.id);

@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { X } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
+  COLOR_SPECIES,
   completedFamilies,
   debugCompleteDex,
+  debugCompleteFamilies,
   debugCompleteShinyDex,
   debugResetDex,
   getShinyDex,
@@ -15,7 +16,15 @@ import {
   type DexEntries,
   type ShinyEntries,
 } from "@/lib/duckDex";
-import { REWARDS, rewardProgress, type DexProgress, type DuckReward } from "@/lib/duckRewards";
+import {
+  COLLECTION_REWARDS,
+  COLOR_REWARDS,
+  REWARDS,
+  type DexProgress,
+  type DuckReward,
+} from "@/lib/duckRewards";
+import { DuckDexDevMenu } from "./DuckDexDevMenu";
+import { DuckRewardSection } from "./DuckRewardSection";
 import { upsertSavedDuck } from "@/lib/savedDucks";
 import type { Rarity } from "./duckRandom";
 import { SPECIES } from "./duckSpecies";
@@ -115,6 +124,10 @@ export function DuckDex() {
     setEntries(await debugCompleteDex());
   }
 
+  async function devCompleteFamilies(count: number) {
+    setEntries(await debugCompleteFamilies(count));
+  }
+
   async function devCompleteShiny() {
     setShiny(await debugCompleteShinyDex());
   }
@@ -167,26 +180,12 @@ export function DuckDex() {
                 </div>
                 <div className="flex items-center gap-2">
                   {import.meta.env.DEV && (
-                    <>
-                      <button
-                        onClick={devComplete}
-                        className="rounded-md bg-amber-500/15 px-2 py-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 transition-colors"
-                      >
-                        DEV: compléter
-                      </button>
-                      <button
-                        onClick={devCompleteShiny}
-                        className="rounded-md bg-fuchsia-500/15 px-2 py-1 text-[10px] font-semibold text-fuchsia-600 dark:text-fuchsia-400 hover:bg-fuchsia-500/25 transition-colors"
-                      >
-                        DEV: shiny
-                      </button>
-                      <button
-                        onClick={devReset}
-                        className="rounded-md bg-red-500/15 px-2 py-1 text-[10px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/25 transition-colors"
-                      >
-                        DEV: reset
-                      </button>
-                    </>
+                    <DuckDexDevMenu
+                      onCompleteDex={devComplete}
+                      onCompleteShiny={devCompleteShiny}
+                      onCompleteFamilies={devCompleteFamilies}
+                      onReset={devReset}
+                    />
                   )}
                   <button
                     onClick={() => setOpen(false)}
@@ -283,51 +282,25 @@ export function DuckDex() {
                 </motion.div>
               ))}
 
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: 0.4, ease: "easeOut" }}
-              >
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-                  Récompenses · {families} familles complètes
-                </p>
-                <div className="grid grid-cols-4 gap-2">
-                  {REWARDS.map((r) => {
-                    const { done, total } = rewardProgress(r, progress);
-                    const unlocked = done >= total;
-                    const got = claimed[r.id];
-                    return (
-                      <div
-                        key={r.id}
-                        title={got ? r.name : r.lockedHint}
-                        className={`relative flex flex-col items-center gap-1 rounded-xl bg-white/70 dark:bg-zinc-800/60 px-2 py-3 ring-1 ${got ? "ring-yellow-300/50" : unlocked ? "ring-amber-400/70" : "ring-black/5 dark:ring-white/5"}`}
-                      >
-                        <span className={got ? "" : "brightness-0 opacity-25 dark:invert"}>
-                          <DuckPreview variant={r.variant()} size={52} />
-                        </span>
-                        <p className="w-full truncate text-center text-[11px] font-medium text-zinc-800 dark:text-zinc-200">
-                          {got ? r.name : "???"}
-                        </p>
-                        {got ? (
-                          <p className="text-[10px] text-zinc-400 dark:text-zinc-500">Obtenu</p>
-                        ) : unlocked ? (
-                          <Button
-                            size="sm"
-                            className="h-6 px-2 text-[10px]"
-                            onClick={() => claim(r)}
-                          >
-                            Réclamer
-                          </Button>
-                        ) : (
-                          <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                            {done}/{total} {r.unit}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </motion.div>
+              <DuckRewardSection
+                title="Récompenses de couleurs"
+                hint={`Une famille, c'est toutes les teintes d'une même espèce. ${families}/${COLOR_SPECIES.length} familles complètes.`}
+                rewards={COLOR_REWARDS}
+                progress={progress}
+                claimed={claimed}
+                onClaim={claim}
+                delay={0.4}
+              />
+
+              <DuckRewardSection
+                title="Récompenses de collection"
+                hint="Pour avoir découvert toutes les espèces, puis toutes leurs versions shiny."
+                rewards={COLLECTION_REWARDS}
+                progress={progress}
+                claimed={claimed}
+                onClaim={claim}
+                delay={0.46}
+              />
             </div>
           </motion.div>
         </motion.div>
