@@ -32,6 +32,7 @@ import {
   networkErrorMessage,
   toastNetworkError,
 } from "@/lib/networkError";
+import { openInVlc, toastVlcOrNetworkError } from "@/lib/player";
 import { toast } from "sonner";
 import vlcLogo from "@/assets/vlc.png";
 import { invoke } from "@tauri-apps/api/core";
@@ -231,10 +232,10 @@ function FilesModal({
     setVlcing(link);
     try {
       const url = await invoke<string>("unlock_link", { link, alldebridKey: apiKey });
-      await invoke("open_with_vlc", { url });
+      await openInVlc([url]);
       toast.success("Ouvert dans VLC");
     } catch (err) {
-      toastNetworkError(err, () => handleOpenVlc(link));
+      toastVlcOrNetworkError(err, () => handleOpenVlc(link));
     } finally {
       setVlcing(null);
     }

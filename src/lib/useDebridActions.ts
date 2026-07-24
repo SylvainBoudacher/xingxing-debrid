@@ -11,6 +11,7 @@ import {
 } from "@/lib/downloads";
 import { toast } from "sonner";
 import { toastNetworkError } from "@/lib/networkError";
+import { openInVlc, toastVlcOrNetworkError } from "@/lib/player";
 
 // Actions AllDebrid sur un lien debride (copie presse-papier, VLC, telechargement).
 // Partage entre MainPage et DiscoverPage. `getKey` fournit la cle AllDebrid au
@@ -63,10 +64,10 @@ export function useDebridActions(getKey: () => string) {
         link,
         alldebridKey: getKeyRef.current(),
       });
-      await invoke("open_with_vlc", { url });
+      await openInVlc([url]);
       toast.success("Ouvert dans VLC");
     } catch (err) {
-      toastNetworkError(err, () => openVlc(link));
+      toastVlcOrNetworkError(err, () => openVlc(link));
     } finally {
       setVlcLink(null);
     }
@@ -150,10 +151,10 @@ export function useDebridActions(getKey: () => string) {
       setBulkVlc(groupKey);
       try {
         const urls = await unlockAll(links);
-        await invoke("open_many_with_vlc", { urls });
+        await openInVlc(urls);
         toast.success("Playlist ouverte dans VLC");
       } catch (err) {
-        toastNetworkError(err, () => openVlcMany(links, groupKey));
+        toastVlcOrNetworkError(err, () => openVlcMany(links, groupKey));
       } finally {
         setBulkVlc(null);
       }
