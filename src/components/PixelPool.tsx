@@ -121,12 +121,12 @@ function leaving(d: Duck) {
   return !!(d.draining || d.storing || d.exiting || d.sucked);
 }
 
-// Push hierarchy: the king and the supernova stand their ground against
-// ordinary ducks and cannonballs; only Zeus the duck god can shove them,
-// and Zeus himself yields to nothing.
+// Push hierarchy: the king, the supernova and the phoenix stand their ground
+// against ordinary ducks and cannonballs; only Zeus the duck god can shove
+// them, and Zeus himself yields to nothing.
 function pushRank(d: Duck): number {
   if (d.effect === "godly") return 2;
-  if (d.effect === "royal" || d.effect === "nova") return 1;
+  if (d.effect === "royal" || d.effect === "nova" || d.effect === "phoenix") return 1;
   return 0;
 }
 
@@ -1088,6 +1088,55 @@ export function PixelPool({
         }
       }
 
+      // peacock (5 families reward): a fan of ocellated feathers opening behind
+      // the duck, breathing slowly while it idles
+      if (d.effect === "peacock") {
+        const cx = d.x;
+        const cy = d.y + bob + dh * 0.12;
+        const open = 0.72 + Math.sin(t * 0.0012 + d.phase) * 0.28;
+        const feathers = 11;
+        const spread = Math.PI * 0.9 * open;
+        for (let i = 0; i < feathers; i++) {
+          const a = -Math.PI / 2 + (i / (feathers - 1) - 0.5) * spread;
+          const len = dh * (0.95 + Math.sin(i * 1.1) * 0.06);
+          const tx = cx + Math.cos(a) * len;
+          const ty = cy + Math.sin(a) * len;
+          ctx.strokeStyle = `hsla(${170 + i * 9},68%,42%,0.85)`;
+          ctx.lineWidth = 2.4;
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.lineTo(tx, ty);
+          ctx.stroke();
+          const tw = (Math.sin(t * 0.004 + i * 1.3 + d.phase) + 1) / 2;
+          ctx.fillStyle = `rgba(232,190,60,${0.6 + tw * 0.4})`;
+          ctx.beginPath();
+          ctx.arc(tx, ty, 4.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = `rgba(40,90,180,${0.75 + tw * 0.25})`;
+          ctx.beginPath();
+          ctx.arc(tx, ty, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // phoenix (10 families reward): rainbow flames instead of the infernal
+      // duck's orange ones, flaring up on a slow rebirth cycle (~20s)
+      if (d.effect === "phoenix") {
+        const cycle = (t * 0.00005 + d.phase * 0.1) % 1;
+        const burn = cycle > 0.92 ? (cycle - 0.92) / 0.08 : 0;
+        for (let i = 0; i < 9; i++) {
+          const p = (t * 0.0011 + d.phase + i * 0.11) % 1;
+          const fx = d.x + Math.sin(t * 0.0022 + i * 1.7 + d.phase) * dw * 0.42;
+          const fy = d.y + bob + dh * 0.18 - p * dh * (1 + burn * 0.6);
+          const r = (3 + i * 0.5) * (1 - p * 0.5) * (1 + burn);
+          const hue = (t * 0.06 + i * 40) % 360;
+          ctx.fillStyle = `hsla(${hue},100%,65%,${(0.55 + burn * 0.35) * (1 - p)})`;
+          ctx.beginPath();
+          ctx.arc(fx, fy, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
       // supernova (dex completion reward): pulsing aura cycling through hues
       if (d.effect === "nova") {
         const hue = (t * 0.05) % 360;
@@ -1217,6 +1266,10 @@ export function PixelPool({
       // duck
       ctx.save();
       ctx.globalAlpha = d.effect === "ghost" ? 0.5 : 1;
+      // chameleon (1 family reward): the sprite is baked once, so the body can
+      // only change colour at draw time — one full hue cycle every ~24s, beak
+      // and accessory included
+      if (d.effect === "chameleon") ctx.filter = `hue-rotate(${(t * 0.015) % 360}deg)`;
       ctx.translate(d.x, d.y + bob);
       ctx.rotate(tilt);
       ctx.scale(flip, 1);
@@ -1245,6 +1298,19 @@ export function PixelPool({
         ctx.fillStyle = `rgba(255,255,255,${0.8 * gtw})`;
         ctx.fillRect(gx - 5, gy - 0.8, 10, 1.6);
         ctx.fillRect(gx - 0.8, gy - 5, 1.6, 10);
+      }
+
+      // phoenix ashes: coloured embers drifting up in front of the duck
+      if (d.effect === "phoenix") {
+        for (let i = 0; i < 6; i++) {
+          const p = (t * 0.0006 + d.phase + i * 0.17) % 1;
+          const ax = d.x + Math.sin(t * 0.0015 + i * 2.3 + d.phase) * dw * 0.55;
+          const ay = d.y + bob + dh * 0.3 - p * dh * 1.4;
+          const hue = (t * 0.06 + i * 60) % 360;
+          const s = 1.6 + (1 - p) * 1.4;
+          ctx.fillStyle = `hsla(${hue},100%,72%,${0.7 * (1 - p)})`;
+          ctx.fillRect(ax - s / 2, ay - s / 2, s, s);
+        }
       }
 
       // godly foreground: lightning bolts hurled down around the god — jagged,
