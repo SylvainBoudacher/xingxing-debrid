@@ -12,6 +12,7 @@ import {
   drawPhoenixEmbers,
   drawPhoenixWings,
 } from "./duckRewardEffects";
+import { rewardPreviewLayout } from "./duckRewardLayout";
 
 // Vignette animée d'une récompense obtenue: le sprite plus son effet, avec les
 // mêmes routines que la piscine. Le canard est dessiné plus petit que la boîte
@@ -25,8 +26,9 @@ export function DuckRewardPreview({ reward, size = 52 }: { reward: DuckReward; s
     const sprite = makeDuckSprite(variant);
     const skin = createChameleonSkinner();
 
+    const layout = rewardPreviewLayout(size, sprite.width / sprite.height, variant.effect);
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const box = size * 1.7;
+    const box = layout.box;
     canvas.width = Math.floor(box * dpr);
     canvas.height = Math.floor(box * dpr);
     canvas.style.width = `${box}px`;
@@ -35,17 +37,7 @@ export function DuckRewardPreview({ reward, size = 52 }: { reward: DuckReward; s
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = true;
 
-    // le halo, les rayons et les éclairs rayonnent tout autour du canard: plutôt
-    // que de rapetisser le canard pour les faire tenir, on resserre l'effet
-    // autour de lui (la roue du paon et les ailes du phénix, elles, ne débordent
-    // que vers le haut et tiennent déjà).
-    const radial = variant.effect === "nova" || variant.effect === "godly";
-    const dh = size * 0.9;
-    const dw = dh * (sprite.width / sprite.height);
-    const cx = box / 2;
-    const cy = box * (radial ? 0.5 : 0.64);
-    const ew = dw * (radial ? 0.62 : 1);
-    const eh = dh * (radial ? 0.62 : 1);
+    const { cx, cy, dw, dh, ew, eh } = layout;
 
     let raf = 0;
     const start = performance.now();
