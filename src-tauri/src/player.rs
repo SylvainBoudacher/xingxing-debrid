@@ -34,6 +34,112 @@ fn pick_vlc(
         .ok_or(PlayerError::NotFound)
 }
 
+#[cfg(target_os = "windows")]
+fn windows_candidates() -> Vec<PathBuf> {
+    use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE};
+    use winreg::RegKey;
+
+    let mut out: Vec<PathBuf> = Vec::new();
+
+    // 1. Registre : l'installeur VLC y ecrit son repertoire reel, quel que soit le disque.
+    let install_dirs = [
+        (HKEY_LOCAL_MACHINE, r"SOFTWARE\VideoLAN\VLC"),
+        (HKEY_LOCAL_MACHINE, r"SOFTWARE\WOW6432Node\VideoLAN\VLC"),
+        (HKEY_CURRENT_USER, r"SOFTWARE\VideoLAN\VLC"),
+    ];
+    for (hive, path) in install_dirs {
+        if let Ok(key) = RegKey::predef(hive).open_subkey(path) {
+            if let Ok(dir) = key.get_value::<String, _>("InstallDir") {
+                out.push(PathBuf::from(dir).join("vlc.exe"));
+            }
+        }
+    }
+    if let Ok(key) = RegKey::predef(HKEY_LOCAL_MACHINE)
+        .open_subkey(r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\vlc.exe")
+    {
+        if let Ok(exe) = key.get_value::<String, _>("") {
+            out.push(PathBuf::from(exe));
+        }
+    }
+
+    // 2. PATH.
+    if let Some(paths) = std::env::var_os("PATH") {
+        out.extend(std::env::split_paths(&paths).map(|p| p.join("vlc.exe")));
+    }
+
+    // 3. Emplacements connus.
+    for var in ["ProgramFiles", "ProgramFiles(x86)"] {
+        if let Some(dir) = std::env::var_os(var) {
+            out.push(PathBuf::from(dir).join(r"VideoLAN\VLC\vlc.exe"));
+        }
+    }
+    if let Some(dir) = std::env::var_os("LOCALAPPDATA") {
+        out.push(PathBuf::from(dir).join(r"Programs\VideoLAN\VLC\vlc.exe"));
+    }
+
+    out
+}
+
+#[cfg(target_os = "windows")]
+fn resolve_vlc(configured: Option<&str>) -> Result<PathBuf, PlayerError> {
+    pick_vlc(configured, &windows_candidates(), &|p: &Path| p.exists())
+}
+
+// macOS delegue a `open -a VLC`, qui retrouve l'application ou qu'elle soit ;
+// Linux passe par le PATH. Aucun chemin a resoudre en amont.
+#[cfg(not(target_os = "windows"))]
+fn resolve_vlc(_configured: Option<&str>) -> Result<PathBuf, PlayerError> {
+    Ok(PathBuf::from("vlc"))
+}
+
+fn spawn_vlc(urls: &[String], configured: Option<&str>) -> Result<(), PlayerError> {
+    let launch = |mut cmd: std::process::Command| -> Result<(), PlayerError> {
+        cmd.spawn()
+            .map(|_| ())
+            .map_err(|e| PlayerError::LaunchFailed {
+                message: e.to_string(),
+            })
+    };
+
+    #[cfg(target_os = "macos")]
+    {
+        let _ = configured;
+        let mut cmd = std::process::Command::new("open");
+        cmd.arg("-a").arg("VLC").args(urls);
+        return launch(cmd);
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let vlc = resolve_vlc(configured)?;
+        let mut cmd = std::process::Command::new(vlc);
+        cmd.args(urls);
+        launch(cmd)
+    }
+}
+
+#[tauri::command]
+pub fn open_with_vlc(url: String, vlc_path: Option<String>) -> Result<(), PlayerError> {
+    spawn_vlc(&[url], vlc_path.as_deref())
+}
+
+#[tauri::command]
+pub fn open_many_with_vlc(urls: Vec<String>, vlc_path: Option<String>) -> Result<(), PlayerError> {
+    if urls.is_empty() {
+        return Err(PlayerError::LaunchFailed {
+            message: "Aucun lien a lire".into(),
+        });
+    }
+    spawn_vlc(&urls, vlc_path.as_deref())
+}
+
+#[tauri::command]
+pub fn detect_vlc(vlc_path: Option<String>) -> Result<String, PlayerError> {
+    Ok(resolve_vlc(vlc_path.as_deref())?
+        .to_string_lossy()
+        .into_owned())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
