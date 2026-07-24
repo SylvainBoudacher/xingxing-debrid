@@ -38,9 +38,11 @@ vi.mock("@tauri-apps/plugin-store", () => {
 import { LazyStore } from "@tauri-apps/plugin-store";
 import type { Variant } from "@/components/duckTypes";
 import { getRarity } from "@/components/duckRandom";
-import { SPECIES, speciesOf } from "@/components/duckSpecies";
+import { SPECIES, SPECIES_BY_ID, speciesOf } from "@/components/duckSpecies";
 import { upsertSavedDuck } from "./savedDucks";
 import {
+  COLOR_SPECIES,
+  completedFamilies,
   dexStatusOf,
   getDex,
   getShinyDex,
@@ -224,6 +226,79 @@ describe("shiny", () => {
     expect(isShinyDexComplete([])).toBe(false);
     for (const s of SPECIES) await recordDiscovery({ ...s.preview, shiny: true });
     expect(isShinyDexComplete(await getShinyDex())).toBe(true);
+  });
+});
+
+describe("completedFamilies", () => {
+  const PIRATE: Variant = { body: "#FFD21E", beak: "#2A2A2A", acc: "pirate" };
+
+  // Enregistre `count` couleurs distinctes pour une même espèce. Les teintes
+  // sont arbitraires: seul le nombre d'entrées compte pour la progression.
+  async function fillFamily(base: Variant, count: number) {
+    for (let i = 0; i < count; i++) {
+      await recordDiscovery({ ...base, body: `#0000${i.toString(16).padStart(2, "0")}` });
+    }
+  }
+
+  it("counts nothing on an empty dex", () => {
+    expect(completedFamilies({})).toBe(0);
+  });
+
+  it("never counts a fixed-look species", async () => {
+    await recordDiscovery(PIRATE);
+    expect(completedFamilies(await getDex())).toBe(0);
+  });
+
+  it("counts a colorable species only on its last color", async () => {
+    const shades = SPECIES_BY_ID.get("shades")!;
+    await fillFamily(SHADES, shades.maxColors - 1);
+    expect(completedFamilies(await getDex())).toBe(0);
+    await fillFamily(SHADES, shades.maxColors);
+    expect(completedFamilies(await getDex())).toBe(1);
+  });
+
+  it("counts families independently", async () => {
+    const shades = SPECIES_BY_ID.get("shades")!;
+    const wizard = SPECIES_BY_ID.get("wizard")!;
+    await fillFamily(SHADES, shades.maxColors);
+    await fillFamily(WIZARD, wizard.maxColors);
+    expect(completedFamilies(await getDex())).toBe(2);
+  });
+
+  it("exposes 27 colorable species", () => {
+    expect(COLOR_SPECIES).toHaveLength(27);
+    expect(COLOR_SPECIES.every((s) => s.maxColors > 1)).toBe(true);
+  });
+});
+
+describe("recordDiscovery family flags", () => {
+  it("flags familyComplete only on the color that completes the family", async () => {
+    const shades = SPECIES_BY_ID.get("shades")!;
+    let disc = await recordDiscovery(SHADES);
+    expect(disc.familyComplete).toBe(false);
+    expect(disc.familiesComplete).toBe(0);
+    for (let i = 1; i < shades.maxColors - 1; i++) {
+      disc = await recordDiscovery({ ...SHADES, body: `#0000${i.toString(16).padStart(2, "0")}` });
+      expect(disc.familyComplete).toBe(false);
+    }
+    disc = await recordDiscovery({ ...SHADES, body: "#abcdef" });
+    expect(disc.familyComplete).toBe(true);
+    expect(disc.familiesComplete).toBe(1);
+  });
+
+  it("never flags familyComplete for a fixed-look species", async () => {
+    const disc = await recordDiscovery({ body: "#FFD21E", beak: "#2A2A2A", acc: "pirate" });
+    expect(disc.familyComplete).toBe(false);
+  });
+
+  it("does not re-flag familyComplete on a duplicate color", async () => {
+    const shades = SPECIES_BY_ID.get("shades")!;
+    for (let i = 0; i < shades.maxColors; i++) {
+      await recordDiscovery({ ...SHADES, body: `#0000${i.toString(16).padStart(2, "0")}` });
+    }
+    const dup = await recordDiscovery({ ...SHADES, body: "#000000" });
+    expect(dup.familyComplete).toBe(false);
+    expect(dup.familiesComplete).toBe(1);
   });
 });
 

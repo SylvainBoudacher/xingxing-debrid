@@ -11,6 +11,15 @@ export type ShinyEntries = string[]; // species ids whose shiny version was save
 
 const store = new LazyStore("duckdex.json", { defaults: {}, autoSave: false });
 
+// Espèces dont le corps peut prendre plusieurs teintes: les seules qui peuvent
+// former une "famille complète". Les espèces à apparence fixe seraient
+// complètes dès leur découverte et videraient les paliers de leur sens.
+export const COLOR_SPECIES = SPECIES.filter((s) => s.maxColors > 1);
+
+export function completedFamilies(entries: DexEntries): number {
+  return COLOR_SPECIES.filter((s) => (entries[s.id]?.length ?? 0) >= s.maxColors).length;
+}
+
 // In-memory mirror of the entries, so the pool canvas can check a hovered
 // duck synchronously inside its draw loop. Refreshed by every read/write.
 let cache: DexEntries | null = null;
@@ -74,6 +83,8 @@ export interface DiscoveryResult {
   totalSpecies: number;
   colorCount: number; // colors collected for this species, after the save
   shinyCount: number; // species whose shiny version was collected, after the save
+  familyComplete: boolean; // cette prise vient de compléter les couleurs de l'espèce
+  familiesComplete: number; // familles complètes après la prise
 }
 
 export async function recordDiscovery(v: Variant): Promise<DiscoveryResult> {
@@ -88,15 +99,19 @@ export async function recordDiscovery(v: Variant): Promise<DiscoveryResult> {
     await store.save();
   }
   const id = speciesOf(v);
+  const sp = SPECIES_BY_ID.get(id)!;
+  const colorCount = entries[id]?.length ?? 0;
   return {
-    species: SPECIES_BY_ID.get(id)!,
+    species: sp,
     newSpecies: unlocked === "species",
     newColor: unlocked === "color",
     newShiny,
     discoveredSpecies: SPECIES.filter((s) => (entries[s.id]?.length ?? 0) > 0).length,
     totalSpecies: SPECIES.length,
-    colorCount: entries[id]?.length ?? 0,
+    colorCount,
     shinyCount: shiny.length,
+    familyComplete: unlocked === "color" && sp.maxColors > 1 && colorCount === sp.maxColors,
+    familiesComplete: completedFamilies(entries),
   };
 }
 
