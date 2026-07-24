@@ -1,3 +1,3 @@
-- VLC est maintenant détecté où qu'il soit installé sur Windows, y compris hors du disque C:
-- Nouveau réglage « Lecture » pour indiquer manuellement l'emplacement de VLC (Windows)
-- Les erreurs de lancement de VLC affichent un message clair au lieu d'une erreur réseau
+- 3 nouveaux canards a debloquer
+- Pity progressif
+- Nouveau reglage

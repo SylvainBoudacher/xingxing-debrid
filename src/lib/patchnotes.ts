@@ -42,6 +42,43 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.5.4",
+    date: "24 juillet 2026",
+    intro:
+      "La 1.5.4 enrichit la collection de canards avec de nouvelles recompenses, des drops plus justes, et corrige plusieurs points de confusion dans l'app.",
+    sections: [
+      {
+        title: "Collection : nouvelles recompenses",
+        items: [
+          "Trois nouveaux canards a debloquer en completant la collection de couleurs.",
+          "Les canards identiques se cumulent desormais sur une seule carte, avec le nombre d'exemplaires possedes.",
+        ],
+      },
+      {
+        title: "Drops : pity progressif",
+        items: [
+          "Plus vous obtenez de doublons, plus vos chances de tomber sur un canard que vous n'avez pas augmentent.",
+          "Cela s'applique aux familles comme aux shiny : chaque shiny deja possede rend les shiny manquants plus probables.",
+        ],
+      },
+      {
+        title: "Reglages",
+        items: [
+          "Choisissez la page sur laquelle l'application s'ouvre au demarrage.",
+          "Nouveau reglage pour indiquer manuellement l'emplacement de VLC sous Windows, si l'application ne le trouve pas toute seule.",
+        ],
+      },
+      {
+        title: "Corrections",
+        items: [
+          "Le bouton de telechargement a ete retire de la page Decouverte pour eviter la confusion.",
+          "La notification d'ajout a la bibliotheque ouvre maintenant la fiche du film ou de la serie concernee, et plus seulement la page Bibliotheque.",
+          "Corrections mineures dans la Bibliotheque.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.5.3",
     date: "23 juillet 2026",
     intro:
