@@ -130,6 +130,50 @@ function pushRank(d: Duck): number {
   return 0;
 }
 
+// Le Caméléon: sa peau est un arc-en-ciel qui défile, une boucle complète
+// toutes les ~48s. Le sprite étant cuit une fois pour toutes, on le recolore
+// dans un canvas tampon à chaque frame. Le mode "color" garde la luminosité du
+// sprite, donc tout l'ombrage et les écailles restent lisibles; le
+// "destination-in" final redécoupe la silhouette que le dégradé a débordée.
+let chameleonScratch: HTMLCanvasElement | null = null;
+
+function chameleonShift(t: number, phase: number): number {
+  return (t * 0.00035 + phase * 0.1) % 1;
+}
+
+function chameleonSkin(
+  sprite: HTMLCanvasElement,
+  dw: number,
+  dh: number,
+  t: number,
+  phase: number,
+): HTMLCanvasElement {
+  const w = Math.max(1, Math.ceil(dw));
+  const h = Math.max(1, Math.ceil(dh));
+  if (!chameleonScratch) chameleonScratch = document.createElement("canvas");
+  if (chameleonScratch.width !== w || chameleonScratch.height !== h) {
+    chameleonScratch.width = w;
+    chameleonScratch.height = h;
+  }
+  const c = chameleonScratch.getContext("2d")!;
+  c.clearRect(0, 0, w, h);
+  c.globalCompositeOperation = "source-over";
+  c.drawImage(sprite, 0, 0, w, h);
+  c.globalCompositeOperation = "color";
+  const shift = chameleonShift(t, phase);
+  const g = c.createLinearGradient(0, h, w, 0);
+  for (let k = 0; k <= 6; k++) {
+    const p = k / 6;
+    g.addColorStop(p, `hsl(${((shift + p * 0.85) * 360) % 360},92%,55%)`);
+  }
+  c.fillStyle = g;
+  c.fillRect(0, 0, w, h);
+  c.globalCompositeOperation = "destination-in";
+  c.drawImage(sprite, 0, 0, w, h);
+  c.globalCompositeOperation = "source-over";
+  return chameleonScratch;
+}
+
 // The king and the god duck hold the centre of the parade.
 function holdsParadeCentre(d: Duck) {
   return d.effect === "royal" || d.effect === "godly";
@@ -1088,27 +1132,17 @@ export function PixelPool({
         }
       }
 
-      // chameleon (1 family reward): ghost copies lagging behind the duck, still
-      // wearing the hues it wore a moment ago — the whole palette at once
+      // chameleon (1 family reward): a soft halo in the hue currently running
+      // through its skin
       if (d.effect === "chameleon") {
-        const speed = Math.hypot(d.vx, d.vy);
-        const ux = speed > 0.02 ? d.vx / speed : -1;
-        const uy = speed > 0.02 ? d.vy / speed : 0;
-        const hue = (t * 0.015) % 360;
-        for (let i = 3; i >= 1; i--) {
-          const lag = dw * 0.22 * i;
-          ctx.save();
-          ctx.globalAlpha = 0.5 - (i - 1) * 0.13;
-          // écart de teinte large et saturation poussée: sinon les fantômes
-          // se lisent comme de simples taches grises sur l'eau sombre
-          ctx.filter = `hue-rotate(${hue - i * 62}deg) saturate(2) brightness(1.15)`;
-          ctx.translate(d.x - ux * lag, d.y + bob - uy * lag);
-          ctx.rotate(tilt);
-          ctx.scale(flip, 1);
-          ctx.imageSmoothingEnabled = true;
-          ctx.drawImage(d.sprite, -dw / 2, -dh / 2, dw, dh);
-          ctx.restore();
-        }
+        const hue = chameleonShift(t, d.phase) * 360;
+        const gr = ctx.createRadialGradient(d.x, d.y + bob, dw * 0.1, d.x, d.y + bob, dw * 0.9);
+        gr.addColorStop(0, `hsla(${hue},95%,65%,0.28)`);
+        gr.addColorStop(1, `hsla(${hue},95%,65%,0)`);
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y + bob, dw * 0.9, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       // peacock (5 families reward): a fan of ocellated feathers opening behind
@@ -1289,16 +1323,13 @@ export function PixelPool({
       // duck
       ctx.save();
       ctx.globalAlpha = d.effect === "ghost" ? 0.5 : 1;
-      // chameleon (1 family reward): the sprite is baked once, so the body can
-      // only change colour at draw time — one full hue cycle every ~24s, beak
-      // and accessory included
-      if (d.effect === "chameleon")
-        ctx.filter = `hue-rotate(${(t * 0.015) % 360}deg) saturate(1.25)`;
       ctx.translate(d.x, d.y + bob);
       ctx.rotate(tilt);
       ctx.scale(flip, 1);
       ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(d.sprite, -dw / 2, -dh / 2, dw, dh);
+      const skin =
+        d.effect === "chameleon" ? chameleonSkin(d.sprite, dw, dh, t, d.phase) : d.sprite;
+      ctx.drawImage(skin, -dw / 2, -dh / 2, dw, dh);
       ctx.restore();
 
       // royal sparkles: golden twinkles orbiting the king + a travelling glint

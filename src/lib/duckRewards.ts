@@ -112,6 +112,7 @@ export const REWARDS: DuckReward[] = [
   },
 ];
 
+export const REWARDS_BY_ID = new Map(REWARDS.map((r) => [r.id, r]));
 export const COLOR_REWARDS = REWARDS.filter((r) => r.group === "colors");
 export const COLLECTION_REWARDS = REWARDS.filter((r) => r.group === "collection");
 

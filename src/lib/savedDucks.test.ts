@@ -48,6 +48,7 @@ import {
   importSavedDucks,
   parseDucksJson,
 } from "./savedDucks";
+import { REWARDS_BY_ID } from "./duckRewards";
 
 const BASE_VARIANT = { body: "#FFD21E", beak: "#F5811F", acc: "none" } as const;
 
@@ -260,5 +261,30 @@ describe("importSavedDucks", () => {
     await importSavedDucks([makeDuck("a", { name: "Imported" })]);
     const list = await getSavedDucks();
     expect(list.find((d) => d.id === "a")!.name).toBe("Original");
+  });
+});
+
+describe("reward ducks follow the catalog", () => {
+  it("refreshes the look of an old reward duck on read", async () => {
+    const chameleon = REWARDS_BY_ID.get("canardex-chameleon")!;
+    await upsertSavedDuck({
+      id: chameleon.id,
+      name: "Mon vieux caméléon",
+      variant: { body: "#8FD14F", beak: "#F5811F", acc: "none", effect: "chameleon" }, // sans écailles
+      scale: 0.6,
+      savedAt: 1,
+    });
+    const [d] = await getSavedDucks();
+    expect(d.variant.pattern).toBe("scales");
+    expect(d.scale).toBe(chameleon.scale);
+    expect(d.name).toBe("Mon vieux caméléon"); // un renommage du joueur survit
+  });
+
+  it("leaves ordinary ducks untouched", async () => {
+    const variant = { body: "#FFD21E", beak: "#F5811F", acc: "shades" } as const;
+    await upsertSavedDuck({ id: "plain", name: "Plain", variant, scale: 0.7, savedAt: 2 });
+    const d = (await getSavedDucks()).find((x) => x.id === "plain")!;
+    expect(d.variant).toEqual(variant);
+    expect(d.scale).toBe(0.7);
   });
 });
