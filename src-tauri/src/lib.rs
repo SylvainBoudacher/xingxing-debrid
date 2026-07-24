@@ -7,6 +7,7 @@ use std::sync::{Mutex, OnceLock};
 use tauri::{Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 
+mod player;
 mod profile;
 
 pub(crate) const KEYRING_SERVICE: &str = "com.sulyk.c411-debrid-app";
@@ -394,54 +395,6 @@ fn open_file(path: String) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
-fn open_with_vlc(url: String) -> Result<(), String> {
-    open_urls_with_vlc(&[url])
-}
-
-#[tauri::command]
-fn open_many_with_vlc(urls: Vec<String>) -> Result<(), String> {
-    if urls.is_empty() {
-        return Err("Aucun lien a lire".into());
-    }
-    open_urls_with_vlc(&urls)
-}
-
-// Lance VLC avec une ou plusieurs URLs (playlist quand il y en a plusieurs).
-fn open_urls_with_vlc(urls: &[String]) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
-    {
-        let mut args = vec!["-a".to_string(), "VLC".to_string()];
-        args.extend(urls.iter().cloned());
-        std::process::Command::new("open")
-            .args(&args)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-
-    #[cfg(target_os = "windows")]
-    {
-        let vlc_paths = [
-            r"C:\Program Files\VideoLAN\VLC\vlc.exe",
-            r"C:\Program Files (x86)\VideoLAN\VLC\vlc.exe",
-        ];
-        let vlc = vlc_paths.iter().find(|p| std::path::Path::new(p).exists())
-            .ok_or("VLC introuvable")?;
-        std::process::Command::new(vlc)
-            .args(urls)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-
-    #[cfg(target_os = "linux")]
-    std::process::Command::new("vlc")
-        .args(urls)
-        .spawn()
-        .map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -482,8 +435,9 @@ pub fn run() {
             upload_magnet_to_debrid,
             get_magnet_files,
             unlock_link,
-            open_with_vlc,
-            open_many_with_vlc,
+            player::open_with_vlc,
+            player::open_many_with_vlc,
+            player::detect_vlc,
             export_json,
             download_to_dir,
             cancel_download,

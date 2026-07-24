@@ -9,6 +9,7 @@ import { DiscoverPanel } from "@/components/settings/panels/DiscoverPanel";
 import { DisplayPanel } from "@/components/settings/panels/DisplayPanel";
 import { LibraryPanel } from "@/components/settings/panels/LibraryPanel";
 import { DownloadsPanel } from "@/components/settings/panels/DownloadsPanel";
+import { PlaybackPanel } from "@/components/settings/panels/PlaybackPanel";
 import { MagnetsPanel } from "@/components/settings/panels/MagnetsPanel";
 import { NyaaPanel } from "@/components/settings/panels/NyaaPanel";
 import { ShortcutsPanel } from "@/components/settings/panels/ShortcutsPanel";
@@ -31,6 +32,7 @@ interface PreferencesPageProps {
   idleAutoHide: boolean;
   onSetIdleAutoHide: (v: boolean) => void;
   onKeysSaved: (keys: Partial<ApiKeys>) => void;
+  initialPanel?: PanelId;
 }
 
 export function PreferencesPage({
@@ -47,8 +49,9 @@ export function PreferencesPage({
   idleAutoHide,
   onSetIdleAutoHide,
   onKeysSaved,
+  initialPanel,
 }: PreferencesPageProps) {
-  const [activePanel, setActivePanel] = useState<PanelId>(ALL_NAV_ITEMS[0].id);
+  const [activePanel, setActivePanel] = useState<PanelId>(initialPanel ?? ALL_NAV_ITEMS[0].id);
 
   // Escape : retour à l'accueil.
   useEffect(() => {
@@ -73,6 +76,8 @@ export function PreferencesPage({
         return <DisplayPanel />;
       case "magnets":
         return <MagnetsPanel />;
+      case "playback":
+        return <PlaybackPanel />;
       case "downloads":
         return <DownloadsPanel />;
       case "library":

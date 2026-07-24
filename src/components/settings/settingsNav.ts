@@ -8,6 +8,7 @@ import {
   Library,
   Magnet,
   Monitor,
+  MonitorPlay,
   Sparkles,
   Sun,
 } from "lucide-react";
@@ -20,6 +21,7 @@ export type PanelId =
   | "shortcuts"
   | "display"
   | "magnets"
+  | "playback"
   | "downloads"
   | "library"
   | "nyaa"
@@ -42,7 +44,7 @@ export interface SettingsNavGroup {
   items: SettingsNavItem[];
 }
 
-export const SETTINGS_GROUPS: SettingsNavGroup[] = [
+const ALL_SETTINGS_GROUPS: SettingsNavGroup[] = [
   {
     id: "general",
     label: "Général",
@@ -90,6 +92,12 @@ export const SETTINGS_GROUPS: SettingsNavGroup[] = [
         icon: Magnet,
       },
       {
+        id: "playback",
+        label: "Lecture",
+        subtitle: "Le lecteur utilisé pour ouvrir les vidéos.",
+        icon: MonitorPlay,
+      },
+      {
         id: "downloads",
         label: "Téléchargement",
         subtitle: "Dossier de destination et fichiers simultanés.",
@@ -129,5 +137,14 @@ export const SETTINGS_GROUPS: SettingsNavGroup[] = [
     ],
   },
 ];
+
+// Le chemin de VLC ne se regle que sur Windows : ailleurs, macOS passe par
+// `open -a VLC` et Linux par le PATH.
+const isWindows = navigator.userAgent.includes("Windows");
+
+export const SETTINGS_GROUPS: SettingsNavGroup[] = ALL_SETTINGS_GROUPS.map((g) => ({
+  ...g,
+  items: g.items.filter((i) => i.id !== "playback" || isWindows),
+}));
 
 export const ALL_NAV_ITEMS: SettingsNavItem[] = SETTINGS_GROUPS.flatMap((g) => g.items);
