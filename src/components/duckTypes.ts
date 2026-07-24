@@ -41,7 +41,8 @@ export type Pattern =
   | "zombie"
   | "metal"
   | "abyss"
-  | "scales";
+  | "scales"
+  | "ember";
 
 export type Effect =
   | "glow"

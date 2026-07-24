@@ -76,7 +76,13 @@ export const REWARDS: DuckReward[] = [
     unit: "familles",
     lockedHint: "Complète les couleurs de 10 espèces.",
     claimToast: "Le Phénix Chromatique renaît de ses cendres !",
-    variant: () => ({ body: "#FFF3D6", beak: "#E8B93C", acc: "none", effect: "phoenix" }),
+    variant: () => ({
+      body: "#FFF3D6",
+      beak: "#E8B93C",
+      acc: "none",
+      pattern: "ember",
+      effect: "phoenix",
+    }),
   },
   {
     id: "canardex-reward",

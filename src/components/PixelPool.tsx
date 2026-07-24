@@ -1176,21 +1176,49 @@ export function PixelPool({
         }
       }
 
-      // phoenix (10 families reward): rainbow flames instead of the infernal
-      // duck's orange ones, flaring up on a slow rebirth cycle (~20s)
+      // phoenix (10 families reward): deux ailes de flammes arc-en-ciel qui
+      // battent lentement, sur un halo de chaleur. Toutes les ~20s il s'embrase:
+      // les ailes s'ouvrent en grand et le halo double.
       if (d.effect === "phoenix") {
+        const cx = d.x;
+        const cy = d.y + bob;
         const cycle = (t * 0.00005 + d.phase * 0.1) % 1;
-        const burn = cycle > 0.92 ? (cycle - 0.92) / 0.08 : 0;
-        for (let i = 0; i < 9; i++) {
-          const p = (t * 0.0011 + d.phase + i * 0.11) % 1;
-          const fx = d.x + Math.sin(t * 0.0022 + i * 1.7 + d.phase) * dw * 0.42;
-          const fy = d.y + bob + dh * 0.18 - p * dh * (1 + burn * 0.6);
-          const r = (3 + i * 0.5) * (1 - p * 0.5) * (1 + burn);
-          const hue = (t * 0.06 + i * 40) % 360;
-          ctx.fillStyle = `hsla(${hue},100%,65%,${(0.55 + burn * 0.35) * (1 - p)})`;
-          ctx.beginPath();
-          ctx.arc(fx, fy, r, 0, Math.PI * 2);
-          ctx.fill();
+        const burn = cycle > 0.9 ? Math.sin(((cycle - 0.9) / 0.1) * Math.PI) : 0;
+
+        const haloR = dw * (1.1 + burn * 0.5);
+        const gr = ctx.createRadialGradient(cx, cy, dw * 0.1, cx, cy, haloR);
+        gr.addColorStop(0, `rgba(255,190,90,${0.25 + burn * 0.4})`);
+        gr.addColorStop(1, "rgba(255,140,40,0)");
+        ctx.fillStyle = gr;
+        ctx.beginPath();
+        ctx.arc(cx, cy, haloR, 0, Math.PI * 2);
+        ctx.fill();
+
+        const flap = 0.5 + Math.sin(t * 0.0016 + d.phase) * 0.5;
+        const open = 0.62 + flap * 0.38 + burn * 0.5;
+        for (const side of [-1, 1]) {
+          for (let f = 0; f < 6; f++) {
+            const k = f / 5;
+            const a = (-0.26 - k * 1.35) * open;
+            const len = dh * (0.62 + k * 0.5) * (0.9 + burn * 0.45);
+            const bx = cx - side * dw * 0.06;
+            const by = cy + dh * 0.04;
+            const tx = bx - side * Math.cos(a) * len;
+            const ty = by + Math.sin(a) * len;
+            const wob = Math.sin(t * 0.005 + f * 1.4 + d.phase) * len * 0.09;
+            const hue = (t * 0.05 + f * 22 + (side > 0 ? 12 : 0)) % 360;
+            const g = ctx.createLinearGradient(bx, by, tx, ty);
+            g.addColorStop(0, `hsla(${hue},100%,72%,0.85)`);
+            g.addColorStop(0.6, `hsla(${(hue + 28) % 360},100%,58%,0.6)`);
+            g.addColorStop(1, `hsla(${(hue + 55) % 360},100%,52%,0)`);
+            ctx.fillStyle = g;
+            const w = dh * 0.1 * (1 - k * 0.35);
+            ctx.beginPath();
+            ctx.moveTo(bx, by);
+            ctx.quadraticCurveTo(bx - side * len * 0.45 + wob, by - len * 0.28 - w, tx, ty);
+            ctx.quadraticCurveTo(bx - side * len * 0.4, by - len * 0.1 + w, bx, by);
+            ctx.fill();
+          }
         }
       }
 
@@ -1357,14 +1385,18 @@ export function PixelPool({
 
       // phoenix ashes: coloured embers drifting up in front of the duck
       if (d.effect === "phoenix") {
-        for (let i = 0; i < 6; i++) {
-          const p = (t * 0.0006 + d.phase + i * 0.17) % 1;
-          const ax = d.x + Math.sin(t * 0.0015 + i * 2.3 + d.phase) * dw * 0.55;
-          const ay = d.y + bob + dh * 0.3 - p * dh * 1.4;
-          const hue = (t * 0.06 + i * 60) % 360;
-          const s = 1.6 + (1 - p) * 1.4;
-          ctx.fillStyle = `hsla(${hue},100%,72%,${0.7 * (1 - p)})`;
-          ctx.fillRect(ax - s / 2, ay - s / 2, s, s);
+        const cycle = (t * 0.00005 + d.phase * 0.1) % 1;
+        const burn = cycle > 0.9 ? Math.sin(((cycle - 0.9) / 0.1) * Math.PI) : 0;
+        for (let i = 0; i < 14; i++) {
+          const p = (t * 0.0006 + d.phase + i * 0.071) % 1;
+          const ax = d.x + Math.sin(t * 0.0015 + i * 2.3 + d.phase) * dw * 0.6;
+          const ay = d.y + bob + dh * 0.3 - p * dh * 1.5;
+          const hue = (t * 0.05 + i * 40) % 360;
+          const r = (0.9 + (1 - p) * 1.5) * (1 + burn * 0.6);
+          ctx.fillStyle = `hsla(${hue},100%,72%,${0.8 * (1 - p)})`;
+          ctx.beginPath();
+          ctx.arc(ax, ay, r, 0, Math.PI * 2);
+          ctx.fill();
         }
       }
 
