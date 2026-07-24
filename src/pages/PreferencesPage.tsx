@@ -31,6 +31,7 @@ interface PreferencesPageProps {
   idleAutoHide: boolean;
   onSetIdleAutoHide: (v: boolean) => void;
   onKeysSaved: (keys: Partial<ApiKeys>) => void;
+  initialPanel?: PanelId;
 }
 
 export function PreferencesPage({
@@ -47,8 +48,9 @@ export function PreferencesPage({
   idleAutoHide,
   onSetIdleAutoHide,
   onKeysSaved,
+  initialPanel,
 }: PreferencesPageProps) {
-  const [activePanel, setActivePanel] = useState<PanelId>(ALL_NAV_ITEMS[0].id);
+  const [activePanel, setActivePanel] = useState<PanelId>(initialPanel ?? ALL_NAV_ITEMS[0].id);
 
   // Escape : retour à l'accueil.
   useEffect(() => {

@@ -1,4 +1,5 @@
 import type { Page } from "@/components/AppMenu";
+import type { PanelId } from "@/components/settings/settingsNav";
 import { DownloadsOverlay } from "@/components/DownloadsOverlay";
 import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
@@ -13,6 +14,7 @@ import { loadCategories } from "@/lib/libraryCategories";
 import { loadLibraryPrefs } from "@/lib/libraryPrefs";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import { loadSeriesFolders } from "@/lib/seriesFolders";
+import { onSettingsPanelRequest } from "@/lib/settingsNavigation";
 import { loadStartupPage } from "@/lib/startupPage";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
@@ -87,6 +89,7 @@ function App() {
   // En preview navigateur, les animations rAF gèlent quand l'onglet est en
   // arrière-plan : on saute splash + transition pour ne pas bloquer dessus.
   const [startPhase, setStartPhase] = useState<StartPhase>(isBrowserPreview ? "done" : "splash");
+  const [settingsPanel, setSettingsPanel] = useState<PanelId | undefined>(undefined);
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const [pendingUpdate, setPendingUpdate] = useState<UpdateInfo | null>(null);
   const fakeUpdate: UpdateInfo = {
@@ -102,6 +105,15 @@ function App() {
     setPage((p) => (p === null || p === "setup" || p === "boatgame" ? p : action));
   });
   useActionShortcuts();
+
+  useEffect(
+    () =>
+      onSettingsPanelRequest((panel) => {
+        setSettingsPanel(panel);
+        setPage("preferences");
+      }),
+    [],
+  );
 
   useEffect(() => {
     checkForUpdate()
@@ -451,6 +463,7 @@ function App() {
                 idleAutoHide={idleAutoHide}
                 onSetIdleAutoHide={handleSetIdleAutoHide}
                 onKeysSaved={applyKeys}
+                initialPanel={settingsPanel}
               />
             </motion.div>
           )}
