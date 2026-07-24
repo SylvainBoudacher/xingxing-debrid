@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getRarity, randomVariant } from "./duckRandom";
-import { SPECIES, speciesOf } from "./duckSpecies";
+import { SPECIES, speciesOf, variantForSpecies } from "./duckSpecies";
 import type { Variant } from "./duckTypes";
 
 const BY_ID = new Map(SPECIES.map((s) => [s.id, s]));
@@ -82,5 +82,50 @@ describe("speciesOf", () => {
     expect(getRarity(mustache)).toBe("common");
     expect(speciesOf(chamane)).toBe("chamane");
     expect(getRarity(chamane)).toBe("rare");
+  });
+});
+
+describe("variantForSpecies", () => {
+  it("always builds a duck of the requested species and rarity", () => {
+    for (const s of SPECIES) {
+      for (let i = 0; i < 200; i++) {
+        const v = variantForSpecies(s);
+        expect(speciesOf(v)).toBe(s.id);
+        expect(getRarity(v)).toBe(s.rarity);
+      }
+    }
+  });
+
+  it("can reach exactly maxColors distinct bodies, never more", () => {
+    for (const s of SPECIES) {
+      const seen = new Set<string>();
+      for (let i = 0; i < 2000; i++) seen.add(variantForSpecies(s).body);
+      expect(seen.size).toBe(s.maxColors);
+    }
+  });
+
+  it("avoids body colors the player already collected", () => {
+    const cool = SPECIES.find((s) => s.id === "shades")!;
+    const taken: string[] = [];
+    for (let i = 0; i < cool.maxColors - 1; i++) {
+      const v = variantForSpecies(cool, taken);
+      expect(taken).not.toContain(v.body.toLowerCase());
+      taken.push(v.body.toLowerCase());
+    }
+  });
+
+  it("falls back to any legal color once the family is complete", () => {
+    const cool = SPECIES.find((s) => s.id === "shades")!;
+    const all = new Set<string>();
+    for (let i = 0; i < 500; i++) all.add(variantForSpecies(cool).body.toLowerCase());
+    const v = variantForSpecies(cool, [...all]);
+    expect(all.has(v.body.toLowerCase())).toBe(true);
+    expect(speciesOf(v)).toBe("shades");
+  });
+
+  it("leaves fixed-body recipes untouched", () => {
+    for (const s of SPECIES.filter((s) => s.maxColors === 1)) {
+      expect(variantForSpecies(s).body).toBe(s.preview.body);
+    }
   });
 });

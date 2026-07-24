@@ -4,6 +4,7 @@ import type { Variant } from "@/components/duckTypes";
 import { SPECIES, SPECIES_BY_ID, speciesOf, type DuckSpecies } from "@/components/duckSpecies";
 import { getSavedDucks } from "./savedDucks";
 import { isRewardEffect, REWARDS } from "./duckRewards";
+import { EMPTY_PITY, type PityState } from "@/game/pity";
 
 // Canardex progress: which species were discovered and with which body colors.
 // A species is discovered the first time a duck of that species is saved to
@@ -48,6 +49,34 @@ export async function getShinyDex(): Promise<ShinyEntries> {
   const shiny = (await store.get<ShinyEntries>("shiny")) ?? [];
   shinyCache = shiny;
   return shiny;
+}
+
+// Vue synchrone du dex, pour le pity: rollRewards() est appele depuis la boucle
+// de jeu et ne peut pas attendre le store. Null tant que rien n'a ete lu.
+export function dexSnapshot(): { entries: DexEntries; shiny: ShinyEntries } | null {
+  return cache && shinyCache ? { entries: cache, shiny: shinyCache } : null;
+}
+
+// Compteurs de secheresse du pity, memes contraintes que le dex: miroir memoire
+// lu en synchrone, ecriture differee.
+const PITY_KEY = "pity";
+let pityCache: PityState = EMPTY_PITY;
+
+export async function loadPityState(): Promise<PityState> {
+  pityCache = (await store.get<PityState>(PITY_KEY)) ?? EMPTY_PITY;
+  return pityCache;
+}
+
+export function pityState(): PityState {
+  return pityCache;
+}
+
+export function savePityState(next: PityState): void {
+  pityCache = next;
+  store
+    .set(PITY_KEY, next)
+    .then(() => store.save())
+    .catch(() => {});
 }
 
 // What saving this duck would unlock, or null if it brings nothing new
@@ -193,8 +222,10 @@ export async function debugCompleteShinyDex(): Promise<ShinyEntries> {
 export async function debugResetDex(): Promise<void> {
   cache = {};
   shinyCache = [];
+  pityCache = EMPTY_PITY;
   await store.set("entries", {});
   await store.set("shiny", []);
+  await store.set(PITY_KEY, EMPTY_PITY);
   for (const r of REWARDS) await store.set(r.storeKey, false);
   await store.save();
 }

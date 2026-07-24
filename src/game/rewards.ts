@@ -10,6 +10,8 @@ import {
   type Rarity,
 } from "@/components/duckRandom";
 import type { Variant } from "@/components/duckTypes";
+import { dexSnapshot, pityState, savePityState } from "@/lib/duckDex";
+import { applyPity } from "./pity";
 import { DIFF_MODS, type Difficulty, type Rank, RANK_BOOST } from "./run";
 
 const RARITY_ORDER: Rarity[] = ["common", "uncommon", "rare", "legendary", "mythic", "god"];
@@ -55,5 +57,8 @@ export function rollRewards(rank: Rank, score: number, difficulty: Difficulty): 
     cards[(Math.random() * cards.length) | 0].shiny = true;
   }
 
-  return cards;
+  // le pity passe en dernier, pour ne pas ecraser les boosts de rang
+  const { cards: final, next } = applyPity(cards, dexSnapshot(), pityState());
+  savePityState(next);
+  return final;
 }
