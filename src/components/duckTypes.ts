@@ -32,7 +32,17 @@ export type Accessory =
   | "laurel";
 
 export type Pattern =
-  "spots" | "stripes" | "polka" | "rainbow" | "gold" | "galaxy" | "zombie" | "metal" | "abyss";
+  | "spots"
+  | "stripes"
+  | "polka"
+  | "rainbow"
+  | "gold"
+  | "galaxy"
+  | "zombie"
+  | "metal"
+  | "abyss"
+  | "scales"
+  | "ember";
 
 export type Effect =
   | "glow"
@@ -47,7 +57,10 @@ export type Effect =
   | "fire"
   | "frost"
   | "nova"
-  | "godly";
+  | "godly"
+  | "chameleon"
+  | "peacock"
+  | "phoenix";
 
 export interface Variant {
   body: string;

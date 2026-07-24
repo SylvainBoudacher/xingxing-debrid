@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { randomVariant } from "./duckRandom";
+import { getRarity, randomVariant } from "./duckRandom";
 import type { Accessory, Pattern, Effect } from "./duckTypes";
 
 // Accessories that render with v.accColor (mirrors COLORED_ACC in duckRandom.ts)
@@ -124,5 +124,37 @@ describe("randomVariant", () => {
     }
     // ~60% common + some uncommon accessories with no pattern/effect = well above 50%
     expect(plain / N).toBeGreaterThan(0.5);
+  });
+});
+
+describe("reward effects rarity", () => {
+  const BEAK = "#F5811F";
+
+  it("ranks the chameleon as legendary", () => {
+    expect(getRarity({ body: "#FFD21E", beak: BEAK, acc: "none", effect: "chameleon" })).toBe(
+      "legendary",
+    );
+  });
+
+  it("ranks the peacock and the phoenix as mythic", () => {
+    expect(getRarity({ body: "#2E6B5E", beak: BEAK, acc: "none", effect: "peacock" })).toBe(
+      "mythic",
+    );
+    expect(getRarity({ body: "#FFF3D6", beak: BEAK, acc: "none", effect: "phoenix" })).toBe(
+      "mythic",
+    );
+  });
+
+  it("keeps Zeus alone in the god tier", () => {
+    expect(getRarity({ body: "#F4EFE4", beak: "#E8B93C", acc: "laurel", effect: "godly" })).toBe(
+      "god",
+    );
+  });
+
+  it("never rolls a reward effect at random", () => {
+    for (let i = 0; i < 3000; i++) {
+      const e = randomVariant().effect;
+      expect(e === "chameleon" || e === "peacock" || e === "phoenix").toBe(false);
+    }
   });
 });

@@ -28,6 +28,15 @@ export function bodyFill(c: CanvasRenderingContext2D, v: Variant): string | Canv
     gx.addColorStop(1, "#0B1030");
     return gx;
   }
+  if (v.pattern === "ember") {
+    // braise: blanc incandescent sur le dessus, cramoisi dans les creux
+    const eg = c.createLinearGradient(0, 16, 0, 130);
+    eg.addColorStop(0, "#FFF7DC");
+    eg.addColorStop(0.34, "#FFCF5C");
+    eg.addColorStop(0.66, "#F4691F");
+    eg.addColorStop(1, "#8C1A10");
+    return eg;
+  }
   if (v.pattern === "abyss") {
     const ax = c.createLinearGradient(10, 12, 110, 112);
     ax.addColorStop(0, "#071828");
@@ -120,6 +129,42 @@ export function paintPattern(
       [cx + rx * 0.5, cy + ry * 0.4],
     ]) {
       fillEll(c, bx, by, 1.6, 1.6, "rgba(255,255,255,0.5)");
+    }
+  } else if (v.pattern === "scales") {
+    // peau de reptile: rangées d'écailles en arcs, décalées d'une rangée à
+    // l'autre, avec un liseré clair au-dessus pour le relief
+    const step = 9;
+    c.lineWidth = 1.2;
+    for (let py = y0; py < y0 + ry * 2 + step; py += step * 0.62) {
+      const row = Math.round((py - y0) / (step * 0.62));
+      for (let px = x0 - step; px < x0 + rx * 2 + step; px += step) {
+        const ox = px + (row % 2 ? step / 2 : 0);
+        c.strokeStyle = "rgba(0,0,0,0.3)";
+        c.beginPath();
+        c.arc(ox, py, step * 0.5, Math.PI * 0.15, Math.PI * 0.85);
+        c.stroke();
+        c.strokeStyle = "rgba(255,255,255,0.3)";
+        c.beginPath();
+        c.arc(ox, py - 1.3, step * 0.5, Math.PI * 0.2, Math.PI * 0.8);
+        c.stroke();
+      }
+    }
+  } else if (v.pattern === "ember") {
+    // plumes carbonisées par endroits, et éclats de braise encore vifs
+    c.strokeStyle = "rgba(70,12,6,0.32)";
+    c.lineWidth = 1.6;
+    for (let i = 0; i < 7; i++) {
+      const px = x0 + Math.random() * rx * 2;
+      const py = y0 + Math.random() * ry * 2;
+      c.beginPath();
+      c.moveTo(px, py);
+      c.quadraticCurveTo(px + 5, py + 4, px + 2, py + 10);
+      c.stroke();
+    }
+    for (let i = 0; i < 12; i++) {
+      const px = x0 + Math.random() * rx * 2;
+      const py = y0 + Math.random() * ry * 2;
+      fillEll(c, px, py, 1.5, 1.5, `rgba(255,${210 + Math.random() * 40},150,0.85)`);
     }
   } else if (v.pattern === "abyss") {
     // bioluminescent spots drifting in the deep

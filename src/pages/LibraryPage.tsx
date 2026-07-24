@@ -48,6 +48,7 @@ import {
   createCategory,
   deleteCategory,
   EMPTY_CATEGORIES,
+  getCachedCategories,
   itemHashes,
   loadCategories,
   moveCategory,
@@ -58,6 +59,15 @@ import {
   type CategoryConfig,
   type LibraryCategory,
 } from "@/lib/libraryCategories";
+import {
+  DEFAULT_LIBRARY_PREFS,
+  getCachedLibraryPrefs,
+  loadLibraryPrefs,
+  saveLibraryPref,
+  type LibraryFilter,
+  type LibraryLayout,
+  type LibrarySort,
+} from "@/lib/libraryPrefs";
 import { toastNetworkError } from "@/lib/networkError";
 import { queryClient } from "@/lib/queryClient";
 import {
@@ -97,20 +107,22 @@ interface LibraryPageProps {
   initialAllDebridKey?: string | null;
   initialTmdbKey?: string | null;
   initialViewMode?: ViewMode;
+  /** Fiche à ouvrir directement (venant de l'action "Voir" d'un toast) */
+  initialExpandedHash?: string | null;
+  initialExpandedGroupId?: number | null;
 }
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
-type Filter = "all" | "todo" | "done";
-type Layout = "list" | "grid";
+type Filter = LibraryFilter;
+type Layout = LibraryLayout;
+type Sort = LibrarySort;
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "Tout" },
   { id: "todo", label: "À voir" },
   { id: "done", label: "Vu" },
 ];
-
-type Sort = "manual" | "recent" | "title" | "size" | "progress";
 
 const SORTS: { id: Sort; label: string }[] = [
   { id: "manual", label: "Manuel" },
@@ -142,17 +154,27 @@ export function LibraryPage({
   initialAllDebridKey,
   initialTmdbKey,
   initialViewMode,
+  initialExpandedHash,
+  initialExpandedGroupId,
 }: LibraryPageProps) {
+  // Réglages lus au lancement (splash) : le premier rendu est déjà le bon,
+  // sans re-tri ni re-groupement visible. Le cache n'est vide que si la page
+  // s'ouvre avant la fin de cette lecture — l'effet plus bas rattrape ce cas.
+  const initialPrefs = useRef(getCachedLibraryPrefs());
+  const prefs = initialPrefs.current ?? DEFAULT_LIBRARY_PREFS;
+
   const [entries, setEntries] = useState<LibraryEntry[]>(() => getCachedLibrary() ?? []);
-  const [filter, setFilter] = useState<Filter>("all");
-  const [sort, setSort] = useState<Sort>("recent");
+  const [filter, setFilter] = useState<Filter>(prefs.filter);
+  const [sort, setSort] = useState<Sort>(prefs.sort);
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? "simple");
-  const [layout, setLayout] = useState<Layout>("grid");
-  const [grouping, setGrouping] = useState<GroupMode>("type");
-  const [genreFilter, setGenreFilter] = useState<Set<string>>(new Set());
-  const [genreBarOpen, setGenreBarOpen] = useState(false);
-  const [categories, setCategories] = useState<CategoryConfig>(EMPTY_CATEGORIES);
+  const [layout, setLayout] = useState<Layout>(prefs.layout);
+  const [grouping, setGrouping] = useState<GroupMode>(prefs.grouping);
+  const [genreFilter, setGenreFilter] = useState<Set<string>>(() => new Set(prefs.genres));
+  const [genreBarOpen, setGenreBarOpen] = useState(prefs.genreBarOpen);
+  const [categories, setCategories] = useState<CategoryConfig>(
+    () => getCachedCategories() ?? EMPTY_CATEGORIES,
+  );
   // Titre en cours de glissement : dataTransfer ne se lit pas pendant dragover,
   // et une ref suffit puisque le glisser-déposer reste dans la page.
   const draggedHashes = useRef<string[]>([]);
@@ -237,12 +259,17 @@ export function LibraryPage({
     store.get<boolean>("auto_watch_on_play").then((v) => {
       if (v !== null && v !== undefined) setAutoWatchOnPlay(v);
     });
-    store.get<Layout>("library_layout").then((v) => {
-      if (v) setLayout(v);
-    });
-    store.get<boolean>("library_genre_bar").then((v) => {
-      if (v !== null && v !== undefined) setGenreBarOpen(v);
-    });
+    // Rattrapage : la page s'est ouverte avant la fin de la lecture du splash.
+    if (initialPrefs.current === null) {
+      void loadLibraryPrefs().then((p) => {
+        setFilter(p.filter);
+        setSort(p.sort);
+        setLayout(p.layout);
+        setGrouping(p.grouping);
+        setGenreFilter(new Set(p.genres));
+        setGenreBarOpen(p.genreBarOpen);
+      });
+    }
     // Purge des références mortes au chargement seulement : pendant la session,
     // une suppression reste annulable, et son appartenance aux listes avec.
     void Promise.all([loadLibrary(), loadCategories()]).then(([loaded, stored]) => {
@@ -250,14 +277,19 @@ export function LibraryPage({
       setCategories(pruned);
       if (pruned !== stored) void saveCategories(pruned);
     });
-    // "library_split" (booléen) est l'ancien réglage films/séries : conservé
-    // comme valeur de repli tant que le nouveau mode n'a pas été choisi.
-    store.get<GroupMode>("library_grouping").then((v) => {
-      if (v) return setGrouping(v);
-      void store.get<boolean>("library_split").then((old) => {
-        if (old !== null && old !== undefined) setGrouping(old ? "type" : "none");
-      });
-    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fiche pré-sélectionnée (action "Voir" d'un toast d'ajout) : on attend la fin
+  // de la transition d'entrée de la page avant d'ouvrir la modale, sinon les
+  // deux animations se chevauchent et l'ouverture paraît précipitée.
+  useEffect(() => {
+    if (!initialExpandedHash && initialExpandedGroupId == null) return;
+    const timer = setTimeout(() => {
+      setExpandedHash(initialExpandedHash ?? null);
+      setExpandedGroupId(initialExpandedGroupId ?? null);
+    }, 420);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -266,8 +298,23 @@ export function LibraryPage({
   function toggleGenreBar() {
     const next = !genreBarOpen;
     setGenreBarOpen(next);
-    if (!next) setGenreFilter(new Set());
-    void store.set("library_genre_bar", next).then(() => store.save());
+    if (!next) changeGenreFilter(new Set());
+    saveLibraryPref("genreBarOpen", next);
+  }
+
+  function changeGenreFilter(next: Set<string>) {
+    setGenreFilter(next);
+    saveLibraryPref("genres", [...next]);
+  }
+
+  function changeFilter(next: Filter) {
+    setFilter(next);
+    saveLibraryPref("filter", next);
+  }
+
+  function changeSort(next: Sort) {
+    setSort(next);
+    saveLibraryPref("sort", next);
   }
 
   // Le rangement par sélection n'existe qu'en vue grille : on y bascule plutôt
@@ -280,17 +327,17 @@ export function LibraryPage({
 
   function changeGrouping(next: GroupMode) {
     setGrouping(next);
-    void store.set("library_grouping", next).then(() => store.save());
+    saveLibraryPref("grouping", next);
   }
 
   function changeLayout(next: Layout) {
     setLayout(next);
     // Le tri manuel (glisser-déposer) n'existe qu'en vue liste : on bascule sur
     // « Plus récents » en passant en grille.
-    if (next === "grid" && sort === "manual") setSort("recent");
+    if (next === "grid" && sort === "manual") changeSort("recent");
     // La sélection multiple n'existe qu'en vue grille.
     if (next === "list") exitSelect();
-    void store.set("library_layout", next).then(() => store.save());
+    saveLibraryPref("layout", next);
   }
 
   // Flushe l'écriture en attente quand on quitte la page.
@@ -505,7 +552,7 @@ export function LibraryPage({
         naming.hashes.length > 0 ? assignHashes(created, naming.hashes, category.id) : created,
       );
       if (naming.hashes.length > 0) exitSelect();
-      setGrouping("category");
+      changeGrouping("category");
     }
     setNaming(null);
   }
@@ -531,12 +578,10 @@ export function LibraryPage({
   }
 
   function toggleGenre(name: string) {
-    setGenreFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
+    const next = new Set(genreFilter);
+    if (next.has(name)) next.delete(name);
+    else next.add(name);
+    changeGenreFilter(next);
   }
 
   // Les genres alimentent le filtre comme le regroupement : ceux qui manquent
@@ -809,7 +854,7 @@ export function LibraryPage({
               {FILTERS.map((f) => (
                 <button
                   key={f.id}
-                  onClick={() => setFilter(f.id)}
+                  onClick={() => changeFilter(f.id)}
                   className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                     filter === f.id
                       ? "bg-indigo-600 text-white"
@@ -903,7 +948,7 @@ export function LibraryPage({
                 ))}
               </div>
 
-              <Select value={sort} onValueChange={(v) => setSort(v as Sort)}>
+              <Select value={sort} onValueChange={(v) => changeSort(v as Sort)}>
                 <SelectTrigger className="h-8 w-auto gap-1 rounded-full px-3 text-xs">
                   <SelectValue />
                 </SelectTrigger>
@@ -936,7 +981,7 @@ export function LibraryPage({
               options={genreOpts}
               selected={genreFilter}
               onToggle={toggleGenre}
-              onClear={() => setGenreFilter(new Set())}
+              onClear={() => changeGenreFilter(new Set())}
             />
           </div>
         )}
@@ -973,7 +1018,7 @@ export function LibraryPage({
             <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
             <p className="text-sm">Aucun titre dans ces genres.</p>
             <button
-              onClick={() => setGenreFilter(new Set())}
+              onClick={() => changeGenreFilter(new Set())}
               className="mt-1 flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
             >
               Effacer les genres

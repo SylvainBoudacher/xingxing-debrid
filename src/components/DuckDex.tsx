@@ -1,32 +1,30 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Lock, Sparkles, X } from "lucide-react";
+import { X } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
+  completedFamilies,
+  familyProgress,
   debugCompleteDex,
+  debugCompleteFamilies,
   debugCompleteShinyDex,
   debugResetDex,
-  getDex,
   getShinyDex,
-  GOD_DUCK_ID,
-  GOD_DUCK_NAME,
-  GOD_DUCK_SCALE,
-  godVariant,
-  isDexComplete,
-  isGodRewardClaimed,
-  isRewardClaimed,
-  isShinyDexComplete,
-  markGodRewardClaimed,
-  markRewardClaimed,
-  REWARD_DUCK_ID,
-  REWARD_DUCK_NAME,
-  REWARD_DUCK_SCALE,
-  rewardVariant,
+  isClaimed,
+  markClaimed,
   syncDexWithCollection,
   type DexEntries,
   type ShinyEntries,
 } from "@/lib/duckDex";
+import {
+  COLLECTION_REWARDS,
+  COLOR_REWARDS,
+  REWARDS,
+  type DexProgress,
+  type DuckReward,
+} from "@/lib/duckRewards";
+import { DuckDexDevMenu } from "./DuckDexDevMenu";
+import { DuckRewardSection } from "./DuckRewardSection";
 import { upsertSavedDuck } from "@/lib/savedDucks";
 import type { Rarity } from "./duckRandom";
 import { SPECIES } from "./duckSpecies";
@@ -50,6 +48,17 @@ const RARITY_RING: Record<Rarity, string> = {
   common: "ring-black/10 dark:ring-white/10",
 };
 
+// hors du composant: Date.now() ne doit pas être appelé pendant un rendu
+function rewardDuck(reward: DuckReward) {
+  return {
+    id: reward.id,
+    name: reward.name,
+    variant: reward.variant(),
+    scale: reward.scale,
+    savedAt: Date.now(),
+  };
+}
+
 // Canardex overlay, toggled by the pixel-art pokedex drawn on the pool canvas.
 // Discoveries are synced from the saved collection every time the panel opens,
 // so ducks saved before the dex existed count retroactively.
@@ -57,9 +66,8 @@ export function DuckDex() {
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<DexEntries>({});
   const [shiny, setShiny] = useState<ShinyEntries>([]);
-  const [claimed, setClaimed] = useState(false);
+  const [claimed, setClaimed] = useState<Record<string, boolean>>({});
   const [shinyShown, setShinyShown] = useState<Set<string>>(new Set());
-  const [godClaimed, setGodClaimed] = useState(false);
 
   const openRef = useRef(false);
   useEffect(() => {
@@ -67,15 +75,13 @@ export function DuckDex() {
   }, [open]);
 
   async function openDex() {
-    const [synced, rewardClaimed, god] = await Promise.all([
-      syncDexWithCollection(),
-      isRewardClaimed(),
-      isGodRewardClaimed(),
-    ]);
+    const synced = await syncDexWithCollection();
+    const flags = await Promise.all(
+      REWARDS.map(async (r) => [r.id, await isClaimed(r.storeKey)] as const),
+    );
     setEntries(synced);
     setShiny(await getShinyDex());
-    setClaimed(rewardClaimed);
-    setGodClaimed(god);
+    setClaimed(Object.fromEntries(flags));
     setOpen(true);
   }
 
@@ -96,35 +102,13 @@ export function DuckDex() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  async function claim() {
-    const duck = {
-      id: REWARD_DUCK_ID,
-      name: REWARD_DUCK_NAME,
-      variant: rewardVariant(),
-      scale: REWARD_DUCK_SCALE,
-      savedAt: Date.now(),
-    };
+  async function claim(reward: DuckReward) {
+    const duck = rewardDuck(reward);
     await upsertSavedDuck(duck);
     injectDuck({ id: duck.id, name: duck.name, variant: duck.variant, scale: duck.scale });
-    await markRewardClaimed();
-    setEntries(await getDex());
-    setClaimed(true);
-    toast.success(`${REWARD_DUCK_NAME} a rejoint ta collection !`);
-  }
-
-  async function claimGod() {
-    const duck = {
-      id: GOD_DUCK_ID,
-      name: GOD_DUCK_NAME,
-      variant: godVariant(),
-      scale: GOD_DUCK_SCALE,
-      savedAt: Date.now(),
-    };
-    await upsertSavedDuck(duck);
-    injectDuck({ id: duck.id, name: duck.name, variant: duck.variant, scale: duck.scale });
-    await markGodRewardClaimed();
-    setGodClaimed(true);
-    toast.success(`${GOD_DUCK_NAME} descend de l'Olympe !`);
+    await markClaimed(reward.storeKey);
+    setClaimed((prev) => ({ ...prev, [reward.id]: true }));
+    toast.success(reward.claimToast);
   }
 
   function toggleShinyShown(id: string) {
@@ -140,6 +124,10 @@ export function DuckDex() {
     setEntries(await debugCompleteDex());
   }
 
+  async function devCompleteFamilies(rarity: Rarity, count: number) {
+    setEntries(await debugCompleteFamilies(rarity, count));
+  }
+
   async function devCompleteShiny() {
     setShiny(await debugCompleteShinyDex());
   }
@@ -148,13 +136,17 @@ export function DuckDex() {
     await debugResetDex();
     setEntries({});
     setShiny([]);
-    setClaimed(false);
-    setGodClaimed(false);
+    setClaimed({});
   }
 
   const discovered = SPECIES.filter((s) => (entries[s.id]?.length ?? 0) > 0).length;
-  const complete = isDexComplete(entries);
-  const shinyComplete = isShinyDexComplete(shiny);
+  const families = completedFamilies(entries);
+  const progress: DexProgress = {
+    species: discovered,
+    shiny: shiny.length,
+    ...familyProgress(entries),
+  };
+  const complete = discovered === SPECIES.length;
 
   return (
     <AnimatePresence>
@@ -192,26 +184,12 @@ export function DuckDex() {
                 </div>
                 <div className="flex items-center gap-2">
                   {import.meta.env.DEV && (
-                    <>
-                      <button
-                        onClick={devComplete}
-                        className="rounded-md bg-amber-500/15 px-2 py-1 text-[10px] font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/25 transition-colors"
-                      >
-                        DEV: compléter
-                      </button>
-                      <button
-                        onClick={devCompleteShiny}
-                        className="rounded-md bg-fuchsia-500/15 px-2 py-1 text-[10px] font-semibold text-fuchsia-600 dark:text-fuchsia-400 hover:bg-fuchsia-500/25 transition-colors"
-                      >
-                        DEV: shiny
-                      </button>
-                      <button
-                        onClick={devReset}
-                        className="rounded-md bg-red-500/15 px-2 py-1 text-[10px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/25 transition-colors"
-                      >
-                        DEV: reset
-                      </button>
-                    </>
+                    <DuckDexDevMenu
+                      onCompleteDex={devComplete}
+                      onCompleteShiny={devCompleteShiny}
+                      onCompleteFamilies={devCompleteFamilies}
+                      onReset={devReset}
+                    />
                   )}
                   <button
                     onClick={() => setOpen(false)}
@@ -296,86 +274,40 @@ export function DuckDex() {
                           <p className="w-full truncate text-center text-[11px] font-medium text-zinc-800 dark:text-zinc-200">
                             {found ? s.name : "???"}
                           </p>
-                          {found && s.maxColors > 1 && (
-                            <p className="text-[10px] text-zinc-400 dark:text-zinc-500">
-                              {colors.length}/{s.maxColors} couleurs
-                            </p>
-                          )}
+                          {/* emplacement réservé: sans lui les espèces à une
+                              seule couleur (les légendaires) font des cases plus
+                              courtes que les autres sections */}
+                          <p className="h-[13px] text-[10px] leading-[13px] text-zinc-400 dark:text-zinc-500">
+                            {found && s.maxColors > 1
+                              ? `${colors.length}/${s.maxColors} couleurs`
+                              : ""}
+                          </p>
                         </motion.div>
                       );
                     })}
                   </div>
                 </motion.div>
               ))}
-            </div>
 
-            <div className="space-y-3 border-t border-black/10 dark:border-white/10 px-5 py-4">
-              {claimed ? (
-                <div className="flex items-center gap-3">
-                  <DuckPreview variant={rewardVariant()} size={48} />
-                  <div>
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                      {REWARD_DUCK_NAME}
-                    </p>
-                    <p className="text-xs text-zinc-500">Récompense de complétion obtenue</p>
-                  </div>
-                </div>
-              ) : complete ? (
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
-                    <p className="text-sm text-zinc-700 dark:text-zinc-200">
-                      Canardex complet ! Une récompense t'attend.
-                    </p>
-                  </div>
-                  <Button size="sm" onClick={claim}>
-                    Réclamer
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-zinc-500">
-                  <Lock className="h-3.5 w-3.5" />
-                  <p className="text-xs">
-                    Découvre les {SPECIES.length} espèces pour débloquer un canard exclusif.
-                  </p>
-                </div>
-              )}
+              <DuckRewardSection
+                title="Récompenses de couleurs"
+                hint={`Une famille, c'est toutes les teintes d'une même espèce. Chaque palier compte les familles de sa rareté. ${families} familles complètes.`}
+                rewards={COLOR_REWARDS}
+                progress={progress}
+                claimed={claimed}
+                onClaim={claim}
+                delay={0.4}
+              />
 
-              {/* ultimate tier: only surfaces once the base dex is complete */}
-              {complete &&
-                (godClaimed ? (
-                  <div className="flex items-center gap-3">
-                    <DuckPreview variant={godVariant()} size={48} />
-                    <div>
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                        {GOD_DUCK_NAME}
-                      </p>
-                      <p className="text-xs text-zinc-500">
-                        Récompense ultime obtenue. Rien ne t'échappe.
-                      </p>
-                    </div>
-                  </div>
-                ) : shinyComplete ? (
-                  <div className="flex items-center justify-between gap-3 rounded-lg bg-gradient-to-r from-fuchsia-500/10 to-amber-400/10 px-3 py-2 ring-1 ring-fuchsia-400/30">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-fuchsia-500 dark:text-fuchsia-400" />
-                      <p className="text-sm text-zinc-700 dark:text-zinc-200">
-                        Collection shiny complète ! Le Dieu Canard t'attend.
-                      </p>
-                    </div>
-                    <Button size="sm" onClick={claimGod}>
-                      Réclamer
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 text-zinc-500">
-                    <Lock className="h-3.5 w-3.5" />
-                    <p className="text-xs">
-                      Collectionne la version ✦ shiny des {SPECIES.length} espèces pour éveiller le
-                      Dieu Canard.
-                    </p>
-                  </div>
-                ))}
+              <DuckRewardSection
+                title="Récompenses de collection"
+                hint="Pour avoir découvert toutes les espèces, puis toutes leurs versions shiny."
+                rewards={COLLECTION_REWARDS}
+                progress={progress}
+                claimed={claimed}
+                onClaim={claim}
+                delay={0.46}
+              />
             </div>
           </motion.div>
         </motion.div>

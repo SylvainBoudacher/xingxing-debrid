@@ -1,4 +1,11 @@
-import { BODY_COLOR_COUNT, kingVariant, type Rarity } from "./duckRandom";
+import {
+  accColorFor,
+  BODY_COLOR_COUNT,
+  BODY_COLOR_LIST,
+  kingVariant,
+  randOf,
+  type Rarity,
+} from "./duckRandom";
 import type { Variant } from "./duckTypes";
 
 // The Canardex catalog: every look randomVariant() can produce, collapsed into
@@ -334,4 +341,23 @@ export function speciesOf(v: Variant): string {
   if (v.pattern === "polka") return "polka";
   if (ACC_SPECIES.has(v.acc)) return v.acc;
   return "classique";
+}
+
+// L'inverse de speciesOf: fabrique un canard de cette espece exacte, dans une
+// teinte que le joueur n'a pas encore (le systeme de pity vise une espece
+// precise, la ou un tirage aleatoire pourrait boucler indefiniment). Les
+// teintes qui feraient basculer la variante vers une autre espece (le charcoal
+// des lunettes lu comme le Ninja, le turquoise du tuba lu comme le Surfer) sont
+// ecartees en interrogeant speciesOf plutot qu'en les listant a la main.
+export function variantForSpecies(sp: DuckSpecies, taken: string[] = []): Variant {
+  const v: Variant = { ...sp.preview };
+  const accColor = accColorFor(v.acc);
+  if (accColor) v.accColor = accColor;
+  if (sp.maxColors > 1) {
+    const owned = new Set(taken.map((c) => c.toLowerCase()));
+    const legal = BODY_COLOR_LIST.filter((c) => speciesOf({ ...v, body: c }) === sp.id);
+    const fresh = legal.filter((c) => !owned.has(c.toLowerCase()));
+    v.body = randOf(fresh.length ? fresh : legal);
+  }
+  return v;
 }

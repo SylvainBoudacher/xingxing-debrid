@@ -50,7 +50,7 @@ export const SETTINGS_GROUPS: SettingsNavGroup[] = [
       {
         id: "appearance",
         label: "Apparence et fenêtre",
-        subtitle: "Taille de la fenêtre au lancement.",
+        subtitle: "Taille de la fenêtre et page d'ouverture au lancement.",
         icon: Monitor,
       },
       {

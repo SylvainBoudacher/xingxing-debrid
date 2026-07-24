@@ -48,14 +48,24 @@ export function fromLegacyLists(lists: LegacyList[]): CategoryConfig {
   };
 }
 
+// Cache mémoire alimenté au lancement (pendant le splash) : le regroupement
+// « Personnalisé » s'affiche déjà classé au premier rendu.
+let cache: CategoryConfig | null = null;
+
+/** Lecture synchrone : null tant que loadCategories n'a pas résolu. */
+export function getCachedCategories(): CategoryConfig | null {
+  return cache;
+}
+
 export async function loadCategories(): Promise<CategoryConfig> {
   const stored = await store.get<CategoryConfig>(STORE_KEY);
-  if (stored) return stored;
+  if (stored) return (cache = stored);
   const legacy = await store.get<LegacyList[]>(LEGACY_LISTS_KEY);
-  return legacy && legacy.length > 0 ? fromLegacyLists(legacy) : EMPTY_CATEGORIES;
+  return (cache = legacy && legacy.length > 0 ? fromLegacyLists(legacy) : EMPTY_CATEGORIES);
 }
 
 export async function saveCategories(config: CategoryConfig): Promise<void> {
+  cache = config;
   await store.set(STORE_KEY, config);
   await store.delete(LEGACY_LISTS_KEY);
   await store.save();

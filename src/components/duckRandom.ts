@@ -31,6 +31,10 @@ const BODY_COLORS: [string, number][] = [
 // number of distinct body colors a colorable species can roll (used by the dex)
 export const BODY_COLOR_COUNT = BODY_COLORS.length;
 
+// the palette itself, for the pity system which needs to build a duck of a
+// given species in a body color the player has not collected yet
+export const BODY_COLOR_LIST = BODY_COLORS.map(([c]) => c);
+
 // vivid colors handed to accessories that render with v.accColor
 const ACC_COLORS = [
   "#E0457B",
@@ -97,7 +101,12 @@ function weighted<T>(items: [T, number][]): T {
   return items[items.length - 1][0];
 }
 
-const randOf = <T>(arr: T[]): T => arr[(Math.random() * arr.length) | 0];
+export const randOf = <T>(arr: T[]): T => arr[(Math.random() * arr.length) | 0];
+
+// a fresh accessory color, or undefined for accessories that hardcode theirs
+export function accColorFor(acc: Accessory): string | undefined {
+  return COLORED_ACC.has(acc) ? randOf(ACC_COLORS) : undefined;
+}
 
 const bodyColor = () => weighted(BODY_COLORS);
 
@@ -177,6 +186,7 @@ const LEGENDARY_EFFECTS = new Set<Effect>([
   "ooze",
   "electric",
   "fire",
+  "chameleon",
 ]);
 const LEGENDARY_PATTERNS = new Set<Pattern>([
   "rainbow",
@@ -211,7 +221,13 @@ const UNCOMMON_ACC_SET = new Set<Accessory>([
 
 export function getRarity(v: Variant): Rarity {
   if (v.effect === "godly") return "god"; // Zeus sits alone above the mythics
-  if (v.effect === "royal" || v.effect === "nova") return "mythic";
+  if (
+    v.effect === "royal" ||
+    v.effect === "nova" ||
+    v.effect === "peacock" ||
+    v.effect === "phoenix"
+  )
+    return "mythic";
   if (
     (v.pattern && LEGENDARY_PATTERNS.has(v.pattern)) ||
     (v.effect && LEGENDARY_EFFECTS.has(v.effect))

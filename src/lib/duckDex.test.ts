@@ -38,23 +38,28 @@ vi.mock("@tauri-apps/plugin-store", () => {
 import { LazyStore } from "@tauri-apps/plugin-store";
 import type { Variant } from "@/components/duckTypes";
 import { getRarity } from "@/components/duckRandom";
-import { SPECIES, speciesOf } from "@/components/duckSpecies";
+import { SPECIES, SPECIES_BY_ID } from "@/components/duckSpecies";
 import { upsertSavedDuck } from "./savedDucks";
 import {
+  COLOR_SPECIES,
+  completedFamilies,
   dexStatusOf,
   getDex,
   getShinyDex,
-  godVariant,
+  isClaimed,
   isDexComplete,
-  isGodRewardClaimed,
-  isRewardClaimed,
   isShinyDexComplete,
-  markGodRewardClaimed,
-  markRewardClaimed,
+  markClaimed,
   recordDiscovery,
-  rewardVariant,
   syncDexWithCollection,
 } from "./duckDex";
+import {
+  COLLECTION_REWARDS,
+  COLOR_REWARDS,
+  familyRewardAt,
+  REWARDS,
+  rewardProgress,
+} from "./duckRewards";
 
 const SHADES: Variant = { body: "#FFD21E", beak: "#F5811F", acc: "shades" };
 const SHADES_PINK: Variant = { body: "#FB7AA8", beak: "#F5811F", acc: "shades" };
@@ -227,28 +232,158 @@ describe("shiny", () => {
   });
 });
 
-describe("reward", () => {
-  it("reward variant is mythic and maps to a cataloged species", () => {
-    const v = rewardVariant();
-    expect(getRarity(v)).toBe("mythic");
-    expect(SPECIES.some((s) => s.id === speciesOf(v))).toBe(true);
+describe("completedFamilies", () => {
+  const PIRATE: Variant = { body: "#FFD21E", beak: "#2A2A2A", acc: "pirate" };
+
+  // Enregistre `count` couleurs distinctes pour une même espèce. Les teintes
+  // sont arbitraires: seul le nombre d'entrées compte pour la progression.
+  async function fillFamily(base: Variant, count: number) {
+    for (let i = 0; i < count; i++) {
+      await recordDiscovery({ ...base, body: `#0000${i.toString(16).padStart(2, "0")}` });
+    }
+  }
+
+  it("counts nothing on an empty dex", () => {
+    expect(completedFamilies({})).toBe(0);
   });
 
-  it("god variant is god-tier and unlocks nothing in the dex", async () => {
-    const v = godVariant();
-    expect(getRarity(v)).toBe("god");
-    const disc = await recordDiscovery(v);
-    expect(disc.newSpecies).toBe(false);
-    expect(disc.newColor).toBe(false);
-    expect(dexStatusOf(v)).toBe(null);
+  it("never counts a fixed-look species", async () => {
+    await recordDiscovery(PIRATE);
+    expect(completedFamilies(await getDex())).toBe(0);
   });
 
-  it("claim flags persist independently", async () => {
-    expect(await isRewardClaimed()).toBe(false);
-    await markRewardClaimed();
-    expect(await isRewardClaimed()).toBe(true);
-    expect(await isGodRewardClaimed()).toBe(false);
-    await markGodRewardClaimed();
-    expect(await isGodRewardClaimed()).toBe(true);
+  it("counts a colorable species only on its last color", async () => {
+    const shades = SPECIES_BY_ID.get("shades")!;
+    await fillFamily(SHADES, shades.maxColors - 1);
+    expect(completedFamilies(await getDex())).toBe(0);
+    await fillFamily(SHADES, shades.maxColors);
+    expect(completedFamilies(await getDex())).toBe(1);
+  });
+
+  it("counts families independently", async () => {
+    const shades = SPECIES_BY_ID.get("shades")!;
+    const wizard = SPECIES_BY_ID.get("wizard")!;
+    await fillFamily(SHADES, shades.maxColors);
+    await fillFamily(WIZARD, wizard.maxColors);
+    expect(completedFamilies(await getDex())).toBe(2);
+  });
+
+  it("counts families of one rarity only when asked", async () => {
+    const shades = SPECIES_BY_ID.get("shades")!;
+    const wizard = SPECIES_BY_ID.get("wizard")!;
+    await fillFamily(SHADES, shades.maxColors);
+    await fillFamily(WIZARD, wizard.maxColors);
+    const entries = await getDex();
+    expect(completedFamilies(entries, "common")).toBe(1);
+    expect(completedFamilies(entries, "rare")).toBe(1);
+    expect(completedFamilies(entries, "uncommon")).toBe(0);
+  });
+
+  it("exposes 27 colorable species", () => {
+    expect(COLOR_SPECIES).toHaveLength(27);
+    expect(COLOR_SPECIES.every((s) => s.maxColors > 1)).toBe(true);
+  });
+});
+
+describe("recordDiscovery family flags", () => {
+  it("flags familyComplete only on the color that completes the family", async () => {
+    const shades = SPECIES_BY_ID.get("shades")!;
+    let disc = await recordDiscovery(SHADES);
+    expect(disc.familyComplete).toBe(false);
+    expect(disc.familiesComplete).toBe(0);
+    for (let i = 1; i < shades.maxColors - 1; i++) {
+      disc = await recordDiscovery({ ...SHADES, body: `#0000${i.toString(16).padStart(2, "0")}` });
+      expect(disc.familyComplete).toBe(false);
+    }
+    disc = await recordDiscovery({ ...SHADES, body: "#abcdef" });
+    expect(disc.familyComplete).toBe(true);
+    expect(disc.familiesComplete).toBe(1);
+  });
+
+  it("never flags familyComplete for a fixed-look species", async () => {
+    const disc = await recordDiscovery({ body: "#FFD21E", beak: "#2A2A2A", acc: "pirate" });
+    expect(disc.familyComplete).toBe(false);
+  });
+
+  it("does not re-flag familyComplete on a duplicate color", async () => {
+    const shades = SPECIES_BY_ID.get("shades")!;
+    for (let i = 0; i < shades.maxColors; i++) {
+      await recordDiscovery({ ...SHADES, body: `#0000${i.toString(16).padStart(2, "0")}` });
+    }
+    const dup = await recordDiscovery({ ...SHADES, body: "#000000" });
+    expect(dup.familyComplete).toBe(false);
+    expect(dup.familiesComplete).toBe(1);
+  });
+});
+
+describe("rewards", () => {
+  it("keeps the legacy store keys of the two existing rewards", () => {
+    expect(REWARDS.find((r) => r.id === "canardex-reward")!.storeKey).toBe("reward_claimed");
+    expect(REWARDS.find((r) => r.id === "canardex-god")!.storeKey).toBe("god_claimed");
+  });
+
+  it("catalogs five rewards with distinct ids, keys and effects", () => {
+    expect(REWARDS).toHaveLength(5);
+    expect(new Set(REWARDS.map((r) => r.id)).size).toBe(5);
+    expect(new Set(REWARDS.map((r) => r.storeKey)).size).toBe(5);
+    expect(new Set(REWARDS.map((r) => r.variant().effect)).size).toBe(5);
+  });
+
+  it("splits the catalog into three colour rewards and two collection ones", () => {
+    expect(COLOR_REWARDS.map((r) => r.metric)).toEqual([
+      "familiesCommon",
+      "familiesUncommon",
+      "familiesRare",
+    ]);
+    expect(COLLECTION_REWARDS.map((r) => r.metric)).toEqual(["species", "shiny"]);
+    expect(COLOR_REWARDS.length + COLLECTION_REWARDS.length).toBe(REWARDS.length);
+  });
+
+  it("sets every family threshold to 5", () => {
+    expect(COLOR_REWARDS.map((r) => r.threshold)).toEqual([5, 5, 5]);
+  });
+
+  it("ranks the reward variants above the ordinary tiers", () => {
+    expect(getRarity(REWARDS.find((r) => r.id === "canardex-god")!.variant())).toBe("god");
+    expect(getRarity(REWARDS.find((r) => r.id === "canardex-reward")!.variant())).toBe("mythic");
+  });
+
+  it("no reward variant unlocks anything in the dex", async () => {
+    for (const r of REWARDS) {
+      const disc = await recordDiscovery(r.variant());
+      expect(disc.newSpecies).toBe(false);
+      expect(disc.newColor).toBe(false);
+      expect(disc.familyComplete).toBe(false);
+      expect(dexStatusOf(r.variant())).toBe(null);
+    }
+    expect(await getDex()).toEqual({});
+  });
+
+  it("caps the displayed progress at the threshold", () => {
+    const phoenix = REWARDS.find((r) => r.id === "canardex-phoenix")!;
+    const base = { species: 0, shiny: 0, familiesCommon: 0, familiesUncommon: 0 };
+    expect(rewardProgress(phoenix, { ...base, familiesRare: 3 })).toEqual({
+      done: 3,
+      total: 5,
+    });
+    expect(rewardProgress(phoenix, { ...base, familiesRare: 8 })).toEqual({
+      done: 5,
+      total: 5,
+    });
+  });
+
+  it("maps a family count and rarity to the reward it unlocks", () => {
+    expect(familyRewardAt("common", 5)!.name).toBe("Canard Caméléon");
+    expect(familyRewardAt("uncommon", 5)!.name).toBe("Canard Paon");
+    expect(familyRewardAt("rare", 5)!.name).toBe("Canard Phénix Chromatique");
+    expect(familyRewardAt("common", 4)).toBeUndefined();
+    expect(familyRewardAt("legendary", 5)).toBeUndefined();
+  });
+
+  it("claim flags persist independently per store key", async () => {
+    expect(await isClaimed("reward_claimed")).toBe(false);
+    await markClaimed("reward_claimed");
+    expect(await isClaimed("reward_claimed")).toBe(true);
+    expect(await isClaimed("god_claimed")).toBe(false);
   });
 });

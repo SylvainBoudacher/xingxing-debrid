@@ -1,5 +1,6 @@
 import { LazyStore } from "@tauri-apps/plugin-store";
 import type { Variant } from "@/components/duckTypes";
+import { REWARDS_BY_ID } from "./duckRewards";
 
 // Persisted duck collection. Lives in its own store file so it survives app
 // updates (tauri-plugin-store data is kept across versions). The full Variant
@@ -15,8 +16,17 @@ export interface SavedDuck {
 
 const store = new LazyStore("ducks.json", { defaults: {}, autoSave: false });
 
+// Les canards de récompense suivent le catalogue plutôt que l'instantané figé
+// dans le store: si leur apparence change dans une mise à jour, un joueur qui
+// avait déjà réclamé la récompense en profite aussi. Le nom reste celui du
+// joueur s'il l'a renommé.
+function withCatalogLook(d: SavedDuck): SavedDuck {
+  const r = REWARDS_BY_ID.get(d.id);
+  return r ? { ...d, variant: r.variant(), scale: r.scale } : d;
+}
+
 export async function getSavedDucks(): Promise<SavedDuck[]> {
-  return (await store.get<SavedDuck[]>("ducks")) ?? [];
+  return ((await store.get<SavedDuck[]>("ducks")) ?? []).map(withCatalogLook);
 }
 
 async function persist(list: SavedDuck[]): Promise<SavedDuck[]> {

@@ -88,6 +88,7 @@ import {
   type ScoreBreakdown,
   scrollSpeed,
 } from "@/game/run";
+import { getDex, getShinyDex, loadPityState } from "@/lib/duckDex";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
@@ -195,6 +196,13 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
   useEffect(() => {
     exitRef.current = onExit;
   }, [onExit]);
+
+  // le pity lit le dex en synchrone a la fin du run: on rechauffe les caches
+  useEffect(() => {
+    getDex().catch(() => {});
+    getShinyDex().catch(() => {});
+    loadPityState().catch(() => {});
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current!;

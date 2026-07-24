@@ -9,8 +9,11 @@ import { UpdateDialog } from "@/components/UpdateDialog";
 import { getApiKey } from "@/lib/apiKeys";
 import { isBrowserPreview } from "@/lib/devTauriShim";
 import { prefetchLibrary } from "@/lib/library";
+import { loadCategories } from "@/lib/libraryCategories";
+import { loadLibraryPrefs } from "@/lib/libraryPrefs";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import { loadSeriesFolders } from "@/lib/seriesFolders";
+import { loadStartupPage } from "@/lib/startupPage";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
 import { useActionShortcuts } from "@/lib/useActionShortcuts";
@@ -69,6 +72,8 @@ function App() {
   const [page, setPage] = useState<Page | null>(null);
   const [discoverQuery, setDiscoverQuery] = useState("");
   const [discoverItem, setDiscoverItem] = useState<TmdbItem | null>(null);
+  const [libraryExpandedHash, setLibraryExpandedHash] = useState<string | null>(null);
+  const [libraryExpandedGroupId, setLibraryExpandedGroupId] = useState<number | null>(null);
   const [mainSearch, setMainSearch] = useState<{
     query: string;
     source: "c411" | "nyaa";
@@ -123,10 +128,18 @@ function App() {
     // splash (best-effort).
     prefetchLibrary().catch(() => {});
     loadSeriesFolders().catch(() => {});
+    // Réglages d'affichage et catégories : la bibliothèque s'ouvre déjà triée,
+    // rangée et filtrée, sans recalcul visible au premier rendu.
+    loadLibraryPrefs().catch(() => {});
+    loadCategories().catch(() => {});
 
-    Promise.all([store.get<boolean>("setup_complete"), store.get<boolean>("welcome_v1_seen")])
-      .then(([done, welcomeSeen]) => {
-        setPage(done && welcomeSeen ? "library" : "setup");
+    Promise.all([
+      store.get<boolean>("setup_complete"),
+      store.get<boolean>("welcome_v1_seen"),
+      loadStartupPage(store),
+    ])
+      .then(([done, welcomeSeen, startupPage]) => {
+        setPage(done && welcomeSeen ? startupPage : "setup");
       })
       .catch((err) => {
         console.error("Store read failed:", err);
@@ -195,7 +208,26 @@ function App() {
     // Toute navigation "normale" vers l'accueil repart sur une barre vierge :
     // seule la fiche Découverte injecte une recherche tracker à lancer.
     if (p === "main") setMainSearch(null);
+    // Navigation "normale" vers la bibliothèque : pas de fiche pré-ouverte
+    // (seule l'action "Voir" d'un toast d'ajout en injecte une).
+    if (p === "library") {
+      setLibraryExpandedHash(null);
+      setLibraryExpandedGroupId(null);
+    }
     setPage(p);
+  }
+
+  // Action "Voir" d'un toast d'ajout à la bibliothèque : ouvre directement la
+  // fiche du titre (groupe série ou entrée film) plutôt que la liste seule.
+  function openLibraryItem(item: TmdbItem, infoHash: string) {
+    if (item.mediaType === "tv") {
+      setLibraryExpandedGroupId(item.id);
+      setLibraryExpandedHash(null);
+    } else {
+      setLibraryExpandedHash(infoHash);
+      setLibraryExpandedGroupId(null);
+    }
+    setPage("library");
   }
 
   function launchDiscover(q: string) {
@@ -392,6 +424,8 @@ function App() {
                 initialAllDebridKey={initAllDebridKey}
                 initialTmdbKey={initTmdbKey}
                 initialViewMode={initPrefs.libraryViewMode}
+                initialExpandedHash={libraryExpandedHash}
+                initialExpandedGroupId={libraryExpandedGroupId}
               />
             </motion.div>
           )}
@@ -441,6 +475,7 @@ function App() {
                 initialAllDebridKey={initAllDebridKey}
                 initialLikes={initLikes}
                 onSearchTracker={launchTrackerSearch}
+                onOpenLibraryItem={openLibraryItem}
               />
             </motion.div>
           )}

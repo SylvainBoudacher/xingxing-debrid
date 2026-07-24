@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Archive, Check, DoorOpen, ListFilter, Pencil, Search, Waves, X } from "lucide-react";
+import { ListFilter, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -34,9 +35,12 @@ import {
   type SavedDuck,
 } from "@/lib/savedDucks";
 import { recordDiscovery } from "@/lib/duckDex";
+import { familyRewardAt } from "@/lib/duckRewards";
 import { getRarity, type Rarity } from "./duckRandom";
 import { SPECIES_BY_ID, speciesOf } from "./duckSpecies";
 import { DuckPreview } from "./DuckPreview";
+import { DuckShopRow } from "./DuckShopRow";
+import { stackDucks } from "./duckStacks";
 import {
   injectDuck,
   isOverShopIcon,
@@ -59,23 +63,6 @@ const settings = new LazyStore("settings.json", { defaults: {}, autoSave: false 
 async function getMaxDucks(): Promise<number> {
   return (await settings.get<number>("summer_pool_max_ducks")) ?? 15;
 }
-
-const RARITY_LABEL: Record<Rarity, string> = {
-  god: "★★★★★",
-  mythic: "★★★★",
-  legendary: "★★★",
-  rare: "★★",
-  uncommon: "★",
-  common: "",
-};
-const RARITY_BADGE: Record<Rarity, string> = {
-  god: "bg-yellow-100/25 text-yellow-100 ring-1 ring-yellow-100/50",
-  mythic: "bg-yellow-300/20 text-yellow-300 ring-1 ring-yellow-300/40",
-  legendary: "bg-amber-400/15 text-amber-400 ring-1 ring-amber-400/30",
-  rare: "bg-blue-400/15 text-blue-400 ring-1 ring-blue-400/30",
-  uncommon: "bg-green-400/15 text-green-400 ring-1 ring-green-400/30",
-  common: "",
-};
 
 type Filter = "all" | "water" | "reserve";
 const FILTER_LABELS: Record<Filter, string> = {
@@ -105,6 +92,8 @@ export function DuckShop() {
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<Sort>("default");
   const [pendingRelease, setPendingRelease] = useState<SavedDuck | null>(null);
+  const [grouped, setGrouped] = useState(false);
+  const [openStacks, setOpenStacks] = useState<string[]>([]);
 
   // keep a ref so the event handlers always see the current dropped duck
   const droppedRef = useRef<DroppedDuck | null>(null);
@@ -123,7 +112,7 @@ export function DuckShop() {
     const down = el.scrollTop + el.clientHeight < el.scrollHeight - 4;
     setScroll((s) => (s.up === up && s.down === down ? s : { up, down }));
   }
-  useEffect(updateScroll, [saved, open, query, filter]);
+  useEffect(updateScroll, [saved, open, query, filter, grouped, openStacks]);
 
   useEffect(() => {
     (async () => {
@@ -231,6 +220,14 @@ export function DuckShop() {
           : `Canardex : ${disc.discoveredSpecies}/${disc.totalSpecies} espèces`,
         duration: 6000,
       });
+    } else if (disc.newColor && disc.familyComplete) {
+      const reward = familyRewardAt(disc.species.rarity, disc.familiesComplete);
+      toast.success(`Famille complète : ${disc.species.name} !`, {
+        description: reward
+          ? `${reward.name} t'attend dans le pokédex.`
+          : `${disc.familiesComplete} familles complètes dans cette rareté`,
+        duration: 6000,
+      });
     } else if (disc.newColor) {
       toast.info(`Nouvelle couleur pour ${disc.species.name}`, {
         description: `${disc.colorCount}/${disc.species.maxColors} couleurs collectionnées`,
@@ -291,6 +288,30 @@ export function DuckShop() {
       if (sort === "alpha") return a.name.localeCompare(b.name, "fr");
       return 0;
     });
+
+  const stacks = grouped ? stackDucks(visible) : visible.map((d) => ({ key: d.id, ducks: [d] }));
+
+  function toggleStack(key: string) {
+    setOpenStacks((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  }
+
+  function rowProps(d: SavedDuck) {
+    return {
+      duck: d,
+      editing: editingId === d.id,
+      editName,
+      onEditNameChange: setEditName,
+      onStartEdit: () => {
+        setEditingId(d.id);
+        setEditName(d.name);
+      },
+      onCommitRename: () => commitRename(d.id),
+      onCancelEdit: () => setEditingId(null),
+      onPutInWater: () => putInWater(d),
+      onPutInReserve: () => putInReserve(d),
+      onRelease: () => setPendingRelease(d),
+    };
+  }
 
   return (
     <AnimatePresence>
@@ -361,6 +382,13 @@ export function DuckShop() {
                         <DropdownMenuRadioItem value="reserve">En réserve</DropdownMenuRadioItem>
                       </DropdownMenuRadioGroup>
                       <DropdownMenuSeparator />
+                      <DropdownMenuCheckboxItem
+                        checked={grouped}
+                        onCheckedChange={(v) => setGrouped(Boolean(v))}
+                      >
+                        Empiler les doublons
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuSeparator />
                       <DropdownMenuRadioGroup
                         value={sort}
                         onValueChange={(v) => setSort(v as Sort)}
@@ -395,89 +423,20 @@ export function DuckShop() {
                     WebkitMaskImage: `linear-gradient(to bottom, ${scroll.up ? "transparent" : "black"}, black 24px, black calc(100% - 24px), ${scroll.down ? "transparent" : "black"})`,
                   }}
                 >
-                  {visible.map((d) => {
-                    const rarity = getRarity(d.variant);
+                  {stacks.map((stack) => {
+                    const [lead, ...rest] = stack.ducks;
+                    const expanded = openStacks.includes(stack.key);
                     return (
-                      <li
-                        key={d.id}
-                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/60"
-                      >
-                        <span className={d.reserved ? "opacity-40" : ""}>
-                          <DuckPreview variant={d.variant} size={40} />
-                        </span>
-                        {editingId === d.id ? (
-                          <Input
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            onBlur={() => commitRename(d.id)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") commitRename(d.id);
-                              if (e.key === "Escape") setEditingId(null);
-                            }}
-                            maxLength={40}
-                            autoFocus
-                            className="h-7 flex-1"
-                          />
-                        ) : (
-                          <span className="flex flex-1 items-center gap-1.5 truncate text-sm">
-                            <span
-                              className={`truncate ${d.reserved ? "text-muted-foreground" : ""}`}
-                            >
-                              {d.name}
-                            </span>
-                            {rarity !== "common" && (
-                              <span
-                                className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${RARITY_BADGE[rarity]}`}
-                              >
-                                {RARITY_LABEL[rarity]}
-                              </span>
-                            )}
-                            {d.variant.shiny && (
-                              <span className="shrink-0 text-[11px] text-fuchsia-400" title="Shiny">
-                                ✦
-                              </span>
-                            )}
-                            {d.reserved && (
-                              <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                                réserve
-                              </span>
-                            )}
-                          </span>
-                        )}
-                        {editingId === d.id ? (
-                          <IconAction label="Valider le nom" onClick={() => commitRename(d.id)}>
-                            <Check className="h-3 w-3" />
-                          </IconAction>
-                        ) : (
-                          <div className="flex shrink-0 items-center [&_button]:cursor-pointer">
-                            {d.reserved ? (
-                              <IconAction label="Remettre a l'eau" onClick={() => putInWater(d)}>
-                                <Waves className="h-3 w-3" />
-                              </IconAction>
-                            ) : (
-                              <IconAction label="Mettre en reserve" onClick={() => putInReserve(d)}>
-                                <Archive className="h-3 w-3" />
-                              </IconAction>
-                            )}
-                            <IconAction
-                              label="Renommer"
-                              onClick={() => {
-                                setEditingId(d.id);
-                                setEditName(d.name);
-                              }}
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </IconAction>
-                            <IconAction
-                              label="Relacher ce canard"
-                              className="text-muted-foreground hover:text-foreground"
-                              onClick={() => setPendingRelease(d)}
-                            >
-                              <DoorOpen className="h-3 w-3" />
-                            </IconAction>
-                          </div>
-                        )}
-                      </li>
+                      <Fragment key={stack.key}>
+                        <DuckShopRow
+                          {...rowProps(lead)}
+                          stackCount={stack.ducks.length}
+                          stackOpen={expanded}
+                          onToggleStack={() => toggleStack(stack.key)}
+                        />
+                        {expanded &&
+                          rest.map((d) => <DuckShopRow key={d.id} {...rowProps(d)} nested />)}
+                      </Fragment>
                     );
                   })}
                 </ul>
@@ -512,33 +471,5 @@ export function DuckShop() {
         </AlertDialogContent>
       </AlertDialog>
     </AnimatePresence>
-  );
-}
-
-function IconAction({
-  label,
-  onClick,
-  className,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  className?: string;
-  children: ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`h-6 w-6 shrink-0${className ? ` ${className}` : ""}`}
-          onClick={onClick}
-        >
-          {children}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
   );
 }

@@ -43,6 +43,17 @@ import {
   type ParadeState,
   paradeSlot,
 } from "./parade";
+import {
+  createChameleonSkinner,
+  drawChameleonHalo,
+  drawGodlyAura,
+  drawGodlyBolts,
+  drawNovaAura,
+  drawNovaOrbit,
+  drawPeacockFan,
+  drawPhoenixEmbers,
+  drawPhoenixWings,
+} from "./duckRewardEffects";
 import { drawDex, overDex } from "./dexIcon";
 import { dexStatusOf, syncDexWithCollection } from "@/lib/duckDex";
 import {
@@ -121,14 +132,16 @@ function leaving(d: Duck) {
   return !!(d.draining || d.storing || d.exiting || d.sucked);
 }
 
-// Push hierarchy: the king and the supernova stand their ground against
-// ordinary ducks and cannonballs; only Zeus the duck god can shove them,
-// and Zeus himself yields to nothing.
+// Push hierarchy: the king, the supernova and the phoenix stand their ground
+// against ordinary ducks and cannonballs; only Zeus the duck god can shove
+// them, and Zeus himself yields to nothing.
 function pushRank(d: Duck): number {
   if (d.effect === "godly") return 2;
-  if (d.effect === "royal" || d.effect === "nova") return 1;
+  if (d.effect === "royal" || d.effect === "nova" || d.effect === "phoenix") return 1;
   return 0;
 }
+
+const chameleonSkin = createChameleonSkinner();
 
 // The king and the god duck hold the centre of the parade.
 function holdsParadeCentre(d: Duck) {
@@ -1088,18 +1101,18 @@ export function PixelPool({
         }
       }
 
-      // supernova (dex completion reward): pulsing aura cycling through hues
-      if (d.effect === "nova") {
-        const hue = (t * 0.05) % 360;
-        const pulse = 0.4 + Math.sin(t * 0.005 + d.phase) * 0.12;
-        const gr = ctx.createRadialGradient(d.x, d.y + bob, dw * 0.1, d.x, d.y + bob, dw);
-        gr.addColorStop(0, `hsla(${hue},95%,70%,${pulse})`);
-        gr.addColorStop(1, `hsla(${hue},95%,70%,0)`);
-        ctx.fillStyle = gr;
-        ctx.beginPath();
-        ctx.arc(d.x, d.y + bob, dw, 0, Math.PI * 2);
-        ctx.fill();
+      // récompenses de couleurs: halo du Caméléon, roue du Paon, ailes du
+      // Phénix — mêmes routines que les vignettes du Canardex
+      if (d.effect === "chameleon" || d.effect === "peacock" || d.effect === "phoenix") {
+        const frame = { ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase };
+        if (d.effect === "chameleon") drawChameleonHalo(frame);
+        else if (d.effect === "peacock") drawPeacockFan(frame);
+        else drawPhoenixWings(frame);
       }
+
+      // supernova (dex completion reward): pulsing aura cycling through hues
+      if (d.effect === "nova")
+        drawNovaAura({ ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase });
 
       // glowing aura behind the duck — cyan for glow (blood red for the
       // vampire's body), amber for golden, cold blue for ghost
@@ -1163,56 +1176,8 @@ export function PixelPool({
 
       // godly (Zeus): storm-cloud ring circling the god, a white-gold sunburst
       // outshining the king's, and a divine halo
-      if (d.effect === "godly") {
-        const cx = d.x;
-        const cy = d.y + bob;
-
-        // rotating sunburst: more rays, longer and whiter than the royal shine
-        const rot = -t * 0.0003;
-        const rays = 16;
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(rot);
-        for (let i = 0; i < rays; i++) {
-          const a = (i / rays) * Math.PI * 2;
-          const long = i % 2 === 0;
-          const len = (long ? dw * 1.45 : dw * 1.0) * (0.95 + Math.sin(t * 0.004 + i) * 0.05);
-          const grad = ctx.createLinearGradient(0, 0, Math.cos(a) * len, Math.sin(a) * len);
-          grad.addColorStop(0, "rgba(255,250,210,0.6)");
-          grad.addColorStop(1, "rgba(255,250,210,0)");
-          ctx.strokeStyle = grad;
-          ctx.lineWidth = long ? 3.5 : 1.8;
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len);
-          ctx.stroke();
-        }
-        ctx.restore();
-
-        // ring of slate storm clouds drifting around the god
-        for (let i = 0; i < 6; i++) {
-          const a = t * 0.0005 + i * (Math.PI / 3);
-          const sx = cx + Math.cos(a) * dw * 0.92;
-          const sy = cy + Math.sin(a) * dh * 0.62;
-          const puff = 0.9 + Math.sin(t * 0.002 + i * 2.3) * 0.12;
-          ctx.fillStyle = "rgba(70,82,104,0.34)";
-          ctx.beginPath();
-          ctx.ellipse(sx, sy, 13 * puff, 6.5 * puff, 0, 0, Math.PI * 2);
-          ctx.ellipse(sx - 9 * puff, sy + 2, 8 * puff, 4.6 * puff, 0, 0, Math.PI * 2);
-          ctx.ellipse(sx + 9 * puff, sy + 2, 8 * puff, 4.6 * puff, 0, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        // strong pulsing white-gold halo
-        const pulse = 0.45 + Math.sin(t * 0.005 + d.phase) * 0.15;
-        const gr = ctx.createRadialGradient(cx, cy, dw * 0.1, cx, cy, dw * 1.1);
-        gr.addColorStop(0, `rgba(255,245,190,${pulse})`);
-        gr.addColorStop(1, "rgba(255,245,190,0)");
-        ctx.fillStyle = gr;
-        ctx.beginPath();
-        ctx.arc(cx, cy, dw * 1.1, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      if (d.effect === "godly")
+        drawGodlyAura({ ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase });
 
       // duck
       ctx.save();
@@ -1221,7 +1186,9 @@ export function PixelPool({
       ctx.rotate(tilt);
       ctx.scale(flip, 1);
       ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(d.sprite, -dw / 2, -dh / 2, dw, dh);
+      const skin =
+        d.effect === "chameleon" ? chameleonSkin(d.sprite, dw, dh, t, d.phase) : d.sprite;
+      ctx.drawImage(skin, -dw / 2, -dh / 2, dw, dh);
       ctx.restore();
 
       // royal sparkles: golden twinkles orbiting the king + a travelling glint
@@ -1247,87 +1214,18 @@ export function PixelPool({
         ctx.fillRect(gx - 0.8, gy - 5, 1.6, 10);
       }
 
-      // godly foreground: lightning bolts hurled down around the god — jagged,
-      // deterministic (hashed ticks like the electric arcs), with a flash tip
-      if (d.effect === "godly") {
-        const tick = (t * 0.004 + d.phase * 10) | 0;
-        for (let i = 0; i < 3; i++) {
-          const h0 = Math.sin(tick * 113.9 + i * 71.3);
-          if (h0 < 0.35) continue; // bolts strike in bursts, not constantly
-          const h1 = Math.sin(tick * 271.7 + i * 53.9);
-          const bx = d.x + h1 * dw * 0.85;
-          const top = d.y + bob - dh * 1.05;
-          const bottom = d.y + bob + dh * 0.25;
-          const seg = (bottom - top) / 4;
-          ctx.strokeStyle = `rgba(255,255,220,${0.55 + h0 * 0.4})`;
-          ctx.lineWidth = 2.2;
-          ctx.beginPath();
-          ctx.moveTo(bx, top);
-          let px = bx;
-          for (let k = 1; k <= 4; k++) {
-            px += Math.sin(tick * 197.3 + i * 31.7 + k * 87.1) * 9;
-            ctx.lineTo(px, top + seg * k);
-          }
-          ctx.stroke();
-          // flash at the impact point
-          const fg = ctx.createRadialGradient(px, bottom, 0, px, bottom, 10);
-          fg.addColorStop(0, `rgba(255,255,240,${0.6 * h0})`);
-          fg.addColorStop(1, "rgba(255,255,240,0)");
-          ctx.fillStyle = fg;
-          ctx.beginPath();
-          ctx.arc(px, bottom, 10, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        // orbiting white-gold twinkles
-        for (let i = 0; i < 10; i++) {
-          const a = t * 0.0016 + i * ((Math.PI * 2) / 10) + d.phase;
-          const tw = (Math.sin(t * 0.007 + i * 1.9) + 1) / 2;
-          const sx = d.x + Math.cos(a) * dw * 0.6;
-          const sy = d.y + bob + Math.sin(a) * dh * 0.52;
-          const r = 1.4 + tw * 3.2;
-          ctx.fillStyle = `rgba(255,250,200,${0.35 + tw * 0.6})`;
-          ctx.fillRect(sx - r, sy - 0.7, r * 2, 1.4);
-          ctx.fillRect(sx - 0.7, sy - r, 1.4, r * 2);
-        }
-      }
+      // braises du Phénix, devant lui
+      if (d.effect === "phoenix")
+        drawPhoenixEmbers({ ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase });
+
+      // godly foreground: lightning bolts hurled down around the god + orbiting
+      // white-gold twinkles
+      if (d.effect === "godly")
+        drawGodlyBolts({ ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase });
 
       // supernova foreground: a tilted prismatic orbit ring + comets with trails
-      if (d.effect === "nova") {
-        const hue = (t * 0.05) % 360;
-        const shards = 14;
-        for (let i = 0; i < shards; i++) {
-          const a = t * 0.0012 + (i / shards) * Math.PI * 2;
-          const sx = d.x + Math.cos(a) * dw * 0.72;
-          const sy = d.y + bob + Math.sin(a) * dh * 0.32;
-          const tw = (Math.sin(t * 0.006 + i * 1.3) + 1) / 2;
-          const r = 1.4 + tw * 2.2;
-          ctx.fillStyle = `hsla(${(hue + i * 26) % 360},100%,72%,${0.35 + tw * 0.55})`;
-          ctx.fillRect(sx - r, sy - 0.7, r * 2, 1.4);
-          ctx.fillRect(sx - 0.7, sy - r, 1.4, r * 2);
-        }
-        for (let i = 0; i < 3; i++) {
-          const a = -t * (0.0018 + i * 0.0004) + i * ((Math.PI * 2) / 3) + d.phase;
-          for (let k = 1; k <= 4; k++) {
-            const ta = a + k * 0.09;
-            const txx = d.x + Math.cos(ta) * dw * 0.95;
-            const tyy = d.y + bob + Math.sin(ta) * dh * 0.8;
-            ctx.fillStyle = `hsla(${(hue + i * 120) % 360},100%,75%,${0.5 * (1 - k / 5)})`;
-            ctx.beginPath();
-            ctx.arc(txx, tyy, 2.2 * (1 - k / 6), 0, Math.PI * 2);
-            ctx.fill();
-          }
-          ctx.fillStyle = "#ffffff";
-          ctx.beginPath();
-          ctx.arc(
-            d.x + Math.cos(a) * dw * 0.95,
-            d.y + bob + Math.sin(a) * dh * 0.8,
-            2.4,
-            0,
-            Math.PI * 2,
-          );
-          ctx.fill();
-        }
-      }
+      if (d.effect === "nova")
+        drawNovaOrbit({ ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase });
 
       // sparkles orbiting: gold for galaxy/magic, rainbow-cycling for prismatic (rainbow duck)
       if (d.effect === "sparkle" || d.effect === "prismatic") {

@@ -43,6 +43,8 @@ interface DiscoverPageProps {
   initialLikes?: LikedItem[];
   /** Lance une recherche brute sur un tracker (C411 / Nyaa) via la page principale */
   onSearchTracker: (query: string, source: "c411" | "nyaa") => void;
+  /** Ouvre directement la fiche bibliothèque d'un titre (action "Voir" des toasts) */
+  onOpenLibraryItem: (item: TmdbItem, infoHash: string) => void;
 }
 
 export function DiscoverPage({
@@ -58,6 +60,7 @@ export function DiscoverPage({
   initialAllDebridKey,
   initialLikes,
   onSearchTracker,
+  onOpenLibraryItem,
 }: DiscoverPageProps) {
   const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(
     initialTmdbKey !== undefined ? initialTmdbKey : undefined,
@@ -110,7 +113,7 @@ export function DiscoverPage({
   const { sendingHash, libraryHash, debridModal, setDebridModal, sendToDebrid } = useSendToDebrid({
     getC411Key: () => c411KeyRef.current,
     getAllDebridKey: () => allDebridKeyRef.current,
-    onOpenLibrary: () => onNavigate("library"),
+    onOpenLibrary: onOpenLibraryItem,
     onLibraryChange: () => setOwnedKeys(ownedTmdbKeys(getCachedLibrary() ?? [])),
   });
 
