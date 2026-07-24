@@ -47,7 +47,10 @@ export type Effect =
   | "fire"
   | "frost"
   | "nova"
-  | "godly";
+  | "godly"
+  | "chameleon"
+  | "peacock"
+  | "phoenix";
 
 export interface Variant {
   body: string;

@@ -177,6 +177,7 @@ const LEGENDARY_EFFECTS = new Set<Effect>([
   "ooze",
   "electric",
   "fire",
+  "chameleon",
 ]);
 const LEGENDARY_PATTERNS = new Set<Pattern>([
   "rainbow",
@@ -211,7 +212,13 @@ const UNCOMMON_ACC_SET = new Set<Accessory>([
 
 export function getRarity(v: Variant): Rarity {
   if (v.effect === "godly") return "god"; // Zeus sits alone above the mythics
-  if (v.effect === "royal" || v.effect === "nova") return "mythic";
+  if (
+    v.effect === "royal" ||
+    v.effect === "nova" ||
+    v.effect === "peacock" ||
+    v.effect === "phoenix"
+  )
+    return "mythic";
   if (
     (v.pattern && LEGENDARY_PATTERNS.has(v.pattern)) ||
     (v.effect && LEGENDARY_EFFECTS.has(v.effect))
