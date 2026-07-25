@@ -327,9 +327,7 @@ export function DiscoverPage({
                 ? "Pour vous"
                 : mode === "search"
                   ? `Résultats pour "${searchedQuery}"`
-                  : mediaType === "animation"
-                    ? "Animations les mieux notées"
-                    : `${mediaType === "movie" ? "Films" : "Séries"} - ${FEED_LABELS[feed]}`}
+                  : `${mediaType === "movie" ? "Films" : mediaType === "tv" ? "Séries" : "Animations"} - ${FEED_LABELS[feed]}`}
           </h2>
 
           {feedMode && moviesError && (

@@ -76,25 +76,26 @@ export function DiscoverTabs({
         </div>
       </div>
 
-      {(mediaType === "movie" || mediaType === "tv") && mode === "top" && (
-        <div className="mt-6 flex justify-center">
-          <div className="flex flex-wrap justify-center gap-1.5">
-            {FEEDS.map((f) => (
-              <button
-                key={f}
-                onClick={() => onSwitchFeed(f)}
-                className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium ring-1 transition-colors ${
-                  feed === f
-                    ? "bg-indigo-600 text-white ring-indigo-500"
-                    : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                }`}
-              >
-                {FEED_LABELS[f]}
-              </button>
-            ))}
+      {(mediaType === "movie" || mediaType === "tv" || mediaType === "animation") &&
+        mode === "top" && (
+          <div className="mt-6 flex justify-center">
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {FEEDS.map((f) => (
+                <button
+                  key={f}
+                  onClick={() => onSwitchFeed(f)}
+                  className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium ring-1 transition-colors ${
+                    feed === f
+                      ? "bg-indigo-600 text-white ring-indigo-500"
+                      : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
+                  }`}
+                >
+                  {FEED_LABELS[f]}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </motion.div>
   );
 }

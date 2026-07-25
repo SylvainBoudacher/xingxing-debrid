@@ -68,8 +68,8 @@ export const tmdbKeys = {
   search: (mt: TmdbMediaType, query: string, page: number) =>
     ["tmdb", "search", mt, query, page] as const,
   searchMulti: (query: string, page: number) => ["tmdb", "search", "multi", query, page] as const,
-  discoverAnimation: (mt: TmdbMediaType, page: number) =>
-    ["tmdb", "discover", "animation", mt, page] as const,
+  discoverAnimation: (f: TmdbFeed, mt: TmdbMediaType, page: number) =>
+    ["tmdb", "discover", "animation", f, mt, page] as const,
   find: (imdbId: string) => ["tmdb", "find", imdbId.toLowerCase()] as const,
   tvDetail: (id: number) => ["tmdb", "tv", id] as const,
   detail: (mt: TmdbMediaType, id: number) => ["tmdb", "detail", mt, id] as const,
@@ -121,9 +121,29 @@ export function searchMulti(query: string, page: number, apiKey: string) {
   );
 }
 
-export function discoverAnimation(mt: TmdbMediaType, page: number, apiKey: string) {
+// Les sources de l'onglet Animations passent toutes par /discover : seul le tri
+// change. "trending" n'a pas d'équivalent /discover, on l'approxime par la
+// popularité restreinte aux sorties des 12 derniers mois.
+function animationSort(f: TmdbFeed, mt: TmdbMediaType): string {
+  const dateField = mt === "movie" ? "primary_release_date" : "first_air_date";
+  const today = new Date().toISOString().slice(0, 10);
+  switch (f) {
+    case "top_rated":
+      return `sort_by=vote_average.desc&vote_count.gte=${mt === "movie" ? 300 : 150}`;
+    case "popular":
+      return "sort_by=popularity.desc";
+    case "trending": {
+      const since = new Date(Date.now() - 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      return `sort_by=popularity.desc&${dateField}.gte=${since}&${dateField}.lte=${today}`;
+    }
+    case "now_playing":
+      return `sort_by=${dateField}.desc&${dateField}.lte=${today}&vote_count.gte=10`;
+  }
+}
+
+export function discoverAnimation(f: TmdbFeed, mt: TmdbMediaType, page: number, apiKey: string) {
   return get<TmdbListResponse>(
-    `${BASE}/discover/${mt}?api_key=${apiKey}&language=fr-FR&with_genres=${ANIMATION_GENRE_ID}&sort_by=vote_average.desc&vote_count.gte=${mt === "movie" ? 300 : 150}&page=${page}`,
+    `${BASE}/discover/${mt}?api_key=${apiKey}&language=fr-FR&with_genres=${ANIMATION_GENRE_ID}&${animationSort(f, mt)}&page=${page}`,
   );
 }
 

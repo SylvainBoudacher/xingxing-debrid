@@ -212,8 +212,8 @@ export function useAppInit(): AppInitResult {
         ),
         ...MEDIA.map((mt) =>
           queryClient.prefetchQuery({
-            queryKey: tmdbKeys.discoverAnimation(mt, page),
-            queryFn: () => tmdbDiscoverAnimation(mt, page, key),
+            queryKey: tmdbKeys.discoverAnimation("top_rated", mt, page),
+            queryFn: () => tmdbDiscoverAnimation("top_rated", mt, page, key),
             staleTime: TMDB_STALE_MS,
           }),
         ),

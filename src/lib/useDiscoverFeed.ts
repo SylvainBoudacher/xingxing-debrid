@@ -48,6 +48,20 @@ const LIVE_SEARCH_DEBOUNCE_MS = 300;
 
 const IMDB_ID_RE = /^tt\d{5,10}$/i;
 
+// L'onglet Animations fusionne deux listes TMDB (films + séries). Sur "Mieux
+// notés" la note donne un ordre global cohérent ; sur les autres sources l'ordre
+// TMDB de chaque liste fait foi, on les entrelace pour ne pas afficher tous les
+// films puis toutes les séries.
+function mergeAnimation(movies: TmdbItem[], tvs: TmdbItem[], f: TmdbFeed): TmdbItem[] {
+  if (f === "top_rated") return [...movies, ...tvs].sort((a, b) => b.voteAverage - a.voteAverage);
+  const out: TmdbItem[] = [];
+  for (let i = 0; i < Math.max(movies.length, tvs.length); i++) {
+    if (movies[i]) out.push(movies[i]);
+    if (tvs[i]) out.push(tvs[i]);
+  }
+  return out;
+}
+
 // Lecture synchrone du cache TanStack pour une source "top" (préchauffée au
 // démarrage par useAppInit). Renvoie null si froid → l'appelant retombe sur un
 // fetch réseau. Évite le flash de spinner et le re-render asynchrone au switch.
@@ -57,15 +71,16 @@ function readTopFromCache(
 ): { items: TmdbItem[]; totalPages: number } | null {
   if (type === "animation") {
     const movies = queryClient.getQueryData<TmdbListResponse>(
-      tmdbKeys.discoverAnimation("movie", 1),
+      tmdbKeys.discoverAnimation(f, "movie", 1),
     );
-    const tvs = queryClient.getQueryData<TmdbListResponse>(tmdbKeys.discoverAnimation("tv", 1));
+    const tvs = queryClient.getQueryData<TmdbListResponse>(tmdbKeys.discoverAnimation(f, "tv", 1));
     if (!movies || !tvs) return null;
     return {
-      items: [
-        ...movies.results.map((r) => mapTmdb(r, "movie")),
-        ...tvs.results.map((r) => mapTmdb(r, "tv")),
-      ].sort((a, b) => b.voteAverage - a.voteAverage),
+      items: mergeAnimation(
+        movies.results.map((r) => mapTmdb(r, "movie")),
+        tvs.results.map((r) => mapTmdb(r, "tv")),
+        f,
+      ),
       totalPages: Math.max(movies.total_pages, tvs.total_pages),
     };
   }
@@ -223,16 +238,17 @@ export function useDiscoverFeed(tmdbKey: string | null | undefined, initialQuery
         const fetchFor = (mt: MediaType) =>
           m === "search"
             ? cachedTmdb(tmdbKeys.search(mt, q, page), () => tmdbSearch(mt, q, page, key))
-            : cachedTmdb(tmdbKeys.discoverAnimation(mt, page), () =>
-                tmdbDiscoverAnimation(mt, page, key),
+            : cachedTmdb(tmdbKeys.discoverAnimation(f, mt, page), () =>
+                tmdbDiscoverAnimation(f, mt, page, key),
               );
         const [movies, tvs] = await Promise.all([fetchFor("movie"), fetchFor("tv")]);
         const animOnly = (rs: TmdbRawResult[]) =>
           m === "search" ? rs.filter((r) => r.genre_ids?.includes(ANIMATION_GENRE_ID)) : rs;
-        mapped = [
-          ...animOnly(movies.results).map((r) => mapTmdb(r, "movie")),
-          ...animOnly(tvs.results).map((r) => mapTmdb(r, "tv")),
-        ].sort((a, b) => b.voteAverage - a.voteAverage);
+        mapped = mergeAnimation(
+          animOnly(movies.results).map((r) => mapTmdb(r, "movie")),
+          animOnly(tvs.results).map((r) => mapTmdb(r, "tv")),
+          m === "search" ? "top_rated" : f,
+        );
         totalPages = Math.max(movies.total_pages, tvs.total_pages);
       } else {
         // "all" et "animation" sont traités plus haut : ici type vaut movie|tv.
@@ -309,14 +325,13 @@ export function useDiscoverFeed(tmdbKey: string | null | undefined, initialQuery
     showTop(type, feed);
   }
 
-  // Change la source (Tendances, Populaires…) — onglets Films / Séries uniquement.
+  // Change la source (Tendances, Populaires…) — onglets Films / Séries / Animations.
   function switchFeed(f: TmdbFeed) {
     if (
       f === feed ||
       !tmdbKey ||
       mediaType === "likes" ||
       mediaType === "recos" ||
-      mediaType === "animation" ||
       mediaType === "all"
     )
       return;
