@@ -35,6 +35,7 @@ import {
   type SavedDuck,
 } from "@/lib/savedDucks";
 import { recordDiscovery } from "@/lib/duckDex";
+import { refreshClaimableRewards } from "@/lib/duckRewardStatus";
 import { familyRewardAt } from "@/lib/duckRewards";
 import { getRarity, type Rarity } from "./duckRandom";
 import { SPECIES_BY_ID, speciesOf } from "./duckSpecies";
@@ -209,6 +210,7 @@ export function DuckShop() {
     };
     setSaved(await upsertSavedDuck(entry));
     const disc = await recordDiscovery(entry.variant);
+    await refreshClaimableRewards();
     dropped.markSaved(finalName);
     setDropped({ ...dropped, saved: true, name: finalName });
     toast.success(`${finalName} a rejoint ta collection`);

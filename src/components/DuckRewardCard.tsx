@@ -10,19 +10,22 @@ export function DuckRewardCard({
   progress,
   claimed,
   onClaim,
+  highlighted,
 }: {
   reward: DuckReward;
   progress: DexProgress;
   claimed: boolean;
   onClaim: (reward: DuckReward) => void;
+  highlighted?: boolean;
 }) {
   const { done, total } = rewardProgress(reward, progress);
   const unlocked = done >= total;
 
   return (
     <div
+      id={`reward-${reward.id}`}
       title={claimed ? reward.name : reward.lockedHint}
-      className={`relative flex flex-col items-center gap-1 rounded-xl bg-white/70 dark:bg-zinc-800/60 px-2 py-3 ring-1 ${claimed ? "ring-yellow-300/50" : unlocked ? "ring-amber-400/70" : "ring-black/5 dark:ring-white/5"}`}
+      className={`relative flex flex-col items-center gap-1 rounded-xl bg-white/70 dark:bg-zinc-800/60 px-2 py-3 ${highlighted ? "animate-pulse ring-2 ring-amber-400" : `ring-1 ${claimed ? "ring-yellow-300/50" : unlocked ? "ring-amber-400/70" : "ring-black/5 dark:ring-white/5"}`}`}
     >
       {claimed ? (
         <DuckRewardPreview reward={reward} size={52} />

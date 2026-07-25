@@ -56,6 +56,7 @@ import {
 } from "./duckRewardEffects";
 import { drawDex, overDex } from "./dexIcon";
 import { dexStatusOf, syncDexWithCollection } from "@/lib/duckDex";
+import { claimableRewards, refreshClaimableRewards } from "@/lib/duckRewardStatus";
 import {
   drawSuckGuide,
   drawSuckPulses,
@@ -1659,7 +1660,7 @@ export function PixelPool({
       }
       drawVacuum(ctx, vacuum, now, w, h, dark, !dragging && overVacuum(pointerX, pointerY, w, h));
       drawParade(ctx, parade, now, !dragging && overParade(pointerX, pointerY, h), h, dark);
-      drawDex(ctx, now, !dragging && overDex(pointerX, pointerY, h), h, dark);
+      drawDex(ctx, now, !dragging && overDex(pointerX, pointerY, h), h, dark, claimableRewards());
 
       // remove ducks whose exit animation (drain / reserve / cull) has finished
       for (let i = pool.length - 1; i >= 0; i--) {
@@ -2050,7 +2051,9 @@ export function PixelPool({
 
     resize();
     ensureSpawning();
-    syncDexWithCollection().catch(() => {}); // warm the dex cache for hover badges
+    syncDexWithCollection() // warm the dex cache for hover badges
+      .then(() => refreshClaimableRewards()) // pastille "recompense a reclamer"
+      .catch(() => {});
     registerInjector(spawnSavedDuck); // flush any saved ducks queued before mount
     registerRemover(removePoolDuck);
     registerReleaser(unmarkSavedDuck);

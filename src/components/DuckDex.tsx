@@ -20,10 +20,14 @@ import {
   COLLECTION_REWARDS,
   COLOR_REWARDS,
   REWARDS,
+  rewardProgress,
   type DexProgress,
   type DuckReward,
 } from "@/lib/duckRewards";
+import { refreshClaimableRewards } from "@/lib/duckRewardStatus";
+import { smoothScrollTo } from "@/lib/smoothScroll";
 import { DuckDexDevMenu } from "./DuckDexDevMenu";
+import { DuckRewardBanner } from "./DuckRewardBanner";
 import { DuckRewardSection } from "./DuckRewardSection";
 import { upsertSavedDuck } from "@/lib/savedDucks";
 import type { Rarity } from "./duckRandom";
@@ -68,6 +72,8 @@ export function DuckDex() {
   const [shiny, setShiny] = useState<ShinyEntries>([]);
   const [claimed, setClaimed] = useState<Record<string, boolean>>({});
   const [shinyShown, setShinyShown] = useState<Set<string>>(new Set());
+  const [highlight, setHighlight] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const openRef = useRef(false);
   useEffect(() => {
@@ -82,6 +88,7 @@ export function DuckDex() {
     setEntries(synced);
     setShiny(await getShinyDex());
     setClaimed(Object.fromEntries(flags));
+    await refreshClaimableRewards();
     setOpen(true);
   }
 
@@ -108,6 +115,7 @@ export function DuckDex() {
     injectDuck({ id: duck.id, name: duck.name, variant: duck.variant, scale: duck.scale });
     await markClaimed(reward.storeKey);
     setClaimed((prev) => ({ ...prev, [reward.id]: true }));
+    await refreshClaimableRewards();
     toast.success(reward.claimToast);
   }
 
@@ -122,14 +130,17 @@ export function DuckDex() {
 
   async function devComplete() {
     setEntries(await debugCompleteDex());
+    await refreshClaimableRewards();
   }
 
   async function devCompleteFamilies(rarity: Rarity, count: number) {
     setEntries(await debugCompleteFamilies(rarity, count));
+    await refreshClaimableRewards();
   }
 
   async function devCompleteShiny() {
     setShiny(await debugCompleteShinyDex());
+    await refreshClaimableRewards();
   }
 
   async function devReset() {
@@ -137,6 +148,7 @@ export function DuckDex() {
     setEntries({});
     setShiny([]);
     setClaimed({});
+    await refreshClaimableRewards();
   }
 
   const discovered = SPECIES.filter((s) => (entries[s.id]?.length ?? 0) > 0).length;
@@ -147,6 +159,25 @@ export function DuckDex() {
     ...familyProgress(entries),
   };
   const complete = discovered === SPECIES.length;
+  const pending = REWARDS.filter((r) => {
+    if (claimed[r.id]) return false;
+    const { done, total } = rewardProgress(r, progress);
+    return done >= total;
+  });
+
+  function seeReward(id: string) {
+    const list = listRef.current;
+    const card = document.getElementById(`reward-${id}`);
+    if (list && card) {
+      // positions mesurees plutot que scrollIntoView: dans un conteneur
+      // transforme il ne bouge pas la liste.
+      const delta = card.getBoundingClientRect().top - list.getBoundingClientRect().top;
+      const top = list.scrollTop + delta - (list.clientHeight - card.clientHeight) / 2;
+      smoothScrollTo(list, top);
+    }
+    setHighlight(id);
+    window.setTimeout(() => setHighlight((cur) => (cur === id ? null : cur)), 2000);
+  }
 
   return (
     <AnimatePresence>
@@ -214,9 +245,12 @@ export function DuckDex() {
                   />
                 </div>
               )}
+              {pending.length > 0 && (
+                <DuckRewardBanner count={pending.length} onSee={() => seeReward(pending[0].id)} />
+              )}
             </div>
 
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div ref={listRef} className="flex-1 overflow-y-auto px-5 py-4">
               {SECTIONS.map(({ rarity, label }, sectionIndex) => (
                 <motion.div
                   key={rarity}
@@ -297,6 +331,7 @@ export function DuckDex() {
                 claimed={claimed}
                 onClaim={claim}
                 delay={0.4}
+                highlightId={highlight}
               />
 
               <DuckRewardSection
@@ -307,6 +342,7 @@ export function DuckDex() {
                 claimed={claimed}
                 onClaim={claim}
                 delay={0.46}
+                highlightId={highlight}
               />
             </div>
           </motion.div>

@@ -12,6 +12,7 @@ export function DuckRewardSection({
   claimed,
   onClaim,
   delay,
+  highlightId,
 }: {
   title: string;
   hint: string;
@@ -20,6 +21,7 @@ export function DuckRewardSection({
   claimed: Record<string, boolean>;
   onClaim: (reward: DuckReward) => void;
   delay: number;
+  highlightId?: string | null;
 }) {
   return (
     <motion.div
@@ -38,6 +40,7 @@ export function DuckRewardSection({
             progress={progress}
             claimed={!!claimed[r.id]}
             onClaim={onClaim}
+            highlighted={highlightId === r.id}
           />
         ))}
       </div>

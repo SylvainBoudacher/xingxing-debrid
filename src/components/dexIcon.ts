@@ -18,6 +18,7 @@ export function drawDex(
   hover: boolean,
   h: number,
   dark: boolean,
+  claimable = 0,
 ) {
   const b = dexBox(h);
   const cx = b.x + b.w / 2;
@@ -90,5 +91,43 @@ export function drawDex(
   ctx.closePath();
   ctx.fill();
 
+  if (claimable > 0) drawClaimBadge(ctx, now, b, claimable);
+
   ctx.restore();
+}
+
+// Pastille doree en haut-droite du boitier: des recompenses attendent d'etre
+// reclamees dans le Canardex.
+function drawClaimBadge(
+  ctx: CanvasRenderingContext2D,
+  now: number,
+  b: { x: number; y: number; w: number; h: number },
+  count: number,
+) {
+  const cx = b.x + b.w - 1;
+  const cy = b.y + 1;
+  const pulse = 0.5 + Math.sin(now * 0.006) * 0.5;
+  const r = 6 + pulse * 0.6;
+
+  const halo = ctx.createRadialGradient(cx, cy, r, cx, cy, r + 9);
+  halo.addColorStop(0, `rgba(255,209,64,${0.35 + pulse * 0.3})`);
+  halo.addColorStop(1, "rgba(255,209,64,0)");
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#FFC61A";
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.95)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle = "#5A3B00";
+  ctx.font = "bold 8px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(count > 1 ? String(count) : "!", cx, cy + 0.5);
 }
