@@ -1,8 +1,6 @@
 import { Download, FolderSync, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { loadLibrary } from "@/lib/library";
 import { loadCategories } from "@/lib/libraryCategories";
 import {
@@ -14,16 +12,15 @@ import {
   readLibraryFile,
 } from "@/lib/librarySync/file";
 import { mergeLibrary } from "@/lib/librarySync/merge";
-import { PASSPHRASE_MIN_LENGTH } from "@/lib/profileBackup";
 import { SettingsPanel } from "../SettingsPanel";
 import { FieldTitle, PanelDivider } from "../controls";
 import { ImportLibraryDialog, type ImportPreview } from "./ImportLibraryDialog";
-import { ImportPassphraseDialog } from "./ImportPassphraseDialog";
+import { PassphraseDialog } from "./PassphraseDialog";
 
 export function LibraryTransferPanel() {
   const [path, setPath] = useState<string | undefined>();
-  const [passphrase, setPassphrase] = useState("");
   const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
   // Import en trois temps : choix du fichier, phrase secrete, apercu.
   const [importFile, setImportFile] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -32,9 +29,6 @@ export function LibraryTransferPanel() {
   useEffect(() => {
     void getExportPath().then(setPath);
   }, []);
-
-  const tooShort = passphrase.length > 0 && passphrase.length < PASSPHRASE_MIN_LENGTH;
-  const canExport = passphrase.length >= PASSPHRASE_MIN_LENGTH && !busy;
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -47,19 +41,29 @@ export function LibraryTransferPanel() {
     }
   }
 
-  const handleExport = () =>
+  // L'emplacement se choisit avant la phrase secrete : inutile de la saisir
+  // pour decouvrir ensuite qu'aucune destination n'est definie.
+  const handleExportClick = () =>
     run(async () => {
-      const written = await exportLibrary(passphrase);
-      if (!written) return;
-      setPath(written);
-      setPassphrase("");
-      toast.success(`Bibliothèque exportée : ${written}`);
+      const target = (await getExportPath()) ?? (await pickExportPath());
+      if (!target) return;
+      setPath(target);
+      setExporting(true);
     });
 
   const handleChangePath = () =>
     run(async () => {
       const picked = await pickExportPath();
       if (picked) setPath(picked);
+    });
+
+  const handleExportPassphrase = (passphrase: string) =>
+    run(async () => {
+      setExporting(false);
+      const written = await exportLibrary(passphrase);
+      if (!written) return;
+      setPath(written);
+      toast.success(`Bibliothèque exportée : ${written}`);
     });
 
   const handlePickImport = () =>
@@ -72,12 +76,12 @@ export function LibraryTransferPanel() {
 
   // Le fichier est dechiffre et la fusion simulee avant d'afficher quoi que ce
   // soit : rien n'est ecrit tant que l'utilisateur n'a pas tranche.
-  function handlePassphrase(entered: string) {
+  function handleImportPassphrase(passphrase: string) {
     if (!importFile) return;
     setBusy(true);
     void (async () => {
       try {
-        const payload = await readLibraryFile(entered, importFile);
+        const payload = await readLibraryFile(passphrase, importFile);
         const local = { entries: await loadLibrary(), categories: await loadCategories() };
         setImportFile(null);
         setPending({
@@ -119,24 +123,10 @@ export function LibraryTransferPanel() {
     >
       <FieldTitle
         title="Exporter"
-        hint="Écrit vos titres et vos catégories dans un fichier chiffré. Placez-le dans un dossier synchronisé (Google Drive, Dropbox, Syncthing) pour le retrouver sur vos autres ordinateurs. La phrase secrète protège le fichier et vous est demandée à chaque export : choisissez celle que vous voulez, elle n'est enregistrée nulle part."
+        hint="Écrit vos titres et vos catégories dans un fichier chiffré. Placez-le dans un dossier synchronisé (Google Drive, Dropbox, Syncthing) pour le retrouver sur vos autres ordinateurs. Une phrase secrète vous est demandée à chaque export : choisissez celle que vous voulez, elle n'est enregistrée nulle part."
       />
 
-      <div className="max-w-sm space-y-3">
-        <div className="space-y-2">
-          <Label htmlFor="library-passphrase">Phrase secrète</Label>
-          <Input
-            id="library-passphrase"
-            type="password"
-            placeholder={`${PASSPHRASE_MIN_LENGTH} caractères minimum`}
-            value={passphrase}
-            onChange={(e) => setPassphrase(e.target.value)}
-          />
-          {tooShort && (
-            <p className="text-xs text-red-500">Au moins {PASSPHRASE_MIN_LENGTH} caractères.</p>
-          )}
-        </div>
-
+      <div className="space-y-3">
         {path && (
           <p className="text-xs text-neutral-500 break-all">
             Destination : {path}{" "}
@@ -150,12 +140,12 @@ export function LibraryTransferPanel() {
         )}
 
         <button
-          onClick={handleExport}
-          disabled={!canExport}
+          onClick={handleExportClick}
+          disabled={busy}
           className="flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-500 transition-colors disabled:opacity-40 disabled:pointer-events-none"
         >
           <Download className="h-3.5 w-3.5" />
-          {busy ? "En cours..." : "Exporter ma bibliothèque"}
+          Exporter ma bibliothèque
         </button>
       </div>
 
@@ -175,14 +165,30 @@ export function LibraryTransferPanel() {
         Importer une bibliothèque
       </button>
 
-      <ImportPassphraseDialog
-        key={importFile}
-        file={importFile}
-        error={importError}
-        busy={busy}
-        onCancel={() => setImportFile(null)}
-        onSubmit={handlePassphrase}
-      />
+      {exporting && (
+        <PassphraseDialog
+          title="Protéger l'export"
+          description="Sans cette phrase le fichier est illisible, et elle n'est enregistrée nulle part : notez-la."
+          confirm
+          submitLabel="Exporter"
+          error={null}
+          busy={busy}
+          onCancel={() => setExporting(false)}
+          onSubmit={handleExportPassphrase}
+        />
+      )}
+
+      {importFile && (
+        <PassphraseDialog
+          title="Phrase secrète"
+          description={`Celle utilisée pour exporter ${importFile.split(/[\\/]/).pop()}.`}
+          submitLabel="Continuer"
+          error={importError}
+          busy={busy}
+          onCancel={() => setImportFile(null)}
+          onSubmit={handleImportPassphrase}
+        />
+      )}
 
       <ImportLibraryDialog
         data={pending}
