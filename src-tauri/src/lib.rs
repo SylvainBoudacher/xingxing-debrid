@@ -7,6 +7,7 @@ use std::sync::{Mutex, OnceLock};
 use tauri::{Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 
+mod cbz;
 mod player;
 mod profile;
 
@@ -446,6 +447,8 @@ pub fn run() {
             profile::import_profile,
             profile::export_library,
             profile::import_library,
+            cbz::cbz_list_pages,
+            cbz::cbz_page,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
