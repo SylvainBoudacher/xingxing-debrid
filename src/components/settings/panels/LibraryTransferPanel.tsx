@@ -18,11 +18,15 @@ import { PASSPHRASE_MIN_LENGTH } from "@/lib/profileBackup";
 import { SettingsPanel } from "../SettingsPanel";
 import { FieldTitle, PanelDivider } from "../controls";
 import { ImportLibraryDialog, type ImportPreview } from "./ImportLibraryDialog";
+import { ImportPassphraseDialog } from "./ImportPassphraseDialog";
 
 export function LibraryTransferPanel() {
   const [path, setPath] = useState<string | undefined>();
   const [passphrase, setPassphrase] = useState("");
   const [busy, setBusy] = useState(false);
+  // Import en trois temps : choix du fichier, phrase secrete, apercu.
+  const [importFile, setImportFile] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [pending, setPending] = useState<ImportPreview | null>(null);
 
   useEffect(() => {
@@ -30,7 +34,7 @@ export function LibraryTransferPanel() {
   }, []);
 
   const tooShort = passphrase.length > 0 && passphrase.length < PASSPHRASE_MIN_LENGTH;
-  const ready = passphrase.length >= PASSPHRASE_MIN_LENGTH && !busy;
+  const canExport = passphrase.length >= PASSPHRASE_MIN_LENGTH && !busy;
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
@@ -58,23 +62,36 @@ export function LibraryTransferPanel() {
       if (picked) setPath(picked);
     });
 
-  // Le fichier est dechiffre et la fusion simulee avant d'afficher quoi que ce
-  // soit : rien n'est ecrit tant que l'utilisateur n'a pas tranche.
-  const handleImport = () =>
+  const handlePickImport = () =>
     run(async () => {
       const file = await pickImportFile();
       if (!file) return;
-
-      const payload = await readLibraryFile(passphrase, file);
-      const local = { entries: await loadLibrary(), categories: await loadCategories() };
-
-      setPassphrase("");
-      setPending({
-        payload,
-        preview: mergeLibrary(local, payload),
-        localCount: local.entries.length,
-      });
+      setImportError(null);
+      setImportFile(file);
     });
+
+  // Le fichier est dechiffre et la fusion simulee avant d'afficher quoi que ce
+  // soit : rien n'est ecrit tant que l'utilisateur n'a pas tranche.
+  function handlePassphrase(entered: string) {
+    if (!importFile) return;
+    setBusy(true);
+    void (async () => {
+      try {
+        const payload = await readLibraryFile(entered, importFile);
+        const local = { entries: await loadLibrary(), categories: await loadCategories() };
+        setImportFile(null);
+        setPending({
+          payload,
+          preview: mergeLibrary(local, payload),
+          localCount: local.entries.length,
+        });
+      } catch (e) {
+        setImportError(String(e));
+      } finally {
+        setBusy(false);
+      }
+    })();
+  }
 
   const handleMerge = (toRemove: Set<string>) =>
     run(async () => {
@@ -101,34 +118,25 @@ export function LibraryTransferPanel() {
       subtitle="Emportez votre bibliothèque d'un ordinateur à l'autre."
     >
       <FieldTitle
-        title="Phrase secrète"
-        hint="Elle protège le fichier et vous est demandée à chaque export comme à chaque import. Choisissez celle que vous voulez : elle n'est enregistrée nulle part."
-      />
-
-      <div className="max-w-sm space-y-2">
-        <Label htmlFor="library-passphrase" className="sr-only">
-          Phrase secrète
-        </Label>
-        <Input
-          id="library-passphrase"
-          type="password"
-          placeholder={`${PASSPHRASE_MIN_LENGTH} caractères minimum`}
-          value={passphrase}
-          onChange={(e) => setPassphrase(e.target.value)}
-        />
-        {tooShort && (
-          <p className="text-xs text-red-500">Au moins {PASSPHRASE_MIN_LENGTH} caractères.</p>
-        )}
-      </div>
-
-      <PanelDivider />
-
-      <FieldTitle
         title="Exporter"
-        hint="Écrit vos titres et vos catégories dans un fichier chiffré. Placez-le dans un dossier synchronisé (Google Drive, Dropbox, Syncthing) pour le retrouver sur vos autres ordinateurs."
+        hint="Écrit vos titres et vos catégories dans un fichier chiffré. Placez-le dans un dossier synchronisé (Google Drive, Dropbox, Syncthing) pour le retrouver sur vos autres ordinateurs. La phrase secrète protège le fichier et vous est demandée à chaque export : choisissez celle que vous voulez, elle n'est enregistrée nulle part."
       />
 
-      <div className="space-y-3">
+      <div className="max-w-sm space-y-3">
+        <div className="space-y-2">
+          <Label htmlFor="library-passphrase">Phrase secrète</Label>
+          <Input
+            id="library-passphrase"
+            type="password"
+            placeholder={`${PASSPHRASE_MIN_LENGTH} caractères minimum`}
+            value={passphrase}
+            onChange={(e) => setPassphrase(e.target.value)}
+          />
+          {tooShort && (
+            <p className="text-xs text-red-500">Au moins {PASSPHRASE_MIN_LENGTH} caractères.</p>
+          )}
+        </div>
+
         {path && (
           <p className="text-xs text-neutral-500 break-all">
             Destination : {path}{" "}
@@ -140,9 +148,10 @@ export function LibraryTransferPanel() {
             </button>
           </p>
         )}
+
         <button
           onClick={handleExport}
-          disabled={!ready}
+          disabled={!canExport}
           className="flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-xs font-medium text-white hover:bg-indigo-500 transition-colors disabled:opacity-40 disabled:pointer-events-none"
         >
           <Download className="h-3.5 w-3.5" />
@@ -154,17 +163,26 @@ export function LibraryTransferPanel() {
 
       <FieldTitle
         title="Importer"
-        hint="Un récapitulatif s'affiche avant toute modification : vous choisissez de fusionner avec votre bibliothèque actuelle ou de la remplacer."
+        hint="Choisissez le fichier, sa phrase secrète vous sera demandée ensuite. Un récapitulatif s'affiche avant toute modification : vous choisissez de fusionner avec votre bibliothèque actuelle ou de la remplacer."
       />
 
       <button
-        onClick={handleImport}
-        disabled={!ready}
+        onClick={handlePickImport}
+        disabled={busy}
         className="flex items-center gap-2 rounded-full px-4 py-2 text-xs font-medium ring-1 ring-black/10 dark:ring-white/15 hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:opacity-40 disabled:pointer-events-none"
       >
         <Upload className="h-3.5 w-3.5" />
         Importer une bibliothèque
       </button>
+
+      <ImportPassphraseDialog
+        key={importFile}
+        file={importFile}
+        error={importError}
+        busy={busy}
+        onCancel={() => setImportFile(null)}
+        onSubmit={handlePassphrase}
+      />
 
       <ImportLibraryDialog
         data={pending}
