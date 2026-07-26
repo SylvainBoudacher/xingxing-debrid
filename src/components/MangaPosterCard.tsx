@@ -9,6 +9,9 @@ interface MangaPosterCardProps {
   /** Tomes possedes / tomes lus, quand l'oeuvre est en bibliotheque. */
   progress: { total: number; read: number } | null;
   onOpen: (item: MangaItem) => void;
+  /** Mode sélection : la carte affiche sa case au lieu de son survol habituel. */
+  selectMode?: boolean;
+  selected?: boolean;
 }
 
 // Memoisee : la grille grandit par pages et chaque ajout re-rendrait sinon
@@ -18,6 +21,8 @@ export const MangaPosterCard = memo(function MangaPosterCard({
   index,
   progress,
   onOpen,
+  selectMode = false,
+  selected = false,
 }: MangaPosterCardProps) {
   const cover = mangaCoverUrl(item, 256);
   return (
@@ -43,7 +48,11 @@ export const MangaPosterCard = memo(function MangaPosterCard({
       onClick={() => onOpen(item)}
       className="group cursor-pointer text-left"
     >
-      <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-200 ring-1 ring-black/8 transition-all duration-500 ease-out group-hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.25)] group-hover:ring-black/20 dark:bg-zinc-900 dark:ring-white/8 dark:group-hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.7)] dark:group-hover:ring-white/25">
+      <div
+        className={`relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-200 ring-1 transition-all duration-500 ease-out group-hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.25)] group-hover:ring-black/20 dark:bg-zinc-900 dark:group-hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.7)] dark:group-hover:ring-white/25 ${
+          selected ? "ring-2 ring-indigo-500" : "ring-black/8 dark:ring-white/8"
+        }`}
+      >
         {cover ? (
           <img
             src={cover}
@@ -55,6 +64,18 @@ export const MangaPosterCard = memo(function MangaPosterCard({
           <div className="flex h-full w-full items-center justify-center px-2 text-center text-xs text-zinc-400 dark:text-zinc-600">
             {item.title}
           </div>
+        )}
+
+        {selectMode && (
+          <span
+            className={`absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 shadow backdrop-blur-sm ${
+              selected
+                ? "border-indigo-500 bg-indigo-500 text-white"
+                : "border-white/80 bg-black/40"
+            }`}
+          >
+            {selected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+          </span>
         )}
 
         {item.lastVolume !== null && (

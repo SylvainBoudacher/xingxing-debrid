@@ -37,6 +37,7 @@ import {
   ArrowUp,
   Book,
   BookMarked,
+  BookOpen,
   BookmarkPlus,
   Check,
   ChevronDown,
@@ -836,6 +837,19 @@ export function MainPage({
                     <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                   </motion.button>
                 </div>
+                <motion.button
+                  whileHover={{ scale: 1.06 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => onNavigate("manga")}
+                  className="group relative z-10 flex items-center gap-2 rounded-full bg-gradient-to-r from-rose-500 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 shadow-[0_0_24px_rgba(244,63,94,0.35)] hover:shadow-[0_0_36px_rgba(217,70,239,0.5)] cursor-pointer transition-shadow"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  Manga
+                  <span className="rounded-full bg-white/25 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide">
+                    New
+                  </span>
+                  <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                </motion.button>
                 <motion.button
                   whileHover={{ scale: 1.06 }}
                   whileTap={{ scale: 0.95 }}

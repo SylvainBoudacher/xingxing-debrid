@@ -6,6 +6,7 @@ interface DiscoverSearchBarProps {
   /** Masquée (repliée) sur les onglets curatifs Ma liste / Pour vous */
   visible: boolean;
   query: string;
+  placeholder: string;
   loading: boolean;
   showClear: boolean;
   onQueryChange: (q: string) => void;
@@ -16,6 +17,7 @@ interface DiscoverSearchBarProps {
 export function DiscoverSearchBar({
   visible,
   query,
+  placeholder,
   loading,
   showClear,
   onQueryChange,
@@ -56,7 +58,7 @@ export function DiscoverSearchBar({
           type="text"
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Rechercher un film ou une série"
+          placeholder={placeholder}
           className="flex-1 bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-500 outline-none text-base pr-8"
         />
         {showClear && (

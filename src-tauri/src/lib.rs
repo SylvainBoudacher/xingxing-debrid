@@ -77,6 +77,7 @@ fn http_client() -> &'static reqwest::Client {
     // injoignable echoue vite, mais un gros telechargement n'est pas coupe.
     CLIENT.get_or_init(|| {
         reqwest::Client::builder()
+            .use_rustls_tls()
             .connect_timeout(std::time::Duration::from_secs(15))
             .build()
             .expect("client reqwest")

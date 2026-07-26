@@ -30,6 +30,8 @@ interface UseAddMangaReleaseOptions {
   getC411Key: () => string;
   getAllDebridKey: () => string;
   onAdded: (entry: MangaEntry) => void;
+  /** Action "Voir" des toasts d'ajout : ouvre la fiche de l'oeuvre. */
+  onOpenLibrary?: (mangaId: string) => void;
 }
 
 /**
@@ -41,6 +43,7 @@ export function useAddMangaRelease({
   getC411Key,
   getAllDebridKey,
   onAdded,
+  onOpenLibrary,
 }: UseAddMangaReleaseOptions) {
   const [addingHash, setAddingHash] = useState<string | null>(null);
 
@@ -56,6 +59,9 @@ export function useAddMangaRelease({
         toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
         return;
       }
+
+      const seeAction = (mangaId: string) =>
+        onOpenLibrary ? { action: { label: "Voir", onClick: () => onOpenLibrary(mangaId) } } : {};
 
       setAddingHash(release.infoHash);
       try {
@@ -80,7 +86,7 @@ export function useAddMangaRelease({
             },
           });
           onAdded(entry);
-          toast.success(`${item.title} ajoute (debridage en cours)`);
+          toast.success(`${item.title} ajoute (debridage en cours)`, seeAction(entry.mangaId));
           return;
         }
 
@@ -97,6 +103,7 @@ export function useAddMangaRelease({
           volumes.length === 1
             ? `${item.title} : 1 tome ajoute`
             : `${item.title} : ${volumes.length} tomes ajoutes`,
+          seeAction(entry.mangaId),
         );
       } catch (err) {
         toastNetworkError(err, () => latest.current?.(release, item));
@@ -104,7 +111,7 @@ export function useAddMangaRelease({
         setAddingHash(null);
       }
     },
-    [addingHash, getAllDebridKey, getC411Key, onAdded],
+    [addingHash, getAllDebridKey, getC411Key, onAdded, onOpenLibrary],
   );
 
   useEffect(() => {

@@ -26,19 +26,17 @@ export interface MangaFeedState {
   loadingMore: boolean;
   error: unknown;
   hasMore: boolean;
-  query: string;
   feed: MangaFeed;
   tagIds: string[];
-  setQuery: (q: string) => void;
   setFeed: (f: MangaFeed) => void;
   setTagIds: (ids: string[]) => void;
   loadMore: () => void;
   retry: () => void;
 }
 
-export function useMangaFeed(): MangaFeedState {
-  const [feed, setFeed] = useState<MangaFeed>("popular");
-  const [query, setQuery] = useState("");
+// `query` est piloté par la page (barre de recherche partagée avec TMDB).
+export function useMangaFeed(query: string): MangaFeedState {
+  const [feed, setFeed] = useState<MangaFeed>("top_rated");
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -130,10 +128,8 @@ export function useMangaFeed(): MangaFeedState {
     loadingMore,
     error,
     hasMore,
-    query,
     feed,
     tagIds,
-    setQuery,
     setFeed,
     setTagIds,
     loadMore,

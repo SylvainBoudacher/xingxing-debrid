@@ -19,7 +19,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 // "all" = état de recherche générale (multi films + séries). Ce n'est pas un
 // onglet cliquable : les onglets restent dédiés à la navigation de découverte.
 export type BrowseType = MediaType | "animation" | "all";
-export type DiscoverTab = BrowseType | "likes" | "recos";
+export type DiscoverTab = BrowseType | "likes" | "recos" | "manga";
 
 // Sources proposées sous les onglets Films / Séries, dans l'ordre d'affichage.
 export const FEED_LABELS: Record<TmdbFeed, string> = {
@@ -94,9 +94,13 @@ function readTopFromCache(
 
 // État de la grille Découverte : feed de navigation (onglets + sources),
 // recherche générale live et scroll infini.
-export function useDiscoverFeed(tmdbKey: string | null | undefined, initialQuery?: string) {
+export function useDiscoverFeed(
+  tmdbKey: string | null | undefined,
+  initialQuery?: string,
+  initialTab?: DiscoverTab,
+) {
   const [query, setQuery] = useState(initialQuery ?? "");
-  const [mediaType, setMediaType] = useState<DiscoverTab>("movie");
+  const [mediaType, setMediaType] = useState<DiscoverTab>(initialTab ?? "movie");
   const [feed, setFeed] = useState<TmdbFeed>("top_rated");
   const [items, setItems] = useState<TmdbItem[]>([]);
   const [mode, setMode] = useState<"top" | "search">("top");
@@ -144,7 +148,8 @@ export function useDiscoverFeed(tmdbKey: string | null | undefined, initialQuery
   // requête en cours coupe l'observer, qui se reconnecte une fois finie).
   useEffect(() => {
     const el = loadMoreRef.current;
-    if (!el || !tmdbKey || mediaType === "likes" || mediaType === "recos") return;
+    if (!el || !tmdbKey || mediaType === "likes" || mediaType === "recos" || mediaType === "manga")
+      return;
     if (loadingMovies || items.length === 0 || tmdbPage >= tmdbTotalPages) return;
     const observer = new IntersectionObserver(
       (entries) => {
@@ -315,9 +320,10 @@ export function useDiscoverFeed(tmdbKey: string | null | undefined, initialQuery
   }
 
   function switchType(type: Exclude<DiscoverTab, "all">) {
-    if (type === mediaType || !tmdbKey) return;
+    // L'onglet Mangas ne dépend pas de TMDB : il reste accessible sans clé.
+    if (type === mediaType || (!tmdbKey && type !== "manga")) return;
     setMediaType(type);
-    if (type === "likes" || type === "recos") return;
+    if (type === "likes" || type === "recos" || type === "manga") return;
     // Onglet de navigation : on quitte toujours la recherche pour parcourir le
     // feed de découverte de la catégorie (la recherche, elle, reste générale).
     lastBrowseTypeRef.current = type;
@@ -332,6 +338,7 @@ export function useDiscoverFeed(tmdbKey: string | null | undefined, initialQuery
       !tmdbKey ||
       mediaType === "likes" ||
       mediaType === "recos" ||
+      mediaType === "manga" ||
       mediaType === "all"
     )
       return;
@@ -354,8 +361,8 @@ export function useDiscoverFeed(tmdbKey: string | null | undefined, initialQuery
   // requete au fil de la frappe garde la meme cle : les resultats se remplacent
   // en place, sans rejouer la transition de toute la grille a chaque debounce.
   const gridKey =
-    mediaType === "likes"
-      ? "likes"
+    mediaType === "likes" || mediaType === "manga"
+      ? mediaType
       : mediaType === "recos"
         ? "recos"
         : mode === "search"

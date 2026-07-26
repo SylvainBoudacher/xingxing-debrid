@@ -17,6 +17,8 @@ import { loadSeriesFolders } from "@/lib/seriesFolders";
 import { onSettingsPanelRequest } from "@/lib/settingsNavigation";
 import { loadStartupPage } from "@/lib/startupPage";
 import type { TmdbItem } from "@/lib/tmdbItem";
+import type { LibraryTab } from "@/components/LibraryTabs";
+import type { DiscoverTab } from "@/lib/useDiscoverFeed";
 import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
 import { useActionShortcuts } from "@/lib/useActionShortcuts";
 import { useAppInit } from "@/lib/useAppInit";
@@ -47,12 +49,6 @@ const PreferencesPage = lazy(() =>
 const PatchnotesPage = lazy(() =>
   import("@/pages/PatchnotesPage").then((m) => ({ default: m.PatchnotesPage })),
 );
-const MangaDiscoverPage = lazy(() =>
-  import("@/pages/MangaDiscoverPage").then((m) => ({ default: m.MangaDiscoverPage })),
-);
-const MangaLibraryPage = lazy(() =>
-  import("@/pages/MangaLibraryPage").then((m) => ({ default: m.MangaLibraryPage })),
-);
 const BoatGamePage = lazy(() =>
   import("@/pages/BoatGamePage").then((m) => ({ default: m.BoatGamePage })),
 );
@@ -80,6 +76,8 @@ function App() {
   const [page, setPage] = useState<Page | null>(null);
   const [discoverQuery, setDiscoverQuery] = useState("");
   const [discoverItem, setDiscoverItem] = useState<TmdbItem | null>(null);
+  const [discoverTab, setDiscoverTab] = useState<DiscoverTab | undefined>(undefined);
+  const [libraryTab, setLibraryTab] = useState<LibraryTab | undefined>(undefined);
   const [mangaLibraryId, setMangaLibraryId] = useState<string | null>(null);
   const [libraryExpandedHash, setLibraryExpandedHash] = useState<string | null>(null);
   const [libraryExpandedGroupId, setLibraryExpandedGroupId] = useState<number | null>(null);
@@ -218,11 +216,20 @@ function App() {
 
   function handleNavigate(p: Page) {
     if (p === "patchnotes") setPatchnotesSeenVersion(LATEST_VERSION);
+    // "manga" n'est plus une page : c'est l'onglet Mangas de la Découverte.
+    if (p === "manga") {
+      setDiscoverQuery("");
+      setDiscoverItem(null);
+      setDiscoverTab("manga");
+      setPage("discover");
+      return;
+    }
     // Une navigation "normale" vers Découverte (menu, CTA) repart sur le feed :
     // seule la barre de recherche de MainPage passe une requête / un item.
     if (p === "discover") {
       setDiscoverQuery("");
       setDiscoverItem(null);
+      setDiscoverTab(undefined);
     }
     // Toute navigation "normale" vers l'accueil repart sur une barre vierge :
     // seule la fiche Découverte injecte une recherche tracker à lancer.
@@ -232,9 +239,17 @@ function App() {
     if (p === "library") {
       setLibraryExpandedHash(null);
       setLibraryExpandedGroupId(null);
+      setLibraryTab(undefined);
+      setMangaLibraryId(null);
     }
-    // Idem côté manga : seule l'action "Voir" d'une fiche pré-ouvre une oeuvre.
-    if (p === "mangalibrary") setMangaLibraryId(null);
+    // "mangalibrary" n'est plus une page : c'est l'onglet Mangas de la
+    // bibliothèque. Seule l'action "Voir" d'une fiche pré-ouvre une oeuvre.
+    if (p === "mangalibrary") {
+      setMangaLibraryId(null);
+      setLibraryTab("manga");
+      setPage("library");
+      return;
+    }
     setPage(p);
   }
 
@@ -252,9 +267,11 @@ function App() {
   }
 
   // Depuis une fiche manga : ouvre la bibliothèque manga sur cette oeuvre.
-  function openMangaEntry(mangaId: string) {
-    setMangaLibraryId(mangaId);
-    setPage("mangalibrary");
+  function openMangaEntry(mangaId?: string) {
+    setMangaLibraryId(mangaId ?? null);
+    setLibraryTab("manga");
+    setLibraryTab("media");
+    setPage("library");
   }
 
   function launchDiscover(q: string) {
@@ -425,7 +442,7 @@ function App() {
             >
               <MagnetsPage
                 onBack={() => setPage("main")}
-                onNavigate={setPage}
+                onNavigate={handleNavigate}
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 initialAllDebridKey={initAllDebridKey}
@@ -445,12 +462,15 @@ function App() {
             >
               <LibraryPage
                 onBack={() => setPage("main")}
-                onNavigate={setPage}
+                onNavigate={handleNavigate}
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 initialAllDebridKey={initAllDebridKey}
                 initialTmdbKey={initTmdbKey}
+                initialC411Key={initC411Key}
                 initialViewMode={initPrefs.libraryViewMode}
+                initialTab={libraryTab}
+                initialMangaId={mangaLibraryId}
                 initialExpandedHash={libraryExpandedHash}
                 initialExpandedGroupId={libraryExpandedGroupId}
               />
@@ -466,7 +486,7 @@ function App() {
             >
               <PreferencesPage
                 onBack={() => setPage("main")}
-                onNavigate={setPage}
+                onNavigate={handleNavigate}
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 summerEnabled={summerEnabled}
@@ -492,11 +512,12 @@ function App() {
             >
               <DiscoverPage
                 onBack={() => setPage("main")}
-                onNavigate={setPage}
+                onNavigate={handleNavigate}
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 summerEnabled={summerEnabled}
                 initialQuery={discoverQuery}
+                initialTab={discoverTab}
                 initialItem={discoverItem}
                 initialTmdbKey={initTmdbKey}
                 initialC411Key={initC411Key}
@@ -504,44 +525,7 @@ function App() {
                 initialLikes={initLikes}
                 onSearchTracker={launchTrackerSearch}
                 onOpenLibraryItem={openLibraryItem}
-              />
-            </motion.div>
-          )}
-          {effectivePhase === "done" && page === "manga" && (
-            <motion.div
-              key="manga"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-            >
-              <MangaDiscoverPage
-                onBack={() => setPage("main")}
-                onNavigate={handleNavigate}
-                hasPendingUpdate={availableUpdate !== null}
-                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
-                getC411Key={() => initC411Key ?? ""}
-                getAllDebridKey={() => initAllDebridKey ?? ""}
-                onOpenLibrary={openMangaEntry}
-              />
-            </motion.div>
-          )}
-          {effectivePhase === "done" && page === "mangalibrary" && (
-            <motion.div
-              key="mangalibrary"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-            >
-              <MangaLibraryPage
-                onBack={() => setPage("main")}
-                onNavigate={handleNavigate}
-                hasPendingUpdate={availableUpdate !== null}
-                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
-                getC411Key={() => initC411Key ?? ""}
-                getAllDebridKey={() => initAllDebridKey ?? ""}
-                initialMangaId={mangaLibraryId}
+                onOpenMangaLibrary={openMangaEntry}
               />
             </motion.div>
           )}
@@ -577,7 +561,7 @@ function App() {
             >
               <PatchnotesPage
                 onBack={() => setPage("main")}
-                onNavigate={setPage}
+                onNavigate={handleNavigate}
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
               />
