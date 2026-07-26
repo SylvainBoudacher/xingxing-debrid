@@ -62,8 +62,13 @@ export const mangadexKeys = {
   tags: () => ["mangadex", "tags"] as const,
 };
 
+// MangaDex (derriere Cloudflare) repond 400 a toute requete sans User-Agent.
+// Le navigateur en pose un d'office, pas le client HTTP de Tauri : sans cet
+// en-tete, l'app native echoue alors que la preview navigateur fonctionne.
+const HEADERS = { "User-Agent": "xingxing-debrid" };
+
 async function get<T>(url: string): Promise<T> {
-  const res = await fetchWithTimeout("MangaDex", url);
+  const res = await fetchWithTimeout("MangaDex", url, { headers: HEADERS });
   return res.json() as Promise<T>;
 }
 

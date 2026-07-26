@@ -49,6 +49,15 @@ function classify(service: NetworkService, err: unknown): NetworkError {
   if (name === "TimeoutError" || name === "AbortError" || /timeout|timed out|abort/i.test(msg)) {
     return new NetworkError(service, "timeout");
   }
+  // Refus du plugin HTTP de Tauri : l'URL manque dans capabilities/default.json.
+  // Sans ce cas, un oubli de configuration se lit comme une panne de connexion.
+  if (/not allowed on the configured scope|forbidden path/i.test(msg)) {
+    return new NetworkError(
+      service,
+      "http",
+      `${service} n'est pas autorisé par la configuration de l'application.`,
+    );
+  }
   return new NetworkError(service, "offline");
 }
 
