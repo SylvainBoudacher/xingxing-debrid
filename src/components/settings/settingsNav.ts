@@ -2,6 +2,7 @@ import {
   Compass,
   DatabaseBackup,
   Download,
+  FolderSync,
   Keyboard,
   KeyRound,
   Layers,
@@ -24,6 +25,7 @@ export type PanelId =
   | "playback"
   | "downloads"
   | "library"
+  | "library-transfer"
   | "nyaa"
   | "discover"
   | "summer";
@@ -108,6 +110,12 @@ const ALL_SETTINGS_GROUPS: SettingsNavGroup[] = [
         label: "Bibliothèque",
         subtitle: "Marquage automatique des contenus vus.",
         icon: Library,
+      },
+      {
+        id: "library-transfer",
+        label: "Transfert de bibliothèque",
+        subtitle: "Emporter votre bibliothèque sur un autre ordinateur.",
+        icon: FolderSync,
       },
       {
         id: "nyaa",

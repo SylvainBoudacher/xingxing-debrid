@@ -32,6 +32,10 @@ export interface LibraryEntry {
   watched: Record<string, boolean>;
   // Présent uniquement pour les entrées provenant de Découverte.
   tmdb?: TmdbMeta;
+  // Horodatage de la dernière modification, posé automatiquement à
+  // l'enregistrement. Absent des entrées écrites avant son introduction : la
+  // fusion retombe alors sur addedAt.
+  updatedAt?: number;
 }
 
 const STORE_KEY = "library";
@@ -43,8 +47,14 @@ const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 // bibliothèque s'ouvre instantanément sans flash d'écran vide.
 let cache: LibraryEntry[] | null = null;
 
+// Dernier état réellement écrit sur disque. Sert de référence à stampUpdated :
+// le cache, lui, avance à chaque saveLibraryDebounced et ne peut pas servir de
+// point de comparaison.
+let persisted: LibraryEntry[] = [];
+
 export async function loadLibrary(): Promise<LibraryEntry[]> {
   cache = (await store.get<LibraryEntry[]>(STORE_KEY)) ?? [];
+  persisted = cache;
   return cache;
 }
 
@@ -64,9 +74,30 @@ export async function saveLibrary(entries: LibraryEntry[]): Promise<void> {
     clearTimeout(saveTimer);
     saveTimer = null;
   }
-  cache = entries;
-  await store.set(STORE_KEY, entries);
+  const stamped = stampUpdated(entries);
+  cache = stamped;
+  persisted = stamped;
+  await store.set(STORE_KEY, stamped);
   await store.save();
+}
+
+// Pose updatedAt sur les seules entrées qui ont changé depuis le dernier
+// enregistrement, pour que la fusion à l'import sache laquelle des deux
+// versions est la plus récente. Centralisé ici : les appelants n'ont rien à
+// faire.
+function stampUpdated(entries: LibraryEntry[]): LibraryEntry[] {
+  const previous = new Map(persisted.map((e) => [e.infoHash, e]));
+  const now = Date.now();
+  return entries.map((entry) => {
+    const before = previous.get(entry.infoHash);
+    if (before && sameEntry(before, entry)) return entry;
+    return { ...entry, updatedAt: now };
+  });
+}
+
+function sameEntry(a: LibraryEntry, b: LibraryEntry): boolean {
+  const strip = ({ updatedAt: _, ...rest }: LibraryEntry) => rest;
+  return JSON.stringify(strip(a)) === JSON.stringify(strip(b));
 }
 
 // Écriture disque différée : met le cache à jour immédiatement mais ne flushe

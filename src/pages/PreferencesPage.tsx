@@ -5,6 +5,7 @@ import { ALL_NAV_ITEMS, type PanelId } from "@/components/settings/settingsNav";
 import { AppearancePanel } from "@/components/settings/panels/AppearancePanel";
 import { ApiKeysPanel } from "@/components/settings/panels/ApiKeysPanel";
 import { BackupPanel } from "@/components/settings/panels/BackupPanel";
+import { LibraryTransferPanel } from "@/components/settings/panels/LibraryTransferPanel";
 import { DiscoverPanel } from "@/components/settings/panels/DiscoverPanel";
 import { DisplayPanel } from "@/components/settings/panels/DisplayPanel";
 import { LibraryPanel } from "@/components/settings/panels/LibraryPanel";
@@ -82,6 +83,8 @@ export function PreferencesPage({
         return <DownloadsPanel />;
       case "library":
         return <LibraryPanel />;
+      case "library-transfer":
+        return <LibraryTransferPanel />;
       case "nyaa":
         return <NyaaPanel />;
       case "discover":

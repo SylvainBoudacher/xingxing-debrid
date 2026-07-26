@@ -26,8 +26,13 @@ fn derive_key(passphrase: &str, salt: &[u8]) -> Result<chacha20poly1305::Key, St
     Ok(key.into())
 }
 
+// Type de contenu de l'enveloppe. Sans lui, import_profile accepterait un
+// fichier de bibliotheque et ecraserait les cles API avec du vide.
+const KIND_PROFILE: &str = "profile";
+const KIND_LIBRARY: &str = "library";
+
 // Chiffre le payload et l'emballe dans l'enveloppe JSON versionnee.
-fn seal(payload: &[u8], passphrase: &str) -> Result<Vec<u8>, String> {
+fn seal(payload: &[u8], passphrase: &str, kind: &str) -> Result<Vec<u8>, String> {
     let mut salt = [0u8; 16];
     OsRng.fill_bytes(&mut salt);
     let mut nonce_bytes = [0u8; 24];
@@ -41,6 +46,7 @@ fn seal(payload: &[u8], passphrase: &str) -> Result<Vec<u8>, String> {
     let envelope = json!({
         "app": "c411-debrid-app",
         "version": FORMAT_VERSION,
+        "kind": kind,
         "kdf": { "algo": "argon2id", "salt": B64.encode(salt) },
         "nonce": B64.encode(nonce_bytes),
         "ciphertext": B64.encode(&ciphertext),
@@ -49,13 +55,25 @@ fn seal(payload: &[u8], passphrase: &str) -> Result<Vec<u8>, String> {
     serde_json::to_vec_pretty(&envelope).map_err(|e| e.to_string())
 }
 
-// Valide l'enveloppe et dechiffre le payload JSON.
-fn unseal(bytes: &[u8], passphrase: &str) -> Result<Value, String> {
+// Valide l'enveloppe et dechiffre le payload JSON. Les fichiers produits avant
+// l'introduction du champ `kind` n'en ont pas : ce sont des profils.
+fn unseal(bytes: &[u8], passphrase: &str, expected_kind: &str) -> Result<Value, String> {
     let envelope: Value = serde_json::from_slice(bytes)
         .map_err(|_| "Ce fichier n'est pas une sauvegarde valide.".to_string())?;
 
     if envelope.get("app").and_then(Value::as_str) != Some("c411-debrid-app") {
-        return Err("Ce fichier n'est pas une sauvegarde de profil XingXing.".to_string());
+        return Err("Ce fichier n'est pas une sauvegarde XingXing.".to_string());
+    }
+    let kind = envelope
+        .get("kind")
+        .and_then(Value::as_str)
+        .unwrap_or(KIND_PROFILE);
+    if kind != expected_kind {
+        return Err(match expected_kind {
+            KIND_LIBRARY => "Ce fichier est une sauvegarde de profil, pas une bibliotheque.",
+            _ => "Ce fichier est un export de bibliotheque, pas une sauvegarde de profil.",
+        }
+        .to_string());
     }
     let version = envelope.get("version").and_then(Value::as_u64).unwrap_or(0);
     if version != FORMAT_VERSION {
@@ -119,9 +137,31 @@ pub fn export_profile(
     let payload = serde_json::to_vec(&json!({ "keys": keys, "stores": stores }))
         .map_err(|e| e.to_string())?;
 
-    let bytes = seal(&payload, &passphrase)?;
+    let bytes = seal(&payload, &passphrase, KIND_PROFILE)?;
     std::fs::write(&path, bytes).map_err(|e| format!("Ecriture du fichier : {e}"))?;
     Ok(())
+}
+
+// La bibliotheque est assemblee et fusionnee cote frontend : le backend ne fait
+// que chiffrer et ecrire. La passphrase ne quitte pas le processus.
+#[tauri::command]
+pub fn export_library(passphrase: String, path: String, payload: Value) -> Result<(), String> {
+    if passphrase.chars().count() < PASSPHRASE_MIN_LEN {
+        return Err(format!(
+            "La phrase secrete doit faire au moins {PASSPHRASE_MIN_LEN} caracteres."
+        ));
+    }
+
+    let bytes = serde_json::to_vec(&payload).map_err(|e| e.to_string())?;
+    let sealed = seal(&bytes, &passphrase, KIND_LIBRARY)?;
+    std::fs::write(&path, sealed).map_err(|e| format!("Ecriture du fichier : {e}"))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn import_library(passphrase: String, path: String) -> Result<Value, String> {
+    let bytes = std::fs::read(&path).map_err(|e| format!("Lecture du fichier : {e}"))?;
+    unseal(&bytes, &passphrase, KIND_LIBRARY)
 }
 
 #[tauri::command]
@@ -131,7 +171,7 @@ pub fn import_profile(
     path: String,
 ) -> Result<(), String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("Lecture du fichier : {e}"))?;
-    let payload = unseal(&bytes, &passphrase)?;
+    let payload = unseal(&bytes, &passphrase, KIND_PROFILE)?;
 
     if let Some(keys) = payload.get("keys").and_then(Value::as_object) {
         for name in KEY_NAMES {
@@ -177,8 +217,8 @@ mod tests {
 
     #[test]
     fn seal_unseal_roundtrip() {
-        let sealed = seal(&payload(), PASS).unwrap();
-        let restored = unseal(&sealed, PASS).unwrap();
+        let sealed = seal(&payload(), PASS, KIND_PROFILE).unwrap();
+        let restored = unseal(&sealed, PASS, KIND_PROFILE).unwrap();
         assert_eq!(restored.pointer("/keys/c411_api_key"), Some(&json!("abc")));
         assert_eq!(
             restored.pointer("/stores/settings.json/theme"),
@@ -188,7 +228,7 @@ mod tests {
 
     #[test]
     fn envelope_has_expected_format() {
-        let sealed = seal(&payload(), PASS).unwrap();
+        let sealed = seal(&payload(), PASS, KIND_PROFILE).unwrap();
         let envelope: Value = serde_json::from_slice(&sealed).unwrap();
         assert_eq!(envelope["app"], "c411-debrid-app");
         assert_eq!(envelope["version"], FORMAT_VERSION);
@@ -199,50 +239,74 @@ mod tests {
 
     #[test]
     fn wrong_passphrase_is_rejected() {
-        let sealed = seal(&payload(), PASS).unwrap();
-        let err = unseal(&sealed, "mauvaise-phrase").unwrap_err();
+        let sealed = seal(&payload(), PASS, KIND_PROFILE).unwrap();
+        let err = unseal(&sealed, "mauvaise-phrase", KIND_PROFILE).unwrap_err();
         assert!(err.contains("Phrase secrete incorrecte"));
     }
 
     #[test]
     fn tampered_ciphertext_is_rejected() {
-        let sealed = seal(&payload(), PASS).unwrap();
+        let sealed = seal(&payload(), PASS, KIND_PROFILE).unwrap();
         let mut envelope: Value = serde_json::from_slice(&sealed).unwrap();
         let mut ct = B64.decode(envelope["ciphertext"].as_str().unwrap()).unwrap();
         ct[0] ^= 0xff;
         envelope["ciphertext"] = Value::String(B64.encode(&ct));
-        let err = unseal(&serde_json::to_vec(&envelope).unwrap(), PASS).unwrap_err();
+        let err = unseal(&serde_json::to_vec(&envelope).unwrap(), PASS, KIND_PROFILE).unwrap_err();
         assert!(err.contains("Phrase secrete incorrecte"));
     }
 
     #[test]
     fn non_json_file_is_rejected() {
-        let err = unseal(b"pas du json", PASS).unwrap_err();
+        let err = unseal(b"pas du json", PASS, KIND_PROFILE).unwrap_err();
         assert!(err.contains("pas une sauvegarde valide"));
     }
 
     #[test]
     fn foreign_app_is_rejected() {
         let bytes = serde_json::to_vec(&json!({ "app": "autre-app", "version": 1 })).unwrap();
-        let err = unseal(&bytes, PASS).unwrap_err();
-        assert!(err.contains("pas une sauvegarde de profil"));
+        let err = unseal(&bytes, PASS, KIND_PROFILE).unwrap_err();
+        assert!(err.contains("pas une sauvegarde XingXing"));
+    }
+
+    #[test]
+    fn library_file_is_refused_by_profile_import() {
+        let sealed = seal(b"{}", PASS, KIND_LIBRARY).unwrap();
+        let err = unseal(&sealed, PASS, KIND_PROFILE).unwrap_err();
+        assert!(err.contains("export de bibliotheque"));
+    }
+
+    #[test]
+    fn profile_file_is_refused_by_library_import() {
+        let sealed = seal(&payload(), PASS, KIND_PROFILE).unwrap();
+        let err = unseal(&sealed, PASS, KIND_LIBRARY).unwrap_err();
+        assert!(err.contains("sauvegarde de profil"));
+    }
+
+    // Les fichiers ecrits avant l'introduction du champ sont des profils.
+    #[test]
+    fn envelope_without_kind_is_a_profile() {
+        let sealed = seal(&payload(), PASS, KIND_PROFILE).unwrap();
+        let mut envelope: Value = serde_json::from_slice(&sealed).unwrap();
+        envelope.as_object_mut().unwrap().remove("kind");
+        let bytes = serde_json::to_vec(&envelope).unwrap();
+        assert!(unseal(&bytes, PASS, KIND_PROFILE).is_ok());
     }
 
     #[test]
     fn unsupported_version_is_rejected() {
-        let sealed = seal(&payload(), PASS).unwrap();
+        let sealed = seal(&payload(), PASS, KIND_PROFILE).unwrap();
         let mut envelope: Value = serde_json::from_slice(&sealed).unwrap();
         envelope["version"] = json!(99);
-        let err = unseal(&serde_json::to_vec(&envelope).unwrap(), PASS).unwrap_err();
+        let err = unseal(&serde_json::to_vec(&envelope).unwrap(), PASS, KIND_PROFILE).unwrap_err();
         assert!(err.contains("version 99 non supportee"));
     }
 
     #[test]
     fn bad_nonce_length_is_rejected() {
-        let sealed = seal(&payload(), PASS).unwrap();
+        let sealed = seal(&payload(), PASS, KIND_PROFILE).unwrap();
         let mut envelope: Value = serde_json::from_slice(&sealed).unwrap();
         envelope["nonce"] = Value::String(B64.encode([0u8; 12]));
-        let err = unseal(&serde_json::to_vec(&envelope).unwrap(), PASS).unwrap_err();
+        let err = unseal(&serde_json::to_vec(&envelope).unwrap(), PASS, KIND_PROFILE).unwrap_err();
         assert!(err.contains("malformee"));
     }
 }

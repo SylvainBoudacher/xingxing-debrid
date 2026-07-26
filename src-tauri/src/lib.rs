@@ -444,6 +444,8 @@ pub fn run() {
             open_file,
             profile::export_profile,
             profile::import_profile,
+            profile::export_library,
+            profile::import_library,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
