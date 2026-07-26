@@ -24,6 +24,8 @@ interface ReaderPageProps {
   /** Appele a chaque changement de page, deja limite en frequence. */
   onProgress: (page: number, pageCount: number) => void;
   onFinished: () => void;
+  /** Le fichier local a disparu : l'appelant doit oublier son chemin. */
+  onMissing: () => void;
   onClose: () => void;
 }
 
@@ -38,6 +40,7 @@ export function ReaderPage({
   onDirectionChange,
   onProgress,
   onFinished,
+  onMissing,
   onClose,
 }: ReaderPageProps) {
   const prefs = getCachedReaderPrefs();
@@ -163,6 +166,12 @@ export function ReaderPage({
     },
     [pageMode],
   );
+
+  // Fichier disparu du disque : l'entree de bibliotheque doit oublier son
+  // chemin local pour reproposer le telechargement.
+  useEffect(() => {
+    if (error?.kind === "fileMissing") onMissing();
+  }, [error, onMissing]);
 
   const measure = useCallback((page: number, isWide: boolean) => {
     setWide((w) => (w[page] === isWide ? w : { ...w, [page]: isWide }));

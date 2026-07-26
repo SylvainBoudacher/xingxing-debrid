@@ -40,10 +40,23 @@ export interface MangaVolume {
 
 export type ReadingDirection = "rtl" | "ltr";
 
+/**
+ * Torrent envoye a AllDebrid dont les fichiers ne sont pas encore disponibles
+ * (debridage en cours). Il n'a donc pas encore de tomes : l'entree le garde en
+ * attente pour pouvoir reessayer plus tard.
+ */
+export interface PendingTorrent {
+  infoHash: string;
+  magnetId: number;
+  torrentName: string;
+  addedAt: number;
+}
+
 export interface MangaEntry {
   mangaId: string;
   meta: MangaMeta;
   volumes: MangaVolume[];
+  pending?: PendingTorrent[];
   readingDirection?: ReadingDirection;
   addedAt: number;
   updatedAt?: number;
@@ -68,6 +81,27 @@ export async function saveMangaLibrary(entries: MangaEntry[]): Promise<void> {
   cache = entries;
   await store.set(STORE_KEY, entries);
   await store.save();
+}
+
+/**
+ * Reconstruit un MangaItem a partir d'une entree de bibliotheque, pour
+ * rechercher d'autres tomes sans repasser par MangaDex. Le titre memorise sert
+ * de titre francais : c'est celui qui a permis de trouver les releases.
+ */
+export function itemFromEntry(entry: MangaEntry): MangaItem {
+  return {
+    id: entry.mangaId,
+    title: entry.meta.title,
+    titleFr: entry.meta.title,
+    titleEn: null,
+    titleRomaji: null,
+    coverFileName: entry.meta.coverFileName,
+    year: entry.meta.year,
+    status: entry.meta.status,
+    lastVolume: entry.meta.lastVolume,
+    description: entry.meta.description,
+    tags: entry.meta.tags,
+  };
 }
 
 export function metaFromItem(item: MangaItem): MangaMeta {
@@ -151,10 +185,14 @@ function preferVolume(a: MangaVolume, b: MangaVolume): MangaVolume {
   return a.fileSize >= b.fileSize ? a : b;
 }
 
-/** Ajoute ou complete l'entree d'une oeuvre avec les tomes d'un torrent. */
-export async function upsertMangaVolumes(
+/**
+ * Ajoute ou complete l'entree d'une oeuvre avec les tomes d'un torrent. Un
+ * torrent encore en cours de debridage n'apporte pas de tomes : il est place en
+ * attente et resolu plus tard par `resolvePendingTorrent`.
+ */
+export async function upsertMangaRelease(
   item: MangaItem,
-  volumes: MangaVolume[],
+  { volumes = [], pending }: { volumes?: MangaVolume[]; pending?: PendingTorrent },
 ): Promise<MangaEntry> {
   const entries = cache ?? (await loadMangaLibrary());
   const existing = entries.find((e) => e.mangaId === item.id);
@@ -162,6 +200,7 @@ export async function upsertMangaVolumes(
     mangaId: item.id,
     meta: metaFromItem(item),
     volumes: mergeVolumes(existing?.volumes ?? [], volumes),
+    pending: mergePending(existing?.pending, pending, volumes),
     readingDirection: existing?.readingDirection,
     addedAt: existing?.addedAt ?? Date.now(),
     updatedAt: Date.now(),
@@ -170,6 +209,43 @@ export async function upsertMangaVolumes(
     existing ? entries.map((e) => (e.mangaId === item.id ? next : e)) : [...entries, next],
   );
   return next;
+}
+
+// Un torrent dont les tomes viennent d'arriver quitte la liste d'attente.
+function mergePending(
+  existing: PendingTorrent[] | undefined,
+  incoming: PendingTorrent | undefined,
+  volumes: MangaVolume[],
+): PendingTorrent[] | undefined {
+  const resolved = new Set(volumes.map((v) => v.infoHash));
+  const kept = (existing ?? []).filter((p) => !resolved.has(p.infoHash));
+  const all = incoming ? [...kept.filter((p) => p.infoHash !== incoming.infoHash), incoming] : kept;
+  return all.length > 0 ? all : undefined;
+}
+
+/** Rattache les tomes d'un torrent qui etait en attente de debridage. */
+export async function resolvePendingTorrent(
+  mangaId: string,
+  infoHash: string,
+  volumes: MangaVolume[],
+): Promise<void> {
+  const entries = cache ?? (await loadMangaLibrary());
+  await saveMangaLibrary(
+    entries.map((entry) =>
+      entry.mangaId !== mangaId
+        ? entry
+        : {
+            ...entry,
+            volumes: mergeVolumes(entry.volumes, volumes),
+            pending: mergePending(entry.pending, undefined, [
+              ...volumes,
+              // Un torrent sans aucun CBZ ne doit pas rester en attente.
+              { infoHash } as MangaVolume,
+            ]),
+            updatedAt: Date.now(),
+          },
+    ),
+  );
 }
 
 /** Met a jour un tome en place (progression, chemin local, etat lu). */

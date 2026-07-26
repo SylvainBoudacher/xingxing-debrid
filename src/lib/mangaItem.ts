@@ -44,6 +44,20 @@ function pickAlt(alts: Record<string, string>[], lang: string): string | null {
   return null;
 }
 
+// Les descriptions MangaDex sont en markdown et se terminent souvent par un
+// pave de liens vers les editions etrangeres. On garde le texte, sans le
+// balisage ni la section de liens.
+export function cleanDescription(raw: string): string {
+  return raw
+    .split(/\n-{3,}\n/)[0]
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/[*_>`#]/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+}
+
 export function mapManga(raw: MangaRaw): MangaItem {
   const a = raw.attributes;
   const alts = a.altTitles ?? [];
@@ -71,7 +85,7 @@ export function mapManga(raw: MangaRaw): MangaItem {
       ? (a.status as MangaStatus)
       : "ongoing",
     lastVolume: Number.isFinite(lastVolume) && lastVolume > 0 ? lastVolume : null,
-    description: pickLang(a.description, ["fr", "en"]) ?? "",
+    description: cleanDescription(pickLang(a.description, ["fr", "en"]) ?? ""),
     tags: (a.tags ?? [])
       .map((t) => pickLang(t.attributes.name, ["fr", "en"]) ?? "")
       .filter(Boolean),

@@ -299,11 +299,23 @@ async fn download_to_dir(
     id: String,
     url: String,
     dir: String,
+    subdir: Option<String>,
 ) -> Result<String, String> {
-    let target_dir = if dir.trim().is_empty() {
+    let base_dir = if dir.trim().is_empty() {
         app.path().download_dir().map_err(|e| e.to_string())?
     } else {
         std::path::PathBuf::from(&dir)
+    };
+
+    // Sous-dossier optionnel (les tomes de manga vont dans "manga/") : cree a
+    // la volee, un seul niveau, sans separateur de chemin.
+    let target_dir = match subdir.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        Some(sub) if !sub.contains(['/', '\\']) && sub != ".." => {
+            let path = base_dir.join(sub);
+            std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+            path
+        }
+        _ => base_dir,
     };
 
     let dest = target_dir.join(filename_from_url(&url));

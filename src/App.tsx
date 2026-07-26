@@ -47,6 +47,12 @@ const PreferencesPage = lazy(() =>
 const PatchnotesPage = lazy(() =>
   import("@/pages/PatchnotesPage").then((m) => ({ default: m.PatchnotesPage })),
 );
+const MangaDiscoverPage = lazy(() =>
+  import("@/pages/MangaDiscoverPage").then((m) => ({ default: m.MangaDiscoverPage })),
+);
+const MangaLibraryPage = lazy(() =>
+  import("@/pages/MangaLibraryPage").then((m) => ({ default: m.MangaLibraryPage })),
+);
 const BoatGamePage = lazy(() =>
   import("@/pages/BoatGamePage").then((m) => ({ default: m.BoatGamePage })),
 );
@@ -74,6 +80,7 @@ function App() {
   const [page, setPage] = useState<Page | null>(null);
   const [discoverQuery, setDiscoverQuery] = useState("");
   const [discoverItem, setDiscoverItem] = useState<TmdbItem | null>(null);
+  const [mangaLibraryId, setMangaLibraryId] = useState<string | null>(null);
   const [libraryExpandedHash, setLibraryExpandedHash] = useState<string | null>(null);
   const [libraryExpandedGroupId, setLibraryExpandedGroupId] = useState<number | null>(null);
   const [mainSearch, setMainSearch] = useState<{
@@ -226,6 +233,8 @@ function App() {
       setLibraryExpandedHash(null);
       setLibraryExpandedGroupId(null);
     }
+    // Idem côté manga : seule l'action "Voir" d'une fiche pré-ouvre une oeuvre.
+    if (p === "mangalibrary") setMangaLibraryId(null);
     setPage(p);
   }
 
@@ -240,6 +249,12 @@ function App() {
       setLibraryExpandedGroupId(null);
     }
     setPage("library");
+  }
+
+  // Depuis une fiche manga : ouvre la bibliothèque manga sur cette oeuvre.
+  function openMangaEntry(mangaId: string) {
+    setMangaLibraryId(mangaId);
+    setPage("mangalibrary");
   }
 
   function launchDiscover(q: string) {
@@ -489,6 +504,44 @@ function App() {
                 initialLikes={initLikes}
                 onSearchTracker={launchTrackerSearch}
                 onOpenLibraryItem={openLibraryItem}
+              />
+            </motion.div>
+          )}
+          {effectivePhase === "done" && page === "manga" && (
+            <motion.div
+              key="manga"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: "easeInOut" }}
+            >
+              <MangaDiscoverPage
+                onBack={() => setPage("main")}
+                onNavigate={handleNavigate}
+                hasPendingUpdate={availableUpdate !== null}
+                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+                getC411Key={() => initC411Key ?? ""}
+                getAllDebridKey={() => initAllDebridKey ?? ""}
+                onOpenLibrary={openMangaEntry}
+              />
+            </motion.div>
+          )}
+          {effectivePhase === "done" && page === "mangalibrary" && (
+            <motion.div
+              key="mangalibrary"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: "easeInOut" }}
+            >
+              <MangaLibraryPage
+                onBack={() => setPage("main")}
+                onNavigate={handleNavigate}
+                hasPendingUpdate={availableUpdate !== null}
+                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+                getC411Key={() => initC411Key ?? ""}
+                getAllDebridKey={() => initAllDebridKey ?? ""}
+                initialMangaId={mangaLibraryId}
               />
             </motion.div>
           )}
