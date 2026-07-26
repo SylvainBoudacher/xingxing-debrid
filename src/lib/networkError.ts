@@ -23,6 +23,8 @@ export class NetworkError extends Error {
     readonly kind: NetworkErrorKind,
     message?: string,
     readonly status?: number,
+    /** Erreur d'origine, conservée pour le diagnostic en dev. */
+    readonly rawCause?: unknown,
   ) {
     super(message ?? defaultMessage(service, kind, status));
     this.name = "NetworkError";
@@ -46,19 +48,25 @@ function classify(service: NetworkService, err: unknown): NetworkError {
   if (err instanceof NetworkError) return err;
   const name = err instanceof Error ? err.name : "";
   const msg = String(err);
+  // La cause brute n'apparaît nulle part en production (message générique) :
+  // sans cette trace, diagnostiquer un échec en app native demande d'ouvrir
+  // les devtools de la webview.
+  console.error(`[${service}] échec réseau brut :`, err);
   if (name === "TimeoutError" || name === "AbortError" || /timeout|timed out|abort/i.test(msg)) {
-    return new NetworkError(service, "timeout");
+    return new NetworkError(service, "timeout", undefined, undefined, err);
   }
   // Refus du plugin HTTP de Tauri : l'URL manque dans capabilities/default.json.
   // Sans ce cas, un oubli de configuration se lit comme une panne de connexion.
-  if (/not allowed on the configured scope|forbidden path/i.test(msg)) {
+  if (/not allowed on the configured scope|url not allowed|forbidden path/i.test(msg)) {
     return new NetworkError(
       service,
       "http",
       `${service} n'est pas autorisé par la configuration de l'application.`,
+      undefined,
+      err,
     );
   }
-  return new NetworkError(service, "offline");
+  return new NetworkError(service, "offline", undefined, undefined, err);
 }
 
 // fetch avec timeout dur (AbortSignal) qui normalise toute erreur réseau ou HTTP
@@ -82,7 +90,14 @@ export async function fetchWithTimeout(
 // Message lisible pour l'utilisateur. Les NetworkError portent déjà un message
 // français ; les erreurs Rust (invoke) sont déjà des chaînes formatées.
 export function networkErrorMessage(err: unknown): string {
-  if (err instanceof NetworkError) return err.message;
+  if (err instanceof NetworkError) {
+    // En dev, la cause brute est affichée sous le message : c'est la seule
+    // information qui distingue une panne réseau d'une URL non autorisée ou
+    // d'un refus du service.
+    return import.meta.env.DEV && err.rawCause !== undefined
+      ? `${err.message}\n${String(err.rawCause)}`
+      : err.message;
+  }
   return String(err);
 }
 
