@@ -35,7 +35,6 @@ Contenu du fichier :
 - les catégories (`CategoryConfig`, store `library_categories`) — sans elles
   les entrées importées arrivent toutes dans « Non classés » et le transfert
   paraît raté
-- les pierres tombales de suppression
 
 Hors périmètre : clés API, session C411, préférences d'affichage, likes,
 ducks. Ils restent du ressort de `export_profile`.
@@ -69,20 +68,16 @@ Payload déchiffré :
 {
   "exportedAt": 1753500000000,
   "entries": [{ "infoHash": "...", "title": "...", "updatedAt": 1753499000000 }],
-  "categories": { "categories": [], "assign": {} },
-  "removed": { "<infoHash>": 1753498000000 }
+  "categories": { "categories": [], "assign": {} }
 }
 ```
 
-Deux ajouts par rapport au modèle actuel :
+Un seul ajout par rapport au modèle actuel : **`updatedAt` par entrée**,
+nécessaire à la fusion. Les entrées existantes n'en ont pas ; à la lecture,
+une entrée sans `updatedAt` retombe sur son `addedAt`.
 
-**`updatedAt` par entrée.** Nécessaire à la fusion. Les entrées existantes
-n'en ont pas ; à la lecture, une entrée sans `updatedAt` retombe sur son
-`addedAt`.
-
-**`removed`.** Dictionnaire infoHash vers horodatage de suppression. Sans lui,
-un titre supprimé sur le PC A réapparaît à chaque import du fichier du PC B.
-Alimenté à la suppression d'une entrée, purgé au-delà de 90 jours.
+Le format n'enregistre pas les suppressions. Voir « Titres absents du
+fichier » ci-dessous.
 
 ## Fusion
 
@@ -91,13 +86,11 @@ l'état local et l'état importé, et rend l'état fusionné plus un résumé.
 
 Règles, appliquées par `infoHash` :
 
-1. Entrée présente d'un seul côté, absente des `removed` de l'autre côté avec
-   un horodatage postérieur à son `updatedAt` → conservée.
+1. Entrée présente uniquement dans le fichier → ajoutée.
 2. Entrée présente des deux côtés → celle dont l'`updatedAt` est le plus
    récent l'emporte, sauf pour `watched`.
 3. `watched` → union. Un fichier marqué vu d'un côté reste vu après fusion.
-4. Entrée dont l'horodatage de suppression est postérieur à son `updatedAt` →
-   supprimée, et la pierre tombale est conservée dans le résultat.
+4. Entrée présente uniquement en local → voir la règle ci-dessous.
 
 Le point 3 est un choix délibéré. La progression de visionnage est ce qui
 diverge le plus souvent entre deux machines, et sa perte est à la fois
@@ -109,19 +102,49 @@ Les catégories fusionnent selon la même logique : union des catégories par
 `id`, la plus récente l'emportant sur le nom en cas de collision ; `assign`
 suit l'entrée à laquelle il se rapporte.
 
-La fonction rend aussi un résumé, utilisé pour l'aperçu avant application :
+### Titres absents du fichier
+
+Un titre présent en local mais pas dans le fichier est ambigu : soit il vient
+d'être ajouté ici, soit il a été supprimé sur l'autre machine. Le format ne
+permet pas de trancher seul, et plutôt qu'un mécanisme de marqueurs de
+suppression persistants, on utilise `exportedAt` comme ligne de partage puis
+on laisse l'utilisateur arbitrer le reste.
+
+- `addedAt` **postérieur** à `exportedAt` → le titre a été ajouté après la
+  création du fichier, il ne pouvait pas y figurer. Conservé sans rien
+  demander.
+- `addedAt` **antérieur** → il existait au moment de l'export et n'y est pas.
+  Il a donc été supprimé sur l'autre machine. Soumis à l'utilisateur.
+
+Ces titres douteux sont listés dans la fenêtre d'import, cochés par défaut
+(l'hypothèse la plus probable étant la suppression). L'utilisateur décoche
+ceux qu'il veut conserver. En régime normal la liste est vide ou contient un
+ou deux titres ; elle n'est longue qu'au tout premier import entre deux
+machines ayant divergé, c'est-à-dire précisément quand l'utilisateur veut
+regarder ce qui se passe.
+
+Ce mécanisme suppose un humain devant l'écran. Une synchronisation
+automatique ultérieure devra réintroduire des marqueurs de suppression dans
+le format — ce sera un ajout, sans rupture de ce qui est défini ici.
+
+La fonction rend un résumé, utilisé pour l'aperçu avant application :
 
 ```ts
 interface MergeSummary {
   added: number;
   updated: number;
   unchanged: number;
-  removed: number;
+  // Presents en local, absents du fichier, anterieurs a exportedAt.
+  missing: LibraryEntry[];
 }
 ```
 
-Le calcul de l'aperçu et l'application réelle passent par le même appel. Il
-n'existe pas de code de simulation distinct qui pourrait diverger.
+`merge()` prend en paramètre l'ensemble des infoHash à supprimer (ceux cochés
+par l'utilisateur). L'aperçu est un premier appel avec un ensemble vide, dont
+on lit `missing` pour peupler la liste ; l'application est un second appel
+avec la sélection. Le calcul de l'aperçu et l'application passent par la même
+fonction, il n'existe pas de code de simulation distinct qui pourrait
+diverger.
 
 ## Export
 
@@ -156,14 +179,24 @@ rouvre la boîte de dialogue avec un message explicatif plutôt que d'échouer.
 Importer la bibliotheque
 Fichier exporte le 26/07/2026 a 14:32
 
-  Fusionner    12 nouveaux, 3 mis a jour, 45 inchanges, 1 supprime
-               Rien de votre bibliotheque actuelle n'est perdu.
+  12 nouveaux titres
+   3 mis a jour
+  45 inchanges
 
-  Ecraser      Votre bibliotheque (60 titres) est remplacee
-               par celle du fichier (57 titres).
+  2 titres absents du fichier
+  Ils existaient lors de l'export : probablement supprimes
+  sur l'autre machine.
+
+    [x] Dune (2021)
+    [x] Severance - Saison 2
+
+  Cochez ceux que vous voulez supprimer ici aussi.
 
            [ Annuler ]  [ Fusionner ]  [ Ecraser ]
 ```
+
+La liste des titres absents ne concerne que « Fusionner ». « Écraser »
+remplace tout, la question ne se pose pas.
 
 5. Le choix est appliqué, la bibliothèque et les catégories sont écrites, les
    caches mémoire de `library.ts` et `libraryCategories.ts` sont rafraîchis.
@@ -211,14 +244,16 @@ avant le moindre appel à `saveLibrary`.
 
 `merge.test.ts`, sur le modèle de `library.test.ts` :
 
-- entrée présente d'un seul côté, dans les deux sens
+- entrée présente uniquement dans le fichier → ajoutée
 - entrée des deux côtés, `updatedAt` local plus récent, puis distant plus
   récent
 - union de `watched` : un épisode vu de chaque côté donne les deux vus
-- suppression postérieure à la modification → entrée retirée
-- suppression antérieure à une modification distante → entrée conservée
-- entrée sans `updatedAt` (fichier d'avant ce changement) → retombe sur
-  `addedAt`
+- entrée locale avec `addedAt` postérieur à `exportedAt` → conservée, absente
+  de `missing`
+- entrée locale avec `addedAt` antérieur à `exportedAt` → présente dans
+  `missing`, conservée tant qu'elle n'est pas dans la sélection
+- même entrée passée dans la sélection de suppression → retirée
+- entrée sans `updatedAt` → retombe sur `addedAt`
 - `MergeSummary` cohérent avec l'état rendu
 - fusion des catégories, collision d'`id`
 
@@ -227,8 +262,13 @@ et au refus croisé entre les deux formats.
 
 ## Suite
 
-Le format, la fusion et les pierres tombales sont ceux dont aurait besoin une
-synchronisation WebDAV automatique. L'ajouter plus tard consiste à écrire un
-second backend qui appelle le même `merge.ts` : `PROPFIND` pour comparer les
-ETag, `GET` et `PUT` avec `If-Match` pour le compare-and-swap. Rien de ce qui
-est décrit ici n'aurait à être réécrit.
+Le format et la fusion sont ceux dont aurait besoin une synchronisation WebDAV
+automatique. L'ajouter plus tard consiste à écrire un backend qui appelle le
+même `merge.ts` : `PROPFIND` pour comparer les ETag, `GET` et `PUT` avec
+`If-Match` pour le compare-and-swap.
+
+Une seule pièce manquerait : la propagation automatique des suppressions, qui
+repose ici sur l'arbitrage de l'utilisateur. Il faudrait alors ajouter au
+format un dictionnaire des suppressions horodatées, alimenté à la suppression
+d'une entrée et purgé au-delà de quelques mois. C'est un ajout au format, pas
+une rupture.
