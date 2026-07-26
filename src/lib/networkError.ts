@@ -12,7 +12,7 @@ export const httpFetch: typeof globalThis.fetch = isBrowserPreview
 // sur le timeout du client reqwest côté Rust (voir http_client dans lib.rs).
 const DEFAULT_TIMEOUT_MS = 20_000;
 
-export type NetworkService = "C411" | "AllDebrid" | "TMDB" | "nyaa.si";
+export type NetworkService = "C411" | "AllDebrid" | "TMDB" | "nyaa.si" | "MangaDex";
 export type NetworkErrorKind = "timeout" | "offline" | "http" | "parse";
 
 // Erreur réseau typée : porte le service fautif et la nature du problème pour

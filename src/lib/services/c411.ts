@@ -17,20 +17,32 @@ export interface C411SearchParams {
   perPage: number;
   sortBy: string;
   sortOrder: "asc" | "desc";
+  /** Filtre serveur par sous-categorie (15 = manga). Absent = toutes. */
+  subcategory?: number;
 }
 
 // La cle API n'entre pas dans la queryKey : une rotation de cle ne doit pas
 // fragmenter le cache, et le secret ne doit pas trainer dans les cles de cache.
 export const c411Keys = {
   search: (p: C411SearchParams) =>
-    ["c411", "search", p.name, p.page, p.perPage, p.sortBy, p.sortOrder] as const,
+    [
+      "c411",
+      "search",
+      p.name,
+      p.page,
+      p.perPage,
+      p.sortBy,
+      p.sortOrder,
+      p.subcategory ?? null,
+    ] as const,
 };
 
 export async function searchTorrents(
   p: C411SearchParams,
   apiKey: string,
 ): Promise<C411SearchResponse> {
-  const url = `${BASE}/api/torrents?page=${p.page}&perPage=${p.perPage}&sortBy=${p.sortBy}&sortOrder=${p.sortOrder}&name=${encodeURIComponent(p.name)}&apikey=${apiKey}`;
+  const sub = p.subcategory ? `&subcategory=${p.subcategory}` : "";
+  const url = `${BASE}/api/torrents?page=${p.page}&perPage=${p.perPage}&sortBy=${p.sortBy}&sortOrder=${p.sortOrder}${sub}&name=${encodeURIComponent(p.name)}&apikey=${apiKey}`;
   const res = await fetchWithTimeout("C411", url);
   return (await res.json()) as C411SearchResponse;
 }
