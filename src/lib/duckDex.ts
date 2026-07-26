@@ -58,23 +58,30 @@ export function dexSnapshot(): { entries: DexEntries; shiny: ShinyEntries } | nu
 }
 
 // Compteurs de secheresse du pity, memes contraintes que le dex: miroir memoire
-// lu en synchrone, ecriture differee.
-const PITY_KEY = "pity";
-let pityCache: PityState = EMPTY_PITY;
+// lu en synchrone, ecriture differee. Un jeu de compteurs par source de canards:
+// le bassin tire un canard toutes les 40s la ou une main de fin de run en tire
+// trois d'un coup, donc partager les compteurs viderait le pity des cartes.
+const PITY_KEYS = { cards: "pity", pool: "pityPool" } as const;
+export type PityScope = keyof typeof PITY_KEYS;
 
-export async function loadPityState(): Promise<PityState> {
-  pityCache = (await store.get<PityState>(PITY_KEY)) ?? EMPTY_PITY;
-  return pityCache;
+const pityCache: Record<PityScope, PityState> = { cards: EMPTY_PITY, pool: EMPTY_PITY };
+
+export async function loadPityState(): Promise<void> {
+  await Promise.all(
+    (Object.keys(PITY_KEYS) as PityScope[]).map(async (scope) => {
+      pityCache[scope] = (await store.get<PityState>(PITY_KEYS[scope])) ?? EMPTY_PITY;
+    }),
+  );
 }
 
-export function pityState(): PityState {
-  return pityCache;
+export function pityState(scope: PityScope): PityState {
+  return pityCache[scope];
 }
 
-export function savePityState(next: PityState): void {
-  pityCache = next;
+export function savePityState(scope: PityScope, next: PityState): void {
+  pityCache[scope] = next;
   store
-    .set(PITY_KEY, next)
+    .set(PITY_KEYS[scope], next)
     .then(() => store.save())
     .catch(() => {});
 }
@@ -222,10 +229,12 @@ export async function debugCompleteShinyDex(): Promise<ShinyEntries> {
 export async function debugResetDex(): Promise<void> {
   cache = {};
   shinyCache = [];
-  pityCache = EMPTY_PITY;
   await store.set("entries", {});
   await store.set("shiny", []);
-  await store.set(PITY_KEY, EMPTY_PITY);
+  for (const scope of Object.keys(PITY_KEYS) as PityScope[]) {
+    pityCache[scope] = EMPTY_PITY;
+    await store.set(PITY_KEYS[scope], EMPTY_PITY);
+  }
   for (const r of REWARDS) await store.set(r.storeKey, false);
   await store.save();
 }

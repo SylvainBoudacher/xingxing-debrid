@@ -10,6 +10,7 @@ import {
   EMPTY_PITY,
   isNewShiny,
   isNewToDex,
+  POOL_CURVES,
   shinyChance,
   type DexSnapshot,
 } from "./pity";
@@ -75,6 +76,62 @@ describe("courbes", () => {
     for (const m of [S, 20, 5, 1]) {
       for (let n = 0; n < 20; n++) expect(shinyChance(m, n + 1)).toBeGreaterThan(shinyChance(m, n));
     }
+  });
+});
+
+describe("courbes du bassin", () => {
+  it("partent de zero au premier canard", () => {
+    expect(POOL_CURVES.dex(0)).toBe(0);
+    expect(POOL_CURVES.shiny(S, 0)).toBe(0);
+  });
+
+  it("sont concaves: chaque canard sec rapporte moins que le precedent", () => {
+    for (let n = 1; n < 200; n++) {
+      expect(POOL_CURVES.dex(n + 1) - POOL_CURVES.dex(n)).toBeLessThan(
+        POOL_CURVES.dex(n) - POOL_CURVES.dex(n - 1),
+      );
+      expect(POOL_CURVES.shiny(S, n + 1) - POOL_CURVES.shiny(S, n)).toBeLessThan(
+        POOL_CURVES.shiny(S, n) - POOL_CURVES.shiny(S, n - 1),
+      );
+    }
+  });
+
+  it("atteignent 90% de leur plafond en quelques dizaines de canards", () => {
+    expect(POOL_CURVES.dex(45)).toBeGreaterThan(0.9 * 0.015);
+    expect(POOL_CURVES.shiny(S, 32)).toBeGreaterThan(0.9 * 0.006);
+  });
+
+  it("plafonnent dix fois plus bas que les courbes des cartes", () => {
+    expect(POOL_CURVES.dex(10000)).toBeCloseTo(0.015, 5);
+    expect(POOL_CURVES.shiny(S, 10000)).toBeCloseTo(0.006, 5);
+    expect(POOL_CURVES.dex(10000)).toBeLessThan(dexChance(1000) / 10);
+    expect(POOL_CURVES.shiny(S, 10000)).toBeLessThan(shinyChance(S, 1000) / 10);
+  });
+
+  it("gardent le bonus de fin de chasse sur les shiny", () => {
+    expect(POOL_CURVES.shiny(0, 10000)).toBeCloseTo(0.006 * 3, 5);
+    expect(POOL_CURVES.shiny(1, 10000)).toBeGreaterThan(POOL_CURVES.shiny(S, 10000));
+  });
+
+  it("un canard seul finit par livrer le shiny manquant", () => {
+    rolls(0); // tous les tirages reussissent
+    const v = variantForSpecies(SPECIES.find((s) => s.id === "classique")!);
+    const snap = fullDex();
+    snap.shiny = SPECIES.filter((s) => s.id !== "roi").map((s) => s.id);
+    const { cards, next } = applyPity([v], snap, { dryDex: 0, dryShiny: 50 }, POOL_CURVES);
+    expect(speciesOf(cards[0])).toBe("roi");
+    expect(cards[0].shiny).toBe(true);
+    expect(next.dryShiny).toBe(0);
+  });
+
+  it("ne declenche rien tant que le canard n'est pas sec", () => {
+    rolls(0);
+    const v = variantForSpecies(SPECIES.find((s) => s.id === "classique")!);
+    const snap = fullDex();
+    snap.shiny = SPECIES.filter((s) => s.id !== "roi").map((s) => s.id);
+    const { cards } = applyPity([v], snap, EMPTY_PITY, POOL_CURVES);
+    expect(speciesOf(cards[0])).toBe("classique");
+    expect(cards[0].shiny).toBeUndefined();
   });
 });
 
@@ -194,6 +251,47 @@ describe("applyPity", () => {
     const { cards, next } = applyPity(hand(), snap, { dryDex: 0, dryShiny: 5 });
     const fresh = cards.filter((c) => isNewShiny(c, snap.shiny));
     expect(fresh.length).toBe(1);
+    expect(next.dryShiny).toBe(0);
+  });
+
+  // une main sans aucune carte du palier vise: sans repli, le pity ne pourrait
+  // rien livrer, alors que c'est exactement la fin de collection
+  const commonHand = (): Variant[] => [
+    variantForSpecies(SPECIES.find((s) => s.id === "bowtie")!),
+    variantForSpecies(SPECIES.find((s) => s.id === "sunhat")!),
+    variantForSpecies(SPECIES.find((s) => s.id === "scarf")!),
+  ];
+
+  it("livre une espece d'un autre palier quand la main n'en contient aucune", () => {
+    const snap = fullDex();
+    delete snap.entries.arcenciel;
+    const h = commonHand();
+    rolls(0);
+    const { cards, next } = applyPity(h, snap, { dryDex: 5, dryShiny: 0 });
+    expect(cards.map((c) => speciesOf(c))).toContain("arcenciel");
+    expect(next.dryDex).toBe(0);
+  });
+
+  it("garde le palier de la carte remplacee tant qu'il a quelque chose a offrir", () => {
+    const snap = fullDex();
+    delete snap.entries.mustache; // common, comme les cartes de la main
+    delete snap.entries.arcenciel; // legendary, uniquement accessible par repli
+    const h = commonHand();
+    rolls(0);
+    const { cards } = applyPity(h, snap, { dryDex: 5, dryShiny: 0 });
+    const ids = cards.map((c) => speciesOf(c));
+    expect(ids).toContain("mustache");
+    expect(ids).not.toContain("arcenciel");
+  });
+
+  it("livre le shiny du roi depuis une main de communes", () => {
+    const snap = fullDex();
+    snap.shiny = SPECIES.filter((s) => s.id !== "roi").map((s) => s.id);
+    const h = commonHand();
+    rolls(0);
+    const { cards, next } = applyPity(h, snap, { dryDex: 0, dryShiny: 5 });
+    const roi = cards.find((c) => speciesOf(c) === "roi");
+    expect(roi?.shiny).toBe(true);
     expect(next.dryShiny).toBe(0);
   });
 

@@ -55,7 +55,8 @@ import {
   drawPhoenixWings,
 } from "./duckRewardEffects";
 import { drawDex, overDex } from "./dexIcon";
-import { dexStatusOf, syncDexWithCollection } from "@/lib/duckDex";
+import { dexStatusOf, loadPityState, syncDexWithCollection } from "@/lib/duckDex";
+import { rollPoolDuck } from "@/game/poolDuck";
 import { claimableRewards, refreshClaimableRewards } from "@/lib/duckRewardStatus";
 import {
   drawSuckGuide,
@@ -263,12 +264,12 @@ function scaleFor(v: Variant) {
 
 function spawnDuck() {
   if (pool.length >= MAX_DUCKS) return;
-  const v = randomVariant();
+  const v = rollPoolDuck();
   enterPool(v, scaleFor(v));
 }
 
 // Dev-only (Shift+S): force un roll shiny pour tester le dex shiny sans
-// attendre le taux de 7%. Ignore MAX_DUCKS volontairement. (Shift, car S seul
+// attendre le taux de 3%. Ignore MAX_DUCKS volontairement. (Shift, car S seul
 // est la marche arriere du bateau.)
 function spawnShinyDuck() {
   const v = randomVariant();
@@ -2051,9 +2052,10 @@ export function PixelPool({
 
     resize();
     ensureSpawning();
-    syncDexWithCollection() // warm the dex cache for hover badges
+    syncDexWithCollection() // warm the dex cache for hover badges + le pity du bassin
       .then(() => refreshClaimableRewards()) // pastille "recompense a reclamer"
       .catch(() => {});
+    loadPityState().catch(() => {}); // compteurs de secheresse du bassin
     registerInjector(spawnSavedDuck); // flush any saved ducks queued before mount
     registerRemover(removePoolDuck);
     registerReleaser(unmarkSavedDuck);

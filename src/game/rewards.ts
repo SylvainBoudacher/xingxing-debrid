@@ -58,7 +58,7 @@ export function rollRewards(rank: Rank, score: number, difficulty: Difficulty): 
   }
 
   // le pity passe en dernier, pour ne pas ecraser les boosts de rang
-  const { cards: final, next } = applyPity(cards, dexSnapshot(), pityState());
-  savePityState(next);
+  const { cards: final, next } = applyPity(cards, dexSnapshot(), pityState("cards"));
+  savePityState("cards", next);
   return final;
 }

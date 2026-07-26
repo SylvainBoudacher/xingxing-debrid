@@ -1,5 +1,5 @@
 import vlcLogo from "@/assets/vlc.png";
-import { formatSize, type DebridModal } from "@/lib/debrid";
+import { formatSize, isVideoFile, type DebridModal } from "@/lib/debrid";
 import { useDebridActions } from "@/lib/useDebridActions";
 import { Check, Copy, Download, Loader2, X } from "lucide-react";
 import { motion } from "motion/react";
@@ -71,21 +71,23 @@ export function DebridFilesModal({ modal, getAllDebridKey, onClose }: DebridFile
                   <p className="text-xs text-zinc-500">{formatSize(file.size)}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={() => handleOpenVlc(file.link)}
-                    disabled={downloadingLink !== null || copiedLink !== null || vlcLink !== null}
-                    className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {vlcLink === file.link ? (
-                      <Loader2 className="h-3.5 w-3.5 text-zinc-900 dark:text-white animate-spin" />
-                    ) : (
-                      <img src={vlcLogo} className="h-4 w-4" />
-                    )}
-                    <span className="text-xs font-medium text-zinc-900 dark:text-white">
-                      Lire avec VLC
-                    </span>
-                  </motion.button>
+                  {isVideoFile(file.name) && (
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => handleOpenVlc(file.link)}
+                      disabled={downloadingLink !== null || copiedLink !== null || vlcLink !== null}
+                      className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {vlcLink === file.link ? (
+                        <Loader2 className="h-3.5 w-3.5 text-zinc-900 dark:text-white animate-spin" />
+                      ) : (
+                        <img src={vlcLogo} className="h-4 w-4" />
+                      )}
+                      <span className="text-xs font-medium text-zinc-900 dark:text-white">
+                        Lire avec VLC
+                      </span>
+                    </motion.button>
+                  )}
                   <motion.button
                     whileTap={{ scale: 0.97 }}
                     onClick={() => handleCopyLink(file.link)}
