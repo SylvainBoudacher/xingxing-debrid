@@ -40,20 +40,27 @@ function basename(path: string): string {
 export function planMangaMoves(entries: MangaEntry[], targetDir: string): PlannedMove[] {
   const sep = separator(targetDir);
   const moves: PlannedMove[] = [];
-  const usedDestinations = new Set<string>();
+  // Associe chaque nom de dossier deja attribue au mangaId qui l'a pris.
+  const folderOwners = new Map<string, string>();
 
   for (const entry of entries) {
-    const folder = sanitizeFolderName(entry.meta.title);
+    const baseFolder = sanitizeFolderName(entry.meta.title);
+    const owner = folderOwners.get(baseFolder);
+    let folder = baseFolder;
+    if (owner !== undefined && owner !== entry.mangaId) {
+      // Collision de nom de dossier entre deux series distinctes : on
+      // desambiguise avec un suffixe derive du mangaId pour ne jamais
+      // scinder une serie entre deux dossiers ni ecraser l'autre.
+      folder = `${baseFolder} (${entry.mangaId.slice(0, 6)})`;
+    } else {
+      folderOwners.set(baseFolder, entry.mangaId);
+    }
+
     for (const volume of entry.volumes) {
       const from = volume.localPath;
       if (!from) continue;
       const to = `${targetDir}${sep}${folder}${sep}${basename(from)}`;
       if (to === from) continue;
-      // Deux titres peuvent s'assainir vers le meme dossier : on garde le
-      // premier deplacement et on ignore les suivants qui ecraseraient sa
-      // destination.
-      if (usedDestinations.has(to)) continue;
-      usedDestinations.add(to);
       moves.push({
         mangaId: entry.mangaId,
         fileName: volume.fileName,

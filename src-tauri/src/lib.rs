@@ -414,11 +414,15 @@ fn move_one(from: &str, to: &str) -> Result<(), String> {
     let src = std::path::Path::new(from);
     let dst = std::path::Path::new(to);
 
+    if dst.exists() {
+        // Le fichier est deja a destination : deplacement deja effectue, rien a faire.
+        if !src.exists() {
+            return Ok(());
+        }
+        return Err("destination deja existante".to_string());
+    }
     if !src.exists() {
         return Err("fichier introuvable".to_string());
-    }
-    if dst.exists() {
-        return Err("destination deja existante".to_string());
     }
     if let Some(parent) = dst.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
