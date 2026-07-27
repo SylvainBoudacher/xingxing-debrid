@@ -290,6 +290,16 @@ fn export_json(app: tauri::AppHandle, filename: String, content: String) -> Resu
     Ok(path.to_string_lossy().into_owned())
 }
 
+// Un sous-dossier est sur si chacun de ses segments est non vide, different de
+// "." et "..", et ne contient ni antislash ni racine absolue.
+fn is_safe_subdir(sub: &str) -> bool {
+    !sub.contains('\\')
+        && !sub.starts_with('/')
+        && sub
+            .split('/')
+            .all(|s| !s.is_empty() && s != "." && s != ".." && !s.contains(':'))
+}
+
 // Telecharge `url` vers `dir` (ou le dossier Telechargements de l'OS si vide),
 // en streamant le corps et en emettant des evenements de progression.
 // Retourne le chemin final. Renvoie Err("cancelled") si annule.
@@ -308,11 +318,14 @@ async fn download_to_dir(
         std::path::PathBuf::from(&dir)
     };
 
-    // Sous-dossier optionnel (les tomes de manga vont dans "manga/") : cree a
-    // la volee, un seul niveau, sans separateur de chemin.
+    // Sous-dossier optionnel, un ou plusieurs segments separes par "/" (ex.
+    // "manga/One Piece") : cree a la volee, toujours sous base_dir.
     let target_dir = match subdir.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
-        Some(sub) if !sub.contains(['/', '\\']) && sub != ".." => {
-            let path = base_dir.join(sub);
+        Some(sub) if is_safe_subdir(sub) => {
+            let mut path = base_dir;
+            for segment in sub.split('/') {
+                path = path.join(segment);
+            }
             std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
             path
         }
