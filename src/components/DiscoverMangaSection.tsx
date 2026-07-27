@@ -10,7 +10,7 @@ import { useAddMangaRelease } from "@/lib/useAddMangaRelease";
 import { MANGA_FEED_LABELS, useMangaFeed } from "@/lib/useMangaFeed";
 import { Loader2 } from "lucide-react";
 import { AnimatePresence } from "motion/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface DiscoverMangaSectionProps {
   /** Requete saisie dans la barre de recherche de la page. */
@@ -36,12 +36,25 @@ export function DiscoverMangaSection({
   onBusyChange,
 }: DiscoverMangaSectionProps) {
   const feed = useMangaFeed(query);
-  const [selected, setSelected] = useState<MangaItem | null>(initialItem ?? null);
+  const [selected, setSelected] = useState<MangaItem | null>(null);
   const [entries, setEntries] = useState<MangaEntry[]>(() => getCachedMangaLibrary() ?? []);
+  const pendingItem = useRef(initialItem ?? null);
 
   useEffect(() => {
     if (getCachedMangaLibrary() === null) void loadMangaLibrary().then(setEntries);
   }, []);
+
+  // Fiche demandee depuis la page principale : on attend que la grille soit
+  // chargee avant de l'ouvrir, sinon la modale apparait sur une page vide.
+  useEffect(() => {
+    if (!pendingItem.current || feed.loading) return;
+    const item = pendingItem.current;
+    pendingItem.current = null;
+    // La grille joue son apparition en cascade avant que la fiche ne monte :
+    // on arrive sur une page posee, pas sur une modale qui coupe l'animation.
+    const timer = setTimeout(() => setSelected(item), 550);
+    return () => clearTimeout(timer);
+  }, [feed.loading]);
 
   useEffect(() => {
     onBusyChange?.(selected !== null);

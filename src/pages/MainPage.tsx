@@ -875,19 +875,26 @@ export function MainPage({
                     <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                   </motion.button>
                 </div>
-                <motion.button
-                  whileHover={{ scale: 1.06 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => onNavigate("manga")}
-                  className="group relative z-10 flex items-center gap-2 rounded-full bg-gradient-to-r from-rose-500 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 shadow-[0_0_24px_rgba(244,63,94,0.35)] hover:shadow-[0_0_36px_rgba(217,70,239,0.5)] cursor-pointer transition-shadow"
-                >
-                  <BookOpen className="h-4 w-4" />
-                  Manga
-                  <span className="rounded-full bg-white/25 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide">
-                    New
-                  </span>
-                  <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-                </motion.button>
+                <div className="relative">
+                  <span
+                    aria-hidden
+                    className="absolute -inset-1 rounded-full bg-gradient-to-r from-fuchsia-500/50 to-rose-500/50 blur-[8px]"
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => onNavigate("manga")}
+                    className="group relative z-10 flex items-center gap-2 rounded-full bg-zinc-900/90 dark:bg-zinc-900/90 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-fuchsia-400/30 shadow-[0_0_20px_rgba(217,70,239,0.25)] hover:ring-fuchsia-300/50 hover:shadow-[0_0_32px_rgba(217,70,239,0.4)] cursor-pointer transition-all"
+                  >
+                    <BookOpen className="h-4 w-4 text-fuchsia-400 transition-colors group-hover:text-fuchsia-300" />
+                    Manga
+                    <span className="flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-fuchsia-300">
+                      <span className="h-1 w-1 rounded-full bg-fuchsia-400 animate-pulse" />
+                      New
+                    </span>
+                    <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                  </motion.button>
+                </div>
                 <motion.button
                   whileHover={{ scale: 1.06 }}
                   whileTap={{ scale: 0.95 }}

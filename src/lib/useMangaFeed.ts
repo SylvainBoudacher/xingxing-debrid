@@ -48,7 +48,13 @@ export function useMangaFeed(query: string): MangaFeedState {
 
   // Requete effectivement envoyee : la frappe est amortie pour ne pas lancer un
   // appel par caractere.
-  const [activeQuery, setActiveQuery] = useState("");
+  // Une requete deja presente au montage (arrivee depuis la barre de la page
+  // principale) part sans amortissement : sinon la page afficherait d'abord le
+  // feed "Populaires" avant d'etre remplacee par les resultats.
+  const [activeQuery, setActiveQuery] = useState(() => {
+    const trimmed = query.trim();
+    return trimmed.length >= LIVE_SEARCH_MIN ? trimmed : "";
+  });
   useEffect(() => {
     const trimmed = query.trim();
     const next = trimmed.length >= LIVE_SEARCH_MIN ? trimmed : "";
