@@ -4,7 +4,7 @@
 // un état éteint tant que le cooldown de 10h n'est pas écoulé.
 
 export function slotBox(h: number) {
-  return { x: 196, y: h - 22 - 36, w: 28, h: 36 };
+  return { x: 208, y: h - 22 - 36, w: 28, h: 36 };
 }
 
 export function overSlot(px: number, py: number, h: number): boolean {

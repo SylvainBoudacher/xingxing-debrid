@@ -28,8 +28,9 @@ import { SlotReel } from "./SlotReel";
 // ils s'arrêtent l'un après l'autre, puis le lot est délivré.
 
 const IDLE_REELS: Reels = ["duckling", "glasses", "wizard"];
-const REEL_MS = [1100, 1550, 2000];
-const SETTLE_MS = REEL_MS[2] + 120;
+// Arrêts très espacés: le dernier rouleau fait durer le suspense.
+const REEL_MS = [1800, 3200, 5200];
+const SETTLE_MS = REEL_MS[2] + 350;
 
 export function SlotMachine() {
   const [open, setOpen] = useState(false);
@@ -154,24 +155,58 @@ export function SlotMachine() {
             </div>
 
             <div className="px-5 py-5">
-              <div className="flex items-end justify-center gap-1">
+              <div className="flex items-center justify-center">
                 {/* la borne */}
                 <div className="w-[268px] overflow-hidden rounded-[26px] bg-gradient-to-b from-[#8E1730] via-[#5E0E20] to-[#2E0511] ring-1 ring-amber-400/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]">
-                  <SlotMarquee lit={ready && !rolling} />
+                  <SlotMarquee lit={ready && !rolling} rolling={rolling} />
 
                   <div className="px-3 pt-3">
-                    <div className="relative rounded-xl bg-black/70 p-2 ring-2 ring-amber-400/50">
+                    <motion.div
+                      animate={
+                        rolling
+                          ? { x: [0, -1.5, 1.5, -1, 1, 0] }
+                          : reveal && reveal.prize !== "none"
+                            ? { scale: [1, 1.03, 1] }
+                            : { x: 0, scale: 1 }
+                      }
+                      transition={
+                        rolling
+                          ? { duration: 0.28, repeat: Infinity, ease: "linear" }
+                          : { duration: 0.45, ease: "easeOut" }
+                      }
+                      className={`relative rounded-xl bg-black/70 p-2 ring-2 transition-shadow duration-500 ${
+                        rolling
+                          ? "ring-amber-300/80 shadow-[0_0_24px_4px_rgba(251,191,36,0.35)]"
+                          : reveal && reveal.prize !== "none"
+                            ? "ring-amber-300 shadow-[0_0_32px_8px_rgba(251,191,36,0.45)]"
+                            : "ring-amber-400/50"
+                      }`}
+                    >
                       <div className="flex justify-center gap-2">
                         {reels.map((s, i) => (
                           <SlotReel key={i} symbol={s} spin={spin} duration={REEL_MS[i] / 1000} />
                         ))}
                       </div>
                       {/* ligne de paie */}
-                      <span className="pointer-events-none absolute inset-x-1 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-red-500/50" />
-                    </div>
+                      <motion.span
+                        animate={
+                          rolling
+                            ? { opacity: [0.5, 1, 0.5] }
+                            : { opacity: reveal && reveal.prize !== "none" ? 1 : 0.5 }
+                        }
+                        transition={
+                          rolling ? { duration: 0.5, repeat: Infinity } : { duration: 0.3 }
+                        }
+                        className={`pointer-events-none absolute inset-x-1 top-1/2 h-[2px] -translate-y-1/2 rounded-full ${
+                          reveal && !rolling && reveal.prize !== "none"
+                            ? "bg-amber-300 shadow-[0_0_10px_2px_rgba(251,191,36,0.8)]"
+                            : "bg-red-500/50"
+                        }`}
+                      />
+                    </motion.div>
 
                     {/* afficheur de la borne */}
-                    <div className="mt-3 flex h-[46px] flex-col items-center justify-center rounded-lg bg-black/70 px-2 ring-1 ring-white/10">
+                    <div className="mt-3 flex h-[58px] flex-col items-center justify-center rounded-lg bg-black/70 px-2 ring-1 ring-white/10">
                       <p
                         className={`font-mono text-[13px] font-bold uppercase tracking-wider ${
                           reveal && !rolling && reveal.prize === "none"
@@ -202,6 +237,12 @@ export function SlotMachine() {
                               ? "Attrape le pommeau et tire vers le bas."
                               : `Prochain tirage dans ${formatCountdown(remaining)}`}
                       </p>
+                      {/* le résultat ne doit pas faire perdre la notion du cooldown */}
+                      {reveal && !rolling && !ready && (
+                        <p className="mt-0.5 text-[10px] leading-tight text-zinc-500">
+                          Prochain tirage dans {formatCountdown(remaining)}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -209,7 +250,9 @@ export function SlotMachine() {
                   <div className="mx-auto my-3 h-1.5 w-20 rounded-full bg-black/60 ring-1 ring-white/10" />
                 </div>
 
-                <SlotLever disabled={!ready || rolling} onPull={pull} />
+                <div className="self-center">
+                  <SlotLever disabled={!ready || rolling} onPull={pull} />
+                </div>
               </div>
 
               <div className="mt-4">
