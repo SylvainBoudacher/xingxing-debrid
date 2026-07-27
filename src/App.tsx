@@ -14,6 +14,7 @@ import { prefetchLibrary } from "@/lib/library";
 import { loadCategories } from "@/lib/libraryCategories";
 import { loadLibraryPrefs } from "@/lib/libraryPrefs";
 import { LATEST_VERSION } from "@/lib/patchnotes";
+import type { SearchMode } from "@/lib/searchModes";
 import { loadSeriesFolders } from "@/lib/seriesFolders";
 import { onSettingsPanelRequest } from "@/lib/settingsNavigation";
 import { loadStartupPage } from "@/lib/startupPage";
@@ -89,6 +90,9 @@ function App() {
     query: string;
     source: "c411" | "nyaa";
   } | null>(null);
+  // Mode de la barre de recherche de l'accueil : remonté ici pour survivre au
+  // démontage de MainPage lors d'une navigation.
+  const [searchMode, setSearchMode] = useState<SearchMode>("discover");
   const [patchnotesSeenVersion, setPatchnotesSeenVersion] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [showMangaWelcome, setShowMangaWelcome] = useState(false);
@@ -318,6 +322,9 @@ function App() {
   function launchDiscover(q: string) {
     setDiscoverQuery(q);
     setDiscoverItem(null);
+    setDiscoverMangaQuery("");
+    setDiscoverMangaItem(null);
+    setDiscoverTab("movie");
     setPage("discover");
   }
 
@@ -326,6 +333,9 @@ function App() {
   function launchDiscoverItem(item: TmdbItem) {
     setDiscoverQuery(item.title);
     setDiscoverItem(item);
+    setDiscoverMangaQuery("");
+    setDiscoverMangaItem(null);
+    setDiscoverTab("movie");
     setPage("discover");
   }
 
@@ -333,6 +343,7 @@ function App() {
   // une recherche brute sur le tracker choisi.
   function launchTrackerSearch(query: string, source: "c411" | "nyaa") {
     setMainSearch({ query, source });
+    setSearchMode(source);
     setPage("main");
   }
 
@@ -477,6 +488,8 @@ function App() {
                 initialPatchnotesSeen={patchnotesSeenVersion ?? initPrefs.patchnotesSeen}
                 initialSearchViewMode={initPrefs.searchViewMode}
                 initialIdleAutoHide={idleAutoHide && summerEnabled && !isBrowserPreview}
+                searchMode={searchMode}
+                onSearchModeChange={setSearchMode}
                 initialSearch={mainSearch}
                 onSearchConsumed={() => setMainSearch(null)}
               />

@@ -1,5 +1,3 @@
-import c411Logo from "@/assets/sources/C411.webp";
-import nyaaLogo from "@/assets/sources/nyaa.webp";
 import vlcLogo from "@/assets/vlc.png";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
@@ -33,6 +31,7 @@ import { mapNyaaResults, mapTorrents, pageNumbers, type SearchResult } from "@/l
 import { c411Keys, searchTorrents } from "@/lib/services/c411";
 import { nyaaKeys, searchNyaa } from "@/lib/services/nyaa";
 import { useDebridActions } from "@/lib/useDebridActions";
+import { MODE_BAR_ACCENT, SEARCH_MODES, type SearchMode } from "@/lib/searchModes";
 import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -178,23 +177,6 @@ type SortKey = keyof typeof SORT_LABELS;
 
 const PER_PAGE = 10;
 
-type SearchMode = "discover" | "manga" | "c411" | "nyaa";
-
-// Modes du sélecteur en bout de barre. "discover" (défaut) redirige vers la
-// page Découverte (TMDB) ; c411 / nyaa lancent une recherche brute sur place.
-const SEARCH_MODES: Array<{
-  id: SearchMode;
-  label: string;
-  icon?: LucideIcon;
-  logo?: string;
-  tip: string;
-}> = [
-  { id: "discover", label: "Films & Séries", icon: Compass, tip: "Recherche guidée via TMDB" },
-  { id: "manga", label: "Mangas", icon: BookOpen, tip: "Recherche guidée via MangaDex" },
-  { id: "c411", label: "C411", logo: c411Logo, tip: "Recherche directe - torrent généraliste" },
-  { id: "nyaa", label: "Nyaa", logo: nyaaLogo, tip: "Recherche directe - animé" },
-];
-
 const API_SORT: Record<SortKey, string> = {
   pertinence: "relevance",
   seeders: "seeders",
@@ -232,6 +214,9 @@ interface MainPageProps {
   initialPatchnotesSeen?: string | null;
   initialSearchViewMode?: ViewMode;
   initialIdleAutoHide?: boolean;
+  /** Mode courant de la barre, conservé par App entre les navigations */
+  searchMode: SearchMode;
+  onSearchModeChange: (mode: SearchMode) => void;
   /** Recherche tracker à lancer au montage (depuis la fiche Découverte) */
   initialSearch?: { query: string; source: "c411" | "nyaa" } | null;
   /** Notifie que `initialSearch` a été consommé (évite un relancement au remontage) */
@@ -259,9 +244,12 @@ export function MainPage({
   initialIdleAutoHide = true,
   initialSearch,
   onSearchConsumed,
+  searchMode,
+  onSearchModeChange,
 }: MainPageProps) {
   const [query, setQuery] = useState(initialSearch?.query ?? "");
-  const [source, setSource] = useState<SearchMode>(initialSearch?.source ?? "discover");
+  const source = searchMode;
+  const setSource = onSearchModeChange;
   const [activeSource, setActiveSource] = useState<"c411" | "nyaa">("c411");
   const [searchFocused, setSearchFocused] = useState(false);
   const [nyaaTeam, setNyaaTeam] = useState("");
@@ -940,9 +928,9 @@ export function MainPage({
             className="relative w-full max-w-2xl px-6"
           >
             <div
-              className={`relative overflow-hidden bg-white/90 dark:bg-zinc-800/80 shadow-[0_8px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)] transition-[border-radius] duration-200 ${
-                showSuggestions || showMangaSuggestions ? "rounded-[28px]" : "rounded-[34px]"
-              }`}
+              className={`relative overflow-hidden border bg-white/90 dark:bg-zinc-800/80 transition-[border-radius,border-color,box-shadow] duration-300 ease-out ${
+                MODE_BAR_ACCENT[source]
+              } ${showSuggestions || showMangaSuggestions ? "rounded-[28px]" : "rounded-[34px]"}`}
             >
               <div className="relative flex items-center gap-2 px-6 py-4">
                 {loading || suggestionsLoading || mangaSuggestionsLoading ? (
