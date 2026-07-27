@@ -393,6 +393,59 @@ async fn download_to_dir(
     Ok(dest.to_string_lossy().into_owned())
 }
 
+#[derive(serde::Deserialize)]
+struct FileMove {
+    from: String,
+    to: String,
+}
+
+#[derive(serde::Serialize)]
+struct MoveResult {
+    from: String,
+    to: String,
+    error: Option<String>,
+}
+
+// Deplace un fichier : rename d'abord (instantane), puis copie + suppression
+// si la source et la destination sont sur des volumes differents. Si la copie
+// reussit mais la suppression echoue, le deplacement est considere reussi :
+// la destination est valide, seul un doublon subsiste.
+fn move_one(from: &str, to: &str) -> Result<(), String> {
+    let src = std::path::Path::new(from);
+    let dst = std::path::Path::new(to);
+
+    if !src.exists() {
+        return Err("fichier introuvable".to_string());
+    }
+    if let Some(parent) = dst.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    if std::fs::rename(src, dst).is_ok() {
+        return Ok(());
+    }
+    std::fs::copy(src, dst).map_err(|e| e.to_string())?;
+    let _ = std::fs::remove_file(src);
+    Ok(())
+}
+
+// Deplace une liste de fichiers sans jamais s'arreter au premier echec :
+// chaque entree porte son propre resultat pour que l'appelant sache quels
+// fichiers restent a deplacer manuellement.
+#[tauri::command]
+fn move_files(moves: Vec<FileMove>) -> Vec<MoveResult> {
+    moves
+        .into_iter()
+        .map(|m| {
+            let error = move_one(&m.from, &m.to).err();
+            MoveResult {
+                from: m.from,
+                to: m.to,
+                error,
+            }
+        })
+        .collect()
+}
+
 #[tauri::command]
 fn cancel_download(state: tauri::State<'_, DownloadState>, id: String) {
     state.cancelled.lock().unwrap().insert(id);
@@ -468,6 +521,7 @@ pub fn run() {
             export_json,
             download_to_dir,
             cancel_download,
+            move_files,
             open_file,
             profile::export_profile,
             profile::import_profile,
