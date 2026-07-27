@@ -417,13 +417,19 @@ fn move_one(from: &str, to: &str) -> Result<(), String> {
     if !src.exists() {
         return Err("fichier introuvable".to_string());
     }
+    if dst.exists() {
+        return Err("destination deja existante".to_string());
+    }
     if let Some(parent) = dst.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     if std::fs::rename(src, dst).is_ok() {
         return Ok(());
     }
-    std::fs::copy(src, dst).map_err(|e| e.to_string())?;
+    if let Err(e) = std::fs::copy(src, dst) {
+        let _ = std::fs::remove_file(dst);
+        return Err(e.to_string());
+    }
     let _ = std::fs::remove_file(src);
     Ok(())
 }
@@ -431,7 +437,7 @@ fn move_one(from: &str, to: &str) -> Result<(), String> {
 // Deplace une liste de fichiers sans jamais s'arreter au premier echec :
 // chaque entree porte son propre resultat pour que l'appelant sache quels
 // fichiers restent a deplacer manuellement.
-#[tauri::command]
+#[tauri::command(async)]
 fn move_files(moves: Vec<FileMove>) -> Vec<MoveResult> {
     moves
         .into_iter()

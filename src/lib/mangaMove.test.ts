@@ -66,4 +66,21 @@ describe("planMangaMoves", () => {
       to: "D:\\Mangas\\Bleach\\T01.cbz",
     });
   });
+
+  it("ignore les deplacements qui entrent en collision sur la meme destination", () => {
+    const first = entry("One Piece", [volume({ localPath: "/old/a/T01.cbz" })]);
+    const second = {
+      ...entry("One Piece", [volume({ localPath: "/old/b/T01.cbz" })]),
+      mangaId: "dupe",
+    };
+    expect(planMangaMoves([first, second], "/new")).toEqual([
+      {
+        mangaId: "One Piece",
+        fileName: "T01.cbz",
+        infoHash: "hash",
+        from: "/old/a/T01.cbz",
+        to: "/new/One Piece/T01.cbz",
+      },
+    ]);
+  });
 });

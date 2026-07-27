@@ -1,4 +1,9 @@
-import { type MangaEntry, updateVolume } from "@/lib/mangaLibrary";
+import {
+  getCachedMangaLibrary,
+  loadMangaLibrary,
+  type MangaEntry,
+  saveMangaLibrary,
+} from "@/lib/mangaLibrary";
 import { sanitizeFolderName } from "@/lib/mangaPaths";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -35,6 +40,7 @@ function basename(path: string): string {
 export function planMangaMoves(entries: MangaEntry[], targetDir: string): PlannedMove[] {
   const sep = separator(targetDir);
   const moves: PlannedMove[] = [];
+  const usedDestinations = new Set<string>();
 
   for (const entry of entries) {
     const folder = sanitizeFolderName(entry.meta.title);
@@ -43,6 +49,11 @@ export function planMangaMoves(entries: MangaEntry[], targetDir: string): Planne
       if (!from) continue;
       const to = `${targetDir}${sep}${folder}${sep}${basename(from)}`;
       if (to === from) continue;
+      // Deux titres peuvent s'assainir vers le meme dossier : on garde le
+      // premier deplacement et on ignore les suivants qui ecraseraient sa
+      // destination.
+      if (usedDestinations.has(to)) continue;
+      usedDestinations.add(to);
       moves.push({
         mangaId: entry.mangaId,
         fileName: volume.fileName,
@@ -67,7 +78,7 @@ export async function applyMangaMoves(
   });
 
   const failed: PlannedMove[] = [];
-  let moved = 0;
+  const succeeded: PlannedMove[] = [];
 
   for (const [i, result] of results.entries()) {
     const move = moves[i];
@@ -75,8 +86,26 @@ export async function applyMangaMoves(
       failed.push(move);
       continue;
     }
-    await updateVolume(move.mangaId, move.fileName, move.infoHash, { localPath: move.to });
-    moved += 1;
+    succeeded.push(move);
   }
-  return { moved, failed };
+
+  if (succeeded.length > 0) {
+    const entries = getCachedMangaLibrary() ?? (await loadMangaLibrary());
+    const now = Date.now();
+    const updated = entries.map((entry) => {
+      const forEntry = succeeded.filter((m) => m.mangaId === entry.mangaId);
+      if (forEntry.length === 0) return entry;
+      return {
+        ...entry,
+        updatedAt: now,
+        volumes: entry.volumes.map((v) => {
+          const move = forEntry.find((m) => m.fileName === v.fileName && m.infoHash === v.infoHash);
+          return move ? { ...v, localPath: move.to } : v;
+        }),
+      };
+    });
+    await saveMangaLibrary(updated);
+  }
+
+  return { moved: succeeded.length, failed };
 }
