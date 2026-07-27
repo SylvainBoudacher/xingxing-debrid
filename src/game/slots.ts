@@ -1,4 +1,4 @@
-// Bandit manchot du bassin: un tirage toutes les 10h, paye en canards.
+// Bandit manchot du bassin: un tirage toutes les 4h, paye en canards.
 //
 // Le lot est tire en premier, les rouleaux sont ensuite construits pour
 // l'afficher. Jamais l'inverse: l'animation ne peut pas changer le resultat, et
@@ -92,7 +92,7 @@ function prizeVariant(prize: Exclude<SlotPrize, "none" | "jackpot">): Variant {
   return variantOfRarity(prize);
 }
 
-// `force` sert au menu dev: le cooldown de 10h rend l'attente d'un jackpot
+// `force` sert au menu dev: le cooldown de 4h rend l'attente d'un jackpot
 // impraticable a la main.
 export function rollSlot(jackpotWon: boolean, force?: SlotPrize): SlotResult {
   const prize = force ?? pickPrize();

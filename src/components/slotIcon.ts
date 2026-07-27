@@ -1,7 +1,7 @@
 // Bandit manchot: une petite machine à sous en pixel-art posée au sol, à droite
 // du Canardex. Un clic ouvre l'overlay du casino. Même langage visuel que le
 // Canardex et le stand (formes plates, halo + rebond au survol), avec en plus
-// un état éteint tant que le cooldown de 10h n'est pas écoulé.
+// un état éteint tant que le cooldown de 4h n'est pas écoulé.
 
 export function slotBox(h: number) {
   return { x: 208, y: h - 22 - 36, w: 28, h: 36 };

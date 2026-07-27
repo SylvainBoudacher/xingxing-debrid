@@ -3,7 +3,7 @@ import { FlaskConical } from "lucide-react";
 import type { SlotPrize } from "@/game/slots";
 import { PRIZE_LABEL } from "./slotCopy";
 
-// Outils de triche du bandit manchot, réservés au mode dev: attendre 10h entre
+// Outils de triche du bandit manchot, réservés au mode dev: attendre 4h entre
 // deux tirages, ou 200 tirages pour voir un jackpot, n'est pas testable.
 // Menu maison plutôt que Radix, pour les mêmes raisons que DuckDexDevMenu.
 

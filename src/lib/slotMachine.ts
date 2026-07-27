@@ -6,7 +6,7 @@ import type { SlotResult } from "@/game/slots";
 // il survit aux mises a jour de l'app.
 const store = new LazyStore("slots.json", { defaults: {}, autoSave: false });
 
-export const COOLDOWN_MS = 10 * 60 * 60 * 1000;
+export const COOLDOWN_MS = 4 * 60 * 60 * 1000;
 
 // Une perte fait avancer le pity du bassin de l'equivalent de 15 canards secs.
 const LOSS_PITY = 15;
@@ -80,7 +80,7 @@ export function formatCountdown(ms: number): string {
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  if (h > 0) return `${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
   if (m > 0) return `${m}m ${s}s`;
   return `${s}s`;
 }

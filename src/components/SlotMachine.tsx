@@ -134,7 +134,7 @@ export function SlotMachine() {
             <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4">
               <div>
                 <h2 className="text-base font-semibold text-white">Bandit manchot</h2>
-                <p className="text-xs text-amber-300/70">Un tirage toutes les 10 heures</p>
+                <p className="text-xs text-amber-300/70">Un tirage toutes les 4 heures</p>
               </div>
               <div className="flex items-center gap-2">
                 {import.meta.env.DEV && (
@@ -155,7 +155,19 @@ export function SlotMachine() {
             </div>
 
             <div className="px-5 py-5">
-              <div className="flex items-center justify-center">
+              {/* compte à rebours bien visible au-dessus de la borne */}
+              {!ready && !rolling && (
+                <div className="mb-4 w-full rounded-xl bg-black/50 px-5 py-2.5 text-center ring-1 ring-amber-400/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-amber-300/60">
+                    Prochain tirage
+                  </p>
+                  <p className="mt-0.5 font-mono text-xl font-bold tracking-wider text-amber-300">
+                    {formatCountdown(remaining)}
+                  </p>
+                </div>
+              )}
+              {/* la borne est centrée seule; le levier est posé hors flux à sa droite */}
+              <div className="relative flex items-center justify-center">
                 {/* la borne */}
                 <div className="w-[268px] overflow-hidden rounded-[26px] bg-gradient-to-b from-[#8E1730] via-[#5E0E20] to-[#2E0511] ring-1 ring-amber-400/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]">
                   <SlotMarquee lit={ready && !rolling} rolling={rolling} />
@@ -206,7 +218,7 @@ export function SlotMachine() {
                     </motion.div>
 
                     {/* afficheur de la borne */}
-                    <div className="mt-3 flex h-[58px] flex-col items-center justify-center rounded-lg bg-black/70 px-2 ring-1 ring-white/10">
+                    <div className="mt-3 flex h-[46px] flex-col items-center justify-center rounded-lg bg-black/70 px-2 ring-1 ring-white/10">
                       <p
                         className={`font-mono text-[13px] font-bold uppercase tracking-wider ${
                           reveal && !rolling && reveal.prize === "none"
@@ -235,14 +247,8 @@ export function SlotMachine() {
                                 : "Le pity du bassin avance."
                             : ready
                               ? "Attrape le pommeau et tire vers le bas."
-                              : `Prochain tirage dans ${formatCountdown(remaining)}`}
+                              : "Reviens quand la borne sera rechargée."}
                       </p>
-                      {/* le résultat ne doit pas faire perdre la notion du cooldown */}
-                      {reveal && !rolling && !ready && (
-                        <p className="mt-0.5 text-[10px] leading-tight text-zinc-500">
-                          Prochain tirage dans {formatCountdown(remaining)}
-                        </p>
-                      )}
                     </div>
                   </div>
 
@@ -250,7 +256,7 @@ export function SlotMachine() {
                   <div className="mx-auto my-3 h-1.5 w-20 rounded-full bg-black/60 ring-1 ring-white/10" />
                 </div>
 
-                <div className="self-center">
+                <div className="absolute left-1/2 top-1/2 ml-[134px] -translate-y-1/2">
                   <SlotLever disabled={!ready || rolling} onPull={pull} />
                 </div>
               </div>

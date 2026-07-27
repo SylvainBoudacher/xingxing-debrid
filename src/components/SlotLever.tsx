@@ -14,7 +14,7 @@ import { animate, motion, useMotionValue, useTransform } from "motion/react";
 
 const TRAVEL = 96; // course du doigt en pixels pour un tir complet
 const TRIGGER = 0.62; // part de la course à partir de laquelle le tirage part
-const ARM = 80; // longueur de la tige, du pivot au pommeau
+const ARM = 104; // longueur de la tige, du pivot au pommeau
 
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -62,10 +62,10 @@ export function SlotLever({ disabled, onPull }: { disabled: boolean; onPull: () 
   }
 
   return (
-    <div className="relative h-[200px] w-12 shrink-0 select-none">
+    <div className="relative h-[248px] w-12 shrink-0 select-none">
       {/* moyeu du pivot, à mi-hauteur */}
-      <div className="absolute left-1/2 top-[94px] h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-b from-zinc-500 to-zinc-800 ring-1 ring-black/40" />
-      <div className="absolute left-1/2 top-[94px] h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-900/80" />
+      <div className="absolute left-1/2 top-[118px] h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-b from-zinc-500 to-zinc-800 ring-1 ring-black/40" />
+      <div className="absolute left-1/2 top-[118px] h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-900/80" />
 
       <button
         type="button"
@@ -83,7 +83,7 @@ export function SlotLever({ disabled, onPull }: { disabled: boolean; onPull: () 
         {/* tige, du pivot au pommeau */}
         <motion.span
           style={{ scaleY: stemScale, originY: 1, x: "-50%" }}
-          className={`absolute left-1/2 top-[14px] h-[80px] w-[9px] rounded-full bg-gradient-to-r ${
+          className={`absolute left-1/2 top-[14px] h-[104px] w-[9px] rounded-full bg-gradient-to-r ${
             disabled
               ? "from-zinc-600 via-zinc-400 to-zinc-600"
               : "from-zinc-500 via-zinc-200 to-zinc-500"
