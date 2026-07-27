@@ -319,3 +319,91 @@ export function drawGodlyBolts({ ctx, cx, cy, dw, dh, t, phase }: EffectFrame) {
     ctx.fillRect(sx - 0.7 * s, sy - r, 1.4 * s, r * 2);
   }
 }
+
+// --- Croupier -------------------------------------------------------------
+
+const CROUPIER_REF_H = 119 * 1.4;
+
+// L'enseigne au-dessus de sa tête clignote par saccades, comme un vrai néon
+// fatigué: allumée la plupart du temps, deux coupures brèves par cycle.
+export function croupierBlink(t: number, phase: number): number {
+  const cycle = (t * 0.0004 + phase * 0.1) % 1;
+  if (cycle > 0.62 && cycle < 0.645) return 0.15;
+  if (cycle > 0.66 && cycle < 0.672) return 0.3;
+  return 0.85 + Math.sin(t * 0.006 + phase) * 0.15;
+}
+
+// Halo de néon rouge et cyan qui respire, derrière lui.
+export function drawCroupierNeon({ ctx, cx, cy, dw, t, phase }: EffectFrame) {
+  const blink = croupierBlink(t, phase);
+  const pulse = (0.22 + Math.sin(t * 0.0035 + phase) * 0.08) * blink;
+  const gr = ctx.createRadialGradient(cx, cy, dw * 0.1, cx, cy, dw * 0.95);
+  gr.addColorStop(0, `rgba(255,60,120,${pulse})`);
+  gr.addColorStop(0.55, `rgba(120,60,255,${pulse * 0.5})`);
+  gr.addColorStop(1, "rgba(65,232,255,0)");
+  ctx.fillStyle = gr;
+  ctx.beginPath();
+  ctx.arc(cx, cy, dw * 0.95, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// Trois jetons de casino en orbite inclinée, devant lui. Ils s'aplatissent en
+// passant derrière pour vendre la rotation.
+export function drawCroupierChips({ ctx, cx, cy, dw, dh, t, phase }: EffectFrame) {
+  const s = dh / CROUPIER_REF_H;
+  const colors = ["#FF3B7B", "#41E8FF", "#FFD24D"];
+  for (let i = 0; i < 3; i++) {
+    const a = t * 0.0016 + i * ((Math.PI * 2) / 3) + phase;
+    const px = cx + Math.cos(a) * dw * 0.62;
+    const py = cy + Math.sin(a) * dh * 0.3;
+    const depth = (Math.sin(a) + 1) / 2; // 0 derrière, 1 devant
+    const r = (5.4 + depth * 2.2) * s;
+    ctx.save();
+    ctx.globalAlpha = 0.45 + depth * 0.55;
+    ctx.fillStyle = colors[i];
+    ctx.beginPath();
+    ctx.ellipse(px, py, r, r * (0.35 + depth * 0.65), 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.lineWidth = 1.2 * s;
+    ctx.beginPath();
+    ctx.ellipse(px, py, r * 0.62, r * 0.62 * (0.35 + depth * 0.65), 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// Enseigne "777" en néon au-dessus de sa tête, devant lui. Les chiffres sont
+// tracés en barres plutôt qu'écrits: une police garde une taille minimale et ne
+// suivrait pas le canard jusqu'aux vignettes du Canardex.
+export function drawCroupierSign({ ctx, cx, cy, dh, t, phase }: EffectFrame) {
+  const s = dh / CROUPIER_REF_H;
+  const blink = croupierBlink(t, phase);
+  const y = cy - dh * 0.74;
+  const gw = 9 * s; // largeur d'un chiffre
+  const gh = 14 * s;
+  const bar = 1.8 * s;
+
+  ctx.save();
+  ctx.globalAlpha = blink;
+  for (let i = 0; i < 3; i++) {
+    const x = cx + (i - 1) * (gw + 3 * s) - gw / 2;
+    // barre du haut, puis la diagonale du 7
+    ctx.fillStyle = "#FFE9F2";
+    ctx.fillRect(x, y - gh / 2, gw, bar);
+    ctx.strokeStyle = "#FFE9F2";
+    ctx.lineWidth = bar;
+    ctx.beginPath();
+    ctx.moveTo(x + gw, y - gh / 2 + bar);
+    ctx.lineTo(x + gw * 0.34, y + gh / 2);
+    ctx.stroke();
+    // liseré cyan, la brûlure du tube
+    ctx.strokeStyle = "rgba(65,232,255,0.7)";
+    ctx.lineWidth = bar * 0.45;
+    ctx.beginPath();
+    ctx.moveTo(x + gw, y - gh / 2 + bar);
+    ctx.lineTo(x + gw * 0.34, y + gh / 2);
+    ctx.stroke();
+  }
+  ctx.restore();
+}

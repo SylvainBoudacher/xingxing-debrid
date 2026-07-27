@@ -225,7 +225,8 @@ export function getRarity(v: Variant): Rarity {
     v.effect === "royal" ||
     v.effect === "nova" ||
     v.effect === "peacock" ||
-    v.effect === "phoenix"
+    v.effect === "phoenix" ||
+    v.effect === "croupier"
   )
     return "mythic";
   if (

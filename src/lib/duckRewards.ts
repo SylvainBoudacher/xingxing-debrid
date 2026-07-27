@@ -14,6 +14,7 @@ export interface DexProgress {
   familiesCommon: number;
   familiesUncommon: number;
   familiesRare: number;
+  casinoJackpot: number; // 1 si le 777 est deja tombe au bandit manchot
 }
 
 export type RewardMetric = keyof DexProgress;
@@ -28,7 +29,7 @@ export const FAMILY_METRIC: Partial<Record<Rarity, RewardMetric>> = {
 
 // Les récompenses de couleurs et celles de collection ne se gagnent pas de la
 // même façon: le Canardex les affiche dans deux sections distinctes.
-export type RewardGroup = "colors" | "collection";
+export type RewardGroup = "colors" | "collection" | "casino";
 
 export interface DuckReward {
   id: string;
@@ -128,11 +129,32 @@ export const REWARDS: DuckReward[] = [
     claimToast: "Zeus, le Dieu Canard descend de l'Olympe !",
     variant: () => ({ body: "#F4EFE4", beak: "#E8B93C", acc: "laurel", effect: "godly" }),
   },
+  {
+    id: "canardex-croupier",
+    group: "casino",
+    name: "Canard Croupier",
+    scale: 1.4,
+    storeKey: "croupier_claimed",
+    metric: "casinoJackpot",
+    threshold: 1,
+    unit: "jackpot",
+    lockedHint: "Aligne les trois 777 au bandit manchot.",
+    claimToast: "Le Canard Croupier ouvre sa table !",
+    variant: () => ({
+      body: "#5E0E20",
+      beak: "#F5811F",
+      acc: "bowtie",
+      accColor: "#1A1A1A",
+      pattern: "neon",
+      effect: "croupier",
+    }),
+  },
 ];
 
 export const REWARDS_BY_ID = new Map(REWARDS.map((r) => [r.id, r]));
 export const COLOR_REWARDS = REWARDS.filter((r) => r.group === "colors");
 export const COLLECTION_REWARDS = REWARDS.filter((r) => r.group === "collection");
+export const CASINO_REWARDS = REWARDS.filter((r) => r.group === "casino");
 
 // Progression affichée sur une carte, plafonnée au seuil: le compteur de
 // familles peut dépasser 5 sans que la carte affiche 8/5.

@@ -17,6 +17,7 @@ import {
   type ShinyEntries,
 } from "@/lib/duckDex";
 import {
+  CASINO_REWARDS,
   COLLECTION_REWARDS,
   COLOR_REWARDS,
   REWARDS,
@@ -25,6 +26,7 @@ import {
   type DuckReward,
 } from "@/lib/duckRewards";
 import { refreshClaimableRewards } from "@/lib/duckRewardStatus";
+import { getSlotState } from "@/lib/slotMachine";
 import { smoothScrollTo } from "@/lib/smoothScroll";
 import { DuckDexDevMenu } from "./DuckDexDevMenu";
 import { DuckRewardBanner } from "./DuckRewardBanner";
@@ -71,6 +73,7 @@ export function DuckDex() {
   const [entries, setEntries] = useState<DexEntries>({});
   const [shiny, setShiny] = useState<ShinyEntries>([]);
   const [claimed, setClaimed] = useState<Record<string, boolean>>({});
+  const [jackpotWon, setJackpotWon] = useState(false);
   const [shinyShown, setShinyShown] = useState<Set<string>>(new Set());
   const [highlight, setHighlight] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -88,6 +91,7 @@ export function DuckDex() {
     setEntries(synced);
     setShiny(await getShinyDex());
     setClaimed(Object.fromEntries(flags));
+    setJackpotWon((await getSlotState()).jackpotWon);
     await refreshClaimableRewards();
     setOpen(true);
   }
@@ -157,6 +161,7 @@ export function DuckDex() {
     species: discovered,
     shiny: shiny.length,
     ...familyProgress(entries),
+    casinoJackpot: jackpotWon ? 1 : 0,
   };
   const complete = discovered === SPECIES.length;
   const pending = REWARDS.filter((r) => {
@@ -342,6 +347,17 @@ export function DuckDex() {
                 claimed={claimed}
                 onClaim={claim}
                 delay={0.46}
+                highlightId={highlight}
+              />
+
+              <DuckRewardSection
+                title="Récompenses du casino"
+                hint="Le bandit manchot du bassin les distribue, et lui seul."
+                rewards={CASINO_REWARDS}
+                progress={progress}
+                claimed={claimed}
+                onClaim={claim}
+                delay={0.52}
                 highlightId={highlight}
               />
             </div>

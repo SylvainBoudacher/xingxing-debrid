@@ -54,6 +54,7 @@ import {
   syncDexWithCollection,
 } from "./duckDex";
 import {
+  CASINO_REWARDS,
   COLLECTION_REWARDS,
   COLOR_REWARDS,
   familyRewardAt,
@@ -322,21 +323,24 @@ describe("rewards", () => {
     expect(REWARDS.find((r) => r.id === "canardex-god")!.storeKey).toBe("god_claimed");
   });
 
-  it("catalogs five rewards with distinct ids, keys and effects", () => {
-    expect(REWARDS).toHaveLength(5);
-    expect(new Set(REWARDS.map((r) => r.id)).size).toBe(5);
-    expect(new Set(REWARDS.map((r) => r.storeKey)).size).toBe(5);
-    expect(new Set(REWARDS.map((r) => r.variant().effect)).size).toBe(5);
+  it("catalogs six rewards with distinct ids, keys and effects", () => {
+    expect(REWARDS).toHaveLength(6);
+    expect(new Set(REWARDS.map((r) => r.id)).size).toBe(6);
+    expect(new Set(REWARDS.map((r) => r.storeKey)).size).toBe(6);
+    expect(new Set(REWARDS.map((r) => r.variant().effect)).size).toBe(6);
   });
 
-  it("splits the catalog into three colour rewards and two collection ones", () => {
+  it("splits the catalog into colour, collection and casino rewards", () => {
     expect(COLOR_REWARDS.map((r) => r.metric)).toEqual([
       "familiesCommon",
       "familiesUncommon",
       "familiesRare",
     ]);
     expect(COLLECTION_REWARDS.map((r) => r.metric)).toEqual(["species", "shiny"]);
-    expect(COLOR_REWARDS.length + COLLECTION_REWARDS.length).toBe(REWARDS.length);
+    expect(CASINO_REWARDS.map((r) => r.metric)).toEqual(["casinoJackpot"]);
+    expect(COLOR_REWARDS.length + COLLECTION_REWARDS.length + CASINO_REWARDS.length).toBe(
+      REWARDS.length,
+    );
   });
 
   it("sets every family threshold to 5", () => {
@@ -361,7 +365,13 @@ describe("rewards", () => {
 
   it("caps the displayed progress at the threshold", () => {
     const phoenix = REWARDS.find((r) => r.id === "canardex-phoenix")!;
-    const base = { species: 0, shiny: 0, familiesCommon: 0, familiesUncommon: 0 };
+    const base = {
+      species: 0,
+      shiny: 0,
+      familiesCommon: 0,
+      familiesUncommon: 0,
+      casinoJackpot: 0,
+    };
     expect(rewardProgress(phoenix, { ...base, familiesRare: 3 })).toEqual({
       done: 3,
       total: 5,

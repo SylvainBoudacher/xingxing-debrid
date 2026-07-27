@@ -37,6 +37,9 @@ const PixelPool = lazy(() =>
 );
 const DuckShop = lazy(() => import("@/components/DuckShop").then((m) => ({ default: m.DuckShop })));
 const DuckDex = lazy(() => import("@/components/DuckDex").then((m) => ({ default: m.DuckDex })));
+const SlotMachine = lazy(() =>
+  import("@/components/SlotMachine").then((m) => ({ default: m.SlotMachine })),
+);
 const SetupPage = lazy(() => import("@/pages/SetupPage").then((m) => ({ default: m.SetupPage })));
 const MainPage = lazy(() => import("@/pages/MainPage").then((m) => ({ default: m.MainPage })));
 const MagnetsPage = lazy(() =>
@@ -406,6 +409,7 @@ function App() {
         <Suspense fallback={null}>
           <DuckShop />
           <DuckDex />
+          <SlotMachine />
         </Suspense>
       )}
 

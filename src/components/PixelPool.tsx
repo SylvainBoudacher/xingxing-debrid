@@ -46,6 +46,9 @@ import {
 import {
   createChameleonSkinner,
   drawChameleonHalo,
+  drawCroupierChips,
+  drawCroupierNeon,
+  drawCroupierSign,
   drawGodlyAura,
   drawGodlyBolts,
   drawNovaAura,
@@ -55,6 +58,8 @@ import {
   drawPhoenixWings,
 } from "./duckRewardEffects";
 import { drawDex, overDex } from "./dexIcon";
+import { drawSlot, overSlot } from "./slotIcon";
+import { getSlotState, slotReadyNow } from "@/lib/slotMachine";
 import { dexStatusOf, loadPityState, syncDexWithCollection } from "@/lib/duckDex";
 import { rollPoolDuck } from "@/game/poolDuck";
 import { claimableRewards, refreshClaimableRewards } from "@/lib/duckRewardStatus";
@@ -74,6 +79,7 @@ import {
 import {
   type DuckSpec,
   emitDexOpen,
+  emitSlotOpen,
   emitDuckDrop,
   emitDucksReserved,
   emitShopOpen,
@@ -489,6 +495,7 @@ export function PixelPool({
       if (overVacuum(e.clientX, e.clientY, w, h)) return setCursor("pointer");
       if (overParade(e.clientX, e.clientY, h)) return setCursor("pointer");
       if (overDex(e.clientX, e.clientY, h)) return setCursor("pointer");
+      if (overSlot(e.clientX, e.clientY, h)) return setCursor("pointer");
       if (duckAt(e.clientX, e.clientY)) return setCursor("grab");
       if (overShop(e.clientX, e.clientY)) return setCursor("pointer");
       setCursor("");
@@ -590,6 +597,12 @@ export function PixelPool({
       // clicking the pokedex toggles the Canardex overlay
       if (e.button === 0 && overDex(e.clientX, e.clientY, h)) {
         emitDexOpen();
+        e.preventDefault();
+        return;
+      }
+      // clicking the slot machine toggles the casino overlay
+      if (e.button === 0 && overSlot(e.clientX, e.clientY, h)) {
+        emitSlotOpen();
         e.preventDefault();
         return;
       }
@@ -1112,6 +1125,10 @@ export function PixelPool({
         else drawPhoenixWings(frame);
       }
 
+      // Croupier (récompense du bandit manchot): halo de néon derrière lui
+      if (d.effect === "croupier")
+        drawCroupierNeon({ ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase });
+
       // supernova (dex completion reward): pulsing aura cycling through hues
       if (d.effect === "nova")
         drawNovaAura({ ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase });
@@ -1214,6 +1231,13 @@ export function PixelPool({
         ctx.fillStyle = `rgba(255,255,255,${0.8 * gtw})`;
         ctx.fillRect(gx - 5, gy - 0.8, 10, 1.6);
         ctx.fillRect(gx - 0.8, gy - 5, 1.6, 10);
+      }
+
+      // jetons en orbite et enseigne 777 du Croupier, devant lui
+      if (d.effect === "croupier") {
+        const frame = { ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase };
+        drawCroupierChips(frame);
+        drawCroupierSign(frame);
       }
 
       // braises du Phénix, devant lui
@@ -1662,6 +1686,7 @@ export function PixelPool({
       drawVacuum(ctx, vacuum, now, w, h, dark, !dragging && overVacuum(pointerX, pointerY, w, h));
       drawParade(ctx, parade, now, !dragging && overParade(pointerX, pointerY, h), h, dark);
       drawDex(ctx, now, !dragging && overDex(pointerX, pointerY, h), h, dark, claimableRewards());
+      drawSlot(ctx, now, !dragging && overSlot(pointerX, pointerY, h), h, dark, slotReadyNow());
 
       // remove ducks whose exit animation (drain / reserve / cull) has finished
       for (let i = pool.length - 1; i >= 0; i--) {
@@ -2056,6 +2081,7 @@ export function PixelPool({
       .then(() => refreshClaimableRewards()) // pastille "recompense a reclamer"
       .catch(() => {});
     loadPityState().catch(() => {}); // compteurs de secheresse du bassin
+    getSlotState().catch(() => {}); // etat du bandit manchot, pour l'icone allumee
     registerInjector(spawnSavedDuck); // flush any saved ducks queued before mount
     registerRemover(removePoolDuck);
     registerReleaser(unmarkSavedDuck);

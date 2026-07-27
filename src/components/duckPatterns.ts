@@ -37,6 +37,14 @@ export function bodyFill(c: CanvasRenderingContext2D, v: Variant): string | Canv
     eg.addColorStop(1, "#8C1A10");
     return eg;
   }
+  if (v.pattern === "neon") {
+    // velours de casino: rouge profond, plus sombre vers le bas
+    const ng = c.createLinearGradient(0, 16, 0, 130);
+    ng.addColorStop(0, "#8E1730");
+    ng.addColorStop(0.55, "#5E0E20");
+    ng.addColorStop(1, "#2E0511");
+    return ng;
+  }
   if (v.pattern === "abyss") {
     const ax = c.createLinearGradient(10, 12, 110, 112);
     ax.addColorStop(0, "#071828");
@@ -165,6 +173,34 @@ export function paintPattern(
       const px = x0 + Math.random() * rx * 2;
       const py = y0 + Math.random() * ry * 2;
       fillEll(c, px, py, 1.5, 1.5, `rgba(255,${210 + Math.random() * 40},150,0.85)`);
+    }
+  } else if (v.pattern === "neon") {
+    // trois tubes de néon posés sur le velours: un liseré sombre pour le creux
+    // puis le tube coloré. Les épaisseurs suivent le rayon, sinon la tête (qui
+    // reçoit le même motif que le corps) disparaît sous les traits.
+    const k = rx / 55;
+    const tubes = [
+      ["#FF3B7B", -0.42],
+      ["#41E8FF", 0.06],
+      ["#FFD24D", 0.54],
+    ] as const;
+    c.lineCap = "round";
+    for (const [color, off] of tubes) {
+      const px = cx + rx * off;
+      const sweep = rx * 0.14;
+      const trace = () => {
+        c.beginPath();
+        c.moveTo(px, cy - ry * 0.72);
+        c.quadraticCurveTo(px + sweep, cy, px - sweep * 0.6, cy + ry * 0.72);
+      };
+      c.strokeStyle = "rgba(0,0,0,0.3)";
+      c.lineWidth = 3.6 * k;
+      trace();
+      c.stroke();
+      c.strokeStyle = color;
+      c.lineWidth = 1.8 * k;
+      trace();
+      c.stroke();
     }
   } else if (v.pattern === "abyss") {
     // bioluminescent spots drifting in the deep
