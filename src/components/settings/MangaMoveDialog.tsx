@@ -37,6 +37,11 @@ export function MangaMoveDialog({ moves, targetDir, onClose }: MangaMoveDialogPr
       }
       toast.error(`${result.failed.length} fichier(s) n'ont pas pu être déplacés.`);
       setFailed(result.failed);
+    } catch {
+      // Echec I/O reel : on ne sait pas quels fichiers ont bouge, on les
+      // considere tous comme non deplaces par securite
+      toast.error("Le déplacement a échoué.");
+      setFailed(moves);
     } finally {
       setBusy(false);
     }
