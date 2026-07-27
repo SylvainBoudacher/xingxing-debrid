@@ -40,27 +40,25 @@ function basename(path: string): string {
 export function planMangaMoves(entries: MangaEntry[], targetDir: string): PlannedMove[] {
   const sep = separator(targetDir);
   const moves: PlannedMove[] = [];
-  // Associe chaque nom de dossier deja attribue au mangaId qui l'a pris.
-  const folderOwners = new Map<string, string>();
+  // Chemins de destination deja planifies dans ce lot.
+  const claimedDestinations = new Set<string>();
 
   for (const entry of entries) {
-    const baseFolder = sanitizeFolderName(entry.meta.title);
-    const owner = folderOwners.get(baseFolder);
-    let folder = baseFolder;
-    if (owner !== undefined && owner !== entry.mangaId) {
-      // Collision de nom de dossier entre deux series distinctes : on
-      // desambiguise avec un suffixe derive du mangaId pour ne jamais
-      // scinder une serie entre deux dossiers ni ecraser l'autre.
-      folder = `${baseFolder} (${entry.mangaId.slice(0, 6)})`;
-    } else {
-      folderOwners.set(baseFolder, entry.mangaId);
-    }
+    const folder = sanitizeFolderName(entry.meta.title);
 
     for (const volume of entry.volumes) {
       const from = volume.localPath;
       if (!from) continue;
       const to = `${targetDir}${sep}${folder}${sep}${basename(from)}`;
       if (to === from) continue;
+      if (claimedDestinations.has(to)) {
+        // Deux tomes visent le meme chemin (collision de nom de fichier
+        // entre series, ou meme entree avec deux infoHash pour le meme
+        // fichier) : on laisse le second la ou il est. C'est sans danger
+        // et reversible, contrairement a un ecrasement du premier tome.
+        continue;
+      }
+      claimedDestinations.add(to);
       moves.push({
         mangaId: entry.mangaId,
         fileName: volume.fileName,

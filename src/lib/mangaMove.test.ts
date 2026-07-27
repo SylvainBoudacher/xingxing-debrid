@@ -83,7 +83,7 @@ describe("planMangaMoves", () => {
     });
   });
 
-  it("desambiguise le dossier quand deux series distinctes s'assainissent pareil", () => {
+  it("ne planifie qu'un seul tome quand deux series distinctes s'assainissent pareil et partagent un nom de fichier", () => {
     const first = entry("One Piece", [volume({ localPath: "/old/a/T01.cbz" })]);
     const second = {
       ...entry("One Piece", [volume({ localPath: "/old/b/T01.cbz" })]),
@@ -97,12 +97,23 @@ describe("planMangaMoves", () => {
         from: "/old/a/T01.cbz",
         to: "/new/One Piece/T01.cbz",
       },
+    ]);
+  });
+
+  it("ne planifie qu'un tome quand la meme entree a deux volumes de meme nom de fichier mais infoHash different", () => {
+    const entries = [
+      entry("One Piece", [
+        volume({ infoHash: "hash-a", localPath: "/old/a/T01.cbz" }),
+        volume({ infoHash: "hash-b", localPath: "/old/b/T01.cbz" }),
+      ]),
+    ];
+    expect(planMangaMoves(entries, "/new")).toEqual([
       {
-        mangaId: "dup123",
+        mangaId: "One Piece",
         fileName: "T01.cbz",
-        infoHash: "hash",
-        from: "/old/b/T01.cbz",
-        to: "/new/One Piece (dup123)/T01.cbz",
+        infoHash: "hash-a",
+        from: "/old/a/T01.cbz",
+        to: "/new/One Piece/T01.cbz",
       },
     ]);
   });
