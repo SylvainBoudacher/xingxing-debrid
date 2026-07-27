@@ -155,17 +155,22 @@ function basename(url: string): string {
  *
  * Retourne le chemin local écrit, ou null si le téléchargement a échoué ou été
  * annulé. `subdir` range le fichier dans un sous-dossier du dossier configuré.
+ * `dir` force le dossier racine (par defaut : le dossier de telechargement).
  */
-export async function startDownload(url: string, subdir?: string): Promise<string | null> {
+export async function startDownload(
+  url: string,
+  subdir?: string,
+  dir?: string,
+): Promise<string | null> {
   ensureProgressListener();
   const id = crypto.randomUUID();
-  const dir = (await store.get<string>("download_dir")) ?? "";
+  const baseDir = dir ?? (await store.get<string>("download_dir")) ?? "";
 
   items.set(id, { id, filename: basename(url), downloaded: 0, total: 0, status: "active" });
   emit();
 
   try {
-    const path = await invoke<string>("download_to_dir", { id, url, dir, subdir });
+    const path = await invoke<string>("download_to_dir", { id, url, dir: baseDir, subdir });
     timing.delete(id);
     const item = items.get(id);
     if (item) {

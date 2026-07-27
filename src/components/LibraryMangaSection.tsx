@@ -209,7 +209,8 @@ export function LibraryMangaSection({
       }
       setDownloading(volumeKey(volume));
       try {
-        const path = await downloadVolume(mangaId, volume, key);
+        const title = entries.find((e) => e.mangaId === mangaId)?.meta.title ?? "Manga";
+        const path = await downloadVolume(mangaId, volume, key, title);
         await refresh();
         return path;
       } catch (err) {
@@ -219,7 +220,7 @@ export function LibraryMangaSection({
         setDownloading(null);
       }
     },
-    [getAllDebridKey, refresh],
+    [getAllDebridKey, refresh, entries],
   );
 
   useEffect(() => {
