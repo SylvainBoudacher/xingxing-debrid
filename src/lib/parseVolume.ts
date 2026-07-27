@@ -128,3 +128,11 @@ export function spanSize(span: VolumeSpan | null): number {
   if (span.kind === "range") return span.to - span.from + 1;
   return 1;
 }
+
+/** Premier tome couvert par une release, pour trier les resultats dans l'ordre des tomes. */
+export function spanStart(span: VolumeSpan | null): number {
+  if (!span) return Number.MAX_SAFE_INTEGER;
+  if (span.kind === "complete") return 0;
+  if (span.kind === "range") return span.from;
+  return span.number;
+}

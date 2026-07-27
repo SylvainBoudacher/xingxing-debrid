@@ -5,7 +5,7 @@ import { addAlias } from "@/lib/mangaAliases";
 import type { MangaItem } from "@/lib/mangaItem";
 import { searchMangaByName, type MangaRelease } from "@/lib/mangaReleases";
 import { toastNetworkError } from "@/lib/networkError";
-import { parseMangaName, spanLabel } from "@/lib/parseVolume";
+import { parseMangaName, spanLabel, spanStart } from "@/lib/parseVolume";
 import { Loader2, Plus, Search, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState, type FormEvent } from "react";
@@ -50,7 +50,8 @@ export function MangaMatchModal({
     if (!trimmed || searching) return;
     setSearching(true);
     try {
-      setResults(await searchMangaByName(trimmed, getC411Key()));
+      const found = await searchMangaByName(trimmed, getC411Key());
+      setResults([...found].sort((a, b) => spanStart(a.span) - spanStart(b.span)));
     } catch (err) {
       toastNetworkError(err);
     } finally {
