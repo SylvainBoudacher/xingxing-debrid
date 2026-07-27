@@ -16,7 +16,8 @@
         { "url": "https://alldebrid.fr/**" },
         { "url": "https://alldebrid.com/**" },
         { "url": "https://api.alldebrid.com/**" },
-        { "url": "https://api.themoviedb.org/**" }
+        { "url": "https://api.themoviedb.org/**" },
+        { "url": "https://api.mangadex.org/**" }
       ]
     },
     "core:window:allow-set-size",

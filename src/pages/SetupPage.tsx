@@ -18,6 +18,7 @@ import {
   FolderOpen,
   Magnet,
   Moon,
+  MonitorPlay,
   Search,
   Settings,
   Sparkles,
@@ -710,6 +711,36 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                     className="mt-2 flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
                   >
                     themoviedb.org
+                    <ExternalLink className="h-3 w-3" />
+                  </button>
+                </div>
+              </motion.div>
+
+              {/* VLC */}
+              <motion.div
+                variants={item}
+                className="flex items-start gap-4 rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-4"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-500/12 ring-1 ring-orange-500/20">
+                  <MonitorPlay className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">VLC</p>
+                    <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                      Gratuit
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    Lecteur video utilise pour lire les contenus en streaming, sans attendre la fin
+                    du telechargement. Il doit etre installe sur votre machine.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => openUrl("https://www.videolan.org/vlc/")}
+                    className="mt-2 flex items-center gap-1 text-xs font-medium text-orange-600 hover:text-orange-500 dark:text-orange-400 dark:hover:text-orange-300 transition-colors"
+                  >
+                    videolan.org
                     <ExternalLink className="h-3 w-3" />
                   </button>
                 </div>

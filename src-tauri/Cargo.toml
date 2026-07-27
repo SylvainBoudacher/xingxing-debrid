@@ -25,7 +25,10 @@ serde_json = "1"
 tauri-plugin-http = "2"
 tauri-plugin-store = "2"
 tauri-plugin-dialog = "2"
-reqwest = { version = "0.12", features = ["multipart", "json", "native-tls", "stream"], default-features = false }
+# rustls et pas native-tls : sur macOS, Secure Transport echoue le handshake avec
+# l'edge Cloudflare de MangaDex ("bad protocol version"). Le feature native-tls
+# etait aussi unifie dans le client de tauri-plugin-http, qui echouait pareil.
+reqwest = { version = "0.12", features = ["multipart", "json", "rustls-tls", "stream"], default-features = false }
 futures-util = "0.3"
 keyring = "4"
 tauri-plugin-updater = "2"
@@ -33,6 +36,7 @@ tauri-plugin-process = "2"
 argon2 = "0.5"
 chacha20poly1305 = "0.10"
 base64 = "0.22"
+zip = { version = "2", default-features = false, features = ["deflate"] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"

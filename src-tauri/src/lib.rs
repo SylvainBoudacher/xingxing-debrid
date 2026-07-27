@@ -7,6 +7,7 @@ use std::sync::{Mutex, OnceLock};
 use tauri::{Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 
+mod cbz;
 mod player;
 mod profile;
 
@@ -76,6 +77,7 @@ fn http_client() -> &'static reqwest::Client {
     // injoignable echoue vite, mais un gros telechargement n'est pas coupe.
     CLIENT.get_or_init(|| {
         reqwest::Client::builder()
+            .use_rustls_tls()
             .connect_timeout(std::time::Duration::from_secs(15))
             .build()
             .expect("client reqwest")
@@ -288,6 +290,16 @@ fn export_json(app: tauri::AppHandle, filename: String, content: String) -> Resu
     Ok(path.to_string_lossy().into_owned())
 }
 
+// Un sous-dossier est sur si chacun de ses segments est non vide, different de
+// "." et "..", et ne contient ni antislash ni racine absolue.
+fn is_safe_subdir(sub: &str) -> bool {
+    !sub.contains('\\')
+        && !sub.starts_with('/')
+        && sub
+            .split('/')
+            .all(|s| !s.is_empty() && s != "." && s != ".." && !s.contains(':'))
+}
+
 // Telecharge `url` vers `dir` (ou le dossier Telechargements de l'OS si vide),
 // en streamant le corps et en emettant des evenements de progression.
 // Retourne le chemin final. Renvoie Err("cancelled") si annule.
@@ -298,11 +310,26 @@ async fn download_to_dir(
     id: String,
     url: String,
     dir: String,
+    subdir: Option<String>,
 ) -> Result<String, String> {
-    let target_dir = if dir.trim().is_empty() {
+    let base_dir = if dir.trim().is_empty() {
         app.path().download_dir().map_err(|e| e.to_string())?
     } else {
         std::path::PathBuf::from(&dir)
+    };
+
+    // Sous-dossier optionnel, un ou plusieurs segments separes par "/" (ex.
+    // "manga/One Piece") : cree a la volee, toujours sous base_dir.
+    let target_dir = match subdir.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        Some(sub) if is_safe_subdir(sub) => {
+            let mut path = base_dir;
+            for segment in sub.split('/') {
+                path = path.join(segment);
+            }
+            std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+            path
+        }
+        _ => base_dir,
     };
 
     let dest = target_dir.join(filename_from_url(&url));
@@ -364,6 +391,69 @@ async fn download_to_dir(
     );
 
     Ok(dest.to_string_lossy().into_owned())
+}
+
+#[derive(serde::Deserialize)]
+struct FileMove {
+    from: String,
+    to: String,
+}
+
+#[derive(serde::Serialize)]
+struct MoveResult {
+    from: String,
+    to: String,
+    error: Option<String>,
+}
+
+// Deplace un fichier : rename d'abord (instantane), puis copie + suppression
+// si la source et la destination sont sur des volumes differents. Si la copie
+// reussit mais la suppression echoue, le deplacement est considere reussi :
+// la destination est valide, seul un doublon subsiste.
+fn move_one(from: &str, to: &str) -> Result<(), String> {
+    let src = std::path::Path::new(from);
+    let dst = std::path::Path::new(to);
+
+    if dst.exists() {
+        // Le fichier est deja a destination : deplacement deja effectue, rien a faire.
+        if !src.exists() {
+            return Ok(());
+        }
+        return Err("destination deja existante".to_string());
+    }
+    if !src.exists() {
+        return Err("fichier introuvable".to_string());
+    }
+    if let Some(parent) = dst.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    if std::fs::rename(src, dst).is_ok() {
+        return Ok(());
+    }
+    if let Err(e) = std::fs::copy(src, dst) {
+        let _ = std::fs::remove_file(dst);
+        return Err(e.to_string());
+    }
+    let _ = std::fs::remove_file(src);
+    Ok(())
+}
+
+// Deplace une liste de fichiers sans jamais s'arreter au premier echec :
+// chaque entree porte son propre resultat pour que l'appelant sache quels
+// fichiers restent a deplacer manuellement.
+#[tauri::command(async)]
+fn move_files(moves: Vec<FileMove>) -> Vec<MoveResult> {
+    moves
+        .into_iter()
+        .map(|m| {
+            let error = move_one(&m.from, &m.to).err();
+            MoveResult {
+                from: m.from,
+                to: m.to,
+                error,
+            }
+        })
+        .collect()
 }
 
 #[tauri::command]
@@ -441,11 +531,14 @@ pub fn run() {
             export_json,
             download_to_dir,
             cancel_download,
+            move_files,
             open_file,
             profile::export_profile,
             profile::import_profile,
             profile::export_library,
             profile::import_library,
+            cbz::cbz_list_pages,
+            cbz::cbz_page,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

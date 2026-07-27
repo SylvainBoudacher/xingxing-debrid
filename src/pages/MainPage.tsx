@@ -4,12 +4,16 @@ import vlcLogo from "@/assets/vlc.png";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
 import { NyaaSearchFilters } from "@/components/NyaaSearchFilters";
+import { MangaSearchSuggestions } from "@/components/MangaSearchSuggestions";
 import { SearchSuggestions } from "@/components/SearchSuggestions";
+import { useMangaSuggestions } from "@/lib/useMangaSuggestions";
 import { useTmdbSuggestions } from "@/lib/useTmdbSuggestions";
+import type { MangaItem } from "@/lib/mangaItem";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
+  DropdownMenuItem,
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -37,6 +41,7 @@ import {
   ArrowUp,
   Book,
   BookMarked,
+  BookOpen,
   BookmarkPlus,
   Check,
   ChevronDown,
@@ -173,7 +178,7 @@ type SortKey = keyof typeof SORT_LABELS;
 
 const PER_PAGE = 10;
 
-type SearchMode = "discover" | "c411" | "nyaa";
+type SearchMode = "discover" | "manga" | "c411" | "nyaa";
 
 // Modes du sélecteur en bout de barre. "discover" (défaut) redirige vers la
 // page Découverte (TMDB) ; c411 / nyaa lancent une recherche brute sur place.
@@ -185,6 +190,7 @@ const SEARCH_MODES: Array<{
   tip: string;
 }> = [
   { id: "discover", label: "Films & Séries", icon: Compass, tip: "Recherche guidée via TMDB" },
+  { id: "manga", label: "Mangas", icon: BookOpen, tip: "Recherche guidée via MangaDex" },
   { id: "c411", label: "C411", logo: c411Logo, tip: "Recherche directe - torrent généraliste" },
   { id: "nyaa", label: "Nyaa", logo: nyaaLogo, tip: "Recherche directe - animé" },
 ];
@@ -207,9 +213,14 @@ interface MainPageProps {
   onLaunchDiscover: (query: string) => void;
   /** Ouvre directement la fiche d'un titre TMDB dans la page Découverte */
   onLaunchDiscoverItem: (item: TmdbItem) => void;
+  /** Lance l'onglet Mangas de la Découverte avec une recherche MangaDex */
+  onLaunchDiscoverManga: (query: string) => void;
+  /** Ouvre directement la fiche d'un manga dans l'onglet Mangas de la Découverte */
+  onLaunchDiscoverMangaItem: (item: MangaItem) => void;
   devMode: boolean;
   onToggleDevMode: () => void;
   onShowUpdatePreview: () => void;
+  onShowMangaWelcome: () => void;
   hasPendingUpdate: boolean;
   onShowPendingUpdate: () => void;
   summerEnabled: boolean;
@@ -231,9 +242,12 @@ export function MainPage({
   onNavigate,
   onLaunchDiscover,
   onLaunchDiscoverItem,
+  onLaunchDiscoverManga,
+  onLaunchDiscoverMangaItem,
   devMode,
   onToggleDevMode,
   onShowUpdatePreview,
+  onShowMangaWelcome,
   hasPendingUpdate,
   onShowPendingUpdate,
   summerEnabled,
@@ -315,6 +329,14 @@ export function MainPage({
   // ferait sauter la hauteur. Le retour de chargement se fait via l'icône.
   const showSuggestions =
     source === "discover" && searchFocused && query.trim().length >= 4 && suggestions.length > 0;
+
+  // Auto-complete MangaDex : même barre, mode Mangas.
+  const { suggestions: mangaSuggestions, loading: mangaSuggestionsLoading } = useMangaSuggestions(
+    query,
+    source === "manga" && searchFocused,
+  );
+  const showMangaSuggestions =
+    source === "manga" && searchFocused && query.trim().length >= 3 && mangaSuggestions.length > 0;
 
   function resetIdleTimer() {
     if (!initialIdleAutoHide) return;
@@ -604,6 +626,10 @@ export function MainPage({
       onLaunchDiscover(q);
       return;
     }
+    if (source === "manga") {
+      onLaunchDiscoverManga(q);
+      return;
+    }
     if (source === "c411") {
       searchInputRef.current?.blur();
       setSearchFocused(false);
@@ -620,18 +646,29 @@ export function MainPage({
     onLaunchDiscoverItem(item);
   }
 
+  // Sélection d'une suggestion MangaDex : ouvre la fiche du manga dans
+  // l'onglet Mangas de la page Découverte.
+  function selectMangaSuggestion(item: MangaItem) {
+    setHighlightedIndex(-1);
+    searchInputRef.current?.blur();
+    setSearchFocused(false);
+    onLaunchDiscoverMangaItem(item);
+  }
+
   function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!showSuggestions || suggestions.length === 0) return;
+    const list = showSuggestions ? suggestions : showMangaSuggestions ? mangaSuggestions : null;
+    if (!list || list.length === 0) return;
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlightedIndex((h) => (h + 1) % suggestions.length);
+      setHighlightedIndex((h) => (h + 1) % list.length);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlightedIndex((h) => (h <= 0 ? suggestions.length - 1 : h - 1));
+      setHighlightedIndex((h) => (h <= 0 ? list.length - 1 : h - 1));
     } else if (e.key === "Enter" && highlightedIndex >= 0) {
       // Entrée sur une suggestion surlignée = clic. Sinon : submit libre normal.
       e.preventDefault();
-      selectSuggestion(suggestions[highlightedIndex]);
+      if (showSuggestions) selectSuggestion(suggestions[highlightedIndex]);
+      else selectMangaSuggestion(mangaSuggestions[highlightedIndex]);
     } else if (e.key === "Escape") {
       setHighlightedIndex(-1);
       searchInputRef.current?.blur();
@@ -645,7 +682,8 @@ export function MainPage({
   function selectSource(src: SearchMode) {
     if (src === source) return;
     setSource(src);
-    if (src !== "discover" && phase === "active" && query.trim()) performSearch(src);
+    if ((src === "c411" || src === "nyaa") && phase === "active" && query.trim())
+      performSearch(src);
   }
 
   async function goToPage(pageNum: number, sort: SortKey = sortBy, dir: "desc" | "asc" = sortDir) {
@@ -778,6 +816,7 @@ export function MainPage({
           devMode={devMode}
           onToggleDevMode={onToggleDevMode}
           onShowUpdatePreview={onShowUpdatePreview}
+          onShowMangaWelcome={onShowMangaWelcome}
         />
       </div>
 
@@ -836,6 +875,26 @@ export function MainPage({
                     <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
                   </motion.button>
                 </div>
+                <div className="relative">
+                  <span
+                    aria-hidden
+                    className="absolute -inset-1 rounded-full bg-gradient-to-r from-fuchsia-500/50 to-rose-500/50 blur-[8px]"
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => onNavigate("manga")}
+                    className="group relative z-10 flex items-center gap-2 rounded-full bg-zinc-900/90 dark:bg-zinc-900/90 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-fuchsia-400/30 shadow-[0_0_20px_rgba(217,70,239,0.25)] hover:ring-fuchsia-300/50 hover:shadow-[0_0_32px_rgba(217,70,239,0.4)] cursor-pointer transition-all"
+                  >
+                    <BookOpen className="h-4 w-4 text-fuchsia-400 transition-colors group-hover:text-fuchsia-300" />
+                    Manga
+                    <span className="flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-fuchsia-300">
+                      <span className="h-1 w-1 rounded-full bg-fuchsia-400 animate-pulse" />
+                      New
+                    </span>
+                    <ChevronRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
+                  </motion.button>
+                </div>
                 <motion.button
                   whileHover={{ scale: 1.06 }}
                   whileTap={{ scale: 0.95 }}
@@ -882,11 +941,11 @@ export function MainPage({
           >
             <div
               className={`relative overflow-hidden bg-white/90 dark:bg-zinc-800/80 shadow-[0_8px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)] transition-[border-radius] duration-200 ${
-                showSuggestions ? "rounded-[28px]" : "rounded-[34px]"
+                showSuggestions || showMangaSuggestions ? "rounded-[28px]" : "rounded-[34px]"
               }`}
             >
               <div className="relative flex items-center gap-2 px-6 py-4">
-                {loading || suggestionsLoading ? (
+                {loading || suggestionsLoading || mangaSuggestionsLoading ? (
                   <Loader2 className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400 animate-spin" />
                 ) : (
                   <Search className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
@@ -900,7 +959,11 @@ export function MainPage({
                     setHighlightedIndex(-1);
                   }}
                   onKeyDown={handleSearchKeyDown}
-                  placeholder="Rechercher un film, une serie..."
+                  placeholder={
+                    source === "manga"
+                      ? "Rechercher un manga..."
+                      : "Rechercher un film, une serie..."
+                  }
                   className="flex-1 min-w-0 bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-500 outline-none text-lg"
                 />
                 <AnimatePresence>
@@ -972,15 +1035,20 @@ export function MainPage({
                       Rechercher via
                     </DropdownMenuLabel>
                     {SEARCH_MODES.map((m) => (
-                      <DropdownMenuCheckboxItem
+                      <DropdownMenuItem
                         key={m.id}
-                        checked={source === m.id}
                         onSelect={(e) => e.preventDefault()}
-                        onCheckedChange={() => selectSource(m.id)}
+                        onClick={() => selectSource(m.id)}
+                        className={
+                          "cursor-pointer not-first:mt-1" +
+                          (source === m.id
+                            ? " bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400"
+                            : "")
+                        }
                       >
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-3">
                           {m.icon ? (
-                            <m.icon className="h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+                            <m.icon className="h-4 w-4 shrink-0" />
                           ) : (
                             <img
                               src={m.logo}
@@ -990,12 +1058,10 @@ export function MainPage({
                           )}
                           <span className="flex flex-col">
                             <span className="text-sm leading-tight">{m.label}</span>
-                            <span className="text-[11px] text-muted-foreground leading-tight">
-                              {m.tip}
-                            </span>
+                            <span className="text-[11px] leading-tight opacity-70">{m.tip}</span>
                           </span>
                         </span>
-                      </DropdownMenuCheckboxItem>
+                      </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1006,6 +1072,14 @@ export function MainPage({
                     suggestions={suggestions}
                     highlightedIndex={highlightedIndex}
                     onSelect={selectSuggestion}
+                    onHover={setHighlightedIndex}
+                  />
+                )}
+                {showMangaSuggestions && (
+                  <MangaSearchSuggestions
+                    suggestions={mangaSuggestions}
+                    highlightedIndex={highlightedIndex}
+                    onSelect={selectMangaSuggestion}
                     onHover={setHighlightedIndex}
                   />
                 )}

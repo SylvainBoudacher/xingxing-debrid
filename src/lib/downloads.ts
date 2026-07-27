@@ -152,17 +152,25 @@ function basename(url: string): string {
  * dossier Téléchargements de l'OS si aucun n'est défini). La promesse se résout
  * une fois le fichier écrit, ce qui permet d'enchaîner avec une limite de
  * concurrence côté appelant. La progression est suivie via l'overlay.
+ *
+ * Retourne le chemin local écrit, ou null si le téléchargement a échoué ou été
+ * annulé. `subdir` range le fichier dans un sous-dossier du dossier configuré.
+ * `dir` force le dossier racine (par defaut : le dossier de telechargement).
  */
-export async function startDownload(url: string): Promise<void> {
+export async function startDownload(
+  url: string,
+  subdir?: string,
+  dir?: string,
+): Promise<string | null> {
   ensureProgressListener();
   const id = crypto.randomUUID();
-  const dir = (await store.get<string>("download_dir")) ?? "";
+  const baseDir = dir ?? (await store.get<string>("download_dir")) ?? "";
 
   items.set(id, { id, filename: basename(url), downloaded: 0, total: 0, status: "active" });
   emit();
 
   try {
-    const path = await invoke<string>("download_to_dir", { id, url, dir });
+    const path = await invoke<string>("download_to_dir", { id, url, dir: baseDir, subdir });
     timing.delete(id);
     const item = items.get(id);
     if (item) {
@@ -172,10 +180,11 @@ export async function startDownload(url: string): Promise<void> {
       item.path = path;
       emit();
     }
+    return path;
   } catch (err) {
     timing.delete(id);
     const item = items.get(id);
-    if (!item) return;
+    if (!item) return null;
     item.speed = undefined;
     if (String(err) === "cancelled") {
       item.status = "cancelled";
@@ -184,6 +193,7 @@ export async function startDownload(url: string): Promise<void> {
       toast.error(`Téléchargement échoué : ${item.filename}`);
     }
     emit();
+    return null;
   }
 }
 

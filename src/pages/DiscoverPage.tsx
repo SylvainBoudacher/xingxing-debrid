@@ -1,5 +1,6 @@
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { DebridFilesModal } from "@/components/DebridFilesModal";
+import { DiscoverMangaSection } from "@/components/DiscoverMangaSection";
 import { DiscoverPosterCard } from "@/components/DiscoverPosterCard";
 import { DiscoverReleasesModal } from "@/components/DiscoverReleasesModal";
 import { DiscoverSearchBar } from "@/components/DiscoverSearchBar";
@@ -16,6 +17,7 @@ import { getCachedLibrary, loadLibrary } from "@/lib/library";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { queryClient } from "@/lib/queryClient";
 import { ownedTmdbKeys } from "@/lib/recommendations";
+import type { MangaItem } from "@/lib/mangaItem";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { FEED_LABELS, useDiscoverFeed, type DiscoverTab } from "@/lib/useDiscoverFeed";
 import { useRecommendations } from "@/lib/useRecommendations";
@@ -32,8 +34,14 @@ interface DiscoverPageProps {
   summerEnabled: boolean;
   /** Requête pré-remplie depuis la barre de MainPage (mode "Films & Séries") */
   initialQuery?: string;
+  /** Onglet ouvert à l'arrivée (ex. "manga" depuis la bibliothèque manga) */
+  initialTab?: DiscoverTab;
   /** Fiche à ouvrir directement (sélection d'une suggestion d'auto-complete) */
   initialItem?: TmdbItem | null;
+  /** Requête MangaDex pré-remplie depuis la barre de MainPage (mode "Mangas") */
+  initialMangaQuery?: string;
+  /** Fiche manga à ouvrir directement (suggestion MangaDex de MainPage) */
+  initialMangaItem?: MangaItem | null;
   /** Clé TMDB pré-chargée par useAppInit */
   initialTmdbKey?: string | null;
   /** Clés C411 et AllDebrid pré-chargées par useAppInit */
@@ -45,6 +53,8 @@ interface DiscoverPageProps {
   onSearchTracker: (query: string, source: "c411" | "nyaa") => void;
   /** Ouvre directement la fiche bibliothèque d'un titre (action "Voir" des toasts) */
   onOpenLibraryItem: (item: TmdbItem, infoHash: string) => void;
+  /** Ouvre la bibliothèque manga, éventuellement sur une oeuvre donnée */
+  onOpenMangaLibrary: (mangaId?: string) => void;
 }
 
 export function DiscoverPage({
@@ -54,19 +64,28 @@ export function DiscoverPage({
   onShowPendingUpdate,
   summerEnabled,
   initialQuery,
+  initialTab,
   initialItem,
+  initialMangaQuery,
+  initialMangaItem,
   initialTmdbKey,
   initialC411Key,
   initialAllDebridKey,
   initialLikes,
   onSearchTracker,
   onOpenLibraryItem,
+  onOpenMangaLibrary,
 }: DiscoverPageProps) {
   const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(
     initialTmdbKey !== undefined ? initialTmdbKey : undefined,
   );
   const [likes, setLikes] = useState<LikedItem[]>(initialLikes ?? []);
   const [selected, setSelected] = useState<TmdbItem | null>(null);
+  // Recherche de l'onglet Mangas : la barre du haut est partagée, son contenu
+  // dépend de l'univers affiché (TMDB ou MangaDex).
+  const [mangaQuery, setMangaQuery] = useState(initialMangaQuery ?? "");
+  // Fiche manga ouverte : Escape lui revient, pas au retour accueil.
+  const [mangaBusy, setMangaBusy] = useState(false);
 
   const c411KeyRef = useRef<string>(initialC411Key ?? "");
   const allDebridKeyRef = useRef<string>(initialAllDebridKey ?? "");
@@ -97,7 +116,7 @@ export function DiscoverPage({
     clearSearch,
     switchType,
     switchFeed,
-  } = useDiscoverFeed(tmdbKey, initialQuery);
+  } = useDiscoverFeed(tmdbKey, initialQuery, initialTab);
 
   const recosApi = useRecommendations(tmdbKey, likes);
 
@@ -167,7 +186,7 @@ export function DiscoverPage({
   }, []);
 
   useEffect(() => {
-    if (!tmdbKey) return;
+    if (!tmdbKey || mediaType === "manga") return;
     // Arrivée depuis la barre de MainPage : on lance directement la recherche
     // TMDB sur l'onglet Films (le terme est conservé si on bascule vers Séries).
     const q = initialQuery?.trim();
@@ -193,12 +212,13 @@ export function DiscoverPage({
       if (e.key !== "Escape") return;
       if (debridModal) setDebridModal(null);
       else if (selected) setSelected(null);
+      else if (mangaBusy) return;
       else onBack();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debridModal, selected, onBack]);
+  }, [debridModal, selected, mangaBusy, onBack]);
 
   const likedKeys = useMemo(() => new Set(likes.map((l) => `${l.mediaType}-${l.id}`)), [likes]);
 
@@ -269,7 +289,7 @@ export function DiscoverPage({
       </div>
 
       {/* Missing or invalid TMDB key */}
-      {(tmdbKey === null || tmdbKeyInvalid) && (
+      {(tmdbKey === null || tmdbKeyInvalid) && mediaType !== "manga" && (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/12 ring-1 ring-indigo-500/25">
             <KeyRound className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -293,27 +313,49 @@ export function DiscoverPage({
         </div>
       )}
 
-      {tmdbKey && !tmdbKeyInvalid && (
-        <div className="mx-auto w-full max-w-5xl flex-1 px-6 pt-8 pb-10 sm:px-8">
+      <div className="mx-auto w-full max-w-5xl px-6 pt-8 sm:px-8">
+        {(mediaType === "manga" || (tmdbKey && !tmdbKeyInvalid)) && (
           <DiscoverSearchBar
-            visible={feedMode}
-            query={query}
-            loading={loadingMovies}
-            showClear={!!query.trim() || mode === "search"}
-            onQueryChange={setQuery}
-            onClear={clearSearch}
-            onSubmit={handleSubmit}
+            visible={feedMode || mediaType === "manga"}
+            query={mediaType === "manga" ? mangaQuery : query}
+            placeholder={
+              mediaType === "manga" ? "Rechercher un manga" : "Rechercher un film ou une série"
+            }
+            loading={mediaType === "manga" ? false : loadingMovies}
+            showClear={
+              mediaType === "manga" ? !!mangaQuery.trim() : !!query.trim() || mode === "search"
+            }
+            onQueryChange={mediaType === "manga" ? setMangaQuery : setQuery}
+            onClear={mediaType === "manga" ? () => setMangaQuery("") : clearSearch}
+            onSubmit={mediaType === "manga" ? (e) => e.preventDefault() : handleSubmit}
           />
+        )}
 
-          <DiscoverTabs
-            collapsed={searchUiActive}
-            mediaType={mediaType}
-            feed={feed}
-            mode={mode}
-            onSwitchType={switchTab}
-            onSwitchFeed={switchFeed}
+        <DiscoverTabs
+          collapsed={searchUiActive}
+          mediaType={mediaType}
+          feed={feed}
+          mode={mode}
+          onSwitchType={switchTab}
+          onSwitchFeed={switchFeed}
+        />
+      </div>
+
+      {mediaType === "manga" && (
+        <div className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 sm:px-8">
+          <DiscoverMangaSection
+            query={mangaQuery}
+            initialItem={initialMangaItem}
+            getC411Key={() => c411KeyRef.current}
+            getAllDebridKey={() => allDebridKeyRef.current}
+            onOpenLibrary={onOpenMangaLibrary}
+            onBusyChange={setMangaBusy}
           />
+        </div>
+      )}
 
+      {tmdbKey && !tmdbKeyInvalid && mediaType !== "manga" && (
+        <div className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 sm:px-8">
           <DiscoverSearchFilters
             visible={mode === "search"}
             active={searchFilter}

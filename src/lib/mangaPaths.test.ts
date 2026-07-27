@@ -1,0 +1,28 @@
+import { sanitizeFolderName } from "@/lib/mangaPaths";
+import { describe, expect, it } from "vitest";
+
+describe("sanitizeFolderName", () => {
+  it("garde un titre simple", () => {
+    expect(sanitizeFolderName("One Piece")).toBe("One Piece");
+  });
+
+  it("remplace les caracteres interdits par un tiret", () => {
+    expect(sanitizeFolderName('Re:Zero / "Life" <2>')).toBe("Re-Zero - -Life- -2-");
+  });
+
+  it("supprime les caracteres de controle", () => {
+    expect(sanitizeFolderName("Nar\x00uto")).toBe("Nar-uto");
+  });
+
+  it("retire espaces et points en debut et fin", () => {
+    expect(sanitizeFolderName("  .Bleach.  ")).toBe("Bleach");
+  });
+
+  it("tronque a 100 caracteres", () => {
+    expect(sanitizeFolderName("a".repeat(150))).toHaveLength(100);
+  });
+
+  it("renvoie Manga si le resultat est vide", () => {
+    expect(sanitizeFolderName("   ...  ")).toBe("Manga");
+  });
+});

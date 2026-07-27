@@ -1,4 +1,5 @@
 import type { C411Torrent } from "@/lib/c411";
+import { normalize } from "@/lib/normalizeTitle";
 import { parseRelease, parseReleaseScope, type ReleaseScope } from "@/lib/parseRelease";
 import { queryClient } from "@/lib/queryClient";
 import { c411Keys, searchTorrents } from "@/lib/services/c411";
@@ -28,14 +29,7 @@ export function scopeLabel(scope: ReleaseScope): string {
 
 const SERIES_SLUGS = new Set(["serie-tv", "serie-documentaire", "emission-tv", "animation-serie"]);
 
-export function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
+export { normalize };
 
 const LANG_TOKENS = ["MULTI", "VFF", "VFQ", "VF2", "VOSTFR", "TRUEFRENCH", "FRENCH", "VF", "VO"];
 

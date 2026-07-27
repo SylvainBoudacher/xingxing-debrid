@@ -17,6 +17,29 @@ const DEV_KEY_ENV: Record<string, string | undefined> = {
   tmdb_api_key: import.meta.env.VITE_DEV_TMDB_API_KEY,
 };
 
+const DEV_CBZ_PAGE_COUNT = 12;
+
+function devCbzPages(): string[] {
+  return Array.from(
+    { length: DEV_CBZ_PAGE_COUNT },
+    (_, i) => `page${String(i + 1).padStart(2, "0")}.svg`,
+  );
+}
+
+// Une page factice au bon format d'image : la 5e est une double page paysage,
+// pour exercer le rendu qui l'affiche seule en mode double.
+function devCbzPageBytes(index: number): ArrayBuffer {
+  const landscape = index === 4;
+  const w = landscape ? 1600 : 800;
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="1200" viewBox="0 0 ${w} 1200">` +
+    `<rect width="100%" height="100%" fill="#1c1917"/>` +
+    `<rect x="16" y="16" width="${w - 32}" height="1168" fill="none" stroke="#57534e" stroke-width="4"/>` +
+    `<text x="50%" y="50%" fill="#e7e5e4" font-family="sans-serif" font-size="140" ` +
+    `text-anchor="middle" dominant-baseline="middle">${index + 1}</text></svg>`;
+  return new TextEncoder().encode(svg).buffer as ArrayBuffer;
+}
+
 function installShim() {
   const callbacks = new Map<number, (response: unknown) => void>();
   let nextCallbackId = 1;
@@ -102,6 +125,11 @@ function installShim() {
       localStorage.setItem(`devkey:${args.name as string}`, args.value as string);
       return null;
     }
+
+    // Lecteur CBZ : pages de démonstration générées à la volée, pour que le
+    // lecteur reste testable en preview navigateur (la crate zip est côté Rust).
+    if (cmd === "cbz_list_pages") return devCbzPages();
+    if (cmd === "cbz_page") return devCbzPageBytes(args.index as number);
 
     // listen/unlisten : accepté sans effet (aucun événement backend en navigateur)
     if (cmd === "plugin:event|listen") return nextCallbackId++;

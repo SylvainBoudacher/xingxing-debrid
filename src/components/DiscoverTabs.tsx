@@ -1,6 +1,6 @@
 import type { TmdbFeed } from "@/lib/services/tmdb";
 import { FEED_LABELS, FEEDS, type DiscoverTab } from "@/lib/useDiscoverFeed";
-import { Clapperboard, Heart, Sparkles, Tv, Wand2 } from "lucide-react";
+import { BookOpen, Clapperboard, Heart, Sparkles, Tv, Wand2 } from "lucide-react";
 import { motion } from "motion/react";
 
 interface DiscoverTabsProps {
@@ -13,7 +13,7 @@ interface DiscoverTabsProps {
   onSwitchFeed: (f: TmdbFeed) => void;
 }
 
-// Onglets de navigation (Films, Séries, Animations, Pour vous, Ma liste) et
+// Onglets de navigation (Films, Séries, Animations, Mangas, Pour vous, Ma liste) et
 // sources TMDB (Tendances, Populaires…) sous les onglets Films / Séries.
 export function DiscoverTabs({
   collapsed,
@@ -39,7 +39,7 @@ export function DiscoverTabs({
       }}
       className={`overflow-hidden ${collapsed ? "pointer-events-none" : ""}`}
     >
-      <div className="flex justify-center">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <div className="flex rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 p-1">
           {(["movie", "tv", "animation", "recos", "likes"] as const).map((t) => (
             <button
@@ -74,6 +74,22 @@ export function DiscoverTabs({
             </button>
           ))}
         </div>
+
+        {/* Univers manga : détaché de la pilule, derrière un séparateur, pour
+            qu'on voie tout de suite que ce n'est pas un onglet TMDB de plus. */}
+        <span className="h-6 w-px bg-black/10 dark:bg-white/15" aria-hidden />
+
+        <button
+          onClick={() => onSwitchType("manga")}
+          className={`flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium ring-1 transition-colors ${
+            mediaType === "manga"
+              ? "bg-indigo-600 text-white ring-indigo-500"
+              : "bg-white/90 text-zinc-500 ring-black/10 hover:text-zinc-900 dark:bg-zinc-800/80 dark:text-zinc-400 dark:ring-white/10 dark:hover:text-white"
+          }`}
+        >
+          <BookOpen className="h-3.5 w-3.5" />
+          Mangas
+        </button>
       </div>
 
       {(mediaType === "movie" || mediaType === "tv" || mediaType === "animation") &&
