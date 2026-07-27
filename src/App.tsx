@@ -5,6 +5,7 @@ import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
 import { SplashScreen } from "@/components/SplashScreen";
 import { SplashTransition } from "@/components/SplashTransition";
+import { MangaWelcomeModal } from "@/components/MangaWelcomeModal";
 import { Toaster } from "@/components/ui/sonner";
 import { UpdateDialog } from "@/components/UpdateDialog";
 import { getApiKey } from "@/lib/apiKeys";
@@ -16,6 +17,7 @@ import { LATEST_VERSION } from "@/lib/patchnotes";
 import { loadSeriesFolders } from "@/lib/seriesFolders";
 import { onSettingsPanelRequest } from "@/lib/settingsNavigation";
 import { loadStartupPage } from "@/lib/startupPage";
+import type { MangaItem } from "@/lib/mangaItem";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import type { LibraryTab } from "@/components/LibraryTabs";
 import type { DiscoverTab } from "@/lib/useDiscoverFeed";
@@ -77,6 +79,8 @@ function App() {
   const [discoverQuery, setDiscoverQuery] = useState("");
   const [discoverItem, setDiscoverItem] = useState<TmdbItem | null>(null);
   const [discoverTab, setDiscoverTab] = useState<DiscoverTab | undefined>(undefined);
+  const [discoverMangaQuery, setDiscoverMangaQuery] = useState("");
+  const [discoverMangaItem, setDiscoverMangaItem] = useState<MangaItem | null>(null);
   const [libraryTab, setLibraryTab] = useState<LibraryTab | undefined>(undefined);
   const [mangaLibraryId, setMangaLibraryId] = useState<string | null>(null);
   const [libraryExpandedHash, setLibraryExpandedHash] = useState<string | null>(null);
@@ -87,6 +91,7 @@ function App() {
   } | null>(null);
   const [patchnotesSeenVersion, setPatchnotesSeenVersion] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
+  const [showMangaWelcome, setShowMangaWelcome] = useState(false);
   const [summerEnabled, setSummerEnabled] = useState(true);
   const [summerFps, setSummerFps] = useState<30 | 60>(60);
   const [summerMaxDucks, setSummerMaxDucks] = useState(15);
@@ -154,9 +159,14 @@ function App() {
       store.get<boolean>("setup_complete"),
       store.get<boolean>("welcome_v1_seen"),
       loadStartupPage(store),
+      store.get<boolean>("manga_welcome_v160_seen"),
     ])
-      .then(([done, welcomeSeen, startupPage]) => {
-        setPage(done && welcomeSeen ? startupPage : "setup");
+      .then(([done, welcomeSeen, startupPage, mangaWelcomeSeen]) => {
+        const installed = Boolean(done && welcomeSeen);
+        setPage(installed ? startupPage : "setup");
+        // Seuls les utilisateurs qui avaient deja l'app installee voient la
+        // presentation Manga : un nouvel arrivant decouvre tout via le setup.
+        if (installed && !mangaWelcomeSeen) setShowMangaWelcome(true);
       })
       .catch((err) => {
         console.error("Store read failed:", err);
@@ -208,6 +218,12 @@ function App() {
     await store.save();
   }
 
+  async function handleCloseMangaWelcome() {
+    setShowMangaWelcome(false);
+    await store.set("manga_welcome_v160_seen", true);
+    await store.save();
+  }
+
   async function handleSetIdleAutoHide(v: boolean) {
     setIdleAutoHide(v);
     await store.set("idle_auto_hide", v);
@@ -220,6 +236,8 @@ function App() {
     if (p === "manga") {
       setDiscoverQuery("");
       setDiscoverItem(null);
+      setDiscoverMangaQuery("");
+      setDiscoverMangaItem(null);
       setDiscoverTab("manga");
       setPage("discover");
       return;
@@ -229,6 +247,8 @@ function App() {
     if (p === "discover") {
       setDiscoverQuery("");
       setDiscoverItem(null);
+      setDiscoverMangaQuery("");
+      setDiscoverMangaItem(null);
       setDiscoverTab(undefined);
     }
     // Toute navigation "normale" vers l'accueil repart sur une barre vierge :
@@ -272,6 +292,27 @@ function App() {
     setLibraryTab("manga");
     setLibraryTab("media");
     setPage("library");
+  }
+
+  // Barre de MainPage en mode Mangas : ouvre l'onglet Mangas de la Découverte
+  // avec la recherche MangaDex, et la fiche du titre si une suggestion a été
+  // choisie.
+  function launchDiscoverManga(q: string) {
+    setDiscoverMangaQuery(q);
+    setDiscoverMangaItem(null);
+    setDiscoverQuery("");
+    setDiscoverItem(null);
+    setDiscoverTab("manga");
+    setPage("discover");
+  }
+
+  function launchDiscoverMangaItem(item: MangaItem) {
+    setDiscoverMangaQuery(item.title);
+    setDiscoverMangaItem(item);
+    setDiscoverQuery("");
+    setDiscoverItem(null);
+    setDiscoverTab("manga");
+    setPage("discover");
   }
 
   function launchDiscover(q: string) {
@@ -321,6 +362,12 @@ function App() {
       {effectivePhase === "done" && pendingUpdate && (
         <UpdateDialog update={pendingUpdate} onDismiss={() => setPendingUpdate(null)} />
       )}
+
+      <AnimatePresence>
+        {effectivePhase === "done" && page !== "setup" && showMangaWelcome && (
+          <MangaWelcomeModal onClose={handleCloseMangaWelcome} />
+        )}
+      </AnimatePresence>
 
       {/* Pool canvas — montée dès la phase "transition" pour qu'elle soit déjà
           visible quand le voile du splash se lève */}
@@ -409,8 +456,11 @@ function App() {
                 onNavigate={handleNavigate}
                 onLaunchDiscover={launchDiscover}
                 onLaunchDiscoverItem={launchDiscoverItem}
+                onLaunchDiscoverManga={launchDiscoverManga}
+                onLaunchDiscoverMangaItem={launchDiscoverMangaItem}
                 devMode={devMode}
                 onToggleDevMode={() => setDevMode((v) => !v)}
+                onShowMangaWelcome={() => setShowMangaWelcome(true)}
                 onShowUpdatePreview={() =>
                   setPendingUpdate({
                     version: "9.9.9",
@@ -519,6 +569,8 @@ function App() {
                 initialQuery={discoverQuery}
                 initialTab={discoverTab}
                 initialItem={discoverItem}
+                initialMangaQuery={discoverMangaQuery}
+                initialMangaItem={discoverMangaItem}
                 initialTmdbKey={initTmdbKey}
                 initialC411Key={initC411Key}
                 initialAllDebridKey={initAllDebridKey}

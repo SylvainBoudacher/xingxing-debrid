@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import {
   Bell,
+  BookOpen,
   Compass,
   FlaskConical,
   Home,
@@ -54,6 +55,7 @@ interface AppMenuProps {
   devMode?: boolean;
   onToggleDevMode?: () => void;
   onShowUpdatePreview?: () => void;
+  onShowMangaWelcome?: () => void;
 }
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
@@ -67,6 +69,7 @@ export function AppMenu({
   devMode,
   onToggleDevMode,
   onShowUpdatePreview,
+  onShowMangaWelcome,
 }: AppMenuProps) {
   const isMain = currentPage === "main";
   // La page Découverte est inutilisable sans clé TMDB : petit indicateur sur
@@ -171,6 +174,10 @@ export function AppMenu({
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
                   Réinitialiser 1er lancement
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onShowMangaWelcome}>
+                  <BookOpen className="mr-2 h-4 w-4" />
+                  Revoir la modale Manga
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={onShowUpdatePreview}>
                   <RefreshCw className="mr-2 h-4 w-4" />

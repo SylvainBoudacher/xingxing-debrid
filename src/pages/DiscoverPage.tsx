@@ -17,6 +17,7 @@ import { getCachedLibrary, loadLibrary } from "@/lib/library";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { queryClient } from "@/lib/queryClient";
 import { ownedTmdbKeys } from "@/lib/recommendations";
+import type { MangaItem } from "@/lib/mangaItem";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { FEED_LABELS, useDiscoverFeed, type DiscoverTab } from "@/lib/useDiscoverFeed";
 import { useRecommendations } from "@/lib/useRecommendations";
@@ -37,6 +38,10 @@ interface DiscoverPageProps {
   initialTab?: DiscoverTab;
   /** Fiche à ouvrir directement (sélection d'une suggestion d'auto-complete) */
   initialItem?: TmdbItem | null;
+  /** Requête MangaDex pré-remplie depuis la barre de MainPage (mode "Mangas") */
+  initialMangaQuery?: string;
+  /** Fiche manga à ouvrir directement (suggestion MangaDex de MainPage) */
+  initialMangaItem?: MangaItem | null;
   /** Clé TMDB pré-chargée par useAppInit */
   initialTmdbKey?: string | null;
   /** Clés C411 et AllDebrid pré-chargées par useAppInit */
@@ -61,6 +66,8 @@ export function DiscoverPage({
   initialQuery,
   initialTab,
   initialItem,
+  initialMangaQuery,
+  initialMangaItem,
   initialTmdbKey,
   initialC411Key,
   initialAllDebridKey,
@@ -76,7 +83,7 @@ export function DiscoverPage({
   const [selected, setSelected] = useState<TmdbItem | null>(null);
   // Recherche de l'onglet Mangas : la barre du haut est partagée, son contenu
   // dépend de l'univers affiché (TMDB ou MangaDex).
-  const [mangaQuery, setMangaQuery] = useState("");
+  const [mangaQuery, setMangaQuery] = useState(initialMangaQuery ?? "");
   // Fiche manga ouverte : Escape lui revient, pas au retour accueil.
   const [mangaBusy, setMangaBusy] = useState(false);
 
@@ -338,6 +345,7 @@ export function DiscoverPage({
         <div className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 sm:px-8">
           <DiscoverMangaSection
             query={mangaQuery}
+            initialItem={initialMangaItem}
             getC411Key={() => c411KeyRef.current}
             getAllDebridKey={() => allDebridKeyRef.current}
             onOpenLibrary={onOpenMangaLibrary}

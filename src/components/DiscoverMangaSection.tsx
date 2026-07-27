@@ -15,6 +15,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 interface DiscoverMangaSectionProps {
   /** Requete saisie dans la barre de recherche de la page. */
   query: string;
+  /** Fiche a ouvrir des l'arrivee (suggestion MangaDex de la page principale). */
+  initialItem?: MangaItem | null;
   getC411Key: () => string;
   getAllDebridKey: () => string;
   /** Ouvre la bibliotheque manga sur l'oeuvre donnee. */
@@ -27,13 +29,14 @@ interface DiscoverMangaSectionProps {
 // (Populaires, Nouveautés…) et grille de jaquettes.
 export function DiscoverMangaSection({
   query,
+  initialItem,
   getC411Key,
   getAllDebridKey,
   onOpenLibrary,
   onBusyChange,
 }: DiscoverMangaSectionProps) {
   const feed = useMangaFeed(query);
-  const [selected, setSelected] = useState<MangaItem | null>(null);
+  const [selected, setSelected] = useState<MangaItem | null>(initialItem ?? null);
   const [entries, setEntries] = useState<MangaEntry[]>(() => getCachedMangaLibrary() ?? []);
 
   useEffect(() => {
