@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import {
   Bell,
-  BookMarked,
-  BookOpen,
   Compass,
   FlaskConical,
   Home,
@@ -109,18 +107,6 @@ export function AppMenu({
                 aria-label="Clé TMDB manquante"
               />
             )}
-          </DropdownMenuItem>
-        )}
-        {currentPage !== "manga" && (
-          <DropdownMenuItem onClick={() => onNavigate("manga")}>
-            <BookOpen className="mr-2 h-4 w-4" />
-            Mangas
-          </DropdownMenuItem>
-        )}
-        {currentPage !== "mangalibrary" && (
-          <DropdownMenuItem onClick={() => onNavigate("mangalibrary")}>
-            <BookMarked className="mr-2 h-4 w-4" />
-            Mes mangas
           </DropdownMenuItem>
         )}
         {currentPage !== "magnets" && (

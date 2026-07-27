@@ -1,5 +1,4 @@
 import { MangaVolumeList } from "@/components/MangaVolumeList";
-import { Button } from "@/components/ui/button";
 import { MANGA_STATUS_LABELS } from "@/lib/mangaItem";
 import type { MangaEntry, MangaVolume } from "@/lib/mangaLibrary";
 import { coverUrl } from "@/lib/services/mangadex";
@@ -60,9 +59,9 @@ export function MangaEntryDetailModal({
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
         transition={{ type: "spring", stiffness: 260, damping: 26 }}
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-zinc-950"
+        className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white/95 shadow-2xl ring-1 ring-black/10 backdrop-blur-xl dark:bg-zinc-900/95 dark:ring-white/10"
       >
-        <div className="flex items-start gap-4 border-b border-black/5 p-5 dark:border-white/5">
+        <div className="flex items-start gap-4 border-b border-black/5 p-5 dark:border-white/10">
           {cover && (
             <img
               src={cover}
@@ -74,7 +73,7 @@ export function MangaEntryDetailModal({
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
               {entry.meta.title}
             </h2>
-            <p className="mt-0.5 text-xs text-zinc-500">
+            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
               {[
                 entry.meta.year,
                 MANGA_STATUS_LABELS[entry.meta.status],
@@ -87,27 +86,36 @@ export function MangaEntryDetailModal({
 
             <div className="mt-3 flex flex-wrap gap-2">
               {readable && (
-                <Button size="sm" onClick={onContinue}>
-                  <BookOpen />
+                <button
+                  onClick={onContinue}
+                  className="flex h-7 items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25"
+                >
+                  <BookOpen className="h-3.5 w-3.5" />
                   Continuer la lecture
-                </Button>
+                </button>
               )}
-              <Button size="sm" variant="outline" onClick={onFindMore}>
-                <Search />
+              <button
+                onClick={onFindMore}
+                className="flex h-7 items-center gap-1.5 rounded-lg bg-indigo-500/10 px-2.5 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-500/20 dark:bg-indigo-500/15 dark:text-indigo-300 dark:hover:bg-indigo-500/25"
+              >
+                <Search className="h-3.5 w-3.5" />
                 Chercher d'autres tomes
-              </Button>
-              <Button size="sm" variant="outline" onClick={onRemove}>
-                <Trash2 />
+              </button>
+              <button
+                onClick={onRemove}
+                className="flex h-7 items-center gap-1.5 rounded-lg bg-red-500/10 px-2.5 text-xs font-medium text-red-600 ring-1 ring-red-500/20 transition-colors hover:bg-red-500/20 dark:text-red-400"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
                 Retirer
-              </Button>
+              </button>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="Fermer"
-            className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-black/5 hover:text-zinc-700 dark:hover:bg-white/10 dark:hover:text-white"
+            className="flex h-6 w-6 flex-none items-center justify-center rounded-md bg-zinc-200 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
           </button>
         </div>
 
@@ -117,15 +125,18 @@ export function MangaEntryDetailModal({
               {entry.pending.length} torrent{entry.pending.length > 1 ? "s" : ""} en cours de
               débridage chez AllDebrid.
             </p>
-            <Button
-              size="sm"
-              variant="outline"
+            <button
               disabled={refreshingPending}
               onClick={onRefreshPending}
+              className="flex h-7 flex-none items-center gap-1.5 rounded-lg bg-amber-500/15 px-2.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/25 disabled:opacity-40 dark:text-amber-400"
             >
-              {refreshingPending ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+              {refreshingPending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
               Vérifier
-            </Button>
+            </button>
           </div>
         )}
 

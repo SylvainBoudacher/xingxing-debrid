@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { formatSize } from "@/lib/debrid";
 import type { MangaEntry, MangaVolume } from "@/lib/mangaLibrary";
 import { BookOpen, Check, Download, Loader2 } from "lucide-react";
@@ -39,10 +38,10 @@ export function MangaVolumeList({
             <button
               onClick={() => onToggleRead(volume)}
               aria-label={volume.read ? "Marquer comme non lu" : "Marquer comme lu"}
-              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors ${
+              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md ring-1 transition-colors ${
                 volume.read
-                  ? "border-emerald-500 bg-emerald-500 text-white"
-                  : "border-zinc-300 text-transparent hover:border-zinc-400 dark:border-zinc-700"
+                  ? "bg-emerald-500 text-white ring-emerald-500"
+                  : "bg-zinc-200 text-transparent ring-black/10 hover:bg-zinc-300 dark:bg-zinc-800 dark:ring-white/10 dark:hover:bg-zinc-700"
               }`}
             >
               <Check className="h-3 w-3" strokeWidth={3} />
@@ -52,7 +51,7 @@ export function MangaVolumeList({
               <p className="truncate text-sm text-zinc-800 dark:text-zinc-200">
                 {volume.number !== null ? `Tome ${volume.number}` : volume.fileName}
               </p>
-              <p className="text-[11px] text-zinc-500">
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
                 {formatSize(volume.fileSize)}
                 {progress !== null && !volume.read && ` · lu à ${progress} %`}
                 {!volume.localPath && " · non téléchargé"}
@@ -60,20 +59,26 @@ export function MangaVolumeList({
             </div>
 
             {volume.localPath ? (
-              <Button size="sm" variant="outline" onClick={() => onRead(volume)}>
-                <BookOpen />
+              <button
+                onClick={() => onRead(volume)}
+                className="flex h-7 flex-none items-center gap-1.5 rounded-lg bg-emerald-500/10 px-2.5 text-xs font-medium text-emerald-600 transition-colors hover:bg-emerald-500/20 dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-emerald-500/25"
+              >
+                <BookOpen className="h-3.5 w-3.5" />
                 Lire
-              </Button>
+              </button>
             ) : (
-              <Button
-                size="sm"
-                variant="outline"
+              <button
                 disabled={downloading !== null}
                 onClick={() => onDownload(volume)}
+                className="flex h-7 flex-none items-center gap-1.5 rounded-lg bg-indigo-600 px-2.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {busy ? <Loader2 className="animate-spin" /> : <Download />}
+                {busy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5" />
+                )}
                 Télécharger
-              </Button>
+              </button>
             )}
           </li>
         );
