@@ -297,7 +297,6 @@ function App() {
   function openMangaEntry(mangaId?: string) {
     setMangaLibraryId(mangaId ?? null);
     setLibraryTab("manga");
-    setLibraryTab("media");
     setPage("library");
   }
 

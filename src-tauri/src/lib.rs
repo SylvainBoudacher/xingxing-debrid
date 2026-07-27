@@ -55,6 +55,25 @@ fn percent_decode(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
+// Remplace les caracteres interdits par Windows (et les points/espaces de fin,
+// refuses par NTFS) pour que File::create ne echoue jamais sur le nom seul.
+fn sanitize_filename(name: &str) -> String {
+    let cleaned: String = name
+        .chars()
+        .map(|c| match c {
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '-',
+            c if (c as u32) < 0x20 => '-',
+            c => c,
+        })
+        .collect();
+    let trimmed = cleaned.trim_end_matches([' ', '.']).to_string();
+    if trimmed.is_empty() {
+        "telechargement".to_string()
+    } else {
+        trimmed
+    }
+}
+
 // Deduit un nom de fichier propre depuis l'URL debridee.
 fn filename_from_url(url: &str) -> String {
     url.split('?')
@@ -62,6 +81,7 @@ fn filename_from_url(url: &str) -> String {
         .and_then(|p| p.rsplit('/').next())
         .filter(|s| !s.is_empty())
         .map(percent_decode)
+        .map(|s| sanitize_filename(&s))
         .unwrap_or_else(|| "telechargement".to_string())
 }
 
@@ -290,6 +310,17 @@ fn export_json(app: tauri::AppHandle, filename: String, content: String) -> Resu
     Ok(path.to_string_lossy().into_owned())
 }
 
+// Dossier par defaut quand aucun n'est configure : Telechargements de l'OS,
+// sinon Documents, sinon le dossier personnel (le dossier connu "Downloads"
+// peut manquer sur certains Windows, ex. profil redirige).
+fn default_download_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    app.path()
+        .download_dir()
+        .or_else(|_| app.path().document_dir())
+        .or_else(|_| app.path().home_dir())
+        .map_err(|e| e.to_string())
+}
+
 // Un sous-dossier est sur si chacun de ses segments est non vide, different de
 // "." et "..", et ne contient ni antislash ni racine absolue.
 fn is_safe_subdir(sub: &str) -> bool {
@@ -313,10 +344,11 @@ async fn download_to_dir(
     subdir: Option<String>,
 ) -> Result<String, String> {
     let base_dir = if dir.trim().is_empty() {
-        app.path().download_dir().map_err(|e| e.to_string())?
+        default_download_dir(&app)?
     } else {
         std::path::PathBuf::from(&dir)
     };
+    std::fs::create_dir_all(&base_dir).map_err(|e| e.to_string())?;
 
     // Sous-dossier optionnel, un ou plusieurs segments separes par "/" (ex.
     // "manga/One Piece") : cree a la volee, toujours sous base_dir.

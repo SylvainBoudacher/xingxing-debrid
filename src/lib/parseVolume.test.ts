@@ -75,6 +75,14 @@ describe("volumeFromFileName", () => {
     expect(volumeFromFileName("Berserk - 42.cbz")).toBe(42);
   });
 
+  it("ignore le dossier parent et lit le numero du fichier seul", () => {
+    expect(
+      volumeFromFileName(
+        "Arrête de me chauffer, Nagatoro (T1 T18) [CBZ] -notage/Arrête de me chauffer, Nagatoro - Tome 12 - Nanashi.cbz",
+      ),
+    ).toBe(12);
+  });
+
   it("rend null quand le nom ne porte pas de numero", () => {
     expect(volumeFromFileName("ComicInfo.xml")).toBeNull();
     expect(volumeFromFileName("couverture.jpg")).toBeNull();

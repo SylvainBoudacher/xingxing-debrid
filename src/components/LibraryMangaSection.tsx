@@ -76,7 +76,15 @@ export function LibraryMangaSection({
   onLayoutChange,
 }: LibraryMangaSectionProps) {
   const [entries, setEntries] = useState<MangaEntry[]>(() => getCachedMangaLibrary() ?? []);
-  const [selectedId, setSelectedId] = useState<string | null>(initialMangaId ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Fiche pre-ouverte (action "Voir" d'un toast) : attendre la fin de la
+  // transition de page avant de l'animer, sinon tout apparait d'un coup.
+  useEffect(() => {
+    if (!initialMangaId) return;
+    const timer = setTimeout(() => setSelectedId(initialMangaId), 350);
+    return () => clearTimeout(timer);
+  }, [initialMangaId]);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [refreshingPending, setRefreshingPending] = useState(false);
   const [findMoreFor, setFindMoreFor] = useState<MangaItem | null>(null);

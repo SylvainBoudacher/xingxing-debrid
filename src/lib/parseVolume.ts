@@ -105,7 +105,10 @@ function cleanTitle(s: string): string {
  * fichier, donc seul le cas "single" a du sens.
  */
 export function volumeFromFileName(fileName: string): number | null {
-  const withoutExt = fileName.replace(/\.[a-z0-9]{2,5}$/i, "");
+  // Les fichiers AllDebrid arrivent prefixes de leur dossier, dont le nom de
+  // torrent peut contenir une plage ("(T1 T18)") : seul le nom propre compte.
+  const baseName = fileName.slice(fileName.lastIndexOf("/") + 1);
+  const withoutExt = baseName.replace(/\.[a-z0-9]{2,5}$/i, "");
   const flat = flatten(withoutExt);
   const marked = flat.match(SINGLE_RE);
   if (marked) return Number(marked[1]);
