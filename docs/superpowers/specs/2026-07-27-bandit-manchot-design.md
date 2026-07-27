@@ -86,9 +86,20 @@ Canvas (`src/components/`)
 
 UI (`src/components/`)
 
-- `SlotMachine.tsx` — overlay plein écran, ouvert par `emitSlotOpen()`
+- `SlotMachine.tsx` — overlay plein écran, ouvert par `emitSlotOpen()`. Le
+  panneau dessine une vraie borne: fronton à ampoules, fenêtre à rouleaux
+  cerclée d'or avec ligne de paie, afficheur, fente à jetons, levier au flanc
+- `SlotLever.tsx` — le levier. Il s'attrape à la souris et se tire vers le bas,
+  et le tirage ne part que passé 62 % de la course. Un clic (ou Entrée) joue la
+  descente automatiquement. Le geste est câblé sur des pointer events bruts:
+  le pan de motion passe par la boucle d'animation, suspendue quand la fenêtre
+  n'est pas au premier plan, ce qui rendrait le levier muet
+- `SlotMarquee.tsx` — fronton 777 et sa guirlande, allumée quand un tirage
+  est disponible
 - `SlotReel.tsx` — un rouleau, animation motion/react
 - `slotSymbols.tsx` — les cinq symboles en SVG pixel-art
+- `slotCopy.ts` — libellés des lots et des symboles, table des gains
+- `SlotPayouts.tsx` — la table des gains affichée sous la borne
 - `SlotDevMenu.tsx` — reset du cooldown et forçage de lot, `import.meta.env.DEV`
 
 Modifications ciblées

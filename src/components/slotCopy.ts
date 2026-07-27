@@ -3,6 +3,15 @@ import { PRIZE_ODDS, SYMBOL_OF_PRIZE, type SlotPrize, type SlotSymbol } from "@/
 // Textes du bandit manchot, sortis du composant: le panneau et la table des
 // gains disent la même chose du même lot.
 
+export const SYMBOL_LABELS: Record<SlotSymbol, string> = {
+  seven: "777",
+  crown: "Couronne",
+  golden: "Canard doré",
+  wizard: "Chapeau de sorcier",
+  glasses: "Canard à lunettes",
+  duckling: "Caneton",
+};
+
 export const PRIZE_LABEL: Record<SlotPrize, string> = {
   jackpot: "Canard Croupier",
   king: "Le Roi des canards",

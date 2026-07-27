@@ -18,6 +18,8 @@ import { refreshClaimableRewards } from "@/lib/duckRewardStatus";
 import { onSlotOpen, spawnVariant } from "./duckShopBridge";
 import { PRIZE_LABEL, prizeToast } from "./slotCopy";
 import { SlotDevMenu } from "./SlotDevMenu";
+import { SlotLever } from "./SlotLever";
+import { SlotMarquee } from "./SlotMarquee";
 import { SlotPayouts } from "./SlotPayouts";
 import { SlotReel } from "./SlotReel";
 
@@ -39,6 +41,7 @@ export function SlotMachine() {
   const [reveal, setReveal] = useState<SlotResult | null>(null);
 
   const openRef = useRef(false);
+  const downOutside = useRef(false);
   const timer = useRef(0);
   useEffect(() => {
     openRef.current = open;
@@ -114,15 +117,18 @@ export function SlotMachine() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
-          onClick={() => !rolling && setOpen(false)}
+          // Un clic dont la pression et le relâchement n'ont pas la même cible
+          // est dispatché sur leur ancêtre commun, donc ici sur le fond: tirer
+          // le levier fermerait le panneau. C'est l'origine du geste qui décide.
+          onPointerDown={(e) => (downOutside.current = e.target === e.currentTarget)}
+          onClick={() => downOutside.current && !rolling && setOpen(false)}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-sm overflow-hidden rounded-2xl bg-gradient-to-b from-[#5E0E20] to-[#2A0710] ring-1 ring-white/15 shadow-2xl"
+            className="w-full max-w-md overflow-hidden rounded-2xl bg-gradient-to-b from-[#3B0A16] to-[#1C040B] ring-1 ring-white/15 shadow-2xl"
           >
             <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4">
               <div>
@@ -147,56 +153,68 @@ export function SlotMachine() {
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-4 px-5 py-5">
-              <div className="flex gap-2 rounded-xl bg-black/40 p-2 ring-1 ring-amber-400/30">
-                {reels.map((s, i) => (
-                  <SlotReel key={i} symbol={s} spin={spin} duration={REEL_MS[i] / 1000} />
-                ))}
-              </div>
+            <div className="px-5 py-5">
+              <div className="flex items-end justify-center gap-1">
+                {/* la borne */}
+                <div className="w-[268px] overflow-hidden rounded-[26px] bg-gradient-to-b from-[#8E1730] via-[#5E0E20] to-[#2E0511] ring-1 ring-amber-400/30 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)]">
+                  <SlotMarquee lit={ready && !rolling} />
 
-              <div className="h-9 text-center">
-                <AnimatePresence mode="wait">
-                  {reveal && (
-                    <motion.div
-                      key={spin}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                    >
+                  <div className="px-3 pt-3">
+                    <div className="relative rounded-xl bg-black/70 p-2 ring-2 ring-amber-400/50">
+                      <div className="flex justify-center gap-2">
+                        {reels.map((s, i) => (
+                          <SlotReel key={i} symbol={s} spin={spin} duration={REEL_MS[i] / 1000} />
+                        ))}
+                      </div>
+                      {/* ligne de paie */}
+                      <span className="pointer-events-none absolute inset-x-1 top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-red-500/50" />
+                    </div>
+
+                    {/* afficheur de la borne */}
+                    <div className="mt-3 flex h-[46px] flex-col items-center justify-center rounded-lg bg-black/70 px-2 ring-1 ring-white/10">
                       <p
-                        className={`text-sm font-semibold ${
-                          reveal.prize === "none" ? "text-zinc-400" : "text-amber-300"
+                        className={`font-mono text-[13px] font-bold uppercase tracking-wider ${
+                          reveal && !rolling && reveal.prize === "none"
+                            ? "text-zinc-400"
+                            : "text-amber-300"
                         }`}
                       >
-                        {reveal.prize === "jackpot" && reveal.jackpotUnlock
-                          ? "JACKPOT !"
-                          : PRIZE_LABEL[reveal.prize]}
+                        {rolling
+                          ? "Ça tourne..."
+                          : reveal
+                            ? reveal.jackpotUnlock
+                              ? "Jackpot !"
+                              : PRIZE_LABEL[reveal.prize]
+                            : ready
+                              ? "Tire le levier"
+                              : "En charge"}
                       </p>
-                      <p className="text-[11px] text-zinc-400">
-                        {reveal.jackpotUnlock
-                          ? "Le Canard Croupier est débloqué dans le Canardex."
-                          : reveal.variant
-                            ? "Attrape-le dans le bassin pour le garder."
-                            : "Le pity du bassin avance."}
+                      <p className="mt-0.5 text-center text-[10px] leading-tight text-zinc-400">
+                        {rolling
+                          ? ""
+                          : reveal
+                            ? reveal.jackpotUnlock
+                              ? "Le Canard Croupier est débloqué dans le Canardex."
+                              : reveal.variant
+                                ? "Attrape-le dans le bassin pour le garder."
+                                : "Le pity du bassin avance."
+                            : ready
+                              ? "Attrape le pommeau et tire vers le bas."
+                              : `Prochain tirage dans ${formatCountdown(remaining)}`}
                       </p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                    </div>
+                  </div>
+
+                  {/* fente à jetons */}
+                  <div className="mx-auto my-3 h-1.5 w-20 rounded-full bg-black/60 ring-1 ring-white/10" />
+                </div>
+
+                <SlotLever disabled={!ready || rolling} onPull={pull} />
               </div>
 
-              <button
-                onClick={() => pull()}
-                disabled={!ready || rolling}
-                className="w-full rounded-xl bg-gradient-to-b from-[#F0584E] to-[#B3202A] px-4 py-3 text-sm font-bold uppercase tracking-wider text-white shadow-lg ring-1 ring-white/20 transition-transform enabled:hover:brightness-110 enabled:active:scale-[0.98] disabled:cursor-not-allowed disabled:from-zinc-700 disabled:to-zinc-800 disabled:text-zinc-400 disabled:ring-white/10"
-              >
-                {rolling
-                  ? "Ça tourne..."
-                  : ready
-                    ? "Tirer le levier"
-                    : `Prochain tirage dans ${formatCountdown(remaining)}`}
-              </button>
-
-              <SlotPayouts />
+              <div className="mt-4">
+                <SlotPayouts />
+              </div>
             </div>
           </motion.div>
         </motion.div>

@@ -1,17 +1,9 @@
 import type { SlotSymbol } from "@/game/slots";
+import { SYMBOL_LABELS } from "./slotCopy";
 
-// Les cinq symboles des rouleaux, en SVG plutôt qu'en canvas: ils vivent dans
-// un rouleau qui défile en CSS, et un <svg> se laisse empiler et animer sans
+// Les symboles des rouleaux, en SVG plutôt qu'en canvas: ils vivent dans un
+// rouleau qui défile en CSS, et un <svg> se laisse empiler et animer sans
 // contexte de dessin.
-
-export const SYMBOL_LABELS: Record<SlotSymbol, string> = {
-  seven: "777",
-  crown: "Couronne",
-  golden: "Canard doré",
-  wizard: "Chapeau de sorcier",
-  glasses: "Canard à lunettes",
-  duckling: "Caneton",
-};
 
 function DuckBody({ body, beak = "#F5811F" }: { body: string; beak?: string }) {
   return (
