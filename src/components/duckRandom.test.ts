@@ -136,11 +136,14 @@ describe("reward effects rarity", () => {
     );
   });
 
-  it("ranks the peacock and the phoenix as mythic", () => {
+  it("ranks the peacock, the phoenix and the croupier as mythic", () => {
     expect(getRarity({ body: "#2E6B5E", beak: BEAK, acc: "none", effect: "peacock" })).toBe(
       "mythic",
     );
     expect(getRarity({ body: "#FFF3D6", beak: BEAK, acc: "none", effect: "phoenix" })).toBe(
+      "mythic",
+    );
+    expect(getRarity({ body: "#5E0E20", beak: BEAK, acc: "bowtie", effect: "croupier" })).toBe(
       "mythic",
     );
   });
@@ -154,7 +157,9 @@ describe("reward effects rarity", () => {
   it("never rolls a reward effect at random", () => {
     for (let i = 0; i < 3000; i++) {
       const e = randomVariant().effect;
-      expect(e === "chameleon" || e === "peacock" || e === "phoenix").toBe(false);
+      expect(e === "chameleon" || e === "peacock" || e === "phoenix" || e === "croupier").toBe(
+        false,
+      );
     }
   });
 });

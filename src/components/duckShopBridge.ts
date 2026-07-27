@@ -52,6 +52,15 @@ export function emitDexOpen() {
   dexOpenCb?.();
 }
 
+// La machine à sous dessinée au sol ouvre/ferme l'overlay du bandit manchot.
+let slotOpenCb: (() => void) | null = null;
+export function onSlotOpen(cb: (() => void) | null) {
+  slotOpenCb = cb;
+}
+export function emitSlotOpen() {
+  slotOpenCb?.();
+}
+
 // The pool reserved some saved ducks on its own (display limit lowered); the
 // shop persists the reserved flag and refreshes its list.
 let reservedCb: ((ids: string[]) => void) | null = null;

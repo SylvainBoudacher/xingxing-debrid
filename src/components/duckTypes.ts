@@ -42,7 +42,8 @@ export type Pattern =
   | "metal"
   | "abyss"
   | "scales"
-  | "ember";
+  | "ember"
+  | "neon";
 
 export type Effect =
   | "glow"
@@ -60,7 +61,8 @@ export type Effect =
   | "godly"
   | "chameleon"
   | "peacock"
-  | "phoenix";
+  | "phoenix"
+  | "croupier";
 
 export interface Variant {
   body: string;

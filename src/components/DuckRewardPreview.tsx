@@ -4,6 +4,9 @@ import { makeDuckSprite } from "./duckSprite";
 import {
   createChameleonSkinner,
   drawChameleonHalo,
+  drawCroupierChips,
+  drawCroupierNeon,
+  drawCroupierSign,
   drawGodlyAura,
   drawGodlyBolts,
   drawNovaAura,
@@ -50,11 +53,16 @@ export function DuckRewardPreview({ reward, size = 52 }: { reward: DuckReward; s
       else if (variant.effect === "phoenix") drawPhoenixWings(frame);
       else if (variant.effect === "nova") drawNovaAura(frame);
       else if (variant.effect === "godly") drawGodlyAura(frame);
+      else if (variant.effect === "croupier") drawCroupierNeon(frame);
       const img = variant.effect === "chameleon" ? skin(sprite, dw, dh, t, 0) : sprite;
       ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
       if (variant.effect === "phoenix") drawPhoenixEmbers(frame);
       else if (variant.effect === "nova") drawNovaOrbit(frame);
       else if (variant.effect === "godly") drawGodlyBolts(frame);
+      else if (variant.effect === "croupier") {
+        drawCroupierChips(frame);
+        drawCroupierSign(frame);
+      }
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);

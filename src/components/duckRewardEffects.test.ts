@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   drawChameleonHalo,
+  drawCroupierChips,
+  drawCroupierNeon,
+  drawCroupierSign,
   drawGodlyAura,
   drawGodlyBolts,
   drawNovaAura,
@@ -101,6 +104,7 @@ const DRAW: Partial<Record<Effect, Array<(f: EffectFrame) => void>>> = {
   phoenix: [drawPhoenixWings, drawPhoenixEmbers],
   nova: [drawNovaAura, drawNovaOrbit],
   godly: [drawGodlyAura, drawGodlyBolts],
+  croupier: [drawCroupierNeon, drawCroupierChips, drawCroupierSign],
 };
 
 // Les effets bouclent lentement (le phénix renaît sur ~20s, le paon ouvre sa
@@ -162,7 +166,7 @@ describe("effets des canards de récompense", () => {
   // la vignette, qui est cinq fois plus petite.
   // le paon est exclu: ses ocelles ont un rayon plancher, sa roue n'est donc
   // pas strictement proportionnelle en très petit
-  it.each(["nova", "godly", "phoenix", "chameleon"] as const)(
+  it.each(["nova", "godly", "phoenix", "chameleon", "croupier"] as const)(
     "met l'effet %s à l'échelle du canard",
     (effect) => {
       // gros écart d'échelle: une constante restée en pixels fixes se voit dans
