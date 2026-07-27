@@ -1,3 +1,6 @@
+import discoverMangaV160Img from "@/assets/patchnote/v1.6.0/discover-manga.webp";
+import slotMachineV160Img from "@/assets/patchnote/v1.6.0/slot-machine.png";
+import bibliothequesMangaV160Img from "@/assets/patchnote/v1.6.0/bibliotheque-manga.webp";
 import newsPrincipalesV150Img from "@/assets/patchnote/v1.5.0/news-principales.webp";
 import importExportV150Img from "@/assets/patchnote/v1.5.0/import-export.webp";
 import canardsNomesV150Img from "@/assets/patchnote/v1.5.0/canards-nomes.webp";
@@ -41,6 +44,66 @@ export interface PatchNote {
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.6.0",
+    date: "27 juillet 2026",
+    intro:
+      "La 1.6.0 est une version majeure : les mangas font leur entrée dans l'application, une machine à sous exclusive arrive dans le Coin des Canards, et l'export de bibliothèque facilite le passage d'un PC à l'autre.",
+    introImage: {
+      src: discoverMangaV160Img,
+      caption: "Recherche de mangas dans la page Découverte, propulsée par MangaDex",
+    },
+    sections: [
+      {
+        title: "Nouveauté principale : les Mangas",
+        items: [
+          "La page Découverte intègre désormais une recherche de mangas, alimentée par la base de données MangaDex.",
+          "L'application cherche automatiquement les fichiers correspondants sur T411 et vous permet de les ajouter directement à votre bibliothèque.",
+          "La barre de recherche principale supporte elle aussi la recherche de mangas.",
+          "Pas besoin de logiciel tiers pour lire vos fichiers .CBZ : Xingxing s'en charge nativement, tout-en-un.",
+        ],
+        images: [
+          {
+            src: bibliothequesMangaV160Img,
+            caption: "Vos mangas dans la bibliothèque, lisibles directement depuis l'application",
+          },
+        ],
+      },
+      {
+        title: "Coin des Canards : machine à sous",
+        items: [
+          "Une machine à sous fait son apparition dans le Coin des Canards, avec une récompense exclusive accessible uniquement via cette machine.",
+          "Un tirage est disponible toutes les 4 heures. Bonne chance à tous.",
+        ],
+        images: [
+          {
+            src: slotMachineV160Img,
+            caption: "La machine à sous — un tirage toutes les 4h pour une récompense exclusive",
+          },
+        ],
+      },
+      {
+        title: "Canardex : notification de récompense",
+        items: [
+          "Une notification apparaît désormais sur le Canardex pour vous alerter dès qu'une récompense est disponible à récupérer.",
+        ],
+      },
+      {
+        title: "Bibliothèque : export multi-PC",
+        items: [
+          "Il est maintenant possible d'exporter votre bibliothèque de films et séries pour la retrouver sur un autre PC.",
+          "L'export est conçu pour fonctionner de façon optimale entre machines partageant la même configuration de compte.",
+        ],
+      },
+      {
+        title: "Corrections",
+        items: [
+          "Correction du pity progressif pour l'apparition des canards : le pity n'était pris en compte que pour le jeu du typhon, et non lors de l'arrivée naturelle des canards dans la piscine.",
+          "Correction des animations entre les transitions de recherche.",
+        ],
+      },
+    ],
+  },
   {
     version: "1.5.4",
     date: "24 juillet 2026",
@@ -1006,4 +1069,4 @@ export const PATCH_NOTES: PatchNote[] = [
   },
 ];
 
-export const LATEST_VERSION = "1.5.3";
+export const LATEST_VERSION = "1.6.0";

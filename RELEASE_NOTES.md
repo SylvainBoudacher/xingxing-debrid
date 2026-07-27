@@ -1,3 +1,4 @@
-- 3 nouveaux canards a debloquer
-- Pity progressif
-- Nouveau reglage
+- Recherche et lecture de mangas (MangaDex)
+- Machine a sous dans le Coin des Canards
+- Export de bibliotheque multi-PC
+- Corrections (pity, animations)
