@@ -141,6 +141,88 @@ pub fn cbz_page(path: String, index: usize) -> Result<Response, CbzError> {
     read_page(&path, index).map(Response::new)
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportResult {
+    pub source: String,
+    pub path: String,
+    pub file_name: String,
+    pub size: u64,
+    pub error: Option<String>,
+}
+
+fn file_stem_ext(name: &str) -> (&str, &str) {
+    match name.rsplit_once('.') {
+        Some((stem, ext)) if !stem.is_empty() => (stem, ext),
+        _ => (name, ""),
+    }
+}
+
+/// Chemin libre dans `dir` pour `name` : suffixe " (2)", " (3)"... tant qu'un
+/// fichier du meme nom existe. Un import ne doit jamais ecraser un tome deja la.
+fn free_path(dir: &Path, name: &str) -> std::path::PathBuf {
+    let candidate = dir.join(name);
+    if !candidate.exists() {
+        return candidate;
+    }
+    let (stem, ext) = file_stem_ext(name);
+    for n in 2..1000 {
+        let alt = if ext.is_empty() {
+            format!("{stem} ({n})")
+        } else {
+            format!("{stem} ({n}).{ext}")
+        };
+        let path = dir.join(&alt);
+        if !path.exists() {
+            return path;
+        }
+    }
+    candidate
+}
+
+fn copy_one(source: &str, dir: &Path) -> Result<(std::path::PathBuf, u64), String> {
+    let from = Path::new(source);
+    let name = from
+        .file_name()
+        .and_then(|n| n.to_str())
+        .ok_or_else(|| "Nom de fichier illisible".to_string())?;
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let to = free_path(dir, name);
+    let size = std::fs::copy(from, &to).map_err(|e| e.to_string())?;
+    Ok((to, size))
+}
+
+/// Copie des .cbz choisis par l'utilisateur dans le dossier d'une serie.
+/// Chaque fichier reussit ou echoue independamment : l'appelant n'ajoute a la
+/// bibliotheque que ceux qui ont abouti.
+#[tauri::command]
+pub fn import_cbz(sources: Vec<String>, dir: String, subdir: String) -> Vec<ImportResult> {
+    let target = Path::new(&dir).join(subdir.replace('/', std::path::MAIN_SEPARATOR_STR));
+    sources
+        .into_iter()
+        .map(|source| match copy_one(&source, &target) {
+            Ok((path, size)) => ImportResult {
+                source,
+                file_name: path
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or_default()
+                    .to_string(),
+                path: path.to_string_lossy().into_owned(),
+                size,
+                error: None,
+            },
+            Err(error) => ImportResult {
+                source,
+                path: String::new(),
+                file_name: String::new(),
+                size: 0,
+                error: Some(error),
+            },
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -242,6 +324,38 @@ mod tests {
         let err = cbz_list_pages(path.to_str().unwrap().to_string()).unwrap_err();
         assert!(matches!(err, CbzError::NoPages));
         std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn import_copies_and_avoids_overwriting() {
+        let src_dir = std::env::temp_dir().join("cbz_import_src");
+        let dst_dir = std::env::temp_dir().join("cbz_import_dst");
+        let _ = std::fs::remove_dir_all(&src_dir);
+        let _ = std::fs::remove_dir_all(&dst_dir);
+        std::fs::create_dir_all(&src_dir).unwrap();
+        let source = src_dir.join("Tome 01.cbz");
+        std::fs::write(&source, b"first").unwrap();
+
+        let sources = vec![
+            source.to_string_lossy().into_owned(),
+            source.to_string_lossy().into_owned(),
+            src_dir.join("absent.cbz").to_string_lossy().into_owned(),
+        ];
+        let results = import_cbz(
+            sources,
+            dst_dir.to_string_lossy().into_owned(),
+            "One Piece".to_string(),
+        );
+
+        assert_eq!(results[0].file_name, "Tome 01.cbz");
+        assert_eq!(results[1].file_name, "Tome 01 (2).cbz");
+        assert_eq!(results[0].size, 5);
+        assert!(results[0].error.is_none());
+        assert!(results[2].error.is_some());
+        assert!(dst_dir.join("One Piece").join("Tome 01 (2).cbz").exists());
+
+        std::fs::remove_dir_all(&src_dir).unwrap();
+        std::fs::remove_dir_all(&dst_dir).unwrap();
     }
 
     #[test]

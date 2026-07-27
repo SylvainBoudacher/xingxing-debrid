@@ -3,6 +3,8 @@ import { LibraryCustomBar } from "@/components/LibraryCustomBar";
 import { LibraryListNameModal } from "@/components/LibraryListNameModal";
 import { MangaBlocks } from "@/components/MangaBlocks";
 import { MangaEntryDetailModal } from "@/components/MangaEntryDetailModal";
+import { MangaImportModal } from "@/components/MangaImportModal";
+import { MangaRetagModal } from "@/components/MangaRetagModal";
 import { MangaListRow } from "@/components/MangaListRow";
 import { MangaPosterCard } from "@/components/MangaPosterCard";
 import { MangaReleasesModal } from "@/components/MangaReleasesModal";
@@ -23,7 +25,16 @@ import {
 } from "@/lib/mangaPrefs";
 import { buildMangaBlocks, mangaCounts, visibleMangas } from "@/lib/mangaSections";
 import { useMangaCategories } from "@/lib/useMangaCategories";
+import {
+  beginBulkDownload,
+  bulkTaskEnd,
+  bulkTaskStart,
+  endBulkDownload,
+  getDownloadBatchSize,
+  isBulkCancelled,
+} from "@/lib/downloads";
 import { downloadVolume, forgetLocalFile } from "@/lib/mangaDownload";
+import { planImports, type PlannedImport } from "@/lib/mangaImport";
 import type { MangaItem } from "@/lib/mangaItem";
 import {
   getCachedMangaLibrary,
@@ -32,6 +43,7 @@ import {
   mangaProgress,
   nextVolume,
   removeMangaEntry,
+  removeVolume,
   resolvePendingTorrent,
   setReadingDirection,
   updateVolume,
@@ -42,8 +54,9 @@ import {
 import { toastNetworkError } from "@/lib/networkError";
 import { fetchMagnetFiles, useAddMangaRelease } from "@/lib/useAddMangaRelease";
 import { ReaderPage } from "@/pages/ReaderPage";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { AnimatePresence } from "motion/react";
-import { BookMarked, Compass } from "lucide-react";
+import { BookMarked, Compass, FolderPlus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -85,9 +98,12 @@ export function LibraryMangaSection({
     const timer = setTimeout(() => setSelectedId(initialMangaId), 350);
     return () => clearTimeout(timer);
   }, [initialMangaId]);
-  const [downloading, setDownloading] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState<Set<string>>(() => new Set());
+  const [bulkDownloading, setBulkDownloading] = useState(false);
   const [refreshingPending, setRefreshingPending] = useState(false);
   const [findMoreFor, setFindMoreFor] = useState<MangaItem | null>(null);
+  const [importing, setImporting] = useState<PlannedImport[] | null>(null);
+  const [retagging, setRetagging] = useState<string | null>(null);
   const [session, setSession] = useState<ReadingSession | null>(null);
 
   const prefs = getCachedMangaPrefs() ?? DEFAULT_MANGA_PREFS;
@@ -151,9 +167,34 @@ export function LibraryMangaSection({
 
   useEffect(() => {
     onBusyChange?.(
-      session !== null || selected !== null || findMoreFor !== null || naming !== null,
+      session !== null ||
+        selected !== null ||
+        findMoreFor !== null ||
+        naming !== null ||
+        importing !== null ||
+        retagging !== null,
     );
-  }, [session, selected, findMoreFor, naming, onBusyChange]);
+  }, [session, selected, findMoreFor, naming, importing, retagging, onBusyChange]);
+
+  // Import manuel : choix des .cbz sur le disque, puis identification de
+  // l'oeuvre dans la modale.
+  const pickFiles = useCallback(async () => {
+    const picked = await openDialog({
+      multiple: true,
+      filters: [{ name: "Archives CBZ", extensions: ["cbz"] }],
+    });
+    const paths = Array.isArray(picked) ? picked : picked ? [picked] : [];
+    if (paths.length === 0) return;
+    setImporting(planImports(paths));
+  }, []);
+
+  const dropVolume = useCallback(
+    async (mangaId: string, volume: MangaVolume) => {
+      await removeVolume(mangaId, volume.fileName, volume.infoHash);
+      await refresh();
+    },
+    [refresh],
+  );
 
   function changeFilter(next: MangaFilter) {
     setFilter(next);
@@ -207,14 +248,30 @@ export function LibraryMangaSection({
   // closure ne peut pas capturer sans se referencer.
   const latestDownload = useRef<((mangaId: string, volume: MangaVolume) => void) | null>(null);
 
+  const markDownloading = useCallback((key: string, busy: boolean) => {
+    setDownloading((prev) => {
+      const next = new Set(prev);
+      if (busy) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }, []);
+
   const download = useCallback(
     async (mangaId: string, volume: MangaVolume) => {
+      // Un tome importe n'a pas de lien AllDebrid : rien a telecharger.
+      if (volume.source === "local") {
+        toast.error(
+          "Ce tome vient d'un import local : son fichier est introuvable, réimportez-le.",
+        );
+        return null;
+      }
       const key = getAllDebridKey();
       if (!key) {
         toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
         return null;
       }
-      setDownloading(volumeKey(volume));
+      markDownloading(volumeKey(volume), true);
       try {
         const title = entries.find((e) => e.mangaId === mangaId)?.meta.title ?? "Manga";
         const path = await downloadVolume(mangaId, volume, key, title);
@@ -224,10 +281,60 @@ export function LibraryMangaSection({
         toastNetworkError(err, () => latestDownload.current?.(mangaId, volume));
         return null;
       } finally {
-        setDownloading(null);
+        markDownloading(volumeKey(volume), false);
       }
     },
-    [getAllDebridKey, refresh, entries],
+    [getAllDebridKey, refresh, entries, markDownloading],
+  );
+
+  // Telecharge tous les tomes manquants par lots de N en parallele (reglage
+  // `download_batch_size`), comme le telechargement groupe des episodes.
+  const downloadAll = useCallback(
+    async (entry: MangaEntry) => {
+      const key = getAllDebridKey();
+      if (!key) {
+        toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
+        return;
+      }
+      const queue = entry.volumes.filter(
+        (v) => !v.localPath && v.source !== "local" && !downloading.has(volumeKey(v)),
+      );
+      if (queue.length === 0) return;
+
+      setBulkDownloading(true);
+      const batchSize = await getDownloadBatchSize();
+      beginBulkDownload(queue.length);
+      let next = 0;
+      let firstError: unknown = null;
+      const worker = async () => {
+        while (next < queue.length) {
+          if (isBulkCancelled()) break;
+          const volume = queue[next++];
+          bulkTaskStart();
+          markDownloading(volumeKey(volume), true);
+          try {
+            await downloadVolume(entry.mangaId, volume, key, entry.meta.title);
+            await refresh();
+          } catch (err) {
+            if (firstError === null) firstError = err;
+          } finally {
+            markDownloading(volumeKey(volume), false);
+            bulkTaskEnd();
+          }
+        }
+      };
+      try {
+        await Promise.all(Array.from({ length: Math.min(batchSize, queue.length) }, worker));
+        if (firstError !== null) throw firstError;
+      } catch (err) {
+        toastNetworkError(err, () => void downloadAll(entry));
+      } finally {
+        endBulkDownload();
+        setBulkDownloading(false);
+        await refresh();
+      }
+    },
+    [getAllDebridKey, refresh, downloading, markDownloading],
   );
 
   useEffect(() => {
@@ -300,6 +407,20 @@ export function LibraryMangaSection({
     [refresh],
   );
 
+  const retagged = entries.find((e) => e.mangaId === retagging) ?? null;
+
+  const importModal = importing && (
+    <MangaImportModal
+      planned={importing}
+      knownIds={mangaIds}
+      onImported={(mangaId) => {
+        setImporting(null);
+        void refresh().then(() => setSelectedId(mangaId));
+      }}
+      onClose={() => setImporting(null)}
+    />
+  );
+
   if (session) {
     const entry = entries.find((e) => e.mangaId === session.mangaId);
     const volume =
@@ -320,7 +441,11 @@ export function LibraryMangaSection({
         onFinished={() => void onFinished()}
         onMissing={() => {
           void forgetLocalFile(session.mangaId, volume).then(refresh);
-          toast.error("Le fichier a disparu du disque, le tome est à retélécharger.");
+          toast.error(
+            volume.source === "local"
+              ? "Le fichier importé a disparu du disque. Il ne vient pas d'AllDebrid : il faut le réimporter."
+              : "Le fichier a disparu du disque, le tome est à retélécharger.",
+          );
           setSession(null);
         }}
         onClose={() => {
@@ -333,14 +458,23 @@ export function LibraryMangaSection({
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-3 py-24 text-center">
-        <BookMarked className="h-8 w-8 text-zinc-400" />
-        <p className="text-sm text-zinc-500">Aucun manga dans la bibliothèque.</p>
-        <Button variant="outline" size="sm" onClick={onDiscover}>
-          <Compass />
-          Parcourir le catalogue
-        </Button>
-      </div>
+      <>
+        <div className="flex flex-col items-center gap-3 py-24 text-center">
+          <BookMarked className="h-8 w-8 text-zinc-400" />
+          <p className="text-sm text-zinc-500">Aucun manga dans la bibliothèque.</p>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={onDiscover}>
+              <Compass />
+              Parcourir le catalogue
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => void pickFiles()}>
+              <FolderPlus />
+              Importer des .cbz
+            </Button>
+          </div>
+        </div>
+        <AnimatePresence>{importModal}</AnimatePresence>
+      </>
     );
   }
 
@@ -395,6 +529,7 @@ export function LibraryMangaSection({
         onLayout={changeLayout}
         sort={sort}
         onSort={changeSort}
+        onImport={() => void pickFiles()}
       />
 
       <AnimatePresence>
@@ -469,11 +604,15 @@ export function LibraryMangaSection({
             entry={selected}
             downloading={downloading}
             refreshingPending={refreshingPending}
+            bulkDownloading={bulkDownloading}
             onRead={(volume) => void read(selected.mangaId, volume)}
             onDownload={(volume) => void download(selected.mangaId, volume)}
+            onRemoveVolume={(volume) => void dropVolume(selected.mangaId, volume)}
+            onDownloadAll={() => void downloadAll(selected)}
             onToggleRead={(volume) => void toggleRead(selected.mangaId, volume)}
             onRefreshPending={() => void refreshPending(selected)}
             onFindMore={() => setFindMoreFor(itemFromEntry(selected))}
+            onRetag={() => setRetagging(selected.mangaId)}
             onContinue={() => {
               const volume = nextVolume(selected);
               if (volume) void read(selected.mangaId, volume);
@@ -499,6 +638,20 @@ export function LibraryMangaSection({
             onClose={() => setFindMoreFor(null)}
           />
         )}
+
+        {retagged && (
+          <MangaRetagModal
+            entry={retagged}
+            knownIds={mangaIds}
+            onRetagged={(mangaId) => {
+              setRetagging(null);
+              void refresh().then(() => setSelectedId(mangaId));
+            }}
+            onClose={() => setRetagging(null)}
+          />
+        )}
+
+        {importModal}
       </AnimatePresence>
     </>
   );

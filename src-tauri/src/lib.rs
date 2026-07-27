@@ -571,6 +571,7 @@ pub fn run() {
             profile::import_library,
             cbz::cbz_list_pages,
             cbz::cbz_page,
+            cbz::import_cbz,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

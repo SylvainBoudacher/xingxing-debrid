@@ -2,19 +2,23 @@ import { MangaVolumeList } from "@/components/MangaVolumeList";
 import { MANGA_STATUS_LABELS } from "@/lib/mangaItem";
 import type { MangaEntry, MangaVolume } from "@/lib/mangaLibrary";
 import { coverUrl } from "@/lib/services/mangadex";
-import { BookOpen, Loader2, RefreshCw, Search, Trash2, X } from "lucide-react";
+import { BookOpen, Download, Loader2, PenLine, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect } from "react";
 
 interface MangaEntryDetailModalProps {
   entry: MangaEntry;
-  downloading: string | null;
+  downloading: Set<string>;
   refreshingPending: boolean;
+  bulkDownloading: boolean;
   onRead: (volume: MangaVolume) => void;
   onDownload: (volume: MangaVolume) => void;
+  onDownloadAll: () => void;
   onToggleRead: (volume: MangaVolume) => void;
+  onRemoveVolume: (volume: MangaVolume) => void;
   onRefreshPending: () => void;
   onFindMore: () => void;
+  onRetag: () => void;
   onRemove: () => void;
   onContinue: () => void;
   onClose: () => void;
@@ -24,11 +28,15 @@ export function MangaEntryDetailModal({
   entry,
   downloading,
   refreshingPending,
+  bulkDownloading,
   onRead,
   onDownload,
+  onDownloadAll,
   onToggleRead,
+  onRemoveVolume,
   onRefreshPending,
   onFindMore,
+  onRetag,
   onRemove,
   onContinue,
   onClose,
@@ -37,6 +45,7 @@ export function MangaEntryDetailModal({
     ? coverUrl(entry.mangaId, entry.meta.coverFileName, 512)
     : null;
   const readable = entry.volumes.some((v) => v.localPath);
+  const missing = entry.volumes.filter((v) => !v.localPath).length;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -94,12 +103,34 @@ export function MangaEntryDetailModal({
                   Continuer la lecture
                 </button>
               )}
+              {missing > 1 && (
+                <button
+                  disabled={bulkDownloading}
+                  onClick={onDownloadAll}
+                  className="flex h-7 items-center gap-1.5 rounded-lg bg-indigo-600 px-2.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {bulkDownloading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Download className="h-3.5 w-3.5" />
+                  )}
+                  Tout télécharger ({missing})
+                </button>
+              )}
               <button
                 onClick={onFindMore}
                 className="flex h-7 items-center gap-1.5 rounded-lg bg-indigo-500/10 px-2.5 text-xs font-medium text-indigo-600 transition-colors hover:bg-indigo-500/20 dark:bg-indigo-500/15 dark:text-indigo-300 dark:hover:bg-indigo-500/25"
               >
                 <Search className="h-3.5 w-3.5" />
                 Chercher d'autres tomes
+              </button>
+              <button
+                onClick={onRetag}
+                title="Choisir une autre fiche MangaDex"
+                className="flex h-7 items-center gap-1.5 rounded-lg bg-black/5 px-2.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+              >
+                <PenLine className="h-3.5 w-3.5" />
+                Corriger la fiche
               </button>
               <button
                 onClick={onRemove}
@@ -152,6 +183,7 @@ export function MangaEntryDetailModal({
               onRead={onRead}
               onDownload={onDownload}
               onToggleRead={onToggleRead}
+              onRemoveVolume={onRemoveVolume}
             />
           )}
         </div>

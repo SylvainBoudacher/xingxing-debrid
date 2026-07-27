@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import { useDragScroll } from "@/lib/useDragScroll";
 import type { MangaFilter, MangaGrouping, MangaLayout, MangaSort } from "@/lib/mangaPrefs";
-import { Layers, LayoutGrid, List, Search } from "lucide-react";
+import { FolderPlus, Layers, LayoutGrid, List, Search } from "lucide-react";
 
 const FILTERS: { id: MangaFilter; label: string }[] = [
   { id: "all", label: "Tout" },
@@ -38,6 +38,7 @@ interface MangaToolbarProps {
   onLayout: (value: MangaLayout) => void;
   sort: MangaSort;
   onSort: (value: MangaSort) => void;
+  onImport: () => void;
 }
 
 // Recherche, filtres et tri de l'onglet Mangas : mêmes commandes que l'onglet
@@ -54,6 +55,7 @@ export function MangaToolbar({
   onLayout,
   sort,
   onSort,
+  onImport,
 }: MangaToolbarProps) {
   const { ref, dragProps } = useDragScroll<HTMLDivElement>();
 
@@ -95,6 +97,15 @@ export function MangaToolbar({
           </div>
 
           <div className="flex flex-none items-center gap-2">
+            <button
+              onClick={onImport}
+              title="Importer des fichiers .cbz depuis le disque"
+              className="flex h-7 items-center gap-1.5 rounded-full bg-black/5 px-3 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+            >
+              <FolderPlus className="h-3.5 w-3.5" />
+              Importer des .cbz
+            </button>
+
             <div className="flex items-center gap-1 rounded-full bg-black/5 p-0.5 dark:bg-white/10">
               <Layers className="ml-2 mr-0.5 h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
               {GROUP_MODES.map((m) => (

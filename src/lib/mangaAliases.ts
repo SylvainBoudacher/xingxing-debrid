@@ -35,6 +35,24 @@ export async function addAlias(mangaId: string, title: string): Promise<void> {
   await store.save();
 }
 
+/**
+ * Rattache les alias d'une oeuvre a un autre mangaId, apres correction de sa
+ * fiche : les titres C411 valides restent valables, c'est la meme oeuvre.
+ */
+export async function transferAliases(fromId: string, toId: string): Promise<void> {
+  const map = cache ?? (await loadAliases());
+  const moving = map[fromId];
+  if (!moving || fromId === toId) return;
+  const merged = [...(map[toId] ?? [])];
+  for (const alias of moving) {
+    if (!merged.some((a) => a.toLowerCase() === alias.toLowerCase())) merged.push(alias);
+  }
+  cache = { ...map, [toId]: merged };
+  delete cache[fromId];
+  await store.set(STORE_KEY, cache);
+  await store.save();
+}
+
 export async function removeAlias(mangaId: string, title: string): Promise<void> {
   const map = cache ?? (await loadAliases());
   const kept = (map[mangaId] ?? []).filter((a) => a !== title);

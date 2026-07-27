@@ -37,3 +37,15 @@ export async function resolveMangaTarget(
   const downloadDir = (await store.get<string>("download_dir")) ?? "";
   return { dir: downloadDir, subdir: `${MANGA_SUBDIR}/${folder}` };
 }
+
+/**
+ * Dossier parent des dossiers de series, chemin complet. Sert a replanifier
+ * les deplacements quand le titre d'une oeuvre change.
+ */
+export async function resolveMangaRoot(): Promise<string> {
+  const mangaDir = (await store.get<string>("manga_dir")) ?? "";
+  if (mangaDir.trim() !== "") return mangaDir;
+  const downloadDir = (await store.get<string>("download_dir")) ?? "";
+  const sep = downloadDir.includes("\\") ? "\\" : "/";
+  return `${downloadDir}${sep}${MANGA_SUBDIR}`;
+}

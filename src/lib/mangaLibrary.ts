@@ -36,7 +36,12 @@ export interface MangaVolume {
   pageCount?: number;
   lastPage?: number;
   read?: boolean;
+  /** Tome importe depuis un fichier local : aucun lien AllDebrid derriere. */
+  source?: "local";
 }
+
+/** infoHash conventionnel des tomes importes, qui ne viennent d'aucun torrent. */
+export const LOCAL_INFO_HASH = "local";
 
 export type ReadingDirection = "rtl" | "ltr";
 
@@ -181,6 +186,9 @@ function readingState(v: MangaVolume): Partial<MangaVolume> {
 }
 
 function preferVolume(a: MangaVolume, b: MangaVolume): MangaVolume {
+  // Un tome importe a la main a ete choisi explicitement : il l'emporte sur la
+  // version issue d'un torrent, quelle que soit sa taille.
+  if ((a.source === "local") !== (b.source === "local")) return a.source === "local" ? a : b;
   if (!!a.localPath !== !!b.localPath) return a.localPath ? a : b;
   return a.fileSize >= b.fileSize ? a : b;
 }
@@ -268,6 +276,28 @@ export async function updateVolume(
         },
   );
   await saveMangaLibrary(updated);
+}
+
+/** Retire un tome de l'oeuvre, sans toucher au fichier sur le disque. */
+export async function removeVolume(
+  mangaId: string,
+  fileName: string,
+  infoHash: string,
+): Promise<void> {
+  const entries = cache ?? (await loadMangaLibrary());
+  await saveMangaLibrary(
+    entries.map((entry) =>
+      entry.mangaId !== mangaId
+        ? entry
+        : {
+            ...entry,
+            updatedAt: Date.now(),
+            volumes: entry.volumes.filter(
+              (v) => !(v.fileName === fileName && v.infoHash === infoHash),
+            ),
+          },
+    ),
+  );
 }
 
 export async function removeMangaEntry(mangaId: string): Promise<void> {
