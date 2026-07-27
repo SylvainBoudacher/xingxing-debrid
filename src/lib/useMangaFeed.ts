@@ -36,7 +36,7 @@ export interface MangaFeedState {
 
 // `query` est piloté par la page (barre de recherche partagée avec TMDB).
 export function useMangaFeed(query: string): MangaFeedState {
-  const [feed, setFeed] = useState<MangaFeed>("top_rated");
+  const [feed, setFeed] = useState<MangaFeed>("popular");
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [attempt, setAttempt] = useState(0);

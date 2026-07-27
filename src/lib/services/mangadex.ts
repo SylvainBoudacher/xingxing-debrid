@@ -12,7 +12,7 @@ export const MANGA_PAGE_SIZE = 32;
 // Sources du catalogue. MangaDex n'a pas d'endpoint "tendances" : la
 // popularite (followedCount) en tient lieu.
 export type MangaFeed = "popular" | "top_rated" | "latest";
-export const MANGA_FEEDS: MangaFeed[] = ["top_rated", "popular", "latest"];
+export const MANGA_FEEDS: MangaFeed[] = ["popular", "top_rated", "latest"];
 
 const FEED_ORDER: Record<MangaFeed, string> = {
   popular: "order[followedCount]=desc",

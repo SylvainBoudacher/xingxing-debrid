@@ -10,7 +10,7 @@ import { networkErrorMessage } from "@/lib/networkError";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, X } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface MangaReleasesModalProps {
   item: MangaItem;
@@ -34,6 +34,14 @@ export function MangaReleasesModal({
   onClose,
 }: MangaReleasesModalProps) {
   const [matching, setMatching] = useState(false);
+
+  // Vrai quand l'arbitrage manuel (MangaMatchModal) est ouvert par-dessus :
+  // neutralise Escape ici, il ferme d'abord ce dernier.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !matching && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, matching]);
 
   const releasesQuery = useQuery({
     queryKey: mangaReleasesQueryKey(item.id),

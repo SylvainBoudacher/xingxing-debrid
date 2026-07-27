@@ -19,6 +19,8 @@ interface DiscoverMangaSectionProps {
   getAllDebridKey: () => string;
   /** Ouvre la bibliotheque manga sur l'oeuvre donnee. */
   onOpenLibrary: (mangaId: string) => void;
+  /** Fiche manga ouverte : la page hote suspend son raccourci Escape. */
+  onBusyChange?: (busy: boolean) => void;
 }
 
 // Onglet "Mangas" de la page Découverte : recherche MangaDex, sources
@@ -28,6 +30,7 @@ export function DiscoverMangaSection({
   getC411Key,
   getAllDebridKey,
   onOpenLibrary,
+  onBusyChange,
 }: DiscoverMangaSectionProps) {
   const feed = useMangaFeed(query);
   const [selected, setSelected] = useState<MangaItem | null>(null);
@@ -36,6 +39,10 @@ export function DiscoverMangaSection({
   useEffect(() => {
     if (getCachedMangaLibrary() === null) void loadMangaLibrary().then(setEntries);
   }, []);
+
+  useEffect(() => {
+    onBusyChange?.(selected !== null);
+  }, [selected, onBusyChange]);
 
   const byId = useMemo(() => new Map(entries.map((e) => [e.mangaId, e])), [entries]);
 

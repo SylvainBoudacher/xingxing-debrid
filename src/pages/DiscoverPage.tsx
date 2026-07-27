@@ -77,6 +77,8 @@ export function DiscoverPage({
   // Recherche de l'onglet Mangas : la barre du haut est partagée, son contenu
   // dépend de l'univers affiché (TMDB ou MangaDex).
   const [mangaQuery, setMangaQuery] = useState("");
+  // Fiche manga ouverte : Escape lui revient, pas au retour accueil.
+  const [mangaBusy, setMangaBusy] = useState(false);
 
   const c411KeyRef = useRef<string>(initialC411Key ?? "");
   const allDebridKeyRef = useRef<string>(initialAllDebridKey ?? "");
@@ -203,12 +205,13 @@ export function DiscoverPage({
       if (e.key !== "Escape") return;
       if (debridModal) setDebridModal(null);
       else if (selected) setSelected(null);
+      else if (mangaBusy) return;
       else onBack();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debridModal, selected, onBack]);
+  }, [debridModal, selected, mangaBusy, onBack]);
 
   const likedKeys = useMemo(() => new Set(likes.map((l) => `${l.mediaType}-${l.id}`)), [likes]);
 
@@ -338,6 +341,7 @@ export function DiscoverPage({
             getC411Key={() => c411KeyRef.current}
             getAllDebridKey={() => allDebridKeyRef.current}
             onOpenLibrary={onOpenMangaLibrary}
+            onBusyChange={setMangaBusy}
           />
         </div>
       )}

@@ -8,7 +8,7 @@ import { toastNetworkError } from "@/lib/networkError";
 import { parseMangaName, spanLabel } from "@/lib/parseVolume";
 import { Loader2, Plus, Search, X } from "lucide-react";
 import { motion } from "motion/react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 interface MangaMatchModalProps {
@@ -37,6 +37,12 @@ export function MangaMatchModal({
   const [query, setQuery] = useState(item.titleFr ?? item.title);
   const [results, setResults] = useState<MangaRelease[] | null>(null);
   const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   async function runSearch(e: FormEvent) {
     e.preventDefault();
