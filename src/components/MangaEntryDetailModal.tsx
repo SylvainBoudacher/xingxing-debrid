@@ -1,10 +1,11 @@
 import { MangaVolumeList } from "@/components/MangaVolumeList";
 import { Button } from "@/components/ui/button";
 import { MANGA_STATUS_LABELS } from "@/lib/mangaItem";
-import type { MangaEntry, MangaVolume, ReadingDirection } from "@/lib/mangaLibrary";
+import type { MangaEntry, MangaVolume } from "@/lib/mangaLibrary";
 import { coverUrl } from "@/lib/services/mangadex";
-import { ArrowLeftRight, BookOpen, Loader2, RefreshCw, Search, Trash2, X } from "lucide-react";
+import { BookOpen, Loader2, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { motion } from "motion/react";
+import { useEffect } from "react";
 
 interface MangaEntryDetailModalProps {
   entry: MangaEntry;
@@ -13,7 +14,6 @@ interface MangaEntryDetailModalProps {
   onRead: (volume: MangaVolume) => void;
   onDownload: (volume: MangaVolume) => void;
   onToggleRead: (volume: MangaVolume) => void;
-  onDirection: (direction: ReadingDirection) => void;
   onRefreshPending: () => void;
   onFindMore: () => void;
   onRemove: () => void;
@@ -28,7 +28,6 @@ export function MangaEntryDetailModal({
   onRead,
   onDownload,
   onToggleRead,
-  onDirection,
   onRefreshPending,
   onFindMore,
   onRemove,
@@ -38,8 +37,13 @@ export function MangaEntryDetailModal({
   const cover = entry.meta.coverFileName
     ? coverUrl(entry.mangaId, entry.meta.coverFileName, 512)
     : null;
-  const direction = entry.readingDirection ?? "rtl";
   const readable = entry.volumes.some((v) => v.localPath);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   return (
     <motion.div
@@ -91,15 +95,6 @@ export function MangaEntryDetailModal({
               <Button size="sm" variant="outline" onClick={onFindMore}>
                 <Search />
                 Chercher d'autres tomes
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => onDirection(direction === "rtl" ? "ltr" : "rtl")}
-                title="Sens de lecture"
-              >
-                <ArrowLeftRight />
-                {direction === "rtl" ? "Droite à gauche" : "Gauche à droite"}
               </Button>
               <Button size="sm" variant="outline" onClick={onRemove}>
                 <Trash2 />

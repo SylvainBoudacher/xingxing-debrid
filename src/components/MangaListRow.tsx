@@ -2,8 +2,9 @@ import { formatSize } from "@/lib/debrid";
 import { mangaCoverUrl, MANGA_STATUS_LABELS } from "@/lib/mangaItem";
 import { itemFromEntry, mangaProgress, type MangaEntry } from "@/lib/mangaLibrary";
 import { entrySize, isFullyRead } from "@/lib/mangaSections";
-import { BookMarked, Check } from "lucide-react";
-import { memo } from "react";
+import { BookMarked, Check, Trash2 } from "lucide-react";
+import { memo, useEffect, useState } from "react";
+import { motion } from "motion/react";
 
 interface MangaListRowProps {
   entry: MangaEntry;
@@ -12,6 +13,8 @@ interface MangaListRowProps {
   selectMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  // Suppression directe (retire l'oeuvre de la bibliothèque).
+  onRemove?: () => void;
 }
 
 // Ligne de la vue liste, calquée sur celle des films et séries : miniature,
@@ -22,12 +25,20 @@ export const MangaListRow = memo(function MangaListRow({
   selectMode = false,
   selected = false,
   onToggleSelect,
+  onRemove,
 }: MangaListRowProps) {
   const cover = mangaCoverUrl(itemFromEntry(entry), 256);
   const progress = mangaProgress(entry);
   const size = entrySize(entry);
   const read = isFullyRead(entry);
   const ratio = progress.total > 0 ? progress.read / progress.total : 0;
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    if (!confirmDelete) return;
+    const t = setTimeout(() => setConfirmDelete(false), 3000);
+    return () => clearTimeout(t);
+  }, [confirmDelete]);
 
   return (
     <div className="overflow-hidden rounded-xl bg-white/80 ring-1 ring-black/5 backdrop-blur-sm dark:bg-zinc-900/70 dark:ring-white/10">
@@ -82,6 +93,25 @@ export const MangaListRow = memo(function MangaListRow({
             </div>
           </div>
         </button>
+
+        {onRemove && !selectMode && (
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              if (confirmDelete) onRemove();
+              else setConfirmDelete(true);
+            }}
+            title={confirmDelete ? "Confirmer la suppression" : "Supprimer"}
+            className={`flex h-7 flex-none items-center justify-center rounded-lg transition-colors ${
+              confirmDelete
+                ? "gap-1 bg-red-500 px-2 text-xs font-medium text-white hover:bg-red-600"
+                : "w-7 text-zinc-400 hover:bg-red-500/10 hover:text-red-500"
+            }`}
+          >
+            <Trash2 className="h-4 w-4" />
+            {confirmDelete && "Sûr ?"}
+          </motion.button>
+        )}
       </div>
     </div>
   );

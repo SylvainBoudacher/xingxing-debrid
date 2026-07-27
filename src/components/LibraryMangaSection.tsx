@@ -38,7 +38,6 @@ import {
   volumesFromFiles,
   type MangaEntry,
   type MangaVolume,
-  type ReadingDirection,
 } from "@/lib/mangaLibrary";
 import { toastNetworkError } from "@/lib/networkError";
 import { fetchMagnetFiles, useAddMangaRelease } from "@/lib/useAddMangaRelease";
@@ -353,6 +352,7 @@ export function LibraryMangaSection({
               onOpen={() =>
                 selectMode ? togglePicked(entry.mangaId) : setSelectedId(entry.mangaId)
               }
+              onRemove={() => void removeMangaEntry(entry.mangaId).then(refresh)}
             />
           );
         })}
@@ -367,6 +367,7 @@ export function LibraryMangaSection({
             selected={picked.has(entry.mangaId)}
             onToggleSelect={() => togglePicked(entry.mangaId)}
             onOpen={() => setSelectedId(entry.mangaId)}
+            onRemove={() => void removeMangaEntry(entry.mangaId).then(refresh)}
           />
         ))}
       </div>
@@ -463,9 +464,6 @@ export function LibraryMangaSection({
             onRead={(volume) => void read(selected.mangaId, volume)}
             onDownload={(volume) => void download(selected.mangaId, volume)}
             onToggleRead={(volume) => void toggleRead(selected.mangaId, volume)}
-            onDirection={(d: ReadingDirection) =>
-              void setReadingDirection(selected.mangaId, d).then(refresh)
-            }
             onRefreshPending={() => void refreshPending(selected)}
             onFindMore={() => setFindMoreFor(itemFromEntry(selected))}
             onContinue={() => {
