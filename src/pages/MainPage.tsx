@@ -31,6 +31,10 @@ import { mapNyaaResults, mapTorrents, pageNumbers, type SearchResult } from "@/l
 import { c411Keys, searchTorrents } from "@/lib/services/c411";
 import { nyaaKeys, searchNyaa } from "@/lib/services/nyaa";
 import { useDebridActions } from "@/lib/useDebridActions";
+import { MangaLinkModal } from "@/components/MangaLinkModal";
+import { cbzReleaseFromResult } from "@/lib/mangaSearchResult";
+import type { MangaRelease } from "@/lib/mangaReleases";
+import { useAddMangaRelease } from "@/lib/useAddMangaRelease";
 import { MODE_BAR_ACCENT, SEARCH_MODES, type SearchMode } from "@/lib/searchModes";
 import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
 import { invoke } from "@tauri-apps/api/core";
@@ -274,6 +278,7 @@ export function MainPage({
   const [sendingIndex, setSendingIndex] = useState<number | null>(null);
   const [libraryIndex, setLibraryIndex] = useState<number | null>(null);
   const [debridModal, setDebridModal] = useState<DebridModal | null>(null);
+  const [mangaLink, setMangaLink] = useState<MangaRelease | null>(null);
   const [showPatchNotif, setShowPatchNotif] = useState(
     initialPatchnotesSeen !== undefined ? initialPatchnotesSeen !== LATEST_VERSION : false,
   );
@@ -300,6 +305,12 @@ export function MainPage({
     openVlc: handleOpenVlc,
     downloadFile: handleDownloadFile,
   } = useDebridActions(() => allDebridKeyRef.current);
+
+  const { addingHash, addRelease } = useAddMangaRelease({
+    getC411Key: () => apiKeyRef.current,
+    getAllDebridKey: () => allDebridKeyRef.current,
+    onAdded: () => setMangaLink(null),
+  });
   const [uiVisible, setUiVisible] = useState(true);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchedQueryRef = useRef<string>("");
@@ -1324,6 +1335,7 @@ export function MainPage({
                 {displayed.map(({ result: r, parsed: p }, i) => {
                   const { icon: Icon, color } = getCategoryIcon(r.category);
                   const parsed = simpleSearchView ? p : null;
+                  const cbz = cbzReleaseFromResult(r);
                   return (
                     <motion.div
                       key={r.guid || `${r.title}-${r.size}`}
@@ -1377,6 +1389,26 @@ export function MainPage({
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
+                        {cbz && (
+                          <div className="group relative">
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => setMangaLink(cbz)}
+                              disabled={addingHash !== null}
+                              className="flex h-8 w-8 items-center justify-center rounded-full bg-black/8 hover:bg-black/15 dark:bg-white/10 dark:hover:bg-white/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {addingHash === cbz.infoHash ? (
+                                <Loader2 className="h-4 w-4 text-rose-600 dark:text-rose-300 animate-spin" />
+                              ) : (
+                                <BookMarked className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
+                              )}
+                            </motion.button>
+                            <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
+                              Ajouter à ma bibliothèque manga
+                            </span>
+                          </div>
+                        )}
                         {isVideoCategory(r.category) && (
                           <div className="group relative">
                             <motion.button
@@ -1595,6 +1627,17 @@ export function MainPage({
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {mangaLink && (
+          <MangaLinkModal
+            release={mangaLink}
+            busy={addingHash !== null}
+            onPick={addRelease}
+            onClose={() => setMangaLink(null)}
+          />
         )}
       </AnimatePresence>
     </main>
