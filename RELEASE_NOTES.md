@@ -1,4 +1,4 @@
-- Recherche et lecture de mangas (MangaDex)
-- Machine a sous dans le Coin des Canards
-- Export de bibliotheque multi-PC
-- Corrections (pity, animations)
+- Fix import de dossiers torrent dans la bibliotheque manga
+- Fix dossier manga par defaut sur Windows
+- Ajout d'oeuvres externes a la bibliotheque manga
+- Fix recherche de certaines oeuvres

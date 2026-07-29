@@ -45,6 +45,28 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.6.1",
+    date: "29 juillet 2026",
+    intro:
+      "La 1.6.1 corrige plusieurs bugs de la 1.6.0 lies aux mangas et ameliore la possibilite d'enrichir sa bibliotheque avec des oeuvres externes.",
+    sections: [
+      {
+        title: "Mangas : import et bibliotheque",
+        items: [
+          "Ajout d'oeuvres a la bibliotheque manga depuis l'exterieur de l'application desormais possible.",
+        ],
+      },
+      {
+        title: "Corrections",
+        items: [
+          "Correction d'un probleme avec certains dossiers torrent lors de l'import dans la bibliotheque de manga.",
+          "Correction du dossier manga par defaut sous Windows.",
+          "Correction d'un probleme lors de la recherche de certaines oeuvres.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.6.0",
     date: "27 juillet 2026",
     intro:
@@ -1069,4 +1091,4 @@ export const PATCH_NOTES: PatchNote[] = [
   },
 ];
 
-export const LATEST_VERSION = "1.6.0";
+export const LATEST_VERSION = "1.6.1";
