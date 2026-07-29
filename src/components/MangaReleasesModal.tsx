@@ -10,7 +10,14 @@ import { networkErrorMessage } from "@/lib/networkError";
 import { useQuery } from "@tanstack/react-query";
 import { BookOpen, X } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+// Les integrales et les noms non parses passent en fin de liste.
+function spanStart(span: MangaRelease["span"]): number {
+  if (span?.kind === "single") return span.number;
+  if (span?.kind === "range") return span.from;
+  return Number.MAX_SAFE_INTEGER;
+}
 
 interface MangaReleasesModalProps {
   item: MangaItem;
@@ -49,7 +56,13 @@ export function MangaReleasesModal({
     queryFn: () => searchMangaReleases(item, aliasesFor(item.id), getC411Key()),
   });
 
-  const releases = releasesQuery.data?.releases ?? null;
+  const releases = useMemo(() => {
+    const found = releasesQuery.data?.releases;
+    if (!found) return null;
+    return [...found].sort(
+      (a, b) => spanStart(a.span) - spanStart(b.span) || b.seeders - a.seeders,
+    );
+  }, [releasesQuery.data]);
   const cover = mangaCoverUrl(item, 512);
   const owned = new Set(entry?.volumes.map((v) => v.infoHash) ?? []);
 
