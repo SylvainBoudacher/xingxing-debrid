@@ -34,7 +34,7 @@ The app uses Tauri auto-update (`tauri-plugin-updater`). Users receive updates a
    ```
 
 4. The `.github/workflows/release.yml` workflow triggers on `v*.*.*` tags:
-   builds Windows and macOS (Apple Silicon) in parallel -> signs with the Tauri
+   builds Windows and macOS (universal: Apple Silicon + Intel) in parallel -> signs with the Tauri
    updater key -> creates the GitHub Release with `.msi`, `.exe`, `.dmg`,
    `.app.tar.gz`, their `.sig` files, and a `latest.json` covering both platforms.
    The macOS build is not Apple-signed/notarized: on first install, users must
