@@ -12,6 +12,7 @@ import {
   searchMulti as tmdbSearchMulti,
   findByImdb as tmdbFindByImdb,
 } from "@/lib/services/tmdb";
+import { LETTERBOXD_FEED, LETTERBOXD_TOTAL_PAGES, letterboxdPage } from "@/lib/letterboxdFeed";
 import { cachedTmdb } from "@/lib/tmdbCache";
 import { mapTmdb, type MediaType, type TmdbItem } from "@/lib/tmdbItem";
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -22,13 +23,20 @@ export type BrowseType = MediaType | "animation" | "all";
 export type DiscoverTab = BrowseType | "likes" | "recos" | "manga";
 
 // Sources proposées sous les onglets Films / Séries, dans l'ordre d'affichage.
-export const FEED_LABELS: Record<TmdbFeed, string> = {
+// "letterboxd" n'est pas une source TMDB : c'est le classement figé du bundle,
+// réservé à l'onglet Films (voir feedsFor).
+export type DiscoverFeed = TmdbFeed | typeof LETTERBOXD_FEED;
+export const FEED_LABELS: Record<DiscoverFeed, string> = {
   top_rated: "Mieux notés",
   trending: "Tendances",
-  popular: "Populaires",
   now_playing: "Sorties récentes",
+  letterboxd: "Top Letterboxd",
 };
-export const FEEDS = Object.keys(FEED_LABELS) as TmdbFeed[];
+export const FEEDS = Object.keys(FEED_LABELS) as DiscoverFeed[];
+
+export function feedsFor(type: DiscoverTab): DiscoverFeed[] {
+  return type === "movie" ? FEEDS : FEEDS.filter((f) => f !== LETTERBOXD_FEED);
+}
 
 // Filtres d'affinage de la recherche générale : "all" garde le multi
 // films + séries, movie/tv relancent la recherche sur l'endpoint dédié.
@@ -65,10 +73,17 @@ function mergeAnimation(movies: TmdbItem[], tvs: TmdbItem[], f: TmdbFeed): TmdbI
 // Lecture synchrone du cache TanStack pour une source "top" (préchauffée au
 // démarrage par useAppInit). Renvoie null si froid → l'appelant retombe sur un
 // fetch réseau. Évite le flash de spinner et le re-render asynchrone au switch.
+// Repli TMDB des sources non-TMDB : les onglets Séries / Animations n'exposent
+// pas "Top Letterboxd", et la recherche générale ignore la source courante.
+function tmdbFeedOf(f: DiscoverFeed): TmdbFeed {
+  return f === LETTERBOXD_FEED ? "top_rated" : f;
+}
+
 function readTopFromCache(
   type: MediaType | "animation",
-  f: TmdbFeed,
+  feed: DiscoverFeed,
 ): { items: TmdbItem[]; totalPages: number } | null {
+  const f = tmdbFeedOf(feed);
   if (type === "animation") {
     const movies = queryClient.getQueryData<TmdbListResponse>(
       tmdbKeys.discoverAnimation(f, "movie", 1),
@@ -101,7 +116,7 @@ export function useDiscoverFeed(
 ) {
   const [query, setQuery] = useState(initialQuery ?? "");
   const [mediaType, setMediaType] = useState<DiscoverTab>(initialTab ?? "movie");
-  const [feed, setFeed] = useState<TmdbFeed>("top_rated");
+  const [feed, setFeed] = useState<DiscoverFeed>("top_rated");
   const [items, setItems] = useState<TmdbItem[]>([]);
   const [mode, setMode] = useState<"top" | "search">("top");
   const [searchedQuery, setSearchedQuery] = useState("");
@@ -183,8 +198,14 @@ export function useDiscoverFeed(
 
   // Affiche une source "top" depuis le cache si elle est chaude (cas normal,
   // préchauffé au démarrage) — sans spinner ni round-trip async. Sinon fetch.
-  function showTop(type: MediaType | "animation", f: TmdbFeed) {
+  function showTop(type: MediaType | "animation", f: DiscoverFeed) {
     setSearchFilter("all");
+    // Classement Letterboxd : servi depuis le bundle, fetchItems le résout
+    // sans réseau ni cache TanStack.
+    if (f === LETTERBOXD_FEED) {
+      fetchItems("top", "", 1, type, f);
+      return;
+    }
     const cached = readTopFromCache(type, f);
     if (!cached) {
       fetchItems("top", "", 1, type, f);
@@ -207,10 +228,25 @@ export function useDiscoverFeed(
     q: string,
     page: number,
     type: BrowseType,
-    f: TmdbFeed,
+    feedArg: DiscoverFeed,
   ) {
+    // Classement figé : pas de requête, la page est une tranche du bundle. La
+    // recherche, elle, reste TMDB quelle que soit la source affichée.
+    if (m === "top" && feedArg === LETTERBOXD_FEED) {
+      fetchSeqRef.current++;
+      const slice = letterboxdPage(page);
+      setItems((prev) => (page === 1 ? slice : [...prev, ...slice]));
+      setLoadingMovies(false);
+      setMode("top");
+      setSearchedQuery("");
+      setTmdbPage(page);
+      setTmdbTotalPages(LETTERBOXD_TOTAL_PAGES);
+      setMoviesError(null);
+      return;
+    }
     if (!tmdbKey) return;
     const key = tmdbKey;
+    const f = tmdbFeedOf(feedArg);
     const seq = ++fetchSeqRef.current;
     setLoadingMovies(true);
     setMoviesError(null);
@@ -328,11 +364,15 @@ export function useDiscoverFeed(
     // feed de découverte de la catégorie (la recherche, elle, reste générale).
     lastBrowseTypeRef.current = type;
     setQuery("");
-    showTop(type, feed);
+    // "Top Letterboxd" n'existe que pour les films : les autres onglets
+    // repartent sur la source TMDB par défaut.
+    const next = type === "movie" ? feed : tmdbFeedOf(feed);
+    if (next !== feed) setFeed(next);
+    showTop(type, next);
   }
 
   // Change la source (Tendances, Populaires…) — onglets Films / Séries / Animations.
-  function switchFeed(f: TmdbFeed) {
+  function switchFeed(f: DiscoverFeed) {
     if (
       f === feed ||
       !tmdbKey ||

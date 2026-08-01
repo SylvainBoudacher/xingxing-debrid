@@ -1,5 +1,6 @@
-import type { TmdbFeed } from "@/lib/services/tmdb";
-import { FEED_LABELS, FEEDS, type DiscoverTab } from "@/lib/useDiscoverFeed";
+import { LetterboxdFeedPill } from "@/components/LetterboxdFeedPill";
+import { LETTERBOXD_FEED } from "@/lib/letterboxdFeed";
+import { FEED_LABELS, feedsFor, type DiscoverFeed, type DiscoverTab } from "@/lib/useDiscoverFeed";
 import { BookOpen, Clapperboard, Heart, Sparkles, Tv, Wand2 } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -7,10 +8,10 @@ interface DiscoverTabsProps {
   /** Repliés pendant la recherche générale */
   collapsed: boolean;
   mediaType: DiscoverTab;
-  feed: TmdbFeed;
+  feed: DiscoverFeed;
   mode: "top" | "search";
   onSwitchType: (t: Exclude<DiscoverTab, "all">) => void;
-  onSwitchFeed: (f: TmdbFeed) => void;
+  onSwitchFeed: (f: DiscoverFeed) => void;
 }
 
 // Onglets de navigation (Films, Séries, Animations, Mangas, Pour vous, Ma liste) et
@@ -96,19 +97,28 @@ export function DiscoverTabs({
         mode === "top" && (
           <div className="mt-6 flex justify-center">
             <div className="flex flex-wrap justify-center gap-1.5">
-              {FEEDS.map((f) => (
-                <button
-                  key={f}
-                  onClick={() => onSwitchFeed(f)}
-                  className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium ring-1 transition-colors ${
-                    feed === f
-                      ? "bg-indigo-600 text-white ring-indigo-500"
-                      : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                  }`}
-                >
-                  {FEED_LABELS[f]}
-                </button>
-              ))}
+              {feedsFor(mediaType).map((f) =>
+                f === LETTERBOXD_FEED ? (
+                  <LetterboxdFeedPill
+                    key={f}
+                    label={FEED_LABELS[f]}
+                    active={feed === f}
+                    onClick={() => onSwitchFeed(f)}
+                  />
+                ) : (
+                  <button
+                    key={f}
+                    onClick={() => onSwitchFeed(f)}
+                    className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium ring-1 transition-colors ${
+                      feed === f
+                        ? "bg-indigo-600 text-white ring-indigo-500"
+                        : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
+                    }`}
+                  >
+                    {FEED_LABELS[f]}
+                  </button>
+                ),
+              )}
             </div>
           </div>
         )}

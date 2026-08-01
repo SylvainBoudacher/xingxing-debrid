@@ -14,6 +14,7 @@ import {
   sortOccupants,
 } from "@/lib/discoverReleases";
 import { getCachedLibrary, loadLibrary } from "@/lib/library";
+import { LETTERBOXD_FEED } from "@/lib/letterboxdFeed";
 import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
 import { queryClient } from "@/lib/queryClient";
 import { ownedTmdbKeys } from "@/lib/recommendations";
@@ -244,6 +245,10 @@ export function DiscoverPage({
   const displayItems =
     mediaType === "likes" ? likes : mediaType === "recos" ? recosApi.recos : items;
 
+  // Le classement Letterboxd est servi dans l'ordre : la position de l'affiche
+  // dans la grille est son rang.
+  const showRank = mode === "top" && mediaType === "movie" && feed === LETTERBOXD_FEED;
+
   return (
     <main
       className={`relative isolate flex min-h-screen flex-col ${
@@ -427,7 +432,13 @@ export function DiscoverPage({
                     index={i}
                     liked={likedKeys.has(key)}
                     inLibrary={ownedKeys.has(key)}
-                    subtitle={because ? `Car vous avez aimé ${because}` : m.year}
+                    subtitle={
+                      because
+                        ? `Car vous avez aimé ${because}`
+                        : showRank
+                          ? `#${i + 1} - ${m.year}`
+                          : m.year
+                    }
                     onOpen={openItem}
                     onToggleLike={toggleLike}
                   />

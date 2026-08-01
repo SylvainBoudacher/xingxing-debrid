@@ -6,13 +6,12 @@ export const ANIMATION_GENRE_ID = 16;
 export type TmdbMediaType = "movie" | "tv";
 
 // Sources de la page Découverte (onglets Films / Séries).
-export type TmdbFeed = "trending" | "popular" | "now_playing" | "top_rated";
-export const TMDB_FEEDS: TmdbFeed[] = ["top_rated", "trending", "popular", "now_playing"];
+export type TmdbFeed = "trending" | "now_playing" | "top_rated";
+export const TMDB_FEEDS: TmdbFeed[] = ["top_rated", "trending", "now_playing"];
 
 // Endpoint TMDB par source : "now_playing" n'existe que pour les films, son
 // équivalent séries est "on_the_air".
 const FEED_ENDPOINT: Record<Exclude<TmdbFeed, "trending">, Record<TmdbMediaType, string>> = {
-  popular: { movie: "popular", tv: "popular" },
   now_playing: { movie: "now_playing", tv: "on_the_air" },
   top_rated: { movie: "top_rated", tv: "top_rated" },
 };
@@ -130,8 +129,6 @@ function animationSort(f: TmdbFeed, mt: TmdbMediaType): string {
   switch (f) {
     case "top_rated":
       return `sort_by=vote_average.desc&vote_count.gte=${mt === "movie" ? 300 : 150}`;
-    case "popular":
-      return "sort_by=popularity.desc";
     case "trending": {
       const since = new Date(Date.now() - 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
       return `sort_by=popularity.desc&${dateField}.gte=${since}&${dateField}.lte=${today}`;

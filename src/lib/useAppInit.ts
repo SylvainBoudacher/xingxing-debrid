@@ -198,7 +198,7 @@ export function useAppInit(): AppInitResult {
         idleAutoHide: idleAutoHide ?? true,
       });
 
-      // Prefetch d'une page complète de la Découverte : les 4 sources × films/séries
+      // Prefetch d'une page complète de la Découverte : les sources TMDB × films/séries
       // + les animations. Page 1 en bloquant, page 2 en fire-and-forget (scroll).
       const prefetchTmdbPage = (key: string, page: number) => [
         ...TMDB_FEEDS.flatMap((f) =>
