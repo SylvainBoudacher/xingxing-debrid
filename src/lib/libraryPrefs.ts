@@ -13,7 +13,6 @@ export interface LibraryPrefs {
   sort: LibrarySort;
   filter: LibraryFilter;
   genres: string[];
-  genreBarOpen: boolean;
 }
 
 export const DEFAULT_LIBRARY_PREFS: LibraryPrefs = {
@@ -22,7 +21,6 @@ export const DEFAULT_LIBRARY_PREFS: LibraryPrefs = {
   sort: "recent",
   filter: "all",
   genres: [],
-  genreBarOpen: false,
 };
 
 const KEYS = {
@@ -31,7 +29,6 @@ const KEYS = {
   sort: "library_sort",
   filter: "library_filter",
   genres: "library_genres",
-  genreBar: "library_genre_bar",
   legacySplit: "library_split",
 } as const;
 
@@ -45,13 +42,12 @@ export function getCachedLibraryPrefs(): LibraryPrefs | null {
 }
 
 export async function loadLibraryPrefs(): Promise<LibraryPrefs> {
-  const [layout, grouping, sort, filter, genres, genreBar, legacySplit] = await Promise.all([
+  const [layout, grouping, sort, filter, genres, legacySplit] = await Promise.all([
     store.get<LibraryLayout>(KEYS.layout),
     store.get<GroupMode>(KEYS.grouping),
     store.get<LibrarySort>(KEYS.sort),
     store.get<LibraryFilter>(KEYS.filter),
     store.get<string[]>(KEYS.genres),
-    store.get<boolean>(KEYS.genreBar),
     // Ancien réglage films/séries (booléen) : repli tant que le nouveau mode
     // de regroupement n'a jamais été choisi.
     store.get<boolean>(KEYS.legacySplit),
@@ -59,17 +55,13 @@ export async function loadLibraryPrefs(): Promise<LibraryPrefs> {
 
   const legacyGrouping: GroupMode | null =
     legacySplit === null || legacySplit === undefined ? null : legacySplit ? "type" : "none";
-  const activeGenres = genres ?? DEFAULT_LIBRARY_PREFS.genres;
 
   cache = {
     layout: layout ?? DEFAULT_LIBRARY_PREFS.layout,
     grouping: grouping ?? legacyGrouping ?? DEFAULT_LIBRARY_PREFS.grouping,
     sort: sort ?? DEFAULT_LIBRARY_PREFS.sort,
     filter: filter ?? DEFAULT_LIBRARY_PREFS.filter,
-    genres: activeGenres,
-    // Un filtre de genres actif implique la barre ouverte : sinon la
-    // bibliothèque paraîtrait incomplète sans raison visible.
-    genreBarOpen: genreBar ?? activeGenres.length > 0,
+    genres: genres ?? DEFAULT_LIBRARY_PREFS.genres,
   };
   return cache;
 }
@@ -80,6 +72,5 @@ export function saveLibraryPref<K extends keyof LibraryPrefs>(
   value: LibraryPrefs[K],
 ): void {
   if (cache) cache = { ...cache, [key]: value };
-  const storeKey = key === "genreBarOpen" ? KEYS.genreBar : KEYS[key as keyof typeof KEYS];
-  void store.set(storeKey, value).then(() => store.save());
+  void store.set(KEYS[key], value).then(() => store.save());
 }

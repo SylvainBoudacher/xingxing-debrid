@@ -1,8 +1,8 @@
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { LibraryDetailModal } from "@/components/LibraryDetailModal";
 import { LibraryBlocks } from "@/components/LibraryBlocks";
+import { LibraryDisplayMenu } from "@/components/LibraryDisplayMenu";
 import { LibraryEntryCard, type DebridControls } from "@/components/LibraryEntryCard";
-import { LibraryGenreFilter } from "@/components/LibraryGenreFilter";
 import { LibraryCategoryMenu } from "@/components/LibraryCategoryMenu";
 import { LibraryCustomBar } from "@/components/LibraryCustomBar";
 import { LibraryListNameModal } from "@/components/LibraryListNameModal";
@@ -15,13 +15,6 @@ import { SeriesGroupCard } from "@/components/SeriesGroupCard";
 import { SeriesGroupDetailModal } from "@/components/SeriesGroupDetailModal";
 import { SeriesGroupPosterCard } from "@/components/SeriesGroupPosterCard";
 import { TmdbMatchModal } from "@/components/TmdbMatchModal";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { flattenFiles, isVideoFile, type DebridFile } from "@/lib/debrid";
 import {
   applyEnrichment,
@@ -81,6 +74,7 @@ import {
 } from "@/lib/services/allDebrid";
 import { useDebridActions } from "@/lib/useDebridActions";
 import { useDragScroll } from "@/lib/useDragScroll";
+import { useStickyBar } from "@/lib/useStickyBar";
 import { useLibraryGenres } from "@/lib/useLibraryGenres";
 import { useLibraryMagnetStatus } from "@/lib/useLibraryMagnetStatus";
 import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
@@ -91,12 +85,10 @@ import {
   CheckSquare,
   Compass,
   GripVertical,
-  Layers,
   LayoutGrid,
   Library as LibraryIcon,
   List,
   Search,
-  Tags,
 } from "lucide-react";
 import { AnimatePresence, motion, Reorder, useDragControls, type PanInfo } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -130,21 +122,6 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "Tout" },
   { id: "todo", label: "À voir" },
   { id: "done", label: "Vu" },
-];
-
-const SORTS: { id: Sort; label: string }[] = [
-  { id: "manual", label: "Manuel" },
-  { id: "recent", label: "Plus récents" },
-  { id: "title", label: "Titre (A-Z)" },
-  { id: "size", label: "Taille" },
-  { id: "progress", label: "À finir" },
-];
-
-const GROUP_MODES: { id: GroupMode; label: string }[] = [
-  { id: "none", label: "Aucun" },
-  { id: "type", label: "Type" },
-  { id: "genre", label: "Genre" },
-  { id: "category", label: "Personnalisé" },
 ];
 
 const SORTERS: Record<Exclude<Sort, "manual">, (a: LibraryEntry, b: LibraryEntry) => number> = {
@@ -188,7 +165,6 @@ export function LibraryPage({
   const [layout, setLayout] = useState<Layout>(prefs.layout);
   const [grouping, setGrouping] = useState<GroupMode>(prefs.grouping);
   const [genreFilter, setGenreFilter] = useState<Set<string>>(() => new Set(prefs.genres));
-  const [genreBarOpen, setGenreBarOpen] = useState(prefs.genreBarOpen);
   const [categories, setCategories] = useState<CategoryConfig>(
     () => getCachedCategories() ?? EMPTY_CATEGORIES,
   );
@@ -201,6 +177,14 @@ export function LibraryPage({
   // ouvrirait la modale de détail : on l'avale en phase capture.
   const suppressClick = useRef(false);
   const { ref: toolbarRef, dragProps: toolbarDrag } = useDragScroll<HTMLDivElement>();
+  // La barre de recherche et les filtres restent accessibles au défilement,
+  // posés juste sous le header.
+  const {
+    headerRef,
+    barRef,
+    offset: barTop,
+    stuck: barStuck,
+  } = useStickyBar<HTMLDivElement, HTMLDivElement>(8);
   // Modale de nom : création simple, création depuis une sélection, renommage.
   const [naming, setNaming] = useState<
     { mode: "create"; hashes: string[] } | { mode: "rename"; category: LibraryCategory } | null
@@ -284,7 +268,6 @@ export function LibraryPage({
         setLayout(p.layout);
         setGrouping(p.grouping);
         setGenreFilter(new Set(p.genres));
-        setGenreBarOpen(p.genreBarOpen);
       });
     }
     // Purge des références mortes au chargement seulement : pendant la session,
@@ -309,15 +292,6 @@ export function LibraryPage({
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Replier la barre efface la sélection : un filtre actif mais invisible
-  // donnerait une bibliothèque incomplète sans raison apparente.
-  function toggleGenreBar() {
-    const next = !genreBarOpen;
-    setGenreBarOpen(next);
-    if (!next) changeGenreFilter(new Set());
-    saveLibraryPref("genreBarOpen", next);
-  }
 
   function changeGenreFilter(next: Set<string>) {
     setGenreFilter(next);
@@ -815,10 +789,11 @@ export function LibraryPage({
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
       {/* Header */}
       <motion.div
+        ref={headerRef}
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="sticky top-0 z-10 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl"
+        className="sticky top-0 z-30 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl"
       >
         <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
           <motion.button
@@ -864,137 +839,108 @@ export function LibraryPage({
 
         {tab === "media" && (
           <>
-            {/* Recherche */}
-            <div className="relative mb-3">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Rechercher un titre..."
-                className="w-full rounded-lg border border-black/10 bg-white/70 py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-zinc-900/60 dark:text-white"
-              />
-            </div>
-
-            {/* Filtres + tri. La barre défile horizontalement plutôt que d'écraser
-            ses libellés quand elle déborde (min-w-max), le glisser reproduit le
-            défilement là où la molette horizontale manque. */}
+            {/* Recherche + filtres : collés sous le header, pour rester à portée
+            sans remonter en haut d'une grosse bibliothèque. Une fois accrochés,
+            ils prennent l'aspect d'une carte flottante (verre + ombre) ; posés,
+            ils se fondent dans la page. Le padding et la bordure existent dans
+            les deux états (-mx compensé) pour que rien ne bouge à la bascule.
+            Le z-index dépasse celui des pastilles des jaquettes (z-10), qui
+            sinon défileraient par-dessus. */}
             <div
-              ref={toolbarRef}
-              {...toolbarDrag}
-              className="mb-4 cursor-grab overflow-x-auto select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              ref={barRef}
+              style={{ top: barTop }}
+              className={`sticky z-20 -mx-3 mb-4 rounded-2xl border p-3 transition-[background-color,border-color,box-shadow] duration-200 ${
+                barStuck
+                  ? "border-black/10 bg-white/70 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/70"
+                  : "border-transparent"
+              }`}
             >
-              <div className="flex w-full min-w-max items-center justify-between gap-2">
-                <div className="flex flex-none items-center gap-1.5">
-                  {FILTERS.map((f) => (
-                    <button
-                      key={f.id}
-                      onClick={() => changeFilter(f.id)}
-                      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                        filter === f.id
-                          ? "bg-indigo-600 text-white"
-                          : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                      }`}
-                    >
-                      {f.label} ({counts[f.id]})
-                    </button>
-                  ))}
-                </div>
+              <div className="relative mb-3">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Rechercher un titre..."
+                  className="w-full rounded-lg border border-black/10 bg-white/70 py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-zinc-900/60 dark:text-white"
+                />
+              </div>
 
-                <div className="flex flex-none items-center gap-2">
-                  {layout === "grid" && (
-                    <button
-                      onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
-                      title="Sélection multiple"
-                      className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
-                        selectMode
-                          ? "bg-indigo-600 text-white"
-                          : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                      }`}
-                    >
-                      <CheckSquare className="h-3.5 w-3.5" />
-                      Sélection
-                    </button>
-                  )}
-
-                  {genreOpts.length > 0 && (
-                    <button
-                      onClick={toggleGenreBar}
-                      title={genreBarOpen ? "Masquer les filtres de genre" : "Filtrer par genre"}
-                      className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
-                        genreBarOpen || genreFilter.size > 0
-                          ? "bg-indigo-600 text-white"
-                          : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                      }`}
-                    >
-                      <Tags className="h-3.5 w-3.5" />
-                      Types
-                      {genreFilter.size > 0 && (
-                        <span className="rounded-full bg-white/25 px-1.5 text-[10px] leading-4">
-                          {genreFilter.size}
-                        </span>
-                      )}
-                    </button>
-                  )}
-
-                  <div className="flex items-center gap-1 rounded-full bg-black/5 p-0.5 dark:bg-white/10">
-                    <Layers className="ml-2 mr-0.5 h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
-                    {GROUP_MODES.map((m) => (
+              {/* La barre défile horizontalement plutôt que d'écraser ses
+              libellés quand elle déborde (min-w-max), le glisser reproduit le
+              défilement là où la molette horizontale manque. */}
+              <div
+                ref={toolbarRef}
+                {...toolbarDrag}
+                className="cursor-grab overflow-x-auto select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                <div className="flex w-full min-w-max items-center justify-between gap-2">
+                  <div className="flex flex-none items-center gap-1.5">
+                    {FILTERS.map((f) => (
                       <button
-                        key={m.id}
-                        onClick={() => changeGrouping(m.id)}
-                        title={
-                          m.id === "genre"
-                            ? "Grouper par genre (films et séries séparés)"
-                            : m.id === "type"
-                              ? "Séparer films / séries"
-                              : "Aucun regroupement"
-                        }
-                        className={`flex h-7 items-center rounded-full px-2.5 text-xs font-medium transition-colors ${
-                          grouping === m.id
+                        key={f.id}
+                        onClick={() => changeFilter(f.id)}
+                        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                          filter === f.id
                             ? "bg-indigo-600 text-white"
-                            : "text-zinc-600 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
+                            : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
                         }`}
                       >
-                        {m.label}
+                        {f.label} ({counts[f.id]})
                       </button>
                     ))}
                   </div>
 
-                  <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
-                    {(
-                      [
-                        ["list", List],
-                        ["grid", LayoutGrid],
-                      ] as const
-                    ).map(([id, Icon]) => (
+                  <div className="flex flex-none items-center gap-2">
+                    {layout === "grid" && (
                       <button
-                        key={id}
-                        onClick={() => changeLayout(id)}
-                        title={id === "list" ? "Vue liste" : "Vue grille"}
-                        className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                          layout === id
-                            ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-700 dark:text-indigo-300"
-                            : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
+                        onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+                        title="Sélection multiple"
+                        className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
+                          selectMode
+                            ? "bg-indigo-600 text-white"
+                            : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
                         }`}
                       >
-                        <Icon className="h-4 w-4" />
+                        <CheckSquare className="h-3.5 w-3.5" />
+                        Sélection
                       </button>
-                    ))}
-                  </div>
+                    )}
 
-                  <Select value={sort} onValueChange={(v) => changeSort(v as Sort)}>
-                    <SelectTrigger className="h-8 w-auto gap-1 rounded-full px-3 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SORTS.filter((s) => s.id !== "manual" || layout === "list").map((s) => (
-                        <SelectItem key={s.id} value={s.id} className="text-xs">
-                          {s.label}
-                        </SelectItem>
+                    <LibraryDisplayMenu
+                      sort={sort}
+                      onSortChange={changeSort}
+                      allowManualSort={layout === "list"}
+                      grouping={grouping}
+                      onGroupingChange={changeGrouping}
+                      genreOptions={genreOpts}
+                      genreFilter={genreFilter}
+                      onToggleGenre={toggleGenre}
+                      onClearGenres={() => changeGenreFilter(new Set())}
+                    />
+
+                    <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
+                      {(
+                        [
+                          ["list", List],
+                          ["grid", LayoutGrid],
+                        ] as const
+                      ).map(([id, Icon]) => (
+                        <button
+                          key={id}
+                          onClick={() => changeLayout(id)}
+                          title={id === "list" ? "Vue liste" : "Vue grille"}
+                          className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                            layout === id
+                              ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-700 dark:text-indigo-300"
+                              : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
+                          }`}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </button>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1009,17 +955,6 @@ export function LibraryPage({
                 />
               )}
             </AnimatePresence>
-
-            {genreBarOpen && genreOpts.length > 0 && (
-              <div className="mb-4">
-                <LibraryGenreFilter
-                  options={genreOpts}
-                  selected={genreFilter}
-                  onToggle={toggleGenre}
-                  onClear={() => changeGenreFilter(new Set())}
-                />
-              </div>
-            )}
 
             {visible.length === 0 ? (
               <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
