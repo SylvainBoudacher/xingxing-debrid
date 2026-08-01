@@ -25,12 +25,14 @@ export function DiscoverTabs({
   onSwitchFeed,
 }: DiscoverTabsProps) {
   return (
+    // paddingBottom : la hauteur mesurée par motion est arrondie au pixel
+    // inférieur, sans cette marge interne overflow-hidden rogne le bas des pilules.
     <motion.div
       initial={false}
       animate={
         collapsed
-          ? { opacity: 0, y: -12, height: 0, marginBottom: 0 }
-          : { opacity: 1, y: 0, height: "auto", marginBottom: 24 }
+          ? { opacity: 0, y: -12, height: 0, marginBottom: 0, paddingBottom: 0 }
+          : { opacity: 1, y: 0, height: "auto", marginBottom: 20, paddingBottom: 4 }
       }
       transition={{
         type: "spring",
