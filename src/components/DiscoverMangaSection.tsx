@@ -1,7 +1,6 @@
 import { MangaPosterCard } from "@/components/MangaPosterCard";
 import { MangaReleasesModal } from "@/components/MangaReleasesModal";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
-import { Button } from "@/components/ui/button";
 import type { MangaItem } from "@/lib/mangaItem";
 import { getCachedMangaLibrary, loadMangaLibrary, type MangaEntry } from "@/lib/mangaLibrary";
 import { networkErrorMessage } from "@/lib/networkError";
@@ -39,6 +38,22 @@ export function DiscoverMangaSection({
   const [selected, setSelected] = useState<MangaItem | null>(null);
   const [entries, setEntries] = useState<MangaEntry[]>(() => getCachedMangaLibrary() ?? []);
   const pendingItem = useRef(initialItem ?? null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Scroll infini : charge la page suivante quand la sentinelle entre dans le
+  // viewport (meme principe que la grille films/series).
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el || !feed.hasMore || feed.loadingMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) feed.loadMore();
+      },
+      { rootMargin: "400px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [feed.hasMore, feed.loadingMore, feed.loadMore]);
 
   useEffect(() => {
     if (getCachedMangaLibrary() === null) void loadMangaLibrary().then(setEntries);
@@ -117,11 +132,8 @@ export function DiscoverMangaSection({
           </div>
 
           {feed.hasMore && (
-            <div className="flex justify-center py-8">
-              <Button variant="outline" onClick={feed.loadMore} disabled={feed.loadingMore}>
-                {feed.loadingMore && <Loader2 className="animate-spin" />}
-                Charger plus
-              </Button>
+            <div ref={loadMoreRef} className="flex h-8 justify-center py-8">
+              {feed.loadingMore && <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />}
             </div>
           )}
         </>
