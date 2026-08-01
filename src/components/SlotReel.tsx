@@ -33,6 +33,8 @@ export function SlotReel({
           symbol,
           randOf(SYMBOLS.filter((s) => s !== symbol)),
         ),
+    // spin force un nouveau tirage des voisins meme si le symbole est identique
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [symbol, spin],
   );
   const end = -(LOOPS * SYMBOLS.length * CELL);

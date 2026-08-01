@@ -53,6 +53,8 @@ export function DiscoverMangaSection({
     );
     observer.observe(el);
     return () => observer.disconnect();
+    // feed est recree a chaque rendu : on depend des champs, pas de l'objet
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feed.hasMore, feed.loadingMore, feed.loadMore]);
 
   useEffect(() => {
