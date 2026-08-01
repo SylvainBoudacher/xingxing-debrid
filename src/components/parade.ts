@@ -8,7 +8,7 @@ export interface ParadeState {
   count: number; // number of ducks in the ring (for even spacing)
 }
 
-export const PARADE_MS = 10_000;
+export const PARADE_MS = 20_000;
 const SPIN = 0.5; // ring rotation speed (rad/s)
 
 export function makeParade(): ParadeState {
