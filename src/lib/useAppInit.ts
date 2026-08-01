@@ -14,6 +14,7 @@ import {
   type TmdbMediaType,
 } from "@/lib/services/tmdb";
 import { allDebridKeys, fetchMagnets } from "@/lib/services/allDebrid";
+import { preloadDiscoverPosters } from "@/lib/discoverPosterPreload";
 import { loadLibrary } from "@/lib/library";
 import { pickSeeds } from "@/lib/recommendations";
 import { type ViewMode, resolveAllViewModes } from "@/lib/viewMode";
@@ -249,6 +250,10 @@ export function useAppInit(): AppInitResult {
         Promise.allSettled(prefetchTmdbPage(tmdbKeyValue, 2));
         prefetchRecommendations(tmdbKeyValue, likesData);
       }
+
+      // Jaquettes des grilles page 1 : les listes sont en cache, il ne manque
+      // que les images. Fire-and-forget, en tache de fond derriere le splash.
+      preloadDiscoverPosters(!!tmdbKeyValue);
 
       // ── Délai minimum du splash ────────────────────────────────────────────
       const elapsed = Date.now() - splashStart;

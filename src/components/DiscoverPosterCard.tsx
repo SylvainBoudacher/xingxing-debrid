@@ -2,6 +2,7 @@ import { memo } from "react";
 import { motion } from "motion/react";
 import { Check, Heart, Star } from "lucide-react";
 import type { TmdbItem } from "@/lib/tmdbItem";
+import { posterUrl } from "@/lib/posterPreload";
 
 interface DiscoverPosterCardProps {
   item: TmdbItem;
@@ -50,7 +51,7 @@ export const DiscoverPosterCard = memo(function DiscoverPosterCard({
       <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-200 dark:bg-zinc-900 ring-1 ring-black/8 dark:ring-white/8 transition-all duration-500 ease-out group-hover:ring-black/20 dark:group-hover:ring-white/25 group-hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.25)] dark:group-hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.7)]">
         {item.posterPath ? (
           <img
-            src={`https://image.tmdb.org/t/p/w342${item.posterPath}`}
+            src={posterUrl(item.posterPath)}
             alt={item.title}
             loading="lazy"
             className="h-full w-full object-cover transition-[filter] duration-500 ease-out group-hover:brightness-110"
