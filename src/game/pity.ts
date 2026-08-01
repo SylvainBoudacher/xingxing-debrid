@@ -9,7 +9,9 @@
 // - CARD_CURVES, sur les 3 cartes de fin de run: un tirage par partie, donc des
 //   plafonds eleves (60% dex, 15 a 42% shiny) pour que le pity se sente vite.
 // - POOL_CURVES, sur les canards du bassin: un canard toutes les 40s en passif,
-//   donc des plafonds dix fois plus bas. C'est le cumul qui fait le travail.
+//   donc des plafonds vingt-cinq fois plus bas, pas de bonus de fin de chasse,
+//   et un repli pondere. Le bassin doit rester un fond de progression, jamais
+//   la source qui termine une collection a la place des runs.
 
 import { getRarity, randOf, type Rarity } from "@/components/duckRandom";
 import { SPECIES, speciesOf, variantForSpecies, type DuckSpecies } from "@/components/duckSpecies";
@@ -51,30 +53,44 @@ export function shinyChance(missingShiny: number, dry: number): number {
   return base + (SHINY_CAP * mult - base) * (1 - SHINY_STEP ** dry);
 }
 
+// Comportement du repli de retarget() quand aucune carte de la main n'est d'un
+// palier incomplet. "any" balaie les paliers jusqu'a en trouver un qui ait
+// quelque chose a offrir, donc livre toujours. "weighted" tire un seul palier
+// selon les taux de spawn et renonce s'il est deja complet.
+export type FallbackMode = "any" | "weighted";
+
 // Les deux courbes que consomme applyPity. Les rendre injectables evite de
 // dupliquer toute la mecanique de ciblage pour le bassin.
 export interface PityCurves {
   dex: (dry: number) => number;
   shiny: (missingShiny: number, dry: number) => number;
+  fallback: FallbackMode;
 }
 
-export const CARD_CURVES: PityCurves = { dex: dexChance, shiny: shinyChance };
+export const CARD_CURVES: PityCurves = {
+  dex: dexChance,
+  shiny: shinyChance,
+  fallback: "any",
+};
 
 // Courbe du bassin: meme forme concave que celle des cartes, mais calibree en
 // canards. Elle atteint 90% de son plafond en une trentaine de canards secs,
-// puis ne bouge plus. Les plafonds sont dix fois plus bas que ceux des cartes
-// parce qu'elle est active en permanence: 0.6% toutes les 40s finit par peser,
-// la ou une main de fin de run ne se presente qu'une fois par partie.
+// puis ne bouge plus. Les plafonds sont bien plus bas que ceux des cartes parce
+// qu'elle est active en permanence, y compris quand personne ne joue: a un
+// canard toutes les 40s, 0.6% de plus par canard represente une entree de dex
+// toutes les deux heures d'application ouverte.
 const ramp = (cap: number, step: number) => (dry: number) => cap * (1 - step ** dry);
 
-const POOL_DEX = ramp(0.015, 0.95);
-const POOL_SHINY = ramp(0.006, 0.93);
+const POOL_DEX = ramp(0.006, 0.95);
+const POOL_SHINY = ramp(0.002, 0.93);
 
 export const POOL_CURVES: PityCurves = {
   dex: POOL_DEX,
-  // le bonus de fin de chasse s'applique aussi ici, mais sur une base bien plus
-  // basse: le bassin ne doit jamais devancer les runs de bateau
-  shiny: (missing, dry) => POOL_SHINY(dry) * endgameMult(missing),
+  // pas de endgameMult ici: le bonus de fin de chasse triplait le debit du
+  // bassin sur les derniers shiny, exactement le segment ou la collection se
+  // bouclait trop vite. Il reste sur les cartes, donc il faut jouer pour l'avoir.
+  shiny: (_missing, dry) => POOL_SHINY(dry),
+  fallback: "weighted",
 };
 
 // Une recompense du Canardex n'est pas une espece: elle ne compte jamais comme
@@ -117,6 +133,27 @@ const shuffled = (n: number) => {
 
 const ALL_RARITIES: Rarity[] = ["common", "uncommon", "rare", "legendary", "mythic", "god"];
 
+// Poids du repli pondere. Version adoucie des taux de spawn reels
+// (60/28/9/3/0.5, voir randomVariant): assez proche pour que le Roi reste rare
+// sous pity, assez plate pour que la derniere espece ne soit pas hors de
+// portee. "god" est absent, aucune espece collectable n'est de ce palier.
+const FALLBACK_WEIGHTS: [Rarity, number][] = [
+  ["common", 45],
+  ["uncommon", 25],
+  ["rare", 15],
+  ["legendary", 9],
+  ["mythic", 6],
+];
+
+function weightedRarity(): Rarity {
+  let roll = Math.random() * 100;
+  for (const [rarity, weight] of FALLBACK_WEIGHTS) {
+    roll -= weight;
+    if (roll < 0) return rarity;
+  }
+  return "common";
+}
+
 // Remplace une carte par un canard cible, en restant dans le palier de rarete
 // de la carte remplacee pour ne pas deformer les taux. Renvoie l'index touche,
 // ou -1 si la main ne contient aucune carte remplacable.
@@ -124,6 +161,7 @@ function retarget(
   cards: Variant[],
   pick: (rarity: Rarity) => DuckSpecies | undefined,
   entries: DexEntries,
+  fallback: FallbackMode,
 ): number {
   const order = shuffled(cards.length);
   const swap = (i: number, sp: DuckSpecies) => {
@@ -142,10 +180,22 @@ function retarget(
   // Repli: aucun palier present dans la main n'a de manque. Sans lui, le pity
   // de fin de chasse ne livrerait jamais une legendaire ou le roi, puisqu'il
   // faudrait que la carte a remplacer soit deja de ce palier - et une main
-  // contient une legendaire 9% du temps, le roi 1.5%. Le palier de repli est
-  // tire au hasard pour ne pas systematiquement servir le plus bas.
+  // contient une legendaire 9% du temps, le roi 1.5%.
   const slot = order.find((i) => isSpecies(cards[i]));
   if (slot === undefined) return -1;
+
+  // Repli pondere (bassin): un seul palier tire, et tant pis s'il n'a rien a
+  // offrir. En balayant tous les paliers on livrait a coup sur ce qui restait,
+  // et comme une main du bassin ne contient qu'un canard, ce balayage etait le
+  // cas nominal des qu'un palier etait complet: la derniere espece manquante
+  // tombait en 45 minutes d'idle, quel que soit son palier.
+  if (fallback === "weighted") {
+    const sp = pick(weightedRarity());
+    return sp ? swap(slot, sp) : -1;
+  }
+
+  // Repli exhaustif (cartes): le palier est tire au hasard pour ne pas
+  // systematiquement servir le plus bas.
   for (const r of shuffled(ALL_RARITIES.length)) {
     const sp = pick(ALL_RARITIES[r]);
     if (sp) return swap(slot, sp);
@@ -164,7 +214,7 @@ export function applyPity(
   const cards = hand.map((v) => ({ ...v }));
 
   if (!cards.some((v) => isNewToDex(v, entries)) && Math.random() < curves.dex(state.dryDex)) {
-    retarget(cards, (r) => dexTarget(r, entries), entries);
+    retarget(cards, (r) => dexTarget(r, entries), entries, curves.fallback);
   }
 
   const missing = SPECIES.length - shiny.length;
@@ -175,7 +225,7 @@ export function applyPity(
     else {
       // les 3 especes ont deja leur shiny: on vise d'abord une espece qui ne
       // l'a pas, puis on la fait briller
-      const i = retarget(cards, (r) => shinyTarget(r, shiny), entries);
+      const i = retarget(cards, (r) => shinyTarget(r, shiny), entries, curves.fallback);
       if (i >= 0) cards[i].shiny = true;
     }
   }

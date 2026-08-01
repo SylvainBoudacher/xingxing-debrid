@@ -39,6 +39,13 @@ function rolls(value: number) {
   vi.spyOn(Math, "random").mockReturnValue(value);
 }
 
+// Suite de tirages explicite, puis 0 (qui fait passer tous les seuils). Sert a
+// piloter le palier du repli pondere, que rolls(0) enverrait sur "common".
+function rollsWith(...seq: number[]) {
+  let n = 0;
+  vi.spyOn(Math, "random").mockImplementation(() => seq[n++] ?? 0);
+}
+
 afterEach(() => vi.restoreAllMocks());
 
 describe("courbes", () => {
@@ -97,31 +104,42 @@ describe("courbes du bassin", () => {
   });
 
   it("atteignent 90% de leur plafond en quelques dizaines de canards", () => {
-    expect(POOL_CURVES.dex(45)).toBeGreaterThan(0.9 * 0.015);
-    expect(POOL_CURVES.shiny(S, 32)).toBeGreaterThan(0.9 * 0.006);
+    expect(POOL_CURVES.dex(45)).toBeGreaterThan(0.9 * 0.006);
+    expect(POOL_CURVES.shiny(S, 32)).toBeGreaterThan(0.9 * 0.002);
   });
 
-  it("plafonnent dix fois plus bas que les courbes des cartes", () => {
-    expect(POOL_CURVES.dex(10000)).toBeCloseTo(0.015, 5);
-    expect(POOL_CURVES.shiny(S, 10000)).toBeCloseTo(0.006, 5);
-    expect(POOL_CURVES.dex(10000)).toBeLessThan(dexChance(1000) / 10);
-    expect(POOL_CURVES.shiny(S, 10000)).toBeLessThan(shinyChance(S, 1000) / 10);
+  it("plafonnent bien plus bas que les courbes des cartes", () => {
+    expect(POOL_CURVES.dex(10000)).toBeCloseTo(0.006, 5);
+    expect(POOL_CURVES.shiny(S, 10000)).toBeCloseTo(0.002, 5);
+    expect(POOL_CURVES.dex(10000)).toBeLessThan(dexChance(1000) / 25);
+    expect(POOL_CURVES.shiny(S, 10000)).toBeLessThan(shinyChance(S, 1000) / 25);
   });
 
-  it("gardent le bonus de fin de chasse sur les shiny", () => {
-    expect(POOL_CURVES.shiny(0, 10000)).toBeCloseTo(0.006 * 3, 5);
-    expect(POOL_CURVES.shiny(1, 10000)).toBeGreaterThan(POOL_CURVES.shiny(S, 10000));
+  it("n'appliquent pas le bonus de fin de chasse: le bassin ne s'emballe pas", () => {
+    expect(POOL_CURVES.shiny(0, 10000)).toBeCloseTo(POOL_CURVES.shiny(S, 10000), 5);
+    expect(POOL_CURVES.shiny(1, 500)).toBe(POOL_CURVES.shiny(S, 500));
   });
 
   it("un canard seul finit par livrer le shiny manquant", () => {
-    rolls(0); // tous les tirages reussissent
     const v = variantForSpecies(SPECIES.find((s) => s.id === "classique")!);
     const snap = fullDex();
     snap.shiny = SPECIES.filter((s) => s.id !== "roi").map((s) => s.id);
+    rollsWith(0, 0, 0.99); // seuils au vert, repli pondere sur le palier mythic
     const { cards, next } = applyPity([v], snap, { dryDex: 0, dryShiny: 50 }, POOL_CURVES);
     expect(speciesOf(cards[0])).toBe("roi");
     expect(cards[0].shiny).toBe(true);
     expect(next.dryShiny).toBe(0);
+  });
+
+  it("le repli du bassin renonce quand le palier tire est deja complet", () => {
+    const v = variantForSpecies(SPECIES.find((s) => s.id === "classique")!);
+    const snap = fullDex();
+    snap.shiny = SPECIES.filter((s) => s.id !== "roi").map((s) => s.id);
+    rollsWith(0, 0, 0); // le repli vise common, qui n'a plus rien a offrir
+    const { cards, next } = applyPity([v], snap, { dryDex: 0, dryShiny: 50 }, POOL_CURVES);
+    expect(speciesOf(cards[0])).toBe("classique");
+    expect(cards[0].shiny).toBeUndefined();
+    expect(next.dryShiny).toBe(51);
   });
 
   it("ne declenche rien tant que le canard n'est pas sec", () => {
