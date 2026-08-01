@@ -6,8 +6,10 @@ import {
   BookOpen,
   Columns2,
   Maximize2,
+  Minimize,
   MoveHorizontal,
   MoveVertical,
+  Expand,
 } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -17,9 +19,11 @@ interface ReaderToolbarProps {
   pageMode: PageMode;
   fit: FitMode;
   direction: ReadingDirection;
+  fullscreen: boolean;
   onPageMode: (mode: PageMode) => void;
   onFit: (fit: FitMode) => void;
   onDirection: (direction: ReadingDirection) => void;
+  onFullscreen: () => void;
   onClose: () => void;
 }
 
@@ -43,9 +47,11 @@ export function ReaderToolbar({
   pageMode,
   fit,
   direction,
+  fullscreen,
   onPageMode,
   onFit,
   onDirection,
+  onFullscreen,
   onClose,
 }: ReaderToolbarProps) {
   const FitIcon = FIT_ICON[fit];
@@ -89,6 +95,13 @@ export function ReaderToolbar({
         >
           <ArrowLeftRight className="h-4 w-4" />
           <span className="text-[10px] font-semibold uppercase">{direction}</span>
+        </ToolbarButton>
+
+        <ToolbarButton
+          label={fullscreen ? "Quitter le plein écran (F)" : "Plein écran (F)"}
+          onClick={onFullscreen}
+        >
+          {fullscreen ? <Minimize className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
         </ToolbarButton>
       </div>
     </div>

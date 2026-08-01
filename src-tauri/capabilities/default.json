@@ -23,6 +23,7 @@
     "core:window:allow-set-size",
     "core:window:allow-maximize",
     "core:window:allow-center",
+    "core:window:allow-set-fullscreen",
     "store:default",
     "updater:default",
     "process:default",

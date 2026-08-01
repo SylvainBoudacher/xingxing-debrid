@@ -10,6 +10,7 @@ import {
   type PageMode,
 } from "@/lib/readerPrefs";
 import { useCbzPages } from "@/lib/useCbzPages";
+import { useFullscreen } from "@/lib/useFullscreen";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -51,6 +52,7 @@ export function ReaderPage({
   // Pages plus larges que hautes : ce sont les doubles pages d'origine, qui
   // s'affichent seules meme en mode double.
   const [wide, setWide] = useState<Record<number, boolean>>({});
+  const { fullscreen, toggle: toggleFullscreen, exit: exitFullscreen } = useFullscreen();
 
   const visible = useMemo(() => {
     if (pageMode === "single") return [index];
@@ -97,7 +99,12 @@ export function ReaderPage({
     const onKey = (e: KeyboardEvent) => {
       switch (e.key) {
         case "Escape":
-          onClose();
+          if (fullscreen) exitFullscreen();
+          else onClose();
+          break;
+        case "f":
+        case "F":
+          toggleFullscreen();
           break;
         case "ArrowLeft":
           if (direction === "rtl") next();
@@ -136,7 +143,7 @@ export function ReaderPage({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [direction, next, prev, goTo, total, onClose]);
+  }, [direction, next, prev, goTo, total, onClose, fullscreen, toggleFullscreen, exitFullscreen]);
 
   // Progression differee : feuilleter dix pages d'affilee ne doit declencher
   // qu'une ecriture.
@@ -185,9 +192,11 @@ export function ReaderPage({
         pageMode={pageMode}
         fit={fit}
         direction={direction}
+        fullscreen={fullscreen}
         onPageMode={changePageMode}
         onFit={changeFit}
         onDirection={onDirectionChange}
+        onFullscreen={toggleFullscreen}
         onClose={onClose}
       />
 
