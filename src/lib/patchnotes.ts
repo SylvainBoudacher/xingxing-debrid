@@ -45,6 +45,40 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.6.2",
+    date: "1 aout 2026",
+    intro:
+      "La 1.6.2 enrichit la page Decouverte avec le Top 500 Letterboxd, ameliore la lecture et la recherche dans la bibliotheque, et reequilibre le Coin des Canards.",
+    sections: [
+      {
+        title: "Decouverte",
+        items: [
+          "Nouvelle section Top 500 Letterboxd.",
+          "Scroll infini sur la section manga, a la place du bouton Charger plus.",
+          "Suppression de la sous-section Populaire, qui faisait doublon avec Tendance.",
+        ],
+      },
+      {
+        title: "Bibliotheque et lecture",
+        items: [
+          "Bloc de recherche de la page Bibliotheque refondu.",
+          "Bouton plein ecran pour la lecture de livres.",
+        ],
+      },
+      {
+        title: "Coin des Canards",
+        items: [
+          "Le drapeau reste affiche plus longtemps.",
+          "Pity nerfe : il etait trop genereux et la completion trop rapide.",
+        ],
+      },
+      {
+        title: "Divers",
+        items: ["Build Xingxing disponible pour les Mac Apple Intel."],
+      },
+    ],
+  },
+  {
     version: "1.6.1",
     date: "29 juillet 2026",
     intro:

@@ -1,4 +1,4 @@
-- Fix import de dossiers torrent dans la bibliotheque manga
-- Fix dossier manga par defaut sur Windows
-- Ajout d'oeuvres externes a la bibliotheque manga
-- Fix recherche de certaines oeuvres
+- Nouvelle section Top 500 Letterboxd dans la page Decouverte
+- Scroll infini sur la section manga, suppression du doublon Populaire/Tendance
+- Bloc de recherche de la bibliotheque refondu et bouton plein ecran pour la lecture
+- Drapeau affiche plus longtemps, Pity nerf, build Xingxing pour Mac Apple Intel
