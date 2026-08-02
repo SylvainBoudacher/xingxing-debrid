@@ -1,3 +1,4 @@
+import { ExpandableText } from "@/components/ExpandableText";
 import { MangaMatchModal } from "@/components/MangaMatchModal";
 import { MangaReleaseRow } from "@/components/MangaReleaseRow";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
@@ -130,11 +131,7 @@ export function MangaReleasesModal({
           </button>
         </div>
 
-        {item.description && (
-          <p className="mx-5 mb-4 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed line-clamp-4">
-            {item.description}
-          </p>
-        )}
+        {item.description && <ExpandableText text={item.description} className="mx-5 mb-4" />}
 
         <div className="h-[32rem] max-h-[65vh] overflow-y-auto px-3 pb-3 space-y-1.5">
           {releasesQuery.isPending &&

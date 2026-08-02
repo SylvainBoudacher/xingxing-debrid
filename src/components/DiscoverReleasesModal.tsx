@@ -2,6 +2,7 @@ import c411Logo from "@/assets/sources/C411.webp";
 import nyaaLogo from "@/assets/sources/nyaa.webp";
 import { DiscoverReleaseFilters, type ReleaseSort } from "@/components/DiscoverReleaseFilters";
 import { DiscoverReleaseRow } from "@/components/DiscoverReleaseRow";
+import { ExpandableText } from "@/components/ExpandableText";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
 import { TmdbGenres } from "@/components/TmdbGenres";
 import {
@@ -237,11 +238,7 @@ export function DiscoverReleasesModal({
           </button>
         </div>
 
-        {item.overview && (
-          <p className="mx-5 mb-4 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed line-clamp-4">
-            {item.overview}
-          </p>
-        )}
+        {item.overview && <ExpandableText text={item.overview} className="mx-5 mb-4" />}
 
         {item.mediaType === "tv" && (
           <div
