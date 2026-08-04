@@ -7,6 +7,7 @@ import {
   type DebridControls,
   type EpisodeSelection,
 } from "@/components/libraryParts";
+import { ExpandableText } from "@/components/ExpandableText";
 import { TmdbGenres } from "@/components/TmdbGenres";
 import {
   DropdownMenu,
@@ -297,9 +298,7 @@ export function SeriesGroupDetailModal({
               className="mt-1.5"
             />
             {group.tmdb.overview && (
-              <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
-                {group.tmdb.overview}
-              </p>
+              <ExpandableText text={group.tmdb.overview} lines={3} className="mt-2" />
             )}
             <div className="relative mt-2.5 h-3.5 w-full overflow-hidden rounded-full bg-black/[0.07] dark:bg-white/[0.08]">
               <div
