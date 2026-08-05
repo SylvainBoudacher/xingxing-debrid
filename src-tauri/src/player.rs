@@ -10,8 +10,11 @@ pub enum PlayerError {
 
 // Priorite : le chemin configure par l'utilisateur prime et ne retombe jamais
 // sur la detection automatique, sinon on lancerait un autre binaire sans le dire.
-// Hors Windows, seuls les tests appellent cette fonction.
-#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+// Sous Linux, seuls les tests appellent cette fonction.
+#[cfg_attr(
+    not(any(target_os = "windows", target_os = "macos")),
+    allow(dead_code)
+)]
 fn pick_vlc(
     configured: Option<&str>,
     candidates: &[PathBuf],
@@ -85,9 +88,36 @@ fn resolve_vlc(configured: Option<&str>) -> Result<PathBuf, PlayerError> {
     pick_vlc(configured, &windows_candidates(), &|p: &Path| p.exists())
 }
 
-// macOS delegue a `open -a VLC`, qui retrouve l'application ou qu'elle soit ;
+#[cfg(target_os = "macos")]
+fn macos_candidates() -> Vec<PathBuf> {
+    let mut out = vec![PathBuf::from("/Applications/VLC.app")];
+    if let Some(home) = std::env::var_os("HOME") {
+        out.push(PathBuf::from(home).join("Applications/VLC.app"));
+    }
+    // Installe ailleurs : Spotlight retrouve le bundle sur n'importe quel disque.
+    if let Ok(output) = std::process::Command::new("mdfind")
+        .arg("kMDItemCFBundleIdentifier == 'org.videolan.vlc'")
+        .output()
+    {
+        out.extend(
+            String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .filter(|l| !l.trim().is_empty())
+                .map(PathBuf::from),
+        );
+    }
+    out
+}
+
+// `open -a VLC` reussit toujours du point de vue du processus fils : il faut
+// verifier soi-meme que le bundle existe, sinon l'echec est silencieux.
+#[cfg(target_os = "macos")]
+fn resolve_vlc(configured: Option<&str>) -> Result<PathBuf, PlayerError> {
+    pick_vlc(configured, &macos_candidates(), &|p: &Path| p.exists())
+}
+
 // Linux passe par le PATH. Aucun chemin a resoudre en amont.
-#[cfg(not(target_os = "windows"))]
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 fn resolve_vlc(_configured: Option<&str>) -> Result<PathBuf, PlayerError> {
     Ok(PathBuf::from("vlc"))
 }
@@ -103,9 +133,9 @@ fn spawn_vlc(urls: &[String], configured: Option<&str>) -> Result<(), PlayerErro
 
     #[cfg(target_os = "macos")]
     {
-        let _ = configured;
+        let vlc = resolve_vlc(configured)?;
         let mut cmd = std::process::Command::new("open");
-        cmd.arg("-a").arg("VLC").args(urls);
+        cmd.arg("-a").arg(vlc).args(urls);
         return launch(cmd);
     }
 

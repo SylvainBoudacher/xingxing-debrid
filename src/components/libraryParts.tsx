@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
+import { Collapse } from "@/components/Collapse";
 import { Check, ChevronDown, Copy, Download, Loader2, Play } from "lucide-react";
 import {
   DropdownMenu,
@@ -381,32 +382,22 @@ function SeasonSection({
           </div>
         </div>
       </div>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <ul className="divide-y divide-black/5 dark:divide-white/5">
-              {group.files.map((f) => (
-                <FileRow
-                  key={f.name}
-                  file={f}
-                  entry={entry}
-                  onChange={onChange}
-                  debrid={debrid}
-                  simple={simple}
-                  autoWatchOnPlay={autoWatchOnPlay}
-                  selection={selection}
-                />
-              ))}
-            </ul>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Collapse open={open}>
+        <ul className="divide-y divide-black/5 dark:divide-white/5">
+          {group.files.map((f) => (
+            <FileRow
+              key={f.name}
+              file={f}
+              entry={entry}
+              onChange={onChange}
+              debrid={debrid}
+              simple={simple}
+              autoWatchOnPlay={autoWatchOnPlay}
+              selection={selection}
+            />
+          ))}
+        </ul>
+      </Collapse>
     </div>
   );
 }

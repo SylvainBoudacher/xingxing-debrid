@@ -30,9 +30,12 @@ export function PlaybackPanel() {
   }
 
   async function pickVlc() {
+    const isMac = navigator.userAgent.includes("Mac");
     const picked = await open({
       multiple: false,
-      filters: [{ name: "Exécutable", extensions: ["exe"] }],
+      filters: isMac
+        ? [{ name: "Application", extensions: ["app"] }]
+        : [{ name: "Exécutable", extensions: ["exe"] }],
     });
     if (typeof picked === "string") await savePath(picked);
   }

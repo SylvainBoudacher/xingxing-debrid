@@ -146,13 +146,13 @@ const ALL_SETTINGS_GROUPS: SettingsNavGroup[] = [
   },
 ];
 
-// Le chemin de VLC ne se regle que sur Windows : ailleurs, macOS passe par
-// `open -a VLC` et Linux par le PATH.
-const isWindows = navigator.userAgent.includes("Windows");
+// Le chemin de VLC se regle sur Windows et macOS ; Linux passe par le PATH.
+const hasVlcPathSetting =
+  navigator.userAgent.includes("Windows") || navigator.userAgent.includes("Mac");
 
 export const SETTINGS_GROUPS: SettingsNavGroup[] = ALL_SETTINGS_GROUPS.map((g) => ({
   ...g,
-  items: g.items.filter((i) => i.id !== "playback" || isWindows),
+  items: g.items.filter((i) => i.id !== "playback" || hasVlcPathSetting),
 }));
 
 export const ALL_NAV_ITEMS: SettingsNavItem[] = SETTINGS_GROUPS.flatMap((g) => g.items);
