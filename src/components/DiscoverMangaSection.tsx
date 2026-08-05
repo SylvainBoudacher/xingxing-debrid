@@ -4,9 +4,14 @@ import { NetworkErrorState } from "@/components/NetworkErrorState";
 import type { MangaItem } from "@/lib/mangaItem";
 import { getCachedMangaLibrary, loadMangaLibrary, type MangaEntry } from "@/lib/mangaLibrary";
 import { networkErrorMessage } from "@/lib/networkError";
-import { MANGA_FEEDS, type MangaFeed } from "@/lib/services/mangadex";
+import { SENSCRITIQUE_FEED, SENSCRITIQUE_RANKS } from "@/lib/senscritiqueFeed";
 import { useAddMangaRelease } from "@/lib/useAddMangaRelease";
-import { MANGA_FEED_LABELS, useMangaFeed } from "@/lib/useMangaFeed";
+import {
+  MANGA_FEED_LABELS,
+  MANGA_SOURCES,
+  useMangaFeed,
+  type MangaSource,
+} from "@/lib/useMangaFeed";
 import { Loader2 } from "lucide-react";
 import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -92,7 +97,7 @@ export function DiscoverMangaSection({
     <>
       <div className="mb-6 flex flex-wrap justify-center gap-1.5">
         {!query.trim() &&
-          MANGA_FEEDS.map((f) => (
+          MANGA_SOURCES.map((f) => (
             <FeedTab key={f} feed={f} active={feed.feed === f} onSelect={() => feed.setFeed(f)} />
           ))}
       </div>
@@ -126,6 +131,11 @@ export function DiscoverMangaSection({
                           read: entry.volumes.filter((v) => v.read).length,
                         }
                       : null
+                  }
+                  // Le rang n'a de sens que sur le classement lui-meme : une
+                  // oeuvre du top croisee dans "Populaires" ne le porte pas.
+                  rank={
+                    feed.feed === SENSCRITIQUE_FEED ? SENSCRITIQUE_RANKS.get(item.id) : undefined
                   }
                   onOpen={setSelected}
                 />
@@ -163,7 +173,7 @@ function FeedTab({
   active,
   onSelect,
 }: {
-  feed: MangaFeed;
+  feed: MangaSource;
   active: boolean;
   onSelect: () => void;
 }) {

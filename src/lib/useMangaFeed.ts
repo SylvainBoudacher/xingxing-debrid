@@ -1,20 +1,32 @@
 import { mapManga, type MangaItem } from "@/lib/mangaItem";
 import { queryClient } from "@/lib/queryClient";
+import { SENSCRITIQUE_COUNT, SENSCRITIQUE_FEED, senscritiquePage } from "@/lib/senscritiqueFeed";
 import {
   MANGA_PAGE_SIZE,
+  MANGA_FEEDS,
   feed as mangaFeed,
   mangadexKeys,
   search as mangaSearch,
   type MangaFeed,
-  type MangaListResponse,
 } from "@/lib/services/mangadex";
 import { useCallback, useEffect, useState } from "react";
 
-export const MANGA_FEED_LABELS: Record<MangaFeed, string> = {
+// Sources proposées sous l'onglet Mangas. "senscritique" n'est pas une source
+// MangaDex : c'est le classement figé du bundle.
+export type MangaSource = MangaFeed | typeof SENSCRITIQUE_FEED;
+export const MANGA_FEED_LABELS: Record<MangaSource, string> = {
   popular: "Populaires",
   top_rated: "Mieux notés",
   latest: "Nouveautés",
+  senscritique: "Top 100 SensCritique",
 };
+export const MANGA_SOURCES: MangaSource[] = [...MANGA_FEEDS, SENSCRITIQUE_FEED];
+
+// La recherche ignore la source affichée : "senscritique" n'étant pas une
+// source MangaDex, elle retombe sur "popular" pour la clé de cache.
+function mangadexFeedOf(f: MangaSource): MangaFeed {
+  return f === SENSCRITIQUE_FEED ? "popular" : f;
+}
 
 // Recherche pendant la frappe : sous ce seuil, on retombe sur le feed courant.
 const LIVE_SEARCH_MIN = 3;
@@ -26,9 +38,9 @@ export interface MangaFeedState {
   loadingMore: boolean;
   error: unknown;
   hasMore: boolean;
-  feed: MangaFeed;
+  feed: MangaSource;
   tagIds: string[];
-  setFeed: (f: MangaFeed) => void;
+  setFeed: (f: MangaSource) => void;
   setTagIds: (ids: string[]) => void;
   loadMore: () => void;
   retry: () => void;
@@ -36,7 +48,7 @@ export interface MangaFeedState {
 
 // `query` est piloté par la page (barre de recherche partagée avec TMDB).
 export function useMangaFeed(query: string): MangaFeedState {
-  const [feed, setFeed] = useState<MangaFeed>("popular");
+  const [feed, setFeed] = useState<MangaSource>("popular");
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -64,16 +76,23 @@ export function useMangaFeed(query: string): MangaFeedState {
   }, [query, activeQuery]);
 
   const fetchPage = useCallback(
-    (p: number): Promise<MangaListResponse> => {
+    async (p: number): Promise<Page> => {
+      // Classement figé : la page est une tranche du bundle, sans réseau. La
+      // recherche, elle, reste MangaDex quelle que soit la source affichée.
+      if (!activeQuery && feed === SENSCRITIQUE_FEED) {
+        return { items: senscritiquePage(p), total: SENSCRITIQUE_COUNT };
+      }
+      const f = mangadexFeedOf(feed);
       const key = activeQuery
         ? mangadexKeys.search(`${activeQuery}|${tagIds.join(",")}`, p)
-        : mangadexKeys.feed(feed, p);
-      return queryClient.fetchQuery({
+        : mangadexKeys.feed(f, p);
+      const res = await queryClient.fetchQuery({
         queryKey: [...key, tagIds],
         queryFn: () =>
-          activeQuery ? mangaSearch(activeQuery, p, tagIds) : mangaFeed(feed, p, tagIds),
+          activeQuery ? mangaSearch(activeQuery, p, tagIds) : mangaFeed(f, p, tagIds),
         staleTime: 5 * 60_000,
       });
+      return { items: res.data.map(mapManga), total: res.total };
     },
     [activeQuery, feed, tagIds],
   );
@@ -87,7 +106,7 @@ export function useMangaFeed(query: string): MangaFeedState {
     fetchPage(0)
       .then((res) => {
         if (!cancelled) {
-          setResult({ key, items: res.data.map(mapManga), total: res.total, page: 0, error: null });
+          setResult({ key, items: res.items, total: res.total, page: 0, error: null });
         }
       })
       .catch((err) => {
@@ -117,7 +136,7 @@ export function useMangaFeed(query: string): MangaFeedState {
           const seen = new Set(prev.items.map((i) => i.id));
           return {
             ...prev,
-            items: [...prev.items, ...res.data.map(mapManga).filter((i) => !seen.has(i.id))],
+            items: [...prev.items, ...res.items.filter((i) => !seen.has(i.id))],
             page: nextPage,
           };
         });
@@ -143,10 +162,13 @@ export function useMangaFeed(query: string): MangaFeedState {
   };
 }
 
-interface Result {
-  key: string;
+interface Page {
   items: MangaItem[];
   total: number;
+}
+
+interface Result extends Page {
+  key: string;
   page: number;
   error: unknown;
 }

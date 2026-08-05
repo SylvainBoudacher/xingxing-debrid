@@ -1,6 +1,7 @@
 import { ReaderCanvas } from "@/components/reader/ReaderCanvas";
 import { ReaderProgress } from "@/components/reader/ReaderProgress";
 import { ReaderToolbar } from "@/components/reader/ReaderToolbar";
+import { ReaderTurnPointer } from "@/components/reader/ReaderTurnPointer";
 import { cbzErrorMessage } from "@/lib/cbz";
 import type { ReadingDirection } from "@/lib/mangaLibrary";
 import {
@@ -229,13 +230,17 @@ export function ReaderPage({
             <button
               aria-label={direction === "rtl" ? "Page suivante" : "Page précédente"}
               onClick={direction === "rtl" ? next : prev}
-              className="absolute inset-y-0 left-0 w-[15%] cursor-w-resize"
-            />
+              className="absolute inset-y-0 left-0 w-[15%]"
+            >
+              <ReaderTurnPointer side="left" />
+            </button>
             <button
               aria-label={direction === "rtl" ? "Page précédente" : "Page suivante"}
               onClick={direction === "rtl" ? prev : next}
-              className="absolute inset-y-0 right-0 w-[15%] cursor-e-resize"
-            />
+              className="absolute inset-y-0 right-0 w-[15%]"
+            >
+              <ReaderTurnPointer side="right" />
+            </button>
           </>
         )}
       </div>

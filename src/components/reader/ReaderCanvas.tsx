@@ -1,3 +1,4 @@
+import { ReaderCanvasPointer } from "@/components/reader/ReaderCanvasPointer";
 import type { FitMode } from "@/lib/readerPrefs";
 import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -23,6 +24,21 @@ export function ReaderCanvas({ pages, urls, fit, zoom, onZoom, onMeasure }: Read
   const scroller = useRef<HTMLDivElement>(null);
   const drag = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
   const [grabbing, setGrabbing] = useState(false);
+  // Le glisser n'a de sens que si l'image deborde : sinon le curseur main
+  // promet une manipulation impossible.
+  const [pannable, setPannable] = useState(false);
+
+  const syncPannable = useCallback(() => {
+    const el = scroller.current;
+    if (!el) return;
+    setPannable(el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight);
+  }, []);
+
+  useEffect(() => {
+    syncPannable();
+    window.addEventListener("resize", syncPannable);
+    return () => window.removeEventListener("resize", syncPannable);
+  }, [syncPannable, pages, urls, fit, zoom]);
 
   // Ctrl/Cmd + molette : zoom. La molette seule reste un defilement, utile des
   // que l'image deborde.
@@ -68,10 +84,9 @@ export function ReaderCanvas({ pages, urls, fit, zoom, onZoom, onMeasure }: Read
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
-      className={`flex h-full w-full items-center justify-center gap-1 overflow-auto p-2 ${
-        grabbing ? "cursor-grabbing" : "cursor-grab"
-      }`}
+      className="flex h-full w-full items-center justify-center gap-1 overflow-auto p-2"
     >
+      <ReaderCanvasPointer pannable={pannable} grabbing={grabbing} />
       {pages.map((page) => {
         const url = urls[page];
         return url ? (
@@ -83,6 +98,7 @@ export function ReaderCanvas({ pages, urls, fit, zoom, onZoom, onMeasure }: Read
             onLoad={(e) => {
               const img = e.currentTarget;
               onMeasure(page, img.naturalWidth > img.naturalHeight);
+              syncPannable();
             }}
             style={zoom === 1 ? undefined : { transform: `scale(${zoom})` }}
             className={`select-none ${FIT_CLASS[fit]} ${zoom === 1 ? "" : "origin-center"}`}

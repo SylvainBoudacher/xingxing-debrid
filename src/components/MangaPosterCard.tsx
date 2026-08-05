@@ -8,6 +8,8 @@ interface MangaPosterCardProps {
   index: number;
   /** Tomes possedes / tomes lus, quand l'oeuvre est en bibliotheque. */
   progress: { total: number; read: number } | null;
+  /** Position dans un classement (Top SensCritique), affichee sur la jaquette. */
+  rank?: number;
   onOpen: (item: MangaItem) => void;
   /** Mode sélection : la carte affiche sa case au lieu de son survol habituel. */
   selectMode?: boolean;
@@ -22,6 +24,7 @@ export const MangaPosterCard = memo(function MangaPosterCard({
   item,
   index,
   progress,
+  rank,
   onOpen,
   selectMode = false,
   selected = false,
@@ -86,6 +89,12 @@ export const MangaPosterCard = memo(function MangaPosterCard({
             }`}
           >
             {selected && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+          </span>
+        )}
+
+        {rank !== undefined && !selectMode && (
+          <span className="absolute left-1.5 top-1.5 rounded-md bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-200 backdrop-blur-sm">
+            #{rank}
           </span>
         )}
 
