@@ -424,6 +424,8 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
       fillEll(c, tx, ty, 3.2, 4.8, colors[i]);
       fillEll(c, tx - 1, ty - 1.5, 1.2, 1.2, "rgba(255,255,255,0.5)");
     }
+  } else if (v.acc === "coincoin") {
+    drawCoinCoinOutfit(c);
   } else if (v.acc === "laurel") {
     drawLaurelAndBeard(c);
   }
@@ -551,4 +553,87 @@ function drawRoyalCrown(c: CanvasRenderingContext2D, gold: string) {
   // sheen sweep across the band
   c.fillStyle = "rgba(255,255,255,0.35)";
   c.fillRect(58, bandTop + 1, 4, 8);
+}
+
+// La panoplie de MrCoinCoin: chapeau d'anniversaire penché sur le crâne, pipe
+// tenue au coin du bec (le fourneau est en x=85 y=81, d'où part la fumée
+// animée) et appareil photo en bandoulière sur le ventre. Un seul accessoire
+// par variante, donc les trois pièces tiennent sous le même nom.
+function drawCoinCoinOutfit(c: CanvasRenderingContext2D) {
+  drawPartyCone(c);
+  drawPipe(c);
+  drawCamera(c);
+}
+
+// Cône penché sur le crâne, cerclé de bandes crème, pompon au sommet. Le
+// sommet reste sous y=-33 pour ne pas sortir du haut du sprite.
+function drawPartyCone(c: CanvasRenderingContext2D) {
+  c.save();
+  c.translate(82, 18);
+  c.rotate(-0.22);
+  const cone = () => {
+    c.beginPath();
+    c.moveTo(-21, 3);
+    c.lineTo(0, -33);
+    c.lineTo(21, 3);
+    c.closePath();
+  };
+  cone();
+  c.fillStyle = "#FF7A6B";
+  c.fill();
+  c.save();
+  cone();
+  c.clip();
+  c.fillStyle = "#FFF3DC";
+  for (const y of [-24, -13, -2]) c.fillRect(-22, y, 44, 4);
+  c.restore();
+  c.fillStyle = "rgba(0,0,0,0.16)";
+  c.fillRect(-21, 0, 42, 3); // bord posé sur la tête
+  fillEll(c, 0, -33, 4.2, 4.2, "#FFE066"); // pompon
+  fillEll(c, -1.2, -34.2, 1.4, 1.4, "#FFF8D0");
+  c.restore();
+}
+
+function drawPipe(c: CanvasRenderingContext2D) {
+  c.strokeStyle = "#1E1A18";
+  c.lineWidth = 3.4;
+  c.lineCap = "round";
+  c.beginPath();
+  c.moveTo(104, 59);
+  c.quadraticCurveTo(96, 70, 88, 76);
+  c.stroke();
+  c.fillStyle = "#1E1A18";
+  c.save();
+  c.translate(85, 81);
+  c.rotate(-0.35);
+  c.fillRect(-7, -6, 14, 13); // fourneau
+  c.restore();
+  fillEll(c, 84, 75, 6.5, 2.6, "#0F0D0C"); // bord du foyer
+  c.fillStyle = "rgba(255,255,255,0.14)";
+  c.fillRect(80, 78, 2.5, 8); // reflet
+}
+
+// Compact argentique pendu au cou: la sangle sort de sous la tête, le boîtier
+// repose sur le ventre, à gauche de la pipe.
+function drawCamera(c: CanvasRenderingContext2D) {
+  c.strokeStyle = "#3A3F45";
+  c.lineWidth = 2.6;
+  c.lineCap = "round";
+  c.beginPath();
+  c.moveTo(68, 72);
+  c.quadraticCurveTo(52, 82, 47, 93);
+  c.moveTo(90, 76);
+  c.quadraticCurveTo(74, 86, 69, 93);
+  c.stroke();
+
+  c.fillStyle = "#2B2F33";
+  c.fillRect(46, 92, 24, 15); // boîtier
+  c.fillStyle = "#3F454C";
+  c.fillRect(46, 92, 24, 4); // capot
+  c.fillStyle = "#E8EDF2";
+  c.fillRect(48, 88, 6, 4); // flash
+  fillEll(c, 66, 90.5, 1.8, 1.8, "#D94F3D"); // déclencheur
+  fillEll(c, 58, 100, 6, 6, "#9AA3AB"); // bague d'objectif
+  fillEll(c, 58, 100, 4.2, 4.2, "#16202A"); // verre
+  fillEll(c, 56.3, 98.3, 1.5, 1.5, "rgba(255,255,255,0.75)"); // reflet
 }

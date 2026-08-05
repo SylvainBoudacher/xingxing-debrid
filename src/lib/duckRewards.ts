@@ -29,7 +29,7 @@ export const FAMILY_METRIC: Partial<Record<Rarity, RewardMetric>> = {
 
 // Les récompenses de couleurs et celles de collection ne se gagnent pas de la
 // même façon: le Canardex les affiche dans deux sections distinctes.
-export type RewardGroup = "colors" | "collection" | "casino";
+export type RewardGroup = "colors" | "collection" | "casino" | "gift";
 
 export interface DuckReward {
   id: string;
@@ -149,12 +149,33 @@ export const REWARDS: DuckReward[] = [
       effect: "croupier",
     }),
   },
+  {
+    // cadeau: seuil à 0, donc réclamable dès la première ouverture du Canardex
+    id: "canardex-coincoin",
+    group: "gift",
+    name: "MrCoinCoin",
+    scale: 1.25,
+    storeKey: "coincoin_claimed",
+    metric: "species",
+    threshold: 0,
+    unit: "cadeau",
+    lockedHint: "Un cadeau: rien à faire, il suffit de le réclamer.",
+    claimToast: "MrCoinCoin allume sa pipe !",
+    variant: () => ({
+      body: "#7A4A2A",
+      beak: "#E8A33C",
+      acc: "coincoin",
+      pattern: "mallard",
+      effect: "smoke",
+    }),
+  },
 ];
 
 export const REWARDS_BY_ID = new Map(REWARDS.map((r) => [r.id, r]));
 export const COLOR_REWARDS = REWARDS.filter((r) => r.group === "colors");
 export const COLLECTION_REWARDS = REWARDS.filter((r) => r.group === "collection");
 export const CASINO_REWARDS = REWARDS.filter((r) => r.group === "casino");
+export const GIFT_REWARDS = REWARDS.filter((r) => r.group === "gift");
 
 // Progression affichée sur une carte, plafonnée au seuil: le compteur de
 // familles peut dépasser 5 sans que la carte affiche 8/5.

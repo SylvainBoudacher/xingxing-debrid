@@ -407,3 +407,21 @@ export function drawCroupierSign({ ctx, cx, cy, dh, t, phase }: EffectFrame) {
   }
   ctx.restore();
 }
+
+// --- MrCoinCoin -----------------------------------------------------------
+
+// Bouffées qui montent du fourneau de la pipe en dérivant vers l'arrière et en
+// s'élargissant. Le fourneau est à (85, 116) dans le sprite de 130x155, d'où
+// les fractions de dw/dh: tout reste proportionnel au canard.
+export function drawPipeSmoke({ ctx, cx, cy, dw, dh, t, phase }: EffectFrame) {
+  const bx = cx + dw * 0.154;
+  const by = cy + dh * 0.248;
+  for (let i = 0; i < 4; i++) {
+    const p = (t * 0.00035 + phase * 0.13 + i * 0.25) % 1;
+    const fade = Math.min(1, p * 6) * (1 - p);
+    ctx.fillStyle = `rgba(228,226,218,${0.5 * fade})`;
+    ctx.beginPath();
+    ctx.arc(bx - dw * p * 0.34, by - dh * p * 0.72, dw * (0.035 + p * 0.11), 0, Math.PI * 2);
+    ctx.fill();
+  }
+}

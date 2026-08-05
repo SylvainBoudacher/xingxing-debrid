@@ -202,6 +202,31 @@ export function paintPattern(
       trace();
       c.stroke();
     }
+  } else if (v.pattern === "mallard") {
+    // livrée de colvert: tête vert bouteille, collier blanc au cou, et la
+    // chemise hawaïenne sur tout le corps (seule la queue, dessinée hors du
+    // clip, garde le brun). paintPattern est appelé une fois pour la tête (un
+    // cercle) et une fois pour le corps (une ellipse), d'où le test rx === ry.
+    const head = rx === ry;
+    if (head) {
+      fillEll(c, cx, cy, rx, ry, "#4E6B33");
+      fillEll(c, cx - rx * 0.12, cy + ry * 0.88, rx * 0.9, ry * 0.16, "#F2EFE6"); // collier
+    } else {
+      paintHawaiianShirt(c, cx, cy, rx, ry);
+    }
+    // les aplats ont recouvert l'ombrage du sprite: on le redessine
+    const hx = cx - rx * 0.45;
+    const hy = cy - ry * 0.5;
+    const hi = c.createRadialGradient(hx, hy, 2, hx, hy, rx * 0.8);
+    hi.addColorStop(0, `rgba(255,255,255,${head ? 0.32 : 0.2})`);
+    hi.addColorStop(1, "rgba(255,255,255,0)");
+    fillEll(c, hx, hy, rx * 0.8, ry * 0.8, hi);
+    const sx = cx + rx * 0.4;
+    const sy = cy + ry * 0.7;
+    const sh = c.createRadialGradient(sx, sy, 2, sx, sy, rx);
+    sh.addColorStop(0, "rgba(0,0,0,0.26)");
+    sh.addColorStop(1, "rgba(0,0,0,0)");
+    fillEll(c, sx, sy, rx, ry, sh);
   } else if (v.pattern === "abyss") {
     // bioluminescent spots drifting in the deep
     const bioColors = ["rgba(0,255,180,0.75)", "rgba(0,200,255,0.65)", "rgba(120,255,200,0.55)"];
@@ -213,4 +238,48 @@ export function paintPattern(
     }
   }
   c.restore();
+}
+
+// La chemise hawaïenne de MrCoinCoin: elle habille tout le corps, avec des
+// fleurs posées à des positions fixes — le sprite n'est cuit qu'une fois, mais
+// deux canards de la même récompense doivent se ressembler. Pas de col: la tête
+// couvre tout le poitrail au-dessus de la ligne du corps.
+const FLOWERS: [number, number][] = [
+  [-0.62, -0.3],
+  [-0.2, 0.3],
+  [0.2, -0.45],
+  [0.62, 0.25],
+  [-0.4, 0.62],
+  [0.1, 0.72],
+  [0.5, -0.55],
+  [-0.75, 0.25],
+];
+
+function paintHawaiianShirt(
+  c: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+) {
+  fillEll(c, cx, cy, rx, ry, "#1FA8A0");
+  // couture d'épaule, là où la manche rejoint le corps
+  c.strokeStyle = "rgba(0,0,0,0.16)";
+  c.lineWidth = rx * 0.05;
+  c.beginPath();
+  c.moveTo(cx + rx * 0.28, cy - ry);
+  c.quadraticCurveTo(cx + rx * 0.02, cy + ry * 0.1, cx + rx * 0.34, cy + ry);
+  c.stroke();
+
+  // fleurs: cinq pétales autour d'un cœur jaune
+  for (const [fx, fy] of FLOWERS) {
+    const px = cx + rx * 0.82 * fx;
+    const py = cy + ry * 0.8 * fy;
+    const pr = rx * 0.055;
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      fillEll(c, px + Math.cos(a) * pr, py + Math.sin(a) * pr, pr * 0.8, pr * 0.8, "#FF7A6B");
+    }
+    fillEll(c, px, py, pr * 0.55, pr * 0.55, "#FFE066");
+  }
 }

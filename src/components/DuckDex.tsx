@@ -20,6 +20,7 @@ import {
   CASINO_REWARDS,
   COLLECTION_REWARDS,
   COLOR_REWARDS,
+  GIFT_REWARDS,
   REWARDS,
   rewardProgress,
   type DexProgress,
@@ -358,6 +359,17 @@ export function DuckDex() {
                 claimed={claimed}
                 onClaim={claim}
                 delay={0.52}
+                highlightId={highlight}
+              />
+
+              <DuckRewardSection
+                title="Cadeaux"
+                hint="Offerts, sans rien à débloquer."
+                rewards={GIFT_REWARDS}
+                progress={progress}
+                claimed={claimed}
+                onClaim={claim}
+                delay={0.58}
                 highlightId={highlight}
               />
             </div>

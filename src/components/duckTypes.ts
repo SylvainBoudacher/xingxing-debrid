@@ -29,7 +29,8 @@ export type Accessory =
   | "antenna"
   | "cape"
   | "feather"
-  | "laurel";
+  | "laurel"
+  | "coincoin";
 
 export type Pattern =
   | "spots"
@@ -43,7 +44,8 @@ export type Pattern =
   | "abyss"
   | "scales"
   | "ember"
-  | "neon";
+  | "neon"
+  | "mallard";
 
 export type Effect =
   | "glow"
@@ -62,7 +64,8 @@ export type Effect =
   | "chameleon"
   | "peacock"
   | "phoenix"
-  | "croupier";
+  | "croupier"
+  | "smoke";
 
 export interface Variant {
   body: string;

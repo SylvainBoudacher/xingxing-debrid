@@ -56,6 +56,7 @@ import {
   drawPeacockFan,
   drawPhoenixEmbers,
   drawPhoenixWings,
+  drawPipeSmoke,
 } from "./duckRewardEffects";
 import { drawDex, overDex } from "./dexIcon";
 import { drawSlot, overSlot } from "./slotIcon";
@@ -1239,6 +1240,10 @@ export function PixelPool({
         drawCroupierChips(frame);
         drawCroupierSign(frame);
       }
+
+      // fumée de la pipe de MrCoinCoin, devant lui
+      if (d.effect === "smoke")
+        drawPipeSmoke({ ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase });
 
       // braises du Phénix, devant lui
       if (d.effect === "phoenix")

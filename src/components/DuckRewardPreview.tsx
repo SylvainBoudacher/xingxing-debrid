@@ -14,6 +14,7 @@ import {
   drawPeacockFan,
   drawPhoenixEmbers,
   drawPhoenixWings,
+  drawPipeSmoke,
 } from "./duckRewardEffects";
 import { rewardPreviewLayout } from "./duckRewardLayout";
 
@@ -62,7 +63,7 @@ export function DuckRewardPreview({ reward, size = 52 }: { reward: DuckReward; s
       else if (variant.effect === "croupier") {
         drawCroupierChips(frame);
         drawCroupierSign(frame);
-      }
+      } else if (variant.effect === "smoke") drawPipeSmoke(frame);
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);

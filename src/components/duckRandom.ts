@@ -196,7 +196,7 @@ const LEGENDARY_PATTERNS = new Set<Pattern>([
   "metal",
   "abyss",
 ]);
-const RARE_EFFECTS = new Set<Effect>(["glow", "bubbles", "frost"]);
+const RARE_EFFECTS = new Set<Effect>(["glow", "bubbles", "frost", "smoke"]);
 const RARE_ACC = new Set<Accessory>([
   "wizard",
   "viking",

@@ -58,6 +58,7 @@ import {
   COLLECTION_REWARDS,
   COLOR_REWARDS,
   familyRewardAt,
+  GIFT_REWARDS,
   REWARDS,
   rewardProgress,
 } from "./duckRewards";
@@ -323,14 +324,14 @@ describe("rewards", () => {
     expect(REWARDS.find((r) => r.id === "canardex-god")!.storeKey).toBe("god_claimed");
   });
 
-  it("catalogs six rewards with distinct ids, keys and effects", () => {
-    expect(REWARDS).toHaveLength(6);
-    expect(new Set(REWARDS.map((r) => r.id)).size).toBe(6);
-    expect(new Set(REWARDS.map((r) => r.storeKey)).size).toBe(6);
-    expect(new Set(REWARDS.map((r) => r.variant().effect)).size).toBe(6);
+  it("catalogs seven rewards with distinct ids, keys and effects", () => {
+    expect(REWARDS).toHaveLength(7);
+    expect(new Set(REWARDS.map((r) => r.id)).size).toBe(7);
+    expect(new Set(REWARDS.map((r) => r.storeKey)).size).toBe(7);
+    expect(new Set(REWARDS.map((r) => r.variant().effect)).size).toBe(7);
   });
 
-  it("splits the catalog into colour, collection and casino rewards", () => {
+  it("splits the catalog into colour, collection, casino and gift rewards", () => {
     expect(COLOR_REWARDS.map((r) => r.metric)).toEqual([
       "familiesCommon",
       "familiesUncommon",
@@ -338,9 +339,13 @@ describe("rewards", () => {
     ]);
     expect(COLLECTION_REWARDS.map((r) => r.metric)).toEqual(["species", "shiny"]);
     expect(CASINO_REWARDS.map((r) => r.metric)).toEqual(["casinoJackpot"]);
-    expect(COLOR_REWARDS.length + COLLECTION_REWARDS.length + CASINO_REWARDS.length).toBe(
-      REWARDS.length,
-    );
+    expect(GIFT_REWARDS.map((r) => r.threshold)).toEqual([0]); // cadeau: réclamable d'emblée
+    expect(
+      COLOR_REWARDS.length +
+        COLLECTION_REWARDS.length +
+        CASINO_REWARDS.length +
+        GIFT_REWARDS.length,
+    ).toBe(REWARDS.length);
   });
 
   it("sets every family threshold to 5", () => {
