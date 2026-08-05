@@ -1,4 +1,6 @@
 import { AppMenu, type Page } from "@/components/AppMenu";
+import { DebridFilesModal } from "@/components/DebridFilesModal";
+import { DiscoverReleasesModal } from "@/components/DiscoverReleasesModal";
 import { LibraryDetailModal } from "@/components/LibraryDetailModal";
 import { LibraryBlocks } from "@/components/LibraryBlocks";
 import { LibraryDisplayMenu } from "@/components/LibraryDisplayMenu";
@@ -30,6 +32,7 @@ import {
   setWholeWatched,
   type DisplayItem,
   type LibraryEntry,
+  type TmdbMeta,
 } from "@/lib/library";
 import {
   buildLibraryBlocks,
@@ -73,6 +76,9 @@ import {
   type MagnetEntry,
 } from "@/lib/services/allDebrid";
 import { useDebridActions } from "@/lib/useDebridActions";
+import { useLikes } from "@/lib/useLikes";
+import { useSendToDebrid } from "@/lib/useSendToDebrid";
+import type { TmdbItem } from "@/lib/tmdbItem";
 import { useDragScroll } from "@/lib/useDragScroll";
 import { useStickyBar } from "@/lib/useStickyBar";
 import { useLibraryGenres } from "@/lib/useLibraryGenres";
@@ -97,6 +103,8 @@ import { toast } from "sonner";
 interface LibraryPageProps {
   onBack: () => void;
   onNavigate: (page: Page) => void;
+  /** Lance une recherche brute sur un tracker (C411 / Nyaa) via la page principale */
+  onSearchTracker: (query: string, source: "c411" | "nyaa") => void;
   hasPendingUpdate: boolean;
   onShowPendingUpdate: () => void;
   initialAllDebridKey?: string | null;
@@ -113,6 +121,12 @@ interface LibraryPageProps {
 }
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
+
+// La fiche C411 attend un TmdbItem : les métadonnées enregistrées n'ont pas de
+// titre original (la recherche retombe sur le titre affiché).
+function tmdbItemOf(meta: TmdbMeta): TmdbItem {
+  return { ...meta, originalTitle: "" };
+}
 
 type Filter = LibraryFilter;
 type Layout = LibraryLayout;
@@ -134,6 +148,7 @@ const SORTERS: Record<Exclude<Sort, "manual">, (a: LibraryEntry, b: LibraryEntry
 export function LibraryPage({
   onBack,
   onNavigate,
+  onSearchTracker,
   hasPendingUpdate,
   onShowPendingUpdate,
   initialAllDebridKey,
@@ -194,7 +209,17 @@ export function LibraryPage({
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
   const [matchingGroupId, setMatchingGroupId] = useState<number | null>(null);
   const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
+  // Fiche C411 ouverte par-dessus une série : recherche d'épisodes manquants.
+  const [findMore, setFindMore] = useState<TmdbItem | null>(null);
   const debrid = useDebridActions(() => initialAllDebridKey ?? "");
+
+  const { likedKeys, toggleLike } = useLikes();
+  const { sendingHash, libraryHash, debridModal, setDebridModal, sendToDebrid } = useSendToDebrid({
+    getC411Key: () => initialC411Key ?? "",
+    getAllDebridKey: () => initialAllDebridKey ?? "",
+    onOpenLibrary: () => setFindMore(null),
+    onLibraryChange: () => void loadLibrary().then(setEntries),
+  });
 
   // Statut AllDebrid des magnets encore en cours de débridage (poll tant
   // qu'un magnet suivi est actif).
@@ -354,13 +379,31 @@ export function LibraryPage({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
+      if (debridModal) {
+        setDebridModal(null);
+        return;
+      }
+      if (findMore) {
+        setFindMore(null);
+        return;
+      }
       if (expandedHash || expandedGroupId || matchingHash || matchingGroupId !== null) return;
       if (mangaBusy) return;
       onBack();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [expandedHash, expandedGroupId, matchingHash, matchingGroupId, mangaBusy, onBack]);
+  }, [
+    expandedHash,
+    expandedGroupId,
+    matchingHash,
+    matchingGroupId,
+    mangaBusy,
+    findMore,
+    debridModal,
+    setDebridModal,
+    onBack,
+  ]);
 
   // Updaters fonctionnels : identité stable (deps vides) pour ne pas casser le
   // React.memo des cartes, tout en lisant le dernier état via `prev`.
@@ -1071,8 +1114,11 @@ export function LibraryPage({
             onEnrichTmdb={
               initialTmdbKey ? () => setMatchingGroupId(expandedGroup.group.tmdbId) : undefined
             }
+            onFindMore={
+              initialTmdbKey ? () => setFindMore(tmdbItemOf(expandedGroup.group.tmdb)) : undefined
+            }
             tmdbKey={initialTmdbKey ?? undefined}
-            enrichOpen={matchingGroupId !== null}
+            enrichOpen={matchingGroupId !== null || findMore !== null}
           />
         )}
       </AnimatePresence>
@@ -1144,6 +1190,33 @@ export function LibraryPage({
               setExpandedGroupId(meta.mediaType === "tv" ? meta.id : null);
             }}
             onClose={() => setMatchingGroupId(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {findMore && initialTmdbKey && (
+          <DiscoverReleasesModal
+            item={findMore}
+            tmdbKey={initialTmdbKey}
+            getC411Key={() => initialC411Key ?? ""}
+            liked={likedKeys.has(`${findMore.mediaType}-${findMore.id}`)}
+            sendingHash={sendingHash}
+            libraryHash={libraryHash}
+            onToggleLike={toggleLike}
+            onClose={() => setFindMore(null)}
+            onSend={(occ, addToLibrary) => sendToDebrid(occ, findMore, addToLibrary)}
+            onSearchTracker={onSearchTracker}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {debridModal && (
+          <DebridFilesModal
+            modal={debridModal}
+            getAllDebridKey={() => initialAllDebridKey ?? ""}
+            onClose={() => setDebridModal(null)}
           />
         )}
       </AnimatePresence>

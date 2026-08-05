@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatSize } from "@/lib/debrid";
 import {
   groupBySeason,
@@ -260,40 +261,60 @@ export function LibraryDetailModal({
             )}
           </div>
 
-          <div className="flex flex-none items-center gap-1.5">
-            {onEnrichTmdb && tmdb && (
-              <button
-                onClick={onEnrichTmdb}
-                title="Changer les informations TMDB"
-                className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-            )}
-            <button
-              onClick={() => {
-                if (confirmDelete) {
-                  onRemove(entry.infoHash);
-                  onClose();
-                } else setConfirmDelete(true);
-              }}
-              title={confirmDelete ? "Confirmer la suppression" : "Supprimer"}
-              className={`flex h-6 items-center justify-center rounded-md transition-colors ${
-                confirmDelete
-                  ? "gap-1 bg-red-500 px-2 text-[11px] font-medium text-white hover:bg-red-600"
-                  : "w-6 bg-zinc-200 text-red-500 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-zinc-700"
-              }`}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              {confirmDelete && "Sûr ?"}
-            </button>
-            <button
-              onClick={onClose}
-              className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700"
-            >
-              <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
-            </button>
-          </div>
+          <TooltipProvider delayDuration={300}>
+            <div className="flex flex-none items-center gap-1.5">
+              {onEnrichTmdb && tmdb && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={onEnrichTmdb}
+                      aria-label="Changer les informations TMDB"
+                      className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Changer les informations TMDB</TooltipContent>
+                </Tooltip>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => {
+                      if (confirmDelete) {
+                        onRemove(entry.infoHash);
+                        onClose();
+                      } else setConfirmDelete(true);
+                    }}
+                    aria-label={confirmDelete ? "Confirmer la suppression" : "Supprimer"}
+                    className={`flex h-6 items-center justify-center rounded-md transition-colors ${
+                      confirmDelete
+                        ? "gap-1 bg-red-500 px-2 text-[11px] font-medium text-white hover:bg-red-600"
+                        : "w-6 bg-zinc-200 text-red-500 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-red-400 dark:hover:bg-zinc-700"
+                    }`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {confirmDelete && "Sûr ?"}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {confirmDelete ? "Confirmer la suppression" : "Supprimer"}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={onClose}
+                    aria-label="Fermer"
+                    className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                  >
+                    <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Fermer</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </div>
 
         {/* Barre d'actions globales : seulement pour les séries (plusieurs fichiers).

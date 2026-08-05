@@ -15,6 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatSize } from "@/lib/debrid";
 import {
   groupIsWholeWatched,
@@ -49,6 +50,7 @@ import {
   ListChecks,
   Loader2,
   Pencil,
+  Search,
   Star,
   Trash2,
   X,
@@ -74,6 +76,8 @@ interface SeriesGroupDetailModalProps {
   autoWatchOnPlay: boolean;
   // Présent uniquement si une clé TMDB existe.
   onEnrichTmdb?: () => void;
+  // Ouvre la recherche de releases C411 pour cette série.
+  onFindMore?: () => void;
   // Permet de récupérer les genres des entrées enregistrées sans genreIds.
   tmdbKey?: string;
   // Vrai quand la recherche TMDB est ouverte par-dessus : neutralise Escape ici.
@@ -89,6 +93,7 @@ export function SeriesGroupDetailModal({
   simple,
   autoWatchOnPlay,
   onEnrichTmdb,
+  onFindMore,
   tmdbKey,
   enrichOpen,
 }: SeriesGroupDetailModalProps) {
@@ -311,50 +316,89 @@ export function SeriesGroupDetailModal({
             </div>
           </div>
 
-          <div className="flex flex-none items-center gap-1.5">
-            <button
-              onClick={() => (organize ? setOrganize(false) : enterOrganize())}
-              title="Gérer les dossiers (saisons)"
-              className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
-                organize
-                  ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                  : "bg-zinc-200 text-zinc-500 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-              }`}
-            >
-              <FolderCog className="h-3.5 w-3.5" />
-            </button>
-            {onEnrichTmdb && (
-              <button
-                onClick={onEnrichTmdb}
-                title="Changer les informations TMDB"
-                className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-            )}
-            <motion.button
-              whileTap={{ scale: 0.9 }}
-              onClick={() => {
-                if (confirmDelete) handleDeleteAll();
-                else setConfirmDelete(true);
-              }}
-              title={confirmDelete ? "Confirmer la suppression" : "Supprimer"}
-              className={`flex h-6 items-center justify-center rounded-md transition-colors ${
-                confirmDelete
-                  ? "gap-1 bg-red-500 px-2 text-[11px] font-medium text-white hover:bg-red-600"
-                  : "w-6 bg-zinc-200 text-zinc-500 hover:bg-red-500/15 hover:text-red-500 dark:bg-zinc-800 dark:text-zinc-400"
-              }`}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              {confirmDelete && "Sûr ?"}
-            </motion.button>
-            <button
-              onClick={onClose}
-              className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700"
-            >
-              <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
-            </button>
-          </div>
+          <TooltipProvider delayDuration={300}>
+            <div className="flex flex-none items-center gap-1.5">
+              {onFindMore && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={onFindMore}
+                      aria-label="Chercher d'autres épisodes"
+                      className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                    >
+                      <Search className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Chercher d'autres épisodes</TooltipContent>
+                </Tooltip>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => (organize ? setOrganize(false) : enterOrganize())}
+                    aria-label="Gérer les dossiers (saisons)"
+                    className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors ${
+                      organize
+                        ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                        : "bg-zinc-200 text-zinc-500 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                    }`}
+                  >
+                    <FolderCog className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Gérer les dossiers (saisons)</TooltipContent>
+              </Tooltip>
+              {onEnrichTmdb && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={onEnrichTmdb}
+                      aria-label="Changer les informations TMDB"
+                      className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 text-zinc-500 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Changer les informations TMDB</TooltipContent>
+                </Tooltip>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <motion.button
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => {
+                      if (confirmDelete) handleDeleteAll();
+                      else setConfirmDelete(true);
+                    }}
+                    aria-label={confirmDelete ? "Confirmer la suppression" : "Supprimer"}
+                    className={`flex h-6 items-center justify-center rounded-md transition-colors ${
+                      confirmDelete
+                        ? "gap-1 bg-red-500 px-2 text-[11px] font-medium text-white hover:bg-red-600"
+                        : "w-6 bg-zinc-200 text-zinc-500 hover:bg-red-500/15 hover:text-red-500 dark:bg-zinc-800 dark:text-zinc-400"
+                    }`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {confirmDelete && "Sûr ?"}
+                  </motion.button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {confirmDelete ? "Confirmer la suppression" : "Supprimer"}
+                </TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={onClose}
+                    aria-label="Fermer"
+                    className="flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700"
+                  >
+                    <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Fermer</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </div>
 
         {!selectMode && !organize && (

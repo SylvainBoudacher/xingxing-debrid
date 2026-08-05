@@ -15,8 +15,9 @@ import {
 } from "@/lib/discoverReleases";
 import { getCachedLibrary, loadLibrary } from "@/lib/library";
 import { LETTERBOXD_FEED } from "@/lib/letterboxdFeed";
-import { getLikes, saveLikes, type LikedItem } from "@/lib/likes";
+import { type LikedItem } from "@/lib/likes";
 import { queryClient } from "@/lib/queryClient";
+import { useLikes } from "@/lib/useLikes";
 import { ownedTmdbKeys } from "@/lib/recommendations";
 import type { MangaItem } from "@/lib/mangaItem";
 import type { TmdbItem } from "@/lib/tmdbItem";
@@ -25,7 +26,7 @@ import { useRecommendations } from "@/lib/useRecommendations";
 import { useSendToDebrid } from "@/lib/useSendToDebrid";
 import { ArrowLeft, KeyRound, Loader2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface DiscoverPageProps {
   onBack: () => void;
@@ -80,7 +81,7 @@ export function DiscoverPage({
   const [tmdbKey, setTmdbKey] = useState<string | null | undefined>(
     initialTmdbKey !== undefined ? initialTmdbKey : undefined,
   );
-  const [likes, setLikes] = useState<LikedItem[]>(initialLikes ?? []);
+  const { likes, likedKeys, toggleLike } = useLikes(initialLikes);
   const [selected, setSelected] = useState<TmdbItem | null>(null);
   // Recherche de l'onglet Mangas : la barre du haut est partagée, son contenu
   // dépend de l'univers affiché (TMDB ou MangaDex).
@@ -153,9 +154,6 @@ export function DiscoverPage({
     if (initialTmdbKey === undefined) {
       getApiKey("tmdb_api_key").then((v) => setTmdbKey(v || null));
     }
-    if (!initialLikes) {
-      getLikes().then(setLikes);
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -220,22 +218,6 @@ export function DiscoverPage({
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debridModal, selected, mangaBusy, onBack]);
-
-  const likedKeys = useMemo(() => new Set(likes.map((l) => `${l.mediaType}-${l.id}`)), [likes]);
-
-  // Stables (useCallback) pour que React.memo sur DiscoverPosterCard tienne
-  // quand la grille grossit au scroll infini.
-  const toggleLike = useCallback(
-    (item: TmdbItem) => {
-      const key = `${item.mediaType}-${item.id}`;
-      const next = likedKeys.has(key)
-        ? likes.filter((l) => `${l.mediaType}-${l.id}` !== key)
-        : [{ ...item, likedAt: Date.now() }, ...likes];
-      setLikes(next);
-      saveLikes(next);
-    },
-    [likes, likedKeys],
-  );
 
   function switchTab(t: Exclude<DiscoverTab, "all">) {
     if (t === "recos" && mediaType !== "recos" && !recosApi.loading) recosApi.load();

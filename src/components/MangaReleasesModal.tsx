@@ -60,9 +60,9 @@ export function MangaReleasesModal({
   const releases = useMemo(() => {
     const found = releasesQuery.data?.releases;
     if (!found) return null;
-    return [...found].sort(
-      (a, b) => spanStart(a.span) - spanStart(b.span) || b.seeders - a.seeders,
-    );
+    return found
+      .filter((r) => r.format === "CBZ" || r.format === null)
+      .sort((a, b) => spanStart(a.span) - spanStart(b.span) || b.seeders - a.seeders);
   }, [releasesQuery.data]);
   const cover = mangaCoverUrl(item, 512);
   const owned = new Set(entry?.volumes.map((v) => v.infoHash) ?? []);

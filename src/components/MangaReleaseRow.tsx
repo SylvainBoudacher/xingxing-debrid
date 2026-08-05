@@ -23,7 +23,6 @@ export function MangaReleaseRow({
   disabled,
   onAdd,
 }: MangaReleaseRowProps) {
-  const readable = release.format === "CBZ" || release.format === null;
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -44,11 +43,6 @@ export function MangaReleaseRow({
             <span className="flex items-center gap-1 rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
               <Check className="h-2.5 w-2.5" />
               Dans la bibliothèque
-            </span>
-          )}
-          {release.format && !readable && (
-            <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-              {release.format} — non lisible
             </span>
           )}
           {!release.exact && (
@@ -72,7 +66,7 @@ export function MangaReleaseRow({
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={onAdd}
-          disabled={disabled || !readable}
+          disabled={disabled}
           className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         >
           {busy ? (
@@ -84,7 +78,7 @@ export function MangaReleaseRow({
           )}
         </motion.button>
         <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
-          {!readable ? "Format non lisible" : owned ? "Déjà ajouté" : "Ajouter à la bibliothèque"}
+          {owned ? "Déjà ajouté" : "Ajouter à la bibliothèque"}
         </span>
       </div>
     </motion.div>

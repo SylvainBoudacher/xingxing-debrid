@@ -529,6 +529,7 @@ function App() {
               <LibraryPage
                 onBack={() => setPage("main")}
                 onNavigate={handleNavigate}
+                onSearchTracker={launchTrackerSearch}
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 initialAllDebridKey={initAllDebridKey}
