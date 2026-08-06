@@ -160,13 +160,13 @@ export const REWARDS: DuckReward[] = [
     threshold: 0,
     unit: "cadeau",
     lockedHint: "Un cadeau: rien à faire, il suffit de le réclamer.",
-    claimToast: "MrCoinCoin allume sa pipe !",
+    claimToast: "MrCoinCoin arrive avec les feux d'artifice !",
     variant: () => ({
       body: "#7A4A2A",
       beak: "#E8A33C",
       acc: "coincoin",
       pattern: "mallard",
-      effect: "smoke",
+      effect: "birthday",
     }),
   },
 ];

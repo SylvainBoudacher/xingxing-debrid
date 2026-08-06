@@ -555,13 +555,12 @@ function drawRoyalCrown(c: CanvasRenderingContext2D, gold: string) {
   c.fillRect(58, bandTop + 1, 4, 8);
 }
 
-// La panoplie de MrCoinCoin: chapeau d'anniversaire penché sur le crâne, pipe
-// tenue au coin du bec (le fourneau est en x=85 y=81, d'où part la fumée
-// animée) et appareil photo en bandoulière sur le ventre. Un seul accessoire
-// par variante, donc les trois pièces tiennent sous le même nom.
+// La panoplie de MrCoinCoin: chapeau d'anniversaire penché sur le crâne (les
+// confettis animés en sortent) et appareil photo en bandoulière sur le ventre.
+// Un seul accessoire par variante, donc les deux pièces tiennent sous le même
+// nom.
 function drawCoinCoinOutfit(c: CanvasRenderingContext2D) {
   drawPartyCone(c);
-  drawPipe(c);
   drawCamera(c);
 }
 
@@ -594,27 +593,8 @@ function drawPartyCone(c: CanvasRenderingContext2D) {
   c.restore();
 }
 
-function drawPipe(c: CanvasRenderingContext2D) {
-  c.strokeStyle = "#1E1A18";
-  c.lineWidth = 3.4;
-  c.lineCap = "round";
-  c.beginPath();
-  c.moveTo(104, 59);
-  c.quadraticCurveTo(96, 70, 88, 76);
-  c.stroke();
-  c.fillStyle = "#1E1A18";
-  c.save();
-  c.translate(85, 81);
-  c.rotate(-0.35);
-  c.fillRect(-7, -6, 14, 13); // fourneau
-  c.restore();
-  fillEll(c, 84, 75, 6.5, 2.6, "#0F0D0C"); // bord du foyer
-  c.fillStyle = "rgba(255,255,255,0.14)";
-  c.fillRect(80, 78, 2.5, 8); // reflet
-}
-
 // Compact argentique pendu au cou: la sangle sort de sous la tête, le boîtier
-// repose sur le ventre, à gauche de la pipe.
+// repose sur le ventre, sous la tête.
 function drawCamera(c: CanvasRenderingContext2D) {
   c.strokeStyle = "#3A3F45";
   c.lineWidth = 2.6;

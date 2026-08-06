@@ -45,18 +45,19 @@ import {
 } from "./parade";
 import {
   createChameleonSkinner,
+  drawBirthdayFireworks,
   drawChameleonHalo,
   drawCroupierChips,
   drawCroupierNeon,
   drawCroupierSign,
   drawGodlyAura,
   drawGodlyBolts,
+  drawHatConfetti,
   drawNovaAura,
   drawNovaOrbit,
   drawPeacockFan,
   drawPhoenixEmbers,
   drawPhoenixWings,
-  drawPipeSmoke,
 } from "./duckRewardEffects";
 import { drawDex, overDex } from "./dexIcon";
 import { drawSlot, overSlot } from "./slotIcon";
@@ -1241,9 +1242,12 @@ export function PixelPool({
         drawCroupierSign(frame);
       }
 
-      // fumée de la pipe de MrCoinCoin, devant lui
-      if (d.effect === "smoke")
-        drawPipeSmoke({ ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase });
+      // confettis et feux d'artifice de MrCoinCoin, devant lui
+      if (d.effect === "birthday") {
+        const frame = { ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase };
+        drawHatConfetti(frame);
+        drawBirthdayFireworks(frame);
+      }
 
       // braises du Phénix, devant lui
       if (d.effect === "phoenix")

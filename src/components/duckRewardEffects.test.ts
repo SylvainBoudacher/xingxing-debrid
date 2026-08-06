@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  drawBirthdayFireworks,
   drawChameleonHalo,
   drawCroupierChips,
   drawCroupierNeon,
@@ -9,9 +10,9 @@ import {
   drawNovaAura,
   drawNovaOrbit,
   drawPeacockFan,
+  drawHatConfetti,
   drawPhoenixEmbers,
   drawPhoenixWings,
-  drawPipeSmoke,
   type EffectFrame,
 } from "./duckRewardEffects";
 import { isRadialEffect, rewardPreviewLayout } from "./duckRewardLayout";
@@ -106,7 +107,7 @@ const DRAW: Partial<Record<Effect, Array<(f: EffectFrame) => void>>> = {
   nova: [drawNovaAura, drawNovaOrbit],
   godly: [drawGodlyAura, drawGodlyBolts],
   croupier: [drawCroupierNeon, drawCroupierChips, drawCroupierSign],
-  smoke: [drawPipeSmoke],
+  birthday: [drawHatConfetti, drawBirthdayFireworks],
 };
 
 // Les effets bouclent lentement (le phénix renaît sur ~20s, le paon ouvre sa
@@ -168,7 +169,7 @@ describe("effets des canards de récompense", () => {
   // la vignette, qui est cinq fois plus petite.
   // le paon est exclu: ses ocelles ont un rayon plancher, sa roue n'est donc
   // pas strictement proportionnelle en très petit
-  it.each(["nova", "godly", "phoenix", "chameleon", "croupier", "smoke"] as const)(
+  it.each(["nova", "godly", "phoenix", "chameleon", "croupier", "birthday"] as const)(
     "met l'effet %s à l'échelle du canard",
     (effect) => {
       // gros écart d'échelle: une constante restée en pixels fixes se voit dans

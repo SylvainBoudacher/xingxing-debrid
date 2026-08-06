@@ -65,7 +65,7 @@ export type Effect =
   | "peacock"
   | "phoenix"
   | "croupier"
-  | "smoke";
+  | "birthday";
 
 export interface Variant {
   body: string;

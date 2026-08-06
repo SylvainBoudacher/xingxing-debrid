@@ -3,18 +3,19 @@ import type { DuckReward } from "@/lib/duckRewards";
 import { makeDuckSprite } from "./duckSprite";
 import {
   createChameleonSkinner,
+  drawBirthdayFireworks,
   drawChameleonHalo,
   drawCroupierChips,
   drawCroupierNeon,
   drawCroupierSign,
   drawGodlyAura,
   drawGodlyBolts,
+  drawHatConfetti,
   drawNovaAura,
   drawNovaOrbit,
   drawPeacockFan,
   drawPhoenixEmbers,
   drawPhoenixWings,
-  drawPipeSmoke,
 } from "./duckRewardEffects";
 import { rewardPreviewLayout } from "./duckRewardLayout";
 
@@ -63,7 +64,10 @@ export function DuckRewardPreview({ reward, size = 52 }: { reward: DuckReward; s
       else if (variant.effect === "croupier") {
         drawCroupierChips(frame);
         drawCroupierSign(frame);
-      } else if (variant.effect === "smoke") drawPipeSmoke(frame);
+      } else if (variant.effect === "birthday") {
+        drawHatConfetti(frame);
+        drawBirthdayFireworks(frame);
+      }
       raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);

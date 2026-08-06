@@ -410,18 +410,93 @@ export function drawCroupierSign({ ctx, cx, cy, dh, t, phase }: EffectFrame) {
 
 // --- MrCoinCoin -----------------------------------------------------------
 
-// Bouffées qui montent du fourneau de la pipe en dérivant vers l'arrière et en
-// s'élargissant. Le fourneau est à (85, 116) dans le sprite de 130x155, d'où
-// les fractions de dw/dh: tout reste proportionnel au canard.
-export function drawPipeSmoke({ ctx, cx, cy, dw, dh, t, phase }: EffectFrame) {
-  const bx = cx + dw * 0.154;
-  const by = cy + dh * 0.248;
-  for (let i = 0; i < 4; i++) {
-    const p = (t * 0.00035 + phase * 0.13 + i * 0.25) % 1;
-    const fade = Math.min(1, p * 6) * (1 - p);
-    ctx.fillStyle = `rgba(228,226,218,${0.5 * fade})`;
+// Confettis tirés du sommet du chapeau d'anniversaire (74.8, 20.8 dans le
+// sprite de 130x155). Chaque confetti suit sa propre parabole: montée en
+// éventail, puis chute, en tournant sur lui-même. La boucle est fonction du
+// temps seul, donc le vol reste lisse d'une frame à l'autre.
+const CONFETTI_COLORS = ["#FF7A6B", "#FFE066", "#41E8FF", "#FFF3DC", "#7CFF9E", "#FF9AD5"];
+const CONFETTI_COUNT = 10;
+
+export function drawHatConfetti({ ctx, cx, cy, dw, dh, t, phase }: EffectFrame) {
+  const ax = cx + dw * 0.075;
+  const ay = cy - dh * 0.366;
+  for (let i = 0; i < CONFETTI_COUNT; i++) {
+    const p = (t * 0.00042 + phase * 0.17 + i / CONFETTI_COUNT) % 1;
+    const a = -Math.PI / 2 + (i / (CONFETTI_COUNT - 1) - 0.5) * 1.7;
+    const s = 0.42 + (i % 3) * 0.13;
+    const x = ax + Math.cos(a) * s * p * dw;
+    const y = ay + Math.sin(a) * s * p * dh + 1.5 * p * p * dh;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(p * 7 + i);
+    ctx.globalAlpha = Math.min(1, p * 8) * (1 - p);
+    ctx.fillStyle = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    ctx.fillRect(-dw * 0.018, -dw * 0.011, dw * 0.036, dw * 0.022);
+    ctx.restore();
+  }
+}
+
+// Feux d'artifice tirés autour du canard: chacun boucle sur une fusée qui monte
+// depuis le chapeau, puis une gerbe d'étincelles qui s'ouvre, retombe et
+// s'éteint. Les points d'éclatement sont assez resserrés pour tenir dans la
+// vignette du Canardex.
+const FIREWORKS: Array<[number, number, string]> = [
+  [-0.45, -0.6, "#FFE066"],
+  [0.48, -0.48, "#FF7A6B"],
+  [0.02, -0.78, "#41E8FF"],
+];
+const SPARKS = 12;
+const RISE = 0.32; // part du cycle passée en montée
+
+export function drawBirthdayFireworks({ ctx, cx, cy, dw, dh, t, phase }: EffectFrame) {
+  const hx = cx + dw * 0.075; // sommet du chapeau, d'où partent les fusées
+  const hy = cy - dh * 0.366;
+  for (let f = 0; f < FIREWORKS.length; f++) {
+    const [ox, oy, color] = FIREWORKS[f];
+    const p = (t * 0.00032 + phase * 0.21 + f / FIREWORKS.length) % 1;
+    const bx = cx + dw * ox;
+    const by = cy + dh * oy;
+
+    if (p < RISE) {
+      // fusée: une traînée qui s'étire du chapeau vers le point d'éclatement
+      const q = p / RISE;
+      const rx = hx + (bx - hx) * q;
+      const ry = hy + (by - hy) * q;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = dw * 0.016;
+      ctx.lineCap = "round";
+      ctx.globalAlpha = Math.min(1, q * 4);
+      ctx.beginPath();
+      ctx.moveTo(rx - (bx - hx) * 0.12, ry - (by - hy) * 0.12);
+      ctx.lineTo(rx, ry);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      continue;
+    }
+
+    // gerbe: des traits radiaux qui s'écartent, s'affaissent et pâlissent
+    const q = (p - RISE) / (1 - RISE);
+    const r = dw * (0.05 + q * 0.28);
+    const drop = dh * 0.3 * q * q;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = dw * 0.014;
+    ctx.lineCap = "round";
+    ctx.globalAlpha = (1 - q) * (1 - q);
+    for (let s = 0; s < SPARKS; s++) {
+      const a = (s / SPARKS) * Math.PI * 2;
+      const co = Math.cos(a);
+      const si = Math.sin(a);
+      ctx.beginPath();
+      ctx.moveTo(bx + co * r * 0.72, by + si * r * 0.72 + drop * 0.72);
+      ctx.lineTo(bx + co * r, by + si * r + drop);
+      ctx.stroke();
+    }
+    // coeur incandescent au moment de l'explosion
+    ctx.globalAlpha = Math.max(0, 1 - q * 5);
+    ctx.fillStyle = "#FFF8E0";
     ctx.beginPath();
-    ctx.arc(bx - dw * p * 0.34, by - dh * p * 0.72, dw * (0.035 + p * 0.11), 0, Math.PI * 2);
+    ctx.arc(bx, by, dw * 0.05, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
   }
 }
