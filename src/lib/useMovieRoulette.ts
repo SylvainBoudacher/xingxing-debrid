@@ -9,6 +9,8 @@ import { useState } from "react";
 export type RouletteStatus = "idle" | "loading" | "spinning" | "revealed";
 
 export const EMPTY_POOL_MESSAGE = "Pas assez de films pour ce genre, essayez d'en cocher un autre.";
+export const ALL_OWNED_MESSAGE =
+  "Tous les films de ce tirage sont déjà dans votre bibliothèque. Décochez le filtre ou changez de genre.";
 
 // Deux pages consecutives, soit ~40 films apres filtrage : assez pour que le
 // ruban ne tourne pas sur les memes jaquettes. Trop court (genre de niche), on
@@ -29,8 +31,9 @@ async function loadPool(genreIds: number[], apiKey: string): Promise<TmdbItem[]>
 }
 
 // idle -> loading -> spinning -> revealed. Relancer repart de loading.
-export function useMovieRoulette(tmdbKey: string) {
+export function useMovieRoulette(tmdbKey: string, ownedKeys: Set<string>) {
   const [genreIds, setGenreIds] = useState<number[]>([]);
+  const [excludeOwned, setExcludeOwned] = useState(false);
   const [status, setStatus] = useState<RouletteStatus>("idle");
   const [strip, setStrip] = useState<TmdbItem[]>([]);
   const [winner, setWinner] = useState<TmdbItem | null>(null);
@@ -52,15 +55,23 @@ export function useMovieRoulette(tmdbKey: string) {
     setGenreIds([]);
   }
 
+  function toggleExcludeOwned() {
+    if (busy) return;
+    setError(null);
+    setExcludeOwned((v) => !v);
+  }
+
   async function roll() {
     if (busy) return;
     setStatus("loading");
     setError(null);
     setWinner(null);
     try {
-      const pool = await loadPool(genreIds, tmdbKey);
+      const fetched = await loadPool(genreIds, tmdbKey);
+      // Le filtre s'applique apres coup : TMDB ne sait pas ce qu'on possede.
+      const pool = excludeOwned ? fetched.filter((m) => !ownedKeys.has(`movie-${m.id}`)) : fetched;
       if (pool.length === 0) {
-        setError(EMPTY_POOL_MESSAGE);
+        setError(fetched.length === 0 ? EMPTY_POOL_MESSAGE : ALL_OWNED_MESSAGE);
         setStatus("idle");
         return;
       }
@@ -81,6 +92,8 @@ export function useMovieRoulette(tmdbKey: string) {
 
   return {
     genreIds,
+    excludeOwned,
+    toggleExcludeOwned,
     status,
     strip,
     winner,

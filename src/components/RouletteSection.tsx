@@ -1,9 +1,10 @@
 import { NetworkErrorState } from "@/components/NetworkErrorState";
 import { RouletteGenrePicker } from "@/components/RouletteGenrePicker";
+import { RouletteOwnedFilter } from "@/components/RouletteOwnedFilter";
 import { RouletteResult } from "@/components/RouletteResult";
 import { RouletteStrip } from "@/components/RouletteStrip";
 import type { TmdbItem } from "@/lib/tmdbItem";
-import { EMPTY_POOL_MESSAGE, useMovieRoulette } from "@/lib/useMovieRoulette";
+import { ALL_OWNED_MESSAGE, EMPTY_POOL_MESSAGE, useMovieRoulette } from "@/lib/useMovieRoulette";
 import { Dices, Loader2 } from "lucide-react";
 import { AnimatePresence, useReducedMotion } from "motion/react";
 import { useEffect } from "react";
@@ -11,6 +12,8 @@ import { useEffect } from "react";
 interface RouletteSectionProps {
   tmdbKey: string;
   likedKeys: Set<string>;
+  /** Cles `mediaType-id` de la bibliotheque : cible du filtre d'exclusion. */
+  ownedKeys: Set<string>;
   onOpen: (item: TmdbItem) => void;
   onToggleLike: (item: TmdbItem) => void;
 }
@@ -18,10 +21,11 @@ interface RouletteSectionProps {
 export function RouletteSection({
   tmdbKey,
   likedKeys,
+  ownedKeys,
   onOpen,
   onToggleLike,
 }: RouletteSectionProps) {
-  const r = useMovieRoulette(tmdbKey);
+  const r = useMovieRoulette(tmdbKey, ownedKeys);
   const prefersReducedMotion = useReducedMotion();
   const busy = r.status === "loading" || r.status === "spinning";
 
@@ -40,6 +44,14 @@ export function RouletteSection({
         onToggle={r.toggleGenre}
         onClear={r.clearGenres}
       />
+
+      <div className="mt-4 flex justify-center">
+        <RouletteOwnedFilter
+          checked={r.excludeOwned}
+          disabled={busy}
+          onToggle={r.toggleExcludeOwned}
+        />
+      </div>
 
       <div className="mt-6">
         <RouletteStrip
@@ -67,10 +79,12 @@ export function RouletteSection({
         </button>
       </div>
 
-      {r.error === EMPTY_POOL_MESSAGE && (
-        <p className="mt-4 text-center text-sm text-zinc-500">{r.error}</p>
+      {/* Vivier vide : ce n'est pas une panne, relancer a l'identique ne
+          donnerait rien. Le bouton Reessayer est reserve aux erreurs reseau. */}
+      {(r.error === EMPTY_POOL_MESSAGE || r.error === ALL_OWNED_MESSAGE) && (
+        <p className="mx-auto mt-4 max-w-md text-center text-sm text-zinc-500">{r.error}</p>
       )}
-      {r.error && r.error !== EMPTY_POOL_MESSAGE && (
+      {r.error && r.error !== EMPTY_POOL_MESSAGE && r.error !== ALL_OWNED_MESSAGE && (
         <NetworkErrorState message={r.error} onRetry={r.roll} className="mt-4" />
       )}
 

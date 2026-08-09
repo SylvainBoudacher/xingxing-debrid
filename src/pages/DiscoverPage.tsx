@@ -347,6 +347,7 @@ export function DiscoverPage({
           <RouletteSection
             tmdbKey={tmdbKey}
             likedKeys={likedKeys}
+            ownedKeys={ownedKeys}
             onOpen={openItem}
             onToggleLike={toggleLike}
           />
