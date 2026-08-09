@@ -1,4 +1,4 @@
-- Nouvelle section Top 500 Letterboxd dans la page Decouverte
-- Scroll infini sur la section manga, suppression du doublon Populaire/Tendance
-- Bloc de recherche de la bibliotheque refondu et bouton plein ecran pour la lecture
-- Drapeau affiche plus longtemps, Pity nerf, build Xingxing pour Mac Apple Intel
+- Roulette de film aleatoire et Top 200 manga dans la page Decouverte
+- Bouton Bibliotheque a cote du menu sur toutes les pages
+- Bibliotheque : bouton recherche episode/saison pour films/series, description depliable, fix animation des listes
+- Case a cocher eau/inventaire pour les canards, verif VLC sur Mac, filtre manga non lisibles, preload images, et un canard cadeau

@@ -45,6 +45,56 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.6.3",
+    date: "9 aout 2026",
+    intro:
+      "La 1.6.3 ajoute la roulette de film aleatoire et le Top 200 manga dans la page Decouverte, un acces rapide a la Bibliotheque depuis toutes les pages, et plusieurs ameliorations pour les mangas et la Bibliotheque.",
+    sections: [
+      {
+        title: "Decouverte",
+        items: [
+          "Nouvelle roulette de film aleatoire : choisissez un genre ou laissez-la piocher parmi tout le catalogue.",
+          "Nouvelle section Top 200 manga.",
+        ],
+      },
+      {
+        title: "Navigation",
+        items: [
+          "Un bouton Bibliotheque apparait a cote du menu sur toutes les pages, sauf la page principale.",
+        ],
+      },
+      {
+        title: "Mangas",
+        items: ["Les fichiers non lisibles ne s'affichent plus dans les listes de torrents."],
+      },
+      {
+        title: "Bibliotheque",
+        items: [
+          "Correction de l'animation des listes : elle ne se joue plus a l'ouverture, seulement a la fermeture.",
+          "Ajout d'un bouton de recherche d'autres episodes ou saisons pour les films et series, comme deja disponible pour les mangas.",
+          "La description des films et series peut desormais etre depliee au lieu d'etre simplement tronquee.",
+        ],
+      },
+      {
+        title: "Mac",
+        items: [
+          "L'application verifie maintenant si VLC est installe et affiche un message d'erreur clair si ce n'est pas le cas.",
+        ],
+      },
+      {
+        title: "Performances",
+        items: ["Les images sont desormais pre-chargees des le lancement de l'application."],
+      },
+      {
+        title: "Coin des Canards",
+        items: [
+          "Nouvelle case a cocher lors de l'enregistrement d'un canard : choisissez s'il retourne directement a l'eau ou s'il rejoint votre inventaire.",
+          "Un canard cadeau vous attend. Amusez-vous bien.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.6.2",
     date: "1 aout 2026",
     intro:
@@ -1125,4 +1175,4 @@ export const PATCH_NOTES: PatchNote[] = [
   },
 ];
 
-export const LATEST_VERSION = "1.6.1";
+export const LATEST_VERSION = "1.6.3";
