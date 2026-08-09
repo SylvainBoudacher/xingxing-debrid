@@ -1,7 +1,7 @@
 import { LetterboxdFeedPill } from "@/components/LetterboxdFeedPill";
 import { LETTERBOXD_FEED } from "@/lib/letterboxdFeed";
 import { FEED_LABELS, feedsFor, type DiscoverFeed, type DiscoverTab } from "@/lib/useDiscoverFeed";
-import { BookOpen, Clapperboard, Heart, Sparkles, Tv, Wand2 } from "lucide-react";
+import { BookOpen, Clapperboard, Dices, Heart, Sparkles, Tv, Wand2 } from "lucide-react";
 import { motion } from "motion/react";
 
 interface DiscoverTabsProps {
@@ -14,8 +14,8 @@ interface DiscoverTabsProps {
   onSwitchFeed: (f: DiscoverFeed) => void;
 }
 
-// Onglets de navigation (Films, Séries, Animations, Mangas, Pour vous, Ma liste) et
-// sources TMDB (Tendances, Populaires…) sous les onglets Films / Séries.
+// Onglets de navigation (Films, Séries, Animations, Mangas, Roulette, Pour vous,
+// Ma liste) et sources TMDB (Tendances, Populaires…) sous les onglets Films / Séries.
 export function DiscoverTabs({
   collapsed,
   mediaType,
@@ -92,6 +92,18 @@ export function DiscoverTabs({
         >
           <BookOpen className="h-3.5 w-3.5" />
           Mangas
+        </button>
+
+        <button
+          onClick={() => onSwitchType("roulette")}
+          className={`flex cursor-pointer items-center gap-1.5 rounded-full px-4 py-2 text-xs font-medium ring-1 transition-colors ${
+            mediaType === "roulette"
+              ? "bg-indigo-600 text-white ring-indigo-500"
+              : "bg-white/90 text-zinc-500 ring-black/10 hover:text-zinc-900 dark:bg-zinc-800/80 dark:text-zinc-400 dark:ring-white/10 dark:hover:text-white"
+          }`}
+        >
+          <Dices className="h-3.5 w-3.5" />
+          Roulette
         </button>
       </div>
 

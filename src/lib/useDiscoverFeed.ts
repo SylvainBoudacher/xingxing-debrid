@@ -20,7 +20,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 // "all" = état de recherche générale (multi films + séries). Ce n'est pas un
 // onglet cliquable : les onglets restent dédiés à la navigation de découverte.
 export type BrowseType = MediaType | "animation" | "all";
-export type DiscoverTab = BrowseType | "likes" | "recos" | "manga";
+export type DiscoverTab = BrowseType | "likes" | "recos" | "manga" | "roulette";
 
 // Sources proposées sous les onglets Films / Séries, dans l'ordre d'affichage.
 // "letterboxd" n'est pas une source TMDB : c'est le classement figé du bundle,
@@ -163,7 +163,14 @@ export function useDiscoverFeed(
   // requête en cours coupe l'observer, qui se reconnecte une fois finie).
   useEffect(() => {
     const el = loadMoreRef.current;
-    if (!el || !tmdbKey || mediaType === "likes" || mediaType === "recos" || mediaType === "manga")
+    if (
+      !el ||
+      !tmdbKey ||
+      mediaType === "likes" ||
+      mediaType === "recos" ||
+      mediaType === "manga" ||
+      mediaType === "roulette"
+    )
       return;
     if (loadingMovies || items.length === 0 || tmdbPage >= tmdbTotalPages) return;
     const observer = new IntersectionObserver(
@@ -359,7 +366,7 @@ export function useDiscoverFeed(
     // L'onglet Mangas ne dépend pas de TMDB : il reste accessible sans clé.
     if (type === mediaType || (!tmdbKey && type !== "manga")) return;
     setMediaType(type);
-    if (type === "likes" || type === "recos" || type === "manga") return;
+    if (type === "likes" || type === "recos" || type === "manga" || type === "roulette") return;
     // Onglet de navigation : on quitte toujours la recherche pour parcourir le
     // feed de découverte de la catégorie (la recherche, elle, reste générale).
     lastBrowseTypeRef.current = type;
@@ -379,6 +386,7 @@ export function useDiscoverFeed(
       mediaType === "likes" ||
       mediaType === "recos" ||
       mediaType === "manga" ||
+      mediaType === "roulette" ||
       mediaType === "all"
     )
       return;
@@ -401,7 +409,7 @@ export function useDiscoverFeed(
   // requete au fil de la frappe garde la meme cle : les resultats se remplacent
   // en place, sans rejouer la transition de toute la grille a chaque debounce.
   const gridKey =
-    mediaType === "likes" || mediaType === "manga"
+    mediaType === "likes" || mediaType === "manga" || mediaType === "roulette"
       ? mediaType
       : mediaType === "recos"
         ? "recos"
