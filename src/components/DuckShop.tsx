@@ -2,7 +2,6 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { ListFilter, Search, X } from "lucide-react";
 import { toast } from "sonner";
-import { LazyStore } from "@tauri-apps/plugin-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -34,12 +33,13 @@ import {
   upsertSavedDuck,
   type SavedDuck,
 } from "@/lib/savedDucks";
+import { getMaxDucks, getSaveToReserve, setSaveToReserve } from "@/lib/duckPrefs";
 import { recordDiscovery } from "@/lib/duckDex";
 import { refreshClaimableRewards } from "@/lib/duckRewardStatus";
 import { familyRewardAt } from "@/lib/duckRewards";
 import { getRarity, type Rarity } from "./duckRandom";
 import { SPECIES_BY_ID, speciesOf } from "./duckSpecies";
-import { DuckPreview } from "./DuckPreview";
+import { DuckCaptureCard } from "./DuckCaptureCard";
 import { DuckShopRow } from "./DuckShopRow";
 import { stackDucks } from "./duckStacks";
 import {
@@ -57,13 +57,6 @@ import {
 // Saved ducks are injected into the pool only once per app launch, even if this
 // component remounts (e.g. summer toggled off then on).
 let injectedOnce = false;
-
-// Same settings file as App: read the display cap directly so the launch
-// reservation isn't racing the prop that App loads asynchronously.
-const settings = new LazyStore("settings.json", { defaults: {}, autoSave: false });
-async function getMaxDucks(): Promise<number> {
-  return (await settings.get<number>("summer_pool_max_ducks")) ?? 15;
-}
 
 type Filter = "all" | "water" | "reserve";
 const FILTER_LABELS: Record<Filter, string> = {
@@ -87,6 +80,7 @@ export function DuckShop() {
   const [open, setOpen] = useState(false);
   const [dropped, setDropped] = useState<DroppedDuck | null>(null);
   const [name, setName] = useState("");
+  const [toReserve, setToReserve] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [query, setQuery] = useState("");
@@ -117,6 +111,7 @@ export function DuckShop() {
 
   useEffect(() => {
     (async () => {
+      setToReserve(await getSaveToReserve());
       let list = await getSavedDucks();
       if (!injectedOnce) {
         injectedOnce = true;
@@ -207,13 +202,22 @@ export function DuckShop() {
       variant: dropped.variant,
       scale: dropped.scale,
       savedAt: Date.now(),
+      reserved: toReserve,
     };
     setSaved(await upsertSavedDuck(entry));
     const disc = await recordDiscovery(entry.variant);
     await refreshClaimableRewards();
-    dropped.markSaved(finalName);
-    setDropped({ ...dropped, saved: true, name: finalName });
-    toast.success(`${finalName} a rejoint ta collection`);
+    if (toReserve) {
+      // le canard quitte le bassin : pas de markSaved, et on ferme le bloc de
+      // capture pour ne pas garder a l'ecran un canard qui ne nage plus
+      removeDuck(dropped.id);
+      setDropped(null);
+      toast.success(`${finalName} a rejoint ta réserve`);
+    } else {
+      dropped.markSaved(finalName);
+      setDropped({ ...dropped, saved: true, name: finalName });
+      toast.success(`${finalName} a rejoint ta collection`);
+    }
     if (disc.newSpecies) {
       const complete = disc.discoveredSpecies === disc.totalSpecies;
       toast.success(`Nouvelle espèce découverte : ${disc.species.name} !`, {
@@ -336,20 +340,18 @@ export function DuckShop() {
             </div>
 
             {dropped && (
-              <div className="flex flex-col items-center gap-3 border-b border-border bg-muted/40 px-4 py-4">
-                <DuckPreview variant={dropped.variant} size={104} />
-                <div className="flex w-full gap-2">
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Nomme ton canard"
-                    maxLength={40}
-                    onKeyDown={(e) => e.key === "Enter" && save()}
-                    autoFocus
-                  />
-                  <Button onClick={save}>{dropped.saved ? "Mettre à jour" : "Enregistrer"}</Button>
-                </div>
-              </div>
+              <DuckCaptureCard
+                variant={dropped.variant}
+                name={name}
+                onNameChange={setName}
+                saved={dropped.saved}
+                toReserve={toReserve}
+                onToReserveChange={(v) => {
+                  setToReserve(v);
+                  setSaveToReserve(v);
+                }}
+                onSave={save}
+              />
             )}
 
             <div className="px-2 py-2">
