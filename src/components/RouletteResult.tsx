@@ -34,9 +34,15 @@ export function RouletteResult({
       style={{ borderColor: `${rarity.color}55` }}
       className="mt-6 flex gap-5 rounded-2xl border bg-white/70 p-5 ring-1 ring-black/5 backdrop-blur-xl dark:bg-zinc-900/60 dark:ring-white/5"
     >
-      <div className="w-[120px] shrink-0 overflow-hidden rounded-xl bg-zinc-200 dark:bg-zinc-800">
+      {/* self-start : sans lui la boite s'etire sur la hauteur de la ligne flex
+          et laisse une bande vide sous l'affiche. */}
+      <div className="aspect-[2/3] w-[120px] shrink-0 self-start overflow-hidden rounded-xl bg-zinc-200 dark:bg-zinc-800">
         {item.posterPath && (
-          <img src={posterUrl(item.posterPath)} alt={item.title} className="w-full" />
+          <img
+            src={posterUrl(item.posterPath)}
+            alt={item.title}
+            className="h-full w-full object-cover"
+          />
         )}
       </div>
 
