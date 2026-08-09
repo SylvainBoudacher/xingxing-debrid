@@ -34,13 +34,14 @@ export function RouletteStrip({
   onSpinEnd,
 }: RouletteStripProps) {
   const boxRef = useRef<HTMLDivElement>(null);
-  const [offset, setOffset] = useState(0);
+  // Le ruban est remonte par cet etat, pas par spin : il ne doit naitre qu'une
+  // fois sa cible connue. Le monter avant lui donnerait une cible a zero, dont
+  // la fin immediate revelerait le gagnant des le debut de l'animation.
+  const [anim, setAnim] = useState({ spin: 0, offset: 0 });
 
-  // Mesure avant peinture : l'offset doit etre connu au premier frame du
-  // nouveau ruban, sinon l'animation demarre sur une cible a zero.
   useLayoutEffect(() => {
     if (spin === 0) return;
-    setOffset(stripOffset(boxRef.current?.clientWidth ?? 0));
+    setAnim({ spin, offset: stripOffset(boxRef.current?.clientWidth ?? 0) });
   }, [spin]);
 
   const cells: (TmdbItem | null)[] = strip.length ? strip : IDLE_CELLS;
@@ -51,12 +52,12 @@ export function RouletteStrip({
       className="relative overflow-hidden py-5 [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]"
     >
       <motion.div
-        key={spin}
+        key={anim.spin}
         initial={{ x: 0 }}
-        animate={{ x: -offset }}
+        animate={{ x: -anim.offset }}
         transition={instant ? { duration: 0 } : { duration: SPIN_MS / 1000, ease: SPIN_EASE }}
         onAnimationComplete={() => {
-          if (spinning && offset !== 0) onSpinEnd();
+          if (spinning) onSpinEnd();
         }}
         style={{ gap: CARD_GAP }}
         className="flex"
