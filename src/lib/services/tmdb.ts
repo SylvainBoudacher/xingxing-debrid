@@ -149,10 +149,11 @@ export function discoverAnimation(f: TmdbFeed, mt: TmdbMediaType, page: number, 
   );
 }
 
-// Vivier de la roulette : les genres sont joints par "," (le OU de TMDB), la
-// liste vide retire le filtre et ouvre le tirage a tout le catalogue.
+// Vivier de la roulette. Le separateur de /discover porte la logique : la
+// virgule est un ET (Western + Documentaire ne renvoie rien), le pipe un OU.
+// On veut le OU, d'ou le %7C. Liste vide = pas de filtre, tout le catalogue.
 export function discoverByGenres(genreIds: number[], page: number, apiKey: string) {
-  const genres = genreIds.length ? `&with_genres=${genreIds.join(",")}` : "";
+  const genres = genreIds.length ? `&with_genres=${genreIds.join("%7C")}` : "";
   return get<TmdbListResponse>(
     `${BASE}/discover/movie?api_key=${apiKey}&language=fr-FR&include_adult=false` +
       `&sort_by=popularity.desc&vote_count.gte=${ROULETTE_VOTE_MIN}${genres}&page=${page}`,
