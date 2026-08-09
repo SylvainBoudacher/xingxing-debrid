@@ -8,6 +8,9 @@ export const PITCH = CARD_W + CARD_GAP;
 export const STRIP_LEN = 60;
 export const WINNER_INDEX = 52;
 export const JITTER_RATIO = 0.35;
+// Une dizaine de cases tiennent a l'ecran : en dessous de cet ecart, deux
+// exemplaires du meme film seraient visibles en meme temps.
+export const MIN_GAP = 8;
 
 export const SPIN_MS = 6000;
 // Depart tres rapide, longue trainee : les dernieres cases prennent la moitie
@@ -23,24 +26,41 @@ function shuffled(items: TmdbItem[]): TmdbItem[] {
   return out;
 }
 
-// Le pool (~40 films) est tire sans remise puis rebrasse, ce qui evite qu'un
-// meme film revienne trois cases plus loin. La case du gagnant est ecrasee en
-// dernier : c'est elle qui doit tomber sous le curseur.
+// Reprise trop proche : soit dans les MIN_GAP cases deja posees, soit le
+// gagnant a moins de MIN_GAP cases avant sa propre case (le gagnant n'est pas
+// encore pose, la fenetre arriere ne peut pas le voir).
+function tooClose(strip: TmdbItem[], i: number, cand: TmdbItem, winner: TmdbItem): boolean {
+  for (let k = Math.max(0, i - MIN_GAP); k < i; k++) {
+    if (strip[k].id === cand.id) return true;
+  }
+  const toWinner = WINNER_INDEX - i;
+  return toWinner > 0 && toWinner <= MIN_GAP && cand.id === winner.id;
+}
+
+// Le sac est vide sans remise : un film ne peut revenir qu'apres un rebrassage.
+// La contrainte d'ecart ne peut donc echouer qu'a la frontiere entre deux sacs,
+// ou juste autour du gagnant. Pool minuscule : on accepte la reprise plutot que
+// de boucler.
+function take(bag: TmdbItem[], strip: TmdbItem[], i: number, winner: TmdbItem): TmdbItem {
+  for (let t = bag.length - 1; t >= 0; t--) {
+    if (!tooClose(strip, i, bag[t], winner)) return bag.splice(t, 1)[0];
+  }
+  return bag.pop() as TmdbItem;
+}
+
+// Le gagnant est pose pendant la construction, pas ecrase a la fin : sinon les
+// cases voisines auraient ete choisies sans savoir qu'il allait arriver.
 export function buildStrip(pool: TmdbItem[], winner: TmdbItem): TmdbItem[] {
   const strip: TmdbItem[] = [];
   let bag: TmdbItem[] = [];
-  while (strip.length < STRIP_LEN) {
-    if (bag.length === 0) bag = shuffled(pool);
-    const next = bag.pop() as TmdbItem;
-    const prev = strip[strip.length - 1];
-    if (prev && prev.id === next.id && bag.length > 0) {
-      strip.push(bag.pop() as TmdbItem);
-      bag.push(next);
+  for (let i = 0; i < STRIP_LEN; i++) {
+    if (i === WINNER_INDEX) {
+      strip.push(winner);
       continue;
     }
-    strip.push(next);
+    if (bag.length === 0) bag = shuffled(pool);
+    strip.push(take(bag, strip, i, winner));
   }
-  strip[WINNER_INDEX] = winner;
   return strip;
 }
 

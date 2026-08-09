@@ -7,6 +7,7 @@ import {
   STRIP_LEN,
   WINNER_INDEX,
   JITTER_RATIO,
+  MIN_GAP,
 } from "./rouletteStrip";
 import type { TmdbItem } from "./tmdbItem";
 
@@ -40,11 +41,25 @@ describe("buildStrip", () => {
     }
   });
 
-  it("evite deux voisines identiques quand le pool le permet", () => {
-    const strip = buildStrip(pool, pool[0]);
-    for (let i = 1; i < strip.length; i++) {
-      if (i === WINNER_INDEX || i === WINNER_INDEX + 1) continue;
-      expect(strip[i].id).not.toBe(strip[i - 1].id);
+  it("ne reprend jamais un film a moins de MIN_GAP cases", () => {
+    for (let run = 0; run < 30; run++) {
+      const strip = buildStrip(pool, pool[run % pool.length]);
+      for (let i = 1; i < strip.length; i++) {
+        for (let k = Math.max(0, i - MIN_GAP); k < i; k++) {
+          expect(strip[k].id).not.toBe(strip[i].id);
+        }
+      }
+    }
+  });
+
+  it("garde le gagnant unique dans sa fenetre, y compris avant sa case", () => {
+    for (let run = 0; run < 30; run++) {
+      const winner = pool[run % pool.length];
+      const strip = buildStrip(pool, winner);
+      const from = Math.max(0, WINNER_INDEX - MIN_GAP);
+      const to = Math.min(STRIP_LEN - 1, WINNER_INDEX + MIN_GAP);
+      const copies = strip.slice(from, to + 1).filter((c) => c.id === winner.id);
+      expect(copies).toHaveLength(1);
     }
   });
 
