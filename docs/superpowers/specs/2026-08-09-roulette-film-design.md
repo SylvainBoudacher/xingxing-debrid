@@ -111,7 +111,7 @@ comme partout ailleurs.
 - `mask-image` lateral pour un fondu aux deux bords plutot qu'une coupe nette.
 
 ```
-offset = PAS * INDEX_GAGNANT + PAS / 2 - largeurConteneur / 2 + jitter
+offset = PAS * INDEX_GAGNANT + LARGEUR_CASE / 2 - largeurConteneur / 2 + jitter
 jitter = (random() * 0.7 - 0.35) * PAS
 ```
 
