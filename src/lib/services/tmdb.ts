@@ -2,6 +2,9 @@ import { fetchWithTimeout, NetworkError } from "@/lib/networkError";
 
 const BASE = "https://api.themoviedb.org/3";
 export const ANIMATION_GENRE_ID = 16;
+// Plancher de votes du vivier de la roulette : ecarte les films fantomes sans
+// note fiable, sans reduire le vivier a une poignee de classiques.
+export const ROULETTE_VOTE_MIN = 200;
 
 export type TmdbMediaType = "movie" | "tv";
 
@@ -69,6 +72,8 @@ export const tmdbKeys = {
   searchMulti: (query: string, page: number) => ["tmdb", "search", "multi", query, page] as const,
   discoverAnimation: (f: TmdbFeed, mt: TmdbMediaType, page: number) =>
     ["tmdb", "discover", "animation", f, mt, page] as const,
+  roulette: (genreIds: number[], page: number) =>
+    ["tmdb", "roulette", [...genreIds].sort((a, b) => a - b).join(","), page] as const,
   find: (imdbId: string) => ["tmdb", "find", imdbId.toLowerCase()] as const,
   tvDetail: (id: number) => ["tmdb", "tv", id] as const,
   detail: (mt: TmdbMediaType, id: number) => ["tmdb", "detail", mt, id] as const,
@@ -141,6 +146,16 @@ function animationSort(f: TmdbFeed, mt: TmdbMediaType): string {
 export function discoverAnimation(f: TmdbFeed, mt: TmdbMediaType, page: number, apiKey: string) {
   return get<TmdbListResponse>(
     `${BASE}/discover/${mt}?api_key=${apiKey}&language=fr-FR&with_genres=${ANIMATION_GENRE_ID}&${animationSort(f, mt)}&page=${page}`,
+  );
+}
+
+// Vivier de la roulette : les genres sont joints par "," (le OU de TMDB), la
+// liste vide retire le filtre et ouvre le tirage a tout le catalogue.
+export function discoverByGenres(genreIds: number[], page: number, apiKey: string) {
+  const genres = genreIds.length ? `&with_genres=${genreIds.join(",")}` : "";
+  return get<TmdbListResponse>(
+    `${BASE}/discover/movie?api_key=${apiKey}&language=fr-FR&include_adult=false` +
+      `&sort_by=popularity.desc&vote_count.gte=${ROULETTE_VOTE_MIN}${genres}&page=${page}`,
   );
 }
 
