@@ -6,6 +6,7 @@ import { DiscoverReleasesModal } from "@/components/DiscoverReleasesModal";
 import { DiscoverSearchBar } from "@/components/DiscoverSearchBar";
 import { DiscoverSearchFilters } from "@/components/DiscoverSearchFilters";
 import { DiscoverTabs } from "@/components/DiscoverTabs";
+import { RouletteSection } from "@/components/RouletteSection";
 import { getApiKey } from "@/lib/apiKeys";
 import {
   filterTvReleases,
@@ -341,7 +342,19 @@ export function DiscoverPage({
         </div>
       )}
 
-      {tmdbKey && !tmdbKeyInvalid && mediaType !== "manga" && (
+      {tmdbKey && !tmdbKeyInvalid && mediaType === "roulette" && (
+        <div className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 sm:px-8">
+          <RouletteSection
+            tmdbKey={tmdbKey}
+            likedKeys={likedKeys}
+            ownedKeys={ownedKeys}
+            onOpen={openItem}
+            onToggleLike={toggleLike}
+          />
+        </div>
+      )}
+
+      {tmdbKey && !tmdbKeyInvalid && mediaType !== "manga" && mediaType !== "roulette" && (
         <div className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 sm:px-8">
           <DiscoverSearchFilters
             visible={mode === "search"}
