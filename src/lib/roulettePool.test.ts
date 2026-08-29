@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { pickPoolPage, usablePool, MAX_POOL_PAGE } from "./roulettePool";
+import {
+  pickPoolPage,
+  reachablePool,
+  usablePool,
+  MAX_POOL_PAGE,
+  TMDB_MAX_PAGE,
+  TMDB_PAGE_SIZE,
+} from "./roulettePool";
 import type { TmdbRawResult } from "./services/tmdb";
 
 function raw(id: number, poster: string | null): TmdbRawResult {
@@ -36,6 +43,27 @@ describe("pickPoolPage", () => {
       expect(p).toBeGreaterThanOrEqual(1);
       expect(p).toBeLessThanOrEqual(MAX_POOL_PAGE);
     }
+  });
+});
+
+describe("MAX_POOL_PAGE", () => {
+  it("laisse la place a la page suivante sous le plafond TMDB", () => {
+    expect(MAX_POOL_PAGE + 1).toBeLessThanOrEqual(TMDB_MAX_PAGE);
+  });
+});
+
+describe("reachablePool", () => {
+  it("plafonne a la profondeur du tirage, pas au catalogue annonce", () => {
+    expect(reachablePool(743, 14843)).toBe((MAX_POOL_PAGE + 1) * TMDB_PAGE_SIZE);
+  });
+
+  it("rend le total quand le catalogue tient sous la profondeur", () => {
+    expect(reachablePool(18, 346)).toBe(346);
+  });
+
+  it("ne compte pas de page vide sur un catalogue minuscule", () => {
+    expect(reachablePool(1, 7)).toBe(7);
+    expect(reachablePool(0, 0)).toBe(0);
   });
 });
 

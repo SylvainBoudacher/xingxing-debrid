@@ -1,4 +1,4 @@
-import { fetchWithTimeout, NetworkError } from "@/lib/networkError";
+import { fetchWithTimeout, NetworkError, readJson } from "@/lib/networkError";
 
 const AD_BASE = "https://api.alldebrid.com/v4";
 
@@ -37,7 +37,7 @@ export async function deleteMagnet(apiKey: string, id: number): Promise<void> {
   const res = await fetchWithTimeout("AllDebrid", `${AD_BASE}/magnet/delete?agent=c411&id=${id}`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
-  const json = (await res.json()) as { status: string };
+  const json = await readJson<{ status: string }>("AllDebrid", res);
   if (json.status !== "success") throw new NetworkError("AllDebrid", "http");
 }
 
@@ -45,10 +45,10 @@ export async function fetchMagnets(apiKey: string): Promise<MagnetEntry[]> {
   const res = await fetchWithTimeout("AllDebrid", `${AD_BASE}.1/magnet/status?agent=c411`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
-  const json = (await res.json()) as {
+  const json = await readJson<{
     status: string;
     data?: { magnets?: MagnetEntry[] };
-  };
+  }>("AllDebrid", res);
   if (json.status !== "success") throw new NetworkError("AllDebrid", "http");
   return json.data?.magnets ?? [];
 }

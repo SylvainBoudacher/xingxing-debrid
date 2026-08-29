@@ -8,6 +8,9 @@ import {
   WINNER_INDEX,
   JITTER_RATIO,
   MIN_GAP,
+  IDLE_LEN,
+  IDLE_SPEED,
+  marqueeDuration,
 } from "./rouletteStrip";
 import type { TmdbItem } from "./tmdbItem";
 
@@ -95,5 +98,17 @@ describe("stripOffset", () => {
     for (let i = 0; i < 200; i++) {
       expect(Math.abs(stripOffset(width) - base)).toBeLessThanOrEqual(max + 1e-9);
     }
+  });
+});
+
+describe("marqueeDuration", () => {
+  it("fait defiler la tuile de sa propre longueur, sans couture", () => {
+    expect(marqueeDuration(IDLE_LEN)).toBeCloseTo((IDLE_LEN * PITCH) / IDLE_SPEED);
+  });
+
+  it("garde une vitesse constante quel que soit le nombre de cases", () => {
+    expect((IDLE_LEN * PITCH) / marqueeDuration(IDLE_LEN)).toBeCloseTo(
+      (40 * PITCH) / marqueeDuration(40),
+    );
   });
 });

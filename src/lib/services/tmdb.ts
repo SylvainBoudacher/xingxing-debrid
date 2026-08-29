@@ -1,4 +1,4 @@
-import { fetchWithTimeout, NetworkError } from "@/lib/networkError";
+import { fetchWithTimeout, NetworkError, readJson } from "@/lib/networkError";
 
 const BASE = "https://api.themoviedb.org/3";
 export const ANIMATION_GENRE_ID = 16;
@@ -36,6 +36,7 @@ export interface TmdbRawResult {
 export interface TmdbListResponse {
   page: number;
   total_pages: number;
+  total_results: number;
   results: TmdbRawResult[];
 }
 
@@ -74,6 +75,7 @@ export const tmdbKeys = {
     ["tmdb", "discover", "animation", f, mt, page] as const,
   roulette: (genreIds: number[], page: number) =>
     ["tmdb", "roulette", [...genreIds].sort((a, b) => a - b).join(","), page] as const,
+  worst: (page: number) => ["tmdb", "roulette", "worst", page] as const,
   find: (imdbId: string) => ["tmdb", "find", imdbId.toLowerCase()] as const,
   tvDetail: (id: number) => ["tmdb", "tv", id] as const,
   detail: (mt: TmdbMediaType, id: number) => ["tmdb", "detail", mt, id] as const,
@@ -83,7 +85,7 @@ export const tmdbKeys = {
 async function get<T>(url: string): Promise<T> {
   try {
     const res = await fetchWithTimeout("TMDB", url);
-    return res.json() as Promise<T>;
+    return readJson<T>("TMDB", res);
   } catch (err) {
     if (err instanceof NetworkError && err.status === 401)
       throw new NetworkError("TMDB", "http", "Clé TMDB invalide", 401);
@@ -150,13 +152,25 @@ export function discoverAnimation(f: TmdbFeed, mt: TmdbMediaType, page: number, 
 }
 
 // Vivier de la roulette. Le separateur de /discover porte la logique : la
-// virgule est un ET (Western + Documentaire ne renvoie rien), le pipe un OU.
-// On veut le OU, d'ou le %7C. Liste vide = pas de filtre, tout le catalogue.
+// virgule est un ET, le pipe un OU. La selection est cumulative, d'ou la
+// virgule : le film doit porter tous les genres coches. Certaines combinaisons
+// ne renvoient donc rien, total_results sert a le dire avant le tirage. Liste
+// vide = pas de filtre, tout le catalogue.
 export function discoverByGenres(genreIds: number[], page: number, apiKey: string) {
-  const genres = genreIds.length ? `&with_genres=${genreIds.join("%7C")}` : "";
+  const genres = genreIds.length ? `&with_genres=${genreIds.join(",")}` : "";
   return get<TmdbListResponse>(
     `${BASE}/discover/movie?api_key=${apiKey}&language=fr-FR&include_adult=false` +
       `&sort_by=popularity.desc&vote_count.gte=${ROULETTE_VOTE_MIN}${genres}&page=${page}`,
+  );
+}
+
+// Vivier des pires films : meme plancher de votes, tri inverse. Sans le
+// plancher on ne recolterait que des inconnus notes 0,5 par trois personnes ;
+// avec, on obtient des navets que tout le monde a vus passer.
+export function discoverWorst(page: number, apiKey: string) {
+  return get<TmdbListResponse>(
+    `${BASE}/discover/movie?api_key=${apiKey}&language=fr-FR&include_adult=false` +
+      `&sort_by=vote_average.asc&vote_count.gte=${ROULETTE_VOTE_MIN}&page=${page}`,
   );
 }
 

@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from "@/lib/networkError";
+import { fetchWithTimeout, readJson } from "@/lib/networkError";
 
 const BASE = "https://api.mangadex.org";
 const COVERS = "https://uploads.mangadex.org/covers";
@@ -69,7 +69,7 @@ const HEADERS = { "User-Agent": "xingxing-debrid" };
 
 async function get<T>(url: string): Promise<T> {
   const res = await fetchWithTimeout("MangaDex", url, { headers: HEADERS });
-  return res.json() as Promise<T>;
+  return readJson<T>("MangaDex", res);
 }
 
 // Parametres communs a toutes les listes : couverture incluse dans la reponse

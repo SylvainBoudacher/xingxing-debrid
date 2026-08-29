@@ -12,6 +12,16 @@ export const JITTER_RATIO = 0.35;
 // exemplaires du meme film seraient visibles en meme temps.
 export const MIN_GAP = 8;
 
+// Ruban d'attente : assez de cases pour couvrir la plus large fenetre, la
+// tuile etant repetee deux fois pour que la boucle ne montre pas de couture.
+export const IDLE_LEN = 20;
+export const IDLE_SPEED = 26;
+
+// Duree d'un tour de boucle : la tuile defile exactement de sa propre longueur.
+export function marqueeDuration(cellCount: number): number {
+  return (cellCount * PITCH) / IDLE_SPEED;
+}
+
 export const SPIN_MS = 6000;
 // Depart tres rapide, longue trainee : les dernieres cases prennent la moitie
 // du temps.

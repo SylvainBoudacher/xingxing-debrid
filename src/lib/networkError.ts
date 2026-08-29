@@ -108,3 +108,16 @@ export function toastNetworkError(err: unknown, retry?: () => void) {
     retry ? { action: { label: "Réessayer", onClick: retry } } : undefined,
   );
 }
+
+// Lecture JSON tolérante aux réponses HTML (page Cloudflare, maintenance,
+// redirection vers un login) renvoyées avec un statut 200 : sans ça, le
+// SyntaxError brut de res.json() remonte tel quel jusqu'à l'UI.
+export async function readJson<T>(service: NetworkService, res: Response): Promise<T> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch (err) {
+    console.error(`[${service}] réponse non-JSON :`, text.slice(0, 500));
+    throw new NetworkError(service, "parse", undefined, res.status, err);
+  }
+}

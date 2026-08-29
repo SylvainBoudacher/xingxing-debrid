@@ -164,7 +164,7 @@ export async function searchC411(
   );
   const byHash = new Map<string, C411Torrent>();
   for (const r of results) {
-    if (r.status === "rejected") throw new Error(r.reason);
+    if (r.status === "rejected") throw r.reason;
     for (const t of r.value.data) {
       if (!byHash.has(t.infoHash)) byHash.set(t.infoHash, t);
     }

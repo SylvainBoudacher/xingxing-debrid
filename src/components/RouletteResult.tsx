@@ -1,13 +1,16 @@
 import { ExpandableText } from "@/components/ExpandableText";
 import { TmdbGenres } from "@/components/TmdbGenres";
 import { posterUrl } from "@/lib/posterPreload";
-import { RARITY_STYLE, rarityOf } from "@/lib/rouletteRarity";
+import { rarityOf, type RarityScale } from "@/lib/rouletteRarity";
+import { letterboxdRank } from "@/lib/rouletteSource";
 import type { TmdbItem } from "@/lib/tmdbItem";
-import { Heart, RotateCcw, Star } from "lucide-react";
+import { Heart, RotateCcw, Star, Trophy } from "lucide-react";
 import { motion } from "motion/react";
 
 interface RouletteResultProps {
   item: TmdbItem;
+  /** Echelle de raretes du vivier qui a produit ce tirage. */
+  scale: RarityScale;
   liked: boolean;
   tmdbKey: string;
   onOpen: (item: TmdbItem) => void;
@@ -17,13 +20,17 @@ interface RouletteResultProps {
 
 export function RouletteResult({
   item,
+  scale,
   liked,
   tmdbKey,
   onOpen,
   onToggleLike,
   onReroll,
 }: RouletteResultProps) {
-  const rarity = RARITY_STYLE[rarityOf(item.voteAverage)];
+  const rarity = rarityOf(item.voteAverage, scale);
+  // Affiche des que le film est classe, quelle que soit la source du tirage :
+  // tomber dessus depuis le catalogue TMDB est justement l'info interessante.
+  const rank = letterboxdRank(item.id);
 
   return (
     <motion.div
@@ -47,12 +54,19 @@ export function RouletteResult({
       </div>
 
       <div className="min-w-0 flex-1">
-        <span
-          style={{ color: rarity.color, backgroundColor: `${rarity.color}1a` }}
-          className="inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
-        >
-          {rarity.label}
-        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span
+            style={{ color: rarity.color, backgroundColor: `${rarity.color}1a` }}
+            className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+          >
+            {rarity.label}
+          </span>
+          {rank && (
+            <span className="flex items-center gap-1 rounded-full bg-[#00e054]/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-300">
+              <Trophy className="h-2.5 w-2.5" />#{rank} Letterboxd
+            </span>
+          )}
+        </div>
 
         <h3 className="mt-2 text-lg font-semibold leading-tight text-zinc-900 dark:text-white">
           {item.title}

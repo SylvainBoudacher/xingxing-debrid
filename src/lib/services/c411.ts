@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from "@/lib/networkError";
+import { fetchWithTimeout, readJson } from "@/lib/networkError";
 import { isBrowserPreview } from "@/lib/devTauriShim";
 import type { C411Torrent } from "@/lib/c411";
 
@@ -44,5 +44,5 @@ export async function searchTorrents(
   const sub = p.subcategory ? `&subcategory=${p.subcategory}` : "";
   const url = `${BASE}/api/torrents?page=${p.page}&perPage=${p.perPage}&sortBy=${p.sortBy}&sortOrder=${p.sortOrder}${sub}&name=${encodeURIComponent(p.name)}&apikey=${apiKey}`;
   const res = await fetchWithTimeout("C411", url);
-  return (await res.json()) as C411SearchResponse;
+  return readJson<C411SearchResponse>("C411", res);
 }
