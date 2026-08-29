@@ -1,3 +1,4 @@
+import rouletteV164Img from "@/assets/patchnote/v1.6.4/roulette.webp";
 import discoverMangaV160Img from "@/assets/patchnote/v1.6.0/discover-manga.webp";
 import slotMachineV160Img from "@/assets/patchnote/v1.6.0/slot-machine.png";
 import bibliothequesMangaV160Img from "@/assets/patchnote/v1.6.0/bibliotheque-manga.webp";
@@ -44,6 +45,27 @@ export interface PatchNote {
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.6.4",
+    date: "29 aout 2026",
+    intro:
+      "La 1.6.4 apporte une grosse mise a jour de la roulette dans la page Decouverte : nouveau design, corrections de bugs et deux nouvelles categories de tirage.",
+    sections: [
+      {
+        title: "Decouverte",
+        items: [
+          "Grosse refonte de la roulette : design revu et plusieurs corrections de bugs.",
+          "Nouvelle categorie de tirage : Top 200 Letterboxd, le haut du classement sans filtre.",
+          "Nouvelle categorie de tirage : Top 200 des pires, les films les plus mal notes de TMDB.",
+        ],
+        images: [{ src: rouletteV164Img, caption: "La roulette repensee" }],
+      },
+      {
+        title: "Bibliotheque",
+        items: ["Correction d'un bug d'affichage dans la Bibliotheque."],
+      },
+    ],
+  },
   {
     version: "1.6.3",
     date: "9 aout 2026",

@@ -1,4 +1,3 @@
-- Roulette de film aleatoire et Top 200 manga dans la page Decouverte
-- Bouton Bibliotheque a cote du menu sur toutes les pages
-- Bibliotheque : bouton recherche episode/saison pour films/series, description depliable, fix animation des listes
-- Case a cocher eau/inventaire pour les canards, verif VLC sur Mac, filtre manga non lisibles, preload images, et un canard cadeau
+- Grosse mise a jour de la roulette dans Decouverte : nouveau design et fix de bugs
+- Deux nouvelles categories de tirage : Top 200 Letterboxd et Top 200 des pires
+- Bibliotheque : correction d'un bug d'affichage
