@@ -24,17 +24,6 @@ export function LetterboxdFeedPill({ label, active, onClick }: LetterboxdFeedPil
       }`}
     >
       {label}
-      {/* Même badge que le bouton Manga de l'accueil, aux couleurs Letterboxd. */}
-      <span
-        className={`flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold tracking-wide uppercase ${
-          active
-            ? "bg-white/15 text-emerald-200"
-            : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300"
-        }`}
-      >
-        <span className="h-1 w-1 animate-pulse rounded-full bg-[#00e054]" />
-        New
-      </span>
     </ShimmerButton>
   );
 }
