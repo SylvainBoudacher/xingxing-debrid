@@ -1,3 +1,4 @@
-- Grosse mise a jour de la roulette dans Decouverte : nouveau design et fix de bugs
-- Deux nouvelles categories de tirage : Top 200 Letterboxd et Top 200 des pires
-- Bibliotheque : correction d'un bug d'affichage
+- Ma bibliotheque : nombreux bugs corriges lors du passage entre films, series et mangas
+- Barre de recherche principale : pastille sur le contenu deja dans votre bibliotheque
+- Toasts d'ajout a la bibliotheque (film, serie, manga) redesignes
+- Page de bienvenue entierement repensee : nouvelles animations et parcours simplifie

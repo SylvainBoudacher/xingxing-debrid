@@ -46,6 +46,41 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.6.5",
+    date: "3 septembre 2026",
+    intro:
+      "La 1.6.5 corrige de nombreux bugs de la page Ma bibliotheque, ajoute une pastille dans la barre de recherche principale pour le contenu deja possede, redesigne les toasts d'ajout a la bibliotheque et repense entierement la page de bienvenue.",
+    sections: [
+      {
+        title: "Ma bibliotheque : corrections",
+        items: [
+          "Plusieurs bugs corriges lors du passage entre les films, les series et les mangas.",
+          "L'affichage restait incoherent quand on basculait d'un type de contenu a l'autre : c'est desormais stable.",
+        ],
+      },
+      {
+        title: "Barre de recherche principale : pastille bibliotheque",
+        items: [
+          "Une pastille apparait maintenant dans la barre de recherche principale quand le contenu est deja dans votre bibliotheque.",
+          "Plus besoin d'ouvrir la fiche pour savoir si vous l'avez deja ajoute.",
+        ],
+      },
+      {
+        title: "Toasts d'ajout a la bibliotheque redesignes",
+        items: [
+          "Les notifications affichees lors de l'ajout d'un film, d'une serie ou d'un manga a votre bibliotheque ont ete entierement redesignees.",
+        ],
+      },
+      {
+        title: "Page de bienvenue repensee",
+        items: [
+          "La page de bienvenue des nouveaux utilisateurs est totalement revue pour etre comprehensible par tout le monde.",
+          "Nouvelles animations et decoupage plus simple pour suivre chaque etape sans se perdre.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.6.4",
     date: "29 aout 2026",
     intro:
@@ -1197,4 +1232,4 @@ export const PATCH_NOTES: PatchNote[] = [
   },
 ];
 
-export const LATEST_VERSION = "1.6.3";
+export const LATEST_VERSION = "1.6.5";
