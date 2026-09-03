@@ -1,3 +1,4 @@
+import { toastLibraryAdded } from "@/components/LibraryAddedToast";
 import { flattenFiles, isVideoFile, type DebridModal } from "@/lib/debrid";
 import type { Occupant } from "@/lib/discoverReleases";
 import { recordDownload } from "@/lib/library";
@@ -80,8 +81,10 @@ export function useSendToDebrid({
         const files = flattenFiles(rawFiles);
         const hasVideo = files.some((f) => isVideoFile(f.name));
         if (addToLibrary) {
-          toast.success(`Ajoute a la bibliotheque : ${uploaded.name ?? occ.torrentName}`, {
-            action: { label: "Voir", onClick: () => onOpenLibrary(item, occ.infoHash) },
+          toastLibraryAdded({
+            item,
+            releaseName: uploaded.name ?? occ.torrentName,
+            onOpen: () => onOpenLibrary(item, occ.infoHash),
           });
         } else {
           setDebridModal({
@@ -104,14 +107,18 @@ export function useSendToDebrid({
           onLibraryChange();
         }
       } else {
-        toast.success(
-          addToLibrary
-            ? `Ajoute a la bibliotheque : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`
-            : `Envoye vers AllDebrid : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`,
-          addToLibrary
-            ? { action: { label: "Voir", onClick: () => onOpenLibrary(item, occ.infoHash) } }
-            : undefined,
-        );
+        if (addToLibrary) {
+          toastLibraryAdded({
+            item,
+            releaseName: uploaded.name ?? occ.torrentName,
+            pending: true,
+            onOpen: () => onOpenLibrary(item, occ.infoHash),
+          });
+        } else {
+          toast.success(
+            `Envoye vers AllDebrid : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`,
+          );
+        }
         await recordDownload({
           infoHash: occ.infoHash,
           title: uploaded.name ?? occ.torrentName,

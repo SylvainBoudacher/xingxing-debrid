@@ -321,6 +321,32 @@ fn default_download_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, St
         .map_err(|e| e.to_string())
 }
 
+// Prefixe des erreurs de dossier de destination : le front les distingue pour
+// afficher un message clair et stopper un telechargement groupe.
+const DIR_ERR: &str = "dir:";
+
+// Verifie que le dossier de destination est utilisable avant d'ecrire. Sans ca,
+// un disque externe debranche remonte une erreur systeme incomprehensible.
+fn ensure_dir_available(dir: &std::path::Path) -> Result<(), String> {
+    if dir.is_dir() {
+        return Ok(());
+    }
+    // Aucun ancetre existant (ex. "G:\\" absent) : le support n'est pas monte.
+    if !dir.ancestors().skip(1).any(|a| a.is_dir()) {
+        return Err(format!(
+            "{DIR_ERR}Dossier de telechargement introuvable : {}. Le disque n'est pas branche ou n'est plus monte.",
+            dir.display()
+        ));
+    }
+    std::fs::create_dir_all(dir).map_err(|e| {
+        format!(
+            "{DIR_ERR}Impossible de creer le dossier {} : {}",
+            dir.display(),
+            e
+        )
+    })
+}
+
 // Un sous-dossier est sur si chacun de ses segments est non vide, different de
 // "." et "..", et ne contient ni antislash ni racine absolue.
 fn is_safe_subdir(sub: &str) -> bool {
@@ -348,7 +374,7 @@ async fn download_to_dir(
     } else {
         std::path::PathBuf::from(&dir)
     };
-    std::fs::create_dir_all(&base_dir).map_err(|e| e.to_string())?;
+    ensure_dir_available(&base_dir)?;
 
     // Sous-dossier optionnel, un ou plusieurs segments separes par "/" (ex.
     // "manga/One Piece") : cree a la volee, toujours sous base_dir.
@@ -358,7 +384,7 @@ async fn download_to_dir(
             for segment in sub.split('/') {
                 path = path.join(segment);
             }
-            std::fs::create_dir_all(&path).map_err(|e| e.to_string())?;
+            ensure_dir_available(&path)?;
             path
         }
         _ => base_dir,
@@ -378,7 +404,8 @@ async fn download_to_dir(
     }
 
     let total = res.content_length().unwrap_or(0);
-    let mut file = std::fs::File::create(&dest).map_err(|e| e.to_string())?;
+    let mut file = std::fs::File::create(&dest)
+        .map_err(|e| format!("{DIR_ERR}Ecriture impossible dans {} : {}", target_dir.display(), e))?;
     let mut downloaded: u64 = 0;
     let mut last_emit = std::time::Instant::now();
     let mut stream = res.bytes_stream();

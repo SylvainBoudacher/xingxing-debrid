@@ -325,6 +325,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   >("intro");
   const [dnsStatus, setDnsStatus] = useState<"idle" | "checking" | "ok" | "fail">("idle");
   const [showDnsGuide, setShowDnsGuide] = useState(false);
+  const [dnsError, setDnsError] = useState("");
   const [c411Key, setC411Key] = useState("");
   const [allDebridKey, setAllDebridKey] = useState("");
   const [tmdbKey, setTmdbKey] = useState("");
@@ -364,11 +365,13 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   }, []);
 
   async function checkDns() {
+    setDnsError("");
     setDnsStatus("checking");
     try {
       await httpFetch("https://c411.org", { method: "HEAD", signal: AbortSignal.timeout(6000) });
       setDnsStatus("ok");
-    } catch {
+    } catch (e) {
+      setDnsError(e instanceof Error ? `${e.name}: ${e.message}` : String(e));
       setDnsStatus("fail");
     }
   }
@@ -836,6 +839,11 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                             Voir le guide DNS
                           </button>
                         </p>
+                        {dnsError && (
+                          <p className="text-[10px] text-zinc-500 mt-1 font-mono break-all select-text">
+                            {dnsError}
+                          </p>
+                        )}
                       </div>
                     </>
                   )}

@@ -1,9 +1,11 @@
 import { mangaCoverUrl, MANGA_STATUS_LABELS, type MangaItem } from "@/lib/mangaItem";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Check } from "lucide-react";
 import { motion } from "motion/react";
 
 interface MangaSearchSuggestionsProps {
   suggestions: MangaItem[];
+  /** Ids MangaDex deja presents dans la bibliotheque */
+  ownedIds: Set<string>;
   highlightedIndex: number;
   onSelect: (item: MangaItem) => void;
   onHover: (index: number) => void;
@@ -11,6 +13,7 @@ interface MangaSearchSuggestionsProps {
 
 export function MangaSearchSuggestions({
   suggestions,
+  ownedIds,
   highlightedIndex,
   onSelect,
   onHover,
@@ -27,6 +30,7 @@ export function MangaSearchSuggestions({
         {suggestions.map((item, i) => {
           const active = i === highlightedIndex;
           const cover = mangaCoverUrl(item, 256);
+          const owned = ownedIds.has(item.id);
           return (
             <li key={item.id}>
               <button
@@ -63,6 +67,12 @@ export function MangaSearchSuggestions({
                     )}
                   </span>
                 </span>
+                {owned && (
+                  <span className="flex shrink-0 items-center gap-1 rounded-md bg-emerald-600/85 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                    Dans la bibliotheque
+                  </span>
+                )}
               </button>
             </li>
           );

@@ -20,7 +20,8 @@ import {
 import { getApiKey } from "@/lib/apiKeys";
 import type { C411Torrent } from "@/lib/c411";
 import { flattenFiles, formatSize, isVideoFile, type DebridModal } from "@/lib/debrid";
-import { recordDownload } from "@/lib/library";
+import { getCachedLibrary, loadLibrary, recordDownload } from "@/lib/library";
+import { ownedTmdbKeys } from "@/lib/recommendations";
 import { networkErrorMessage, toastNetworkError } from "@/lib/networkError";
 import { loadNyaaDefaults } from "@/lib/nyaaDefaults";
 import { buildNyaaQuery } from "@/lib/nyaaFilters";
@@ -34,6 +35,7 @@ import { useDebridActions } from "@/lib/useDebridActions";
 import { MangaLinkModal } from "@/components/MangaLinkModal";
 import { cbzReleaseFromResult } from "@/lib/mangaSearchResult";
 import type { MangaRelease } from "@/lib/mangaReleases";
+import { getCachedMangaLibrary, loadMangaLibrary, ownedMangaIds } from "@/lib/mangaLibrary";
 import { useAddMangaRelease } from "@/lib/useAddMangaRelease";
 import { MODE_BAR_ACCENT, SEARCH_MODES, type SearchMode } from "@/lib/searchModes";
 import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
@@ -309,13 +311,32 @@ export function MainPage({
   const { addingHash, addRelease } = useAddMangaRelease({
     getC411Key: () => apiKeyRef.current,
     getAllDebridKey: () => allDebridKeyRef.current,
-    onAdded: () => setMangaLink(null),
+    onAdded: () => {
+      setMangaLink(null);
+      setOwnedMangas(ownedMangaIds(getCachedMangaLibrary() ?? []));
+    },
   });
   const [uiVisible, setUiVisible] = useState(true);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchedQueryRef = useRef<string>("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Ids TMDB deja presents dans la bibliotheque : badge dans l'auto-complete.
+  const [ownedKeys, setOwnedKeys] = useState<Set<string>>(() =>
+    ownedTmdbKeys(getCachedLibrary() ?? []),
+  );
+  useEffect(() => {
+    void loadLibrary().then((lib) => setOwnedKeys(ownedTmdbKeys(lib)));
+  }, []);
+
+  // Idem cote manga : ids MangaDex deja dans la bibliotheque manga.
+  const [ownedMangas, setOwnedMangas] = useState<Set<string>>(() =>
+    ownedMangaIds(getCachedMangaLibrary() ?? []),
+  );
+  useEffect(() => {
+    void loadMangaLibrary().then((lib) => setOwnedMangas(ownedMangaIds(lib)));
+  }, []);
 
   // Auto-complete TMDB : uniquement en mode Films & Séries, barre focalisée.
   const { suggestions, loading: suggestionsLoading } = useTmdbSuggestions(
@@ -507,6 +528,7 @@ export function MainPage({
       toastNetworkError(err, () => handleSendToDebrid(result, index, addToLibrary));
     } finally {
       setBusy(null);
+      setOwnedKeys(ownedTmdbKeys(getCachedLibrary() ?? []));
     }
   }
 
@@ -1069,6 +1091,7 @@ export function MainPage({
                 {showSuggestions && (
                   <SearchSuggestions
                     suggestions={suggestions}
+                    ownedKeys={ownedKeys}
                     highlightedIndex={highlightedIndex}
                     onSelect={selectSuggestion}
                     onHover={setHighlightedIndex}
@@ -1077,6 +1100,7 @@ export function MainPage({
                 {showMangaSuggestions && (
                   <MangaSearchSuggestions
                     suggestions={mangaSuggestions}
+                    ownedIds={ownedMangas}
                     highlightedIndex={highlightedIndex}
                     onSelect={selectMangaSuggestion}
                     onHover={setHighlightedIndex}

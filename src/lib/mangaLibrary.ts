@@ -109,6 +109,12 @@ export function itemFromEntry(entry: MangaEntry): MangaItem {
   };
 }
 
+// Ids MangaDex deja presents dans la bibliotheque, pour le badge "Dans la
+// bibliotheque" sur les suggestions de recherche.
+export function ownedMangaIds(entries: MangaEntry[]): Set<string> {
+  return new Set(entries.map((e) => e.mangaId));
+}
+
 export function metaFromItem(item: MangaItem): MangaMeta {
   return {
     title: item.title,

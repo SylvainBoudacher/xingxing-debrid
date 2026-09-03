@@ -1,9 +1,11 @@
 import type { TmdbItem } from "@/lib/tmdbItem";
-import { Clapperboard, Tv } from "lucide-react";
+import { Check, Clapperboard, Tv } from "lucide-react";
 import { motion } from "motion/react";
 
 interface SearchSuggestionsProps {
   suggestions: TmdbItem[];
+  /** Cles `mediaType-id` deja presentes dans la bibliotheque */
+  ownedKeys: Set<string>;
   highlightedIndex: number;
   onSelect: (item: TmdbItem) => void;
   onHover: (index: number) => void;
@@ -11,6 +13,7 @@ interface SearchSuggestionsProps {
 
 export function SearchSuggestions({
   suggestions,
+  ownedKeys,
   highlightedIndex,
   onSelect,
   onHover,
@@ -26,6 +29,7 @@ export function SearchSuggestions({
       <ul className="max-h-80 overflow-y-auto py-1.5">
         {suggestions.map((item, i) => {
           const active = i === highlightedIndex;
+          const owned = ownedKeys.has(`${item.mediaType}-${item.id}`);
           return (
             <li key={`${item.mediaType}-${item.id}`}>
               <button
@@ -71,6 +75,12 @@ export function SearchSuggestions({
                     )}
                   </span>
                 </span>
+                {owned && (
+                  <span className="flex shrink-0 items-center gap-1 rounded-md bg-emerald-600/85 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    <Check className="h-2.5 w-2.5" strokeWidth={3} />
+                    Dans la bibliotheque
+                  </span>
+                )}
               </button>
             </li>
           );

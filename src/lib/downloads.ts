@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { toast } from "sonner";
+import { openSettingsPanel } from "@/lib/settingsNavigation";
 
 export type DownloadStatus = "active" | "done" | "error" | "cancelled";
 
@@ -22,6 +23,9 @@ interface ProgressEvent {
   downloaded: number;
   total: number;
 }
+
+// Prefixe des erreurs de dossier renvoyees par la commande Rust download_to_dir.
+const DIR_ERR = "dir:";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
@@ -186,11 +190,28 @@ export async function startDownload(
     const item = items.get(id);
     if (!item) return null;
     item.speed = undefined;
-    if (String(err) === "cancelled") {
+    const message = String(err);
+    if (message === "cancelled") {
       item.status = "cancelled";
     } else {
       item.status = "error";
-      toast.error(`Téléchargement échoué : ${item.filename}`);
+      if (message.startsWith(DIR_ERR)) {
+        // Destination inaccessible (disque debranche, droits) : le probleme est
+        // le meme pour tous les fichiers, on stoppe le lot et on n'alerte
+        // qu'une fois.
+        bulkCancelled = true;
+        toast.error("Dossier de téléchargement inaccessible", {
+          id: "download-dir-error",
+          description: message.slice(DIR_ERR.length),
+          duration: 10000,
+          action: {
+            label: "Changer le dossier",
+            onClick: () => openSettingsPanel("downloads"),
+          },
+        });
+      } else {
+        toast.error(`Téléchargement échoué : ${item.filename}`, { description: message });
+      }
     }
     emit();
     return null;
