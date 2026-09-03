@@ -33,11 +33,11 @@ export function CopyChip({ value }: { value: string }) {
     <button
       type="button"
       onClick={() => copy(value)}
-      title="Copier"
-      className="group inline-flex items-center align-baseline font-mono text-[12px] font-semibold text-zinc-700 dark:text-zinc-200 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded px-1.5 py-0.5 transition-colors"
+      title="Cliquer pour copier"
+      className="inline-flex items-center gap-1 align-baseline font-mono text-[12px] font-semibold text-violet-600 dark:text-violet-300 bg-violet-100 dark:bg-violet-500/15 hover:bg-violet-200 dark:hover:bg-violet-500/25 ring-1 ring-violet-300/60 dark:ring-violet-400/20 rounded px-1.5 py-0.5 transition-colors"
     >
       {value}
-      <Copy className="h-3 w-0 ml-0 opacity-0 text-zinc-500 dark:text-zinc-400 transition-all group-hover:w-3 group-hover:ml-1 group-hover:opacity-100" />
+      <Copy className="h-3 w-3 text-violet-500 dark:text-violet-300" />
     </button>
   );
 }

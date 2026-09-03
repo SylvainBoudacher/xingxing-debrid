@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check, Globe, Laptop, Server, X } from "lucide-react";
 
-const STAGE = { width: 420, height: 188 };
+const STAGE = { width: 540, height: 188 };
 const PHASE_MS = 5600;
 
 const PHASES = [
@@ -24,9 +24,9 @@ const PHASES = [
   },
 ];
 
-const NODE = { width: 92, height: 72, top: 26 };
-const MID_W = 124;
-const LEFT_X = 8;
+const NODE = { width: 100, height: 72, top: 26 };
+const MID_W = 140;
+const LEFT_X = 10;
 const RIGHT_X = STAGE.width - LEFT_X - NODE.width;
 /** Le noeud DNS est le pivot du schema : il doit tomber pile au centre de la scene. */
 const MID_X = (STAGE.width - MID_W) / 2;

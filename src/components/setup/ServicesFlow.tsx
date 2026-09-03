@@ -1,7 +1,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import appLogo from "@/assets/logo.png";
 import c411Logo from "@/assets/sources/C411.webp";
-import allDebridLogo from "@/assets/sources/alldebrid.svg";
+import allDebridLogo from "@/assets/sources/alldebrid.webp";
 import tmdbLogo from "@/assets/sources/tmdb.svg";
 
 const STAGE = { width: 420, height: 244 };

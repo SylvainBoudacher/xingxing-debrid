@@ -22,7 +22,7 @@ la fois, une verification apres chaque saisie.
 | TMDB           | Obligatoire, comme C411 et AllDebrid                                        |
 | Perimetre      | Textes des tutoriels extraits en source unique, partagee avec `ApiKeysForm` |
 | UI Preferences | Inchangee (formulaire compact), elle consomme juste la source unique        |
-| Visuel         | Capture d'ecran annotee par service, ratio 16:10, repli SVG si absente      |
+| Visuel         | Aucune capture d'ecran : le tutoriel reste textuel (trois etapes)           |
 | Champ vide     | Seul cas qui desactive le bouton                                            |
 
 ## Architecture
@@ -33,20 +33,13 @@ Nouveaux :
 
 - `src/lib/keyServices.ts` - table des trois services. Pour chacun : `id`,
   `name`, `logo`, `url`, `urlLabel`, `badge` ("free" | "paid"), `tagline`,
-  `steps` (exactement 3), `placeholder`, `keyName` (nom keyring),
-  `validate(key)`, `screenshot` (import ou `null`), `highlight`
-  (`{ x, y, w, h }` en pourcentages) et `errorLabel` (nom du service dans les
-  messages). Pur, sans JSX.
+  `steps` (exactement 3), `placeholder`, `keyName` (nom keyring) et
+  `check(key)`. Pur, sans JSX.
 - `src/components/setup/keys/KeyWizard.tsx` - orchestration : index courant,
   valeurs saisies, etat de verification par service, `AnimatePresence` entre
   les ecrans, sortie vers `display`.
 - `src/components/setup/keys/KeyScreen.tsx` - un ecran. Presentation pure,
   recoit un service et des callbacks.
-- `src/components/setup/keys/KeyScreenshot.tsx` - cadre 16:10, capture si
-  fournie, illustration SVG de repli sinon, rectangle de surbrillance
-  positionne en pourcentages.
-- `src/assets/setup/` - `c411.png`, `alldebrid.png`, `tmdb.png` (~640x400,
-  recadrees serre sur la zone utile du site, pas la fenetre entiere).
 
 Modifies :
 
@@ -70,10 +63,6 @@ Modifies :
 
         [logo]  Votre cle C411   .Gratuit.
         Le moteur de recherche. Deux minutes.
-
-   +---------------------------------------+
-   |  capture du site, bouton entoure      |
-   +---------------------------------------+
 
    1  Ouvrez c411.org et connectez-vous     [ Ouvrir ^ ]
    2  Profil, en haut a droite > Integration API
@@ -143,8 +132,8 @@ Preferences. Ce rappel n'empeche pas de continuer.
   formulaire compact. Un utilisateur deja installe ne repasse pas par un
   wizard pour changer une cle.
 - Les autres steps du setup (`display`, `downloads`, `theme`).
-- La production des captures d'ecran : les emplacements sont cables et le
-  repli SVG s'affiche tant que les fichiers ne sont pas deposes.
+- Toute illustration du parcours sur les sites tiers : ecarte pour ne pas
+  diffuser de captures de comptes reels.
 
 ## Verification
 

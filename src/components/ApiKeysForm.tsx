@@ -5,31 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getApiKey, setApiKey, type ApiKeyName } from "@/lib/apiKeys";
+import { KEY_SERVICES } from "@/lib/keyServices";
 import { validateKey as validateTmdbKey } from "@/lib/services/tmdb";
-
-const C411_STEPS = [
-  "Connectez-vous a votre compte C411.",
-  "Cliquez sur votre profil en haut a droite.",
-  'Allez dans "Integration API".',
-  'Cliquez sur "Creer une cle".',
-  "Copiez la cle generee et collez-la ci-dessous.",
-];
-
-const ALLDEBRID_STEPS = [
-  "Connectez-vous a votre compte sur alldebrid.fr.",
-  'Allez dans "Mon compte".',
-  'Cliquez sur "Apikey Manager".',
-  'Cliquez sur "Nouvelle cle".',
-  "Copiez la cle generee et collez-la ci-dessous.",
-];
-
-const TMDB_STEPS = [
-  "Creez un compte gratuit sur themoviedb.org.",
-  'Allez dans "Parametres" puis "API".',
-  "Demandez une cle API (usage personnel).",
-  'Copiez la "Cle d\'API" (v3) et collez-la ci-dessous.',
-  "Cette cle est optionnelle : elle sert uniquement a la page Decouverte.",
-];
 
 function TutorialBlock({
   number,
@@ -158,41 +135,32 @@ export function ApiKeysForm({ onSaved }: { onSaved?: (keys: Partial<ApiKeys>) =>
     toast.success("Cle sauvegardee.");
   }
 
+  const fields: Record<string, { field: keyof ApiKeys; value: string; set: (v: string) => void }> =
+    {
+      c411: { field: "c411Key", value: c411Key, set: setC411Key },
+      alldebrid: { field: "allDebridKey", value: allDebridKey, set: setAllDebridKey },
+      tmdb: { field: "tmdbKey", value: tmdbKey, set: setTmdbKey },
+    };
+
   return (
     <div className="w-full max-w-lg space-y-4">
-      <TutorialBlock
-        number={1}
-        title="Cle API C411"
-        url="https://c411.org"
-        steps={C411_STEPS}
-        inputId="c411-key"
-        value={c411Key}
-        placeholder="Collez votre cle C411"
-        onChange={setC411Key}
-        onBlur={() => saveField("c411Key", c411Key)}
-      />
-      <TutorialBlock
-        number={2}
-        title="Cle API AllDebrid"
-        url="https://alldebrid.fr"
-        steps={ALLDEBRID_STEPS}
-        inputId="alldebrid-key"
-        value={allDebridKey}
-        placeholder="Collez votre cle AllDebrid"
-        onChange={setAllDebridKey}
-        onBlur={() => saveField("allDebridKey", allDebridKey)}
-      />
-      <TutorialBlock
-        number={3}
-        title="Cle API TMDB (optionnelle)"
-        url="https://www.themoviedb.org/settings/api"
-        steps={TMDB_STEPS}
-        inputId="tmdb-key"
-        value={tmdbKey}
-        placeholder="Collez votre cle TMDB"
-        onChange={setTmdbKey}
-        onBlur={() => saveField("tmdbKey", tmdbKey)}
-      />
+      {KEY_SERVICES.map((service, i) => {
+        const f = fields[service.id];
+        return (
+          <TutorialBlock
+            key={service.id}
+            number={i + 1}
+            title={`Cle API ${service.name}`}
+            url={service.url}
+            steps={service.steps}
+            inputId={`${service.id}-key`}
+            value={f.value}
+            placeholder={service.placeholder}
+            onChange={f.set}
+            onBlur={() => saveField(f.field, f.value)}
+          />
+        );
+      })}
     </div>
   );
 }

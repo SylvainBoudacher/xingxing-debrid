@@ -45,7 +45,7 @@ export function NetworkStep({
       animate="visible"
       exit={{ opacity: 0, x: -24, transition: { duration: 0.2 } }}
       variants={stagger}
-      className="relative mx-auto w-full max-w-xl px-6 pt-10 pb-12 sm:px-8 space-y-4"
+      className="relative mx-auto w-full max-w-2xl px-6 pt-10 pb-12 sm:px-8 space-y-4"
     >
       <motion.div variants={item}>
         <motion.button

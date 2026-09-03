@@ -1,4 +1,4 @@
-import { fetchWithTimeout, readJson } from "@/lib/networkError";
+import { fetchWithTimeout, NetworkError, readJson } from "@/lib/networkError";
 import { isBrowserPreview } from "@/lib/devTauriShim";
 import type { C411Torrent } from "@/lib/c411";
 
@@ -45,4 +45,19 @@ export async function searchTorrents(
   const url = `${BASE}/api/torrents?page=${p.page}&perPage=${p.perPage}&sortBy=${p.sortBy}&sortOrder=${p.sortOrder}${sub}&name=${encodeURIComponent(p.name)}&apikey=${apiKey}`;
   const res = await fetchWithTimeout("C411", url);
   return readJson<C411SearchResponse>("C411", res);
+}
+
+// true si C411 accepte la cle, false si elle est refusee (401/403). Les autres
+// erreurs reseau remontent : hors-ligne, impossible de trancher.
+export async function validateKey(apiKey: string): Promise<boolean> {
+  try {
+    await searchTorrents(
+      { name: "a", page: 1, perPage: 1, sortBy: "publishedAt", sortOrder: "desc" },
+      apiKey,
+    );
+    return true;
+  } catch (err) {
+    if (err instanceof NetworkError && (err.status === 401 || err.status === 403)) return false;
+    throw err;
+  }
 }

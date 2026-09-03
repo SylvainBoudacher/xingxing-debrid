@@ -17,7 +17,7 @@ export const WINDOWS_STEPS: GuideStep[] = [
         Appuyez sur <WinKey /> + <Key>R</Key>.
       </>,
       <>
-        Tapez <CopyChip value="ncpa.cpl" /> puis Entree.
+        Copiez <CopyChip value="ncpa.cpl" /> (cliquez dessus), collez dans la fenetre puis Entree.
       </>,
     ],
   },
@@ -77,7 +77,8 @@ export const WINDOWS_STEPS: GuideStep[] = [
     title: "Vider le cache puis retester",
     lines: [
       <>
-        Appuyez sur <WinKey /> + <Key>R</Key>, tapez <CopyChip value="cmd" /> puis Entree.
+        Appuyez sur <WinKey /> + <Key>R</Key>, copiez <CopyChip value="cmd" /> (cliquez dessus),
+        collez puis Entree.
       </>,
       <>
         Dans la fenetre noire, tapez <CopyChip value="ipconfig /flushdns" /> puis Entree.

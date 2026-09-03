@@ -134,7 +134,7 @@ export function ServicesStep({ onBack, onNext }: { onBack: () => void; onNext: (
         accent="bg-emerald-500/12 ring-emerald-500/20 text-emerald-600 dark:text-emerald-400"
         title="TMDB"
         badges={[{ label: "Gratuit", tone: "free" }]}
-        description="La base de donnees de films et series. Elle alimente la page Decouverte et affiche jaquettes, resumes et notes dans votre bibliotheque. Sans elle, l'app fonctionne mais reste bridee."
+        description="La base de donnees de films et series. Elle alimente la page Decouverte et affiche jaquettes, resumes et notes dans votre bibliotheque. Sa cle est gratuite et requise, comme les deux autres."
       />
 
       <motion.div

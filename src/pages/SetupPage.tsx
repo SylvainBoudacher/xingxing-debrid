@@ -5,190 +5,36 @@ import {
   ArrowRight,
   Check,
   Download,
-  ExternalLink,
-  FileText,
-  KeyRound,
   Loader2,
   FolderOpen,
-  Magnet,
   Moon,
-  Search,
   Settings,
   Sparkles,
   Sun,
   Upload,
   Zap,
-  type LucideIcon,
 } from "lucide-react";
 import { SetupIntroSequence } from "@/components/setupIntro/SetupIntroSequence";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { LazyStore } from "@tauri-apps/plugin-store";
-import { openUrl } from "@tauri-apps/plugin-opener";
 import { toast } from "sonner";
-import { parseRelease } from "@/lib/parseRelease";
-import { getApiKey, setApiKey } from "@/lib/apiKeys";
+import { setApiKey } from "@/lib/apiKeys";
 import { httpFetch } from "@/lib/networkError";
 import { pickBackupFile } from "@/lib/profileBackup";
 import { ImportProfileModal } from "@/components/ImportProfileModal";
 import { DnsGuideModal } from "@/components/DnsGuideModal";
 import { ServicesStep } from "@/components/setup/ServicesStep";
 import { NetworkStep, type DnsStatus } from "@/components/setup/NetworkStep";
+import { KeyWizard } from "@/components/setup/keys/KeyWizard";
+import { KEY_SERVICES } from "@/lib/keyServices";
 import { item, stagger } from "@/components/setup/motionVariants";
-import { validateKey as validateTmdbKey } from "@/lib/services/tmdb";
 import { applyTheme, type Theme } from "@/lib/theme";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
 );
-import type { ViewMode } from "@/lib/viewMode";
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
-
-const C411_STEPS = [
-  "Connectez-vous à votre compte C411.",
-  "Cliquez sur votre profil en haut à droite.",
-  'Allez dans "Intégration API".',
-  'Cliquez sur "Créer une clé".',
-  "Copiez la clé générée et collez-la ci-dessous.",
-];
-
-const ALLDEBRID_STEPS = [
-  "Connectez-vous à votre compte sur alldebrid.fr.",
-  'Allez dans "Mon compte".',
-  'Cliquez sur "Apikey Manager".',
-  'Cliquez sur "Nouvelle clé".',
-  "Copiez la clé générée et collez-la ci-dessous.",
-];
-
-const TMDB_STEPS = [
-  "Créez un compte gratuit sur themoviedb.org.",
-  'Allez dans "Paramètres" puis "API".',
-  "Demandez une clé API (usage personnel).",
-  'Copiez la "Clé d\'API" (v3) et collez-la ci-dessous.',
-  "Sans cette clé, l'application est bridée : pas de page Découverte, et votre bibliothèque perd les jaquettes et les infos de vos films et séries.",
-];
-
-function KeyCard({
-  number,
-  title,
-  url,
-  urlLabel,
-  steps,
-  value,
-  placeholder,
-  onChange,
-  optional,
-}: {
-  number: number;
-  title: string;
-  url: string;
-  urlLabel: string;
-  steps: string[];
-  value: string;
-  placeholder: string;
-  onChange: (v: string) => void;
-  optional?: boolean;
-}) {
-  return (
-    <motion.div variants={item}>
-      {optional && (
-        <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
-          Optionnel, mais fortement recommandé
-        </p>
-      )}
-      <div
-        className={`rounded-2xl px-5 py-5 ${
-          optional
-            ? "bg-white/60 dark:bg-zinc-900/40 border border-dashed border-black/15 dark:border-white/15"
-            : "bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6"
-        }`}
-      >
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3">
-            <span
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                optional
-                  ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
-                  : "bg-indigo-600 text-white"
-              }`}
-            >
-              {number}
-            </span>
-            <p className="text-sm font-semibold text-zinc-900 dark:text-white">{title}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => openUrl(url)}
-            className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-          >
-            {urlLabel}
-            <ExternalLink className="h-3 w-3" />
-          </button>
-        </div>
-
-        <ol className="space-y-1.5 mb-4">
-          {steps.map((step, i) => (
-            <li
-              key={i}
-              className="flex gap-2 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed"
-            >
-              <span className="shrink-0 font-semibold text-zinc-500">{i + 1}.</span>
-              {step}
-            </li>
-          ))}
-        </ol>
-
-        <div className="relative flex items-center">
-          <KeyRound className="absolute left-3 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
-          <input
-            type="password"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
-            className="w-full rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 pl-9 pr-3 py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-600 outline-none focus:ring-indigo-500/40 transition-all"
-          />
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function ViewOption({
-  label,
-  selected,
-  onClick,
-  children,
-}: {
-  label: string;
-  selected: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex flex-col rounded-xl px-4 py-3 text-left transition-all ${
-        selected
-          ? "bg-indigo-500/[0.07] ring-2 ring-indigo-500"
-          : "bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 hover:ring-black/20 dark:hover:ring-white/20"
-      }`}
-    >
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <span
-          className={`text-xs font-semibold ${selected ? "text-indigo-700 dark:text-indigo-300" : "text-zinc-500 dark:text-zinc-400"}`}
-        >
-          {label}
-        </span>
-        <span
-          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${selected ? "bg-indigo-500" : "ring-1 ring-black/15 dark:ring-white/15"}`}
-        >
-          {selected && <Check className="h-2.5 w-2.5 text-white" />}
-        </span>
-      </div>
-      {children}
-    </button>
-  );
-}
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -208,90 +54,17 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   );
 }
 
-function ViewModeCard({
-  icon: Icon,
-  title,
-  description,
-  example,
-  value,
-  onChange,
-}: {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  example: string;
-  value: ViewMode;
-  onChange: (v: ViewMode) => void;
-}) {
-  const parsed = parseRelease(example);
-  return (
-    <motion.div
-      variants={item}
-      className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-5"
-    >
-      <div className="flex items-center gap-3 mb-1">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
-          <Icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-        </div>
-        <p className="text-sm font-semibold text-zinc-900 dark:text-white">{title}</p>
-      </div>
-      <p className="text-xs text-zinc-500 mb-4">{description}</p>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <ViewOption
-          label="Simplifiée"
-          selected={value === "simple"}
-          onClick={() => onChange("simple")}
-        >
-          <div className="flex items-center gap-1.5 mb-1">
-            {parsed.quality && (
-              <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
-                {parsed.quality}
-              </span>
-            )}
-            {parsed.codec && (
-              <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                {parsed.codec}
-              </span>
-            )}
-          </div>
-          <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug">
-            {parsed.title}
-          </p>
-        </ViewOption>
-
-        <ViewOption
-          label="Détaillée"
-          selected={value === "detailed"}
-          onClick={() => onChange("detailed")}
-        >
-          <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug break-all">
-            {example}
-          </p>
-        </ViewOption>
-      </div>
-    </motion.div>
-  );
-}
-
 interface SetupPageProps {
   onComplete: () => void;
 }
 
 export function SetupPage({ onComplete }: SetupPageProps) {
   const [step, setStep] = useState<
-    "intro" | "services" | "network" | "keys" | "display" | "downloads" | "theme"
+    "intro" | "services" | "network" | "keys" | "downloads" | "theme"
   >("intro");
   const [dnsStatus, setDnsStatus] = useState<DnsStatus>("idle");
   const [showDnsGuide, setShowDnsGuide] = useState(false);
   const [dnsError, setDnsError] = useState("");
-  const [c411Key, setC411Key] = useState("");
-  const [allDebridKey, setAllDebridKey] = useState("");
-  const [tmdbKey, setTmdbKey] = useState("");
-  const [searchViewMode, setSearchViewMode] = useState<ViewMode>("simple");
-  const [viewMode, setViewMode] = useState<ViewMode>("simple");
-  const [hideNfo, setHideNfo] = useState(true);
-  const [skipNfoDownload, setSkipNfoDownload] = useState(true);
   const [downloadDir, setDownloadDir] = useState("");
   const [batchSize, setBatchSize] = useState(2);
   const [theme, setThemeState] = useState<Theme>("dark");
@@ -300,23 +73,6 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   const [importPath, setImportPath] = useState<string | null>(null);
 
   useEffect(() => {
-    getApiKey("c411_api_key").then((v) => {
-      if (v) setC411Key(v);
-    });
-    getApiKey("alldebrid_api_key").then((v) => {
-      if (v) setAllDebridKey(v);
-    });
-    getApiKey("tmdb_api_key").then((v) => {
-      if (v) setTmdbKey(v);
-    });
-    store.get<ViewMode>("search_view_mode").then((v) => {
-      if (v) setSearchViewMode(v);
-    });
-    store.get<ViewMode>("view_mode").then((v) => {
-      if (v) setViewMode(v);
-    });
-    store.get<boolean>("hide_nfo_files").then((v) => setHideNfo(v ?? true));
-    store.get<boolean>("skip_nfo_download").then((v) => setSkipNfoDownload(v ?? true));
     store.get<string>("download_dir").then((v) => setDownloadDir(v ?? ""));
     store.get<number>("download_batch_size").then((v) => setBatchSize(v ?? 2));
     store.get<Theme>("theme").then((v) => setThemeState(v === "light" ? "light" : "dark"));
@@ -345,39 +101,12 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     if (path) setImportPath(path);
   }
 
-  const bothFilled = c411Key.trim() !== "" && allDebridKey.trim() !== "";
-
-  async function handleKeysNext() {
+  async function handleKeysDone(values: Record<string, string>) {
     setSaving(true);
     try {
-      await setApiKey("c411_api_key", c411Key.trim());
-      await setApiKey("alldebrid_api_key", allDebridKey.trim());
-      await setApiKey("tmdb_api_key", tmdbKey.trim());
-      // Clé optionnelle : on prévient si elle est invalide mais on ne bloque pas
-      // le setup (hors-ligne / TMDB injoignable = on laisse passer).
-      if (tmdbKey.trim()) {
-        const valid = await validateTmdbKey(tmdbKey.trim()).catch(() => true);
-        if (!valid)
-          toast.error(
-            "Clé TMDB invalide : la page Découverte ne fonctionnera pas sans clé valide.",
-          );
+      for (const service of KEY_SERVICES) {
+        await setApiKey(service.keyName, (values[service.id] ?? "").trim());
       }
-      setStep("display");
-    } catch (err) {
-      toast.error(String(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDisplayNext() {
-    setSaving(true);
-    try {
-      await store.set("search_view_mode", searchViewMode);
-      await store.set("view_mode", viewMode);
-      await store.set("hide_nfo_files", hideNfo);
-      await store.set("skip_nfo_download", skipNfoDownload);
-      await store.save();
       setStep("downloads");
     } catch (err) {
       toast.error(String(err));
@@ -502,201 +231,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
           )}
 
           {step === "keys" && (
-            <motion.div
-              key="keys"
-              initial="hidden"
-              animate="visible"
-              exit={{ opacity: 0, x: 24, transition: { duration: 0.2 } }}
-              variants={stagger}
-              className="relative mx-auto w-full max-w-xl px-6 pt-10 pb-12 sm:px-8 space-y-4"
-            >
-              <motion.div variants={item}>
-                <motion.button
-                  whileTap={{ scale: 0.93 }}
-                  onClick={() => setStep("network")}
-                  className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span className="text-sm font-medium">Retour</span>
-                </motion.button>
-
-                <div className="text-center mb-2">
-                  <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
-                    Configurez vos clés API
-                  </h1>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-                    Deux clés gratuites pour relier l'application à C411 et AllDebrid. La clé TMDB
-                    est optionnelle, mais sans elle une partie de l'application reste bridée.
-                  </p>
-                </div>
-              </motion.div>
-
-              <KeyCard
-                number={1}
-                title="Clé API C411"
-                url="https://c411.org"
-                urlLabel="c411.org"
-                steps={C411_STEPS}
-                value={c411Key}
-                placeholder="Collez votre clé C411"
-                onChange={setC411Key}
-              />
-              <KeyCard
-                number={2}
-                title="Clé API AllDebrid"
-                url="https://alldebrid.fr"
-                urlLabel="alldebrid.fr"
-                steps={ALLDEBRID_STEPS}
-                value={allDebridKey}
-                placeholder="Collez votre clé AllDebrid"
-                onChange={setAllDebridKey}
-              />
-              <KeyCard
-                number={3}
-                title="Clé API TMDB"
-                url="https://www.themoviedb.org"
-                urlLabel="themoviedb.org"
-                steps={TMDB_STEPS}
-                value={tmdbKey}
-                placeholder="Collez votre clé TMDB"
-                onChange={setTmdbKey}
-              />
-
-              <motion.div variants={item} className="pt-2">
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleKeysNext}
-                  disabled={!bothFilled || saving}
-                  className="flex w-full items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold text-white transition-colors"
-                >
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      Continuer
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </motion.button>
-                {!bothFilled && (
-                  <p className="mt-2 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
-                    Renseignez les deux clés pour continuer.
-                  </p>
-                )}
-              </motion.div>
-            </motion.div>
-          )}
-
-          {step === "display" && (
-            <motion.div
-              key="display"
-              initial="hidden"
-              animate="visible"
-              exit={{ opacity: 0, x: 24, transition: { duration: 0.2 } }}
-              variants={stagger}
-              className="relative mx-auto w-full max-w-xl px-6 pt-10 pb-12 sm:px-8 space-y-4"
-            >
-              <motion.div variants={item}>
-                <motion.button
-                  whileTap={{ scale: 0.93 }}
-                  onClick={() => setStep("keys")}
-                  className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span className="text-sm font-medium">Retour</span>
-                </motion.button>
-
-                <div className="text-center mb-2">
-                  <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
-                    Choisissez votre affichage
-                  </h1>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-                    Cliquez sur l'affichage que vous préférez. Modifiable à tout moment dans les
-                    Paramètres.
-                  </p>
-                </div>
-              </motion.div>
-
-              <ViewModeCard
-                icon={Search}
-                title="Affichage des résultats de recherche"
-                description="Les résultats de recherche sur la page d'accueil."
-                example="Dune.Part.Two.2024.MULTi.2160p.WEB.H265-Slay3R"
-                value={searchViewMode}
-                onChange={setSearchViewMode}
-              />
-              <ViewModeCard
-                icon={Magnet}
-                title="Affichage des noms de fichiers"
-                description="Les noms de fichiers dans la page Magnets."
-                example="Apple.Cider.Vinegar.S01E01.MULTi.1080p.WEB.H265-CHiLL.mkv"
-                value={viewMode}
-                onChange={setViewMode}
-              />
-
-              <motion.div
-                variants={item}
-                className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-5"
-              >
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
-                    <FileText className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                  </div>
-                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                    Fichiers .nfo
-                  </p>
-                </div>
-                <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
-                  Un fichier .nfo est un petit fichier texte ajouté par les teams de release pour
-                  décrire le contenu (qualité, langue, source). Il n'est pas nécessaire pour
-                  regarder vos films et séries.
-                </p>
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                        Ne pas afficher les fichiers .nfo
-                      </p>
-                      <p className="text-xs text-zinc-500 mt-0.5">
-                        Les masque dans la liste des fichiers d'un magnet.
-                      </p>
-                    </div>
-                    <Toggle checked={hideNfo} onChange={setHideNfo} />
-                  </div>
-
-                  <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium text-zinc-900 dark:text-white">
-                        Ne pas télécharger les fichiers .nfo
-                      </p>
-                      <p className="text-xs text-zinc-500 mt-0.5">
-                        Les exclut des téléchargements groupés ("Tout télécharger").
-                      </p>
-                    </div>
-                    <Toggle checked={skipNfoDownload} onChange={setSkipNfoDownload} />
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div variants={item} className="pt-2">
-                <motion.button
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleDisplayNext}
-                  disabled={saving}
-                  className="flex w-full items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold text-white transition-colors"
-                >
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      Continuer
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </motion.button>
-              </motion.div>
-            </motion.div>
+            <KeyWizard onBack={() => setStep("network")} onDone={handleKeysDone} />
           )}
 
           {step === "downloads" && (
@@ -711,7 +246,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               <motion.div variants={item}>
                 <motion.button
                   whileTap={{ scale: 0.93 }}
-                  onClick={() => setStep("display")}
+                  onClick={() => setStep("keys")}
                   className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
                 >
                   <ArrowLeft className="h-4 w-4" />
@@ -743,24 +278,20 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                   </p>
                 </div>
                 <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
-                  Ou les fichiers debrides sont enregistres. Par defaut, le dossier Telechargements
-                  de votre systeme.
+                  Ou les fichiers debrides sont enregistres. Il n'y a pas de dossier par defaut :
+                  choisissez celui que vous voulez, il restera modifiable dans les Preferences.
                 </p>
 
                 <div className="flex items-center justify-between gap-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
-                      {downloadDir || "Dossier Telechargements (par defaut)"}
-                    </p>
-                    {downloadDir && (
-                      <button
-                        onClick={() => setDownloadDir("")}
-                        className="mt-0.5 text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
-                      >
-                        Reinitialiser
-                      </button>
-                    )}
-                  </div>
+                  <p
+                    className={`truncate text-sm ${
+                      downloadDir
+                        ? "font-medium text-zinc-900 dark:text-white"
+                        : "text-zinc-500 dark:text-zinc-400"
+                    }`}
+                  >
+                    {downloadDir || "Aucun dossier choisi"}
+                  </p>
                   <button
                     onClick={async () => {
                       const picked = await openDialog({ directory: true, multiple: false });
@@ -769,7 +300,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                     className="flex shrink-0 items-center gap-2 rounded-full bg-white/90 dark:bg-zinc-800/80 ring-1 ring-black/10 dark:ring-white/10 px-4 py-2 text-xs font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white transition-colors"
                   >
                     <FolderOpen className="h-3.5 w-3.5" />
-                    Choisir
+                    {downloadDir ? "Changer" : "Choisir"}
                   </button>
                 </div>
               </motion.div>
@@ -824,7 +355,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 <motion.button
                   whileTap={{ scale: 0.98 }}
                   onClick={handleDownloadsNext}
-                  disabled={saving}
+                  disabled={!downloadDir || saving}
                   className="flex w-full items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold text-white transition-colors"
                 >
                   {saving ? (
@@ -836,6 +367,11 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                     </>
                   )}
                 </motion.button>
+                {!downloadDir && (
+                  <p className="mt-2 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
+                    Choisissez un dossier de telechargement pour continuer.
+                  </p>
+                )}
               </motion.div>
             </motion.div>
           )}

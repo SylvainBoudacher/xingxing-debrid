@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import {
   Bell,
   BookOpen,
@@ -32,6 +32,7 @@ import { LibraryQuickButton } from "@/components/LibraryQuickButton";
 import { toast } from "sonner";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { getApiKey } from "@/lib/apiKeys";
+import { DevConfirmDialog, type DevAction } from "@/components/DevConfirmDialog";
 
 export type Page =
   | "main"
@@ -76,6 +77,20 @@ export function AppMenu({
   // La page Découverte est inutilisable sans clé TMDB : petit indicateur sur
   // l'entrée du menu pour prévenir avant de naviguer.
   const [tmdbKeyMissing, setTmdbKeyMissing] = useState(false);
+  const [devConfirm, setDevConfirm] = useState<DevAction | null>(null);
+
+  const runDevAction = async (action: DevAction) => {
+    setDevConfirm(null);
+    if (action === "reset-first-launch") {
+      await store.set("setup_complete", false);
+      await store.save();
+      toast.success("Premier lancement réinitialisé");
+      return;
+    }
+    await store.clear();
+    await store.save();
+    location.reload();
+  };
 
   useEffect(() => {
     getApiKey("tmdb_api_key")
@@ -88,7 +103,7 @@ export function AppMenu({
       {currentPage !== "library" && !isMain && (
         <LibraryQuickButton onClick={() => onNavigate("library")} />
       )}
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <motion.button
             whileHover={{ scale: 1.08 }}
@@ -163,63 +178,68 @@ export function AppMenu({
               <DropdownMenuLabel className="text-xs text-muted-foreground">
                 Développeur
               </DropdownMenuLabel>
-              <DropdownMenuCheckboxItem checked={devMode} onCheckedChange={onToggleDevMode}>
+              <DropdownMenuCheckboxItem
+                checked={devMode}
+                onCheckedChange={onToggleDevMode}
+                onSelect={(e) => e.preventDefault()}
+              >
                 <FlaskConical className="mr-2 h-4 w-4" />
                 Mode développeur
               </DropdownMenuCheckboxItem>
-              {devMode && (
-                <>
-                  <DropdownMenuItem onClick={() => onNavigate("setup")}>
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    Voir la welcome page
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={async () => {
-                      await store.set("setup_complete", false);
-                      await store.save();
-                      toast.success("Premier lancement réinitialisé");
-                    }}
+              <AnimatePresence initial={false}>
+                {devMode && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="overflow-hidden"
                   >
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Réinitialiser 1er lancement
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onShowMangaWelcome}>
-                    <BookOpen className="mr-2 h-4 w-4" />
-                    Revoir la modale Manga
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onShowUpdatePreview}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Apercu mise a jour
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onNavigate("nyaa")}>
-                    <TestTube className="mr-2 h-4 w-4" />
-                    Test nyaa.si
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      toast.success("Toast de succès");
-                      toast.error("Toast d'erreur");
-                    }}
-                  >
-                    <Bell className="mr-2 h-4 w-4" />
-                    Tester les toasts
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={async () => {
-                      await store.clear();
-                      await store.save();
-                      location.reload();
-                    }}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Vider le store
-                  </DropdownMenuItem>
-                </>
-              )}
+                    <DropdownMenuItem onClick={() => onNavigate("setup")}>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Voir la welcome page
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDevConfirm("reset-first-launch")}>
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Réinitialiser 1er lancement
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onShowMangaWelcome}>
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Revoir la modale Manga
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onShowUpdatePreview}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Apercu mise a jour
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onNavigate("nyaa")}>
+                      <TestTube className="mr-2 h-4 w-4" />
+                      Test nyaa.si
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        toast.success("Toast de succès");
+                        toast.error("Toast d'erreur");
+                      }}
+                    >
+                      <Bell className="mr-2 h-4 w-4" />
+                      Tester les toasts
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setDevConfirm("clear-store")}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Vider le store
+                    </DropdownMenuItem>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      <DevConfirmDialog
+        action={devConfirm}
+        onCancel={() => setDevConfirm(null)}
+        onConfirm={() => devConfirm && runDevAction(devConfirm)}
+      />
     </div>
   );
 }
