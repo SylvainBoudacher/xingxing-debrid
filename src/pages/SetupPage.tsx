@@ -7,7 +7,6 @@ import {
   Check,
   CheckCircle2,
   Clapperboard,
-  Compass,
   CreditCard,
   Download,
   ExternalLink,
@@ -30,7 +29,7 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import { SetupIntroSequence } from "@/components/setupIntro/SetupIntroSequence";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -73,29 +72,6 @@ const TMDB_STEPS = [
   "Demandez une clé API (usage personnel).",
   'Copiez la "Clé d\'API" (v3) et collez-la ci-dessous.',
   "Sans cette clé, l'application est bridée : pas de page Découverte, et votre bibliothèque perd les jaquettes et les infos de vos films et séries.",
-];
-
-const FEATURES = [
-  {
-    icon: Search,
-    title: "Recherchez",
-    text: "Trouvez films, séries, musiques et plus encore grâce au catalogue C411.",
-  },
-  {
-    icon: Compass,
-    title: "Découvrez",
-    text: "Découvrez des films et des séries grâce au catalogue TMDB.",
-  },
-  {
-    icon: Zap,
-    title: "Débridez",
-    text: "Convertissez les liens magnet en téléchargements premium instantanés via AllDebrid.",
-  },
-  {
-    icon: Download,
-    title: "Téléchargez ou regardez",
-    text: "Téléchargement direct ou lecture immédiate dans VLC, sans attendre.",
-  },
 ];
 
 const item = {
@@ -495,79 +471,17 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               variants={stagger}
               className="relative mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-6 py-6 sm:px-8"
             >
-              <motion.div variants={item} className="flex flex-col items-center text-center mb-5">
-                <div className="relative mb-2 flex h-52 w-52 items-center justify-center [perspective:700px]">
-                  <motion.div
-                    animate={{ opacity: [0.4, 0.9, 0.4], scale: [0.95, 1.15, 0.95] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-500/50 blur-2xl"
-                  />
-                  {/* 3D scene: the logo sits at z=0, the orbit plane is tilted so icons pass in front of and behind it */}
-                  <div className="absolute inset-0 flex items-center justify-center [transform-style:preserve-3d]">
-                    <img
-                      src={logo}
-                      alt="XingXing Debrid"
-                      className="relative h-24 w-24 rounded-2xl ring-1 ring-black/10 dark:ring-white/10 shadow-[0_0_50px_rgba(79,70,229,0.5)]"
-                    />
-                    <div className="pointer-events-none absolute inset-0 [transform-style:preserve-3d] [transform:rotateX(70deg)]">
-                      <div className="absolute inset-[26px] rounded-full border border-dashed border-indigo-500/25" />
-                      <motion.div
-                        animate={{ rotateZ: 360 }}
-                        transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
-                        className="absolute inset-0 [transform-style:preserve-3d]"
-                      >
-                        {FEATURES.map((f, i) => (
-                          <div
-                            key={f.title}
-                            className="absolute left-1/2 top-1/2 -ml-6 -mt-6 h-12 w-12 [transform-style:preserve-3d]"
-                            style={{ transform: `rotateZ(${i * 90}deg) translateY(-78px)` }}
-                          >
-                            {/* counter-rotation + un-tilt so the icon stays upright and faces the camera */}
-                            <motion.div
-                              initial={{ rotateZ: -i * 90 }}
-                              animate={{ rotateZ: -360 - i * 90 }}
-                              transition={{ duration: 24, repeat: Infinity, ease: "linear" }}
-                              className="h-12 w-12 [transform-style:preserve-3d]"
-                            >
-                              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/90 dark:bg-zinc-900/90 ring-1 ring-indigo-500/30 shadow-lg shadow-indigo-500/10 [transform:rotateX(-70deg)]">
-                                <f.icon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                              </div>
-                            </motion.div>
-                          </div>
-                        ))}
-                      </motion.div>
-                    </div>
-                  </div>
+              <motion.div variants={item} className="flex flex-col items-center text-center mb-8">
+                <div className="mb-6 w-full">
+                  <SetupIntroSequence />
                 </div>
                 <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
-                  XingXing Debrid
+                  Bienvenue sur XingXing Debrid
                 </h1>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm leading-relaxed">
                   De la recherche au visionnage, tout votre contenu en un seul endroit.
                 </p>
               </motion.div>
-
-              <div className="space-y-2 mb-5">
-                {FEATURES.map((f) => (
-                  <motion.div
-                    key={f.title}
-                    variants={item}
-                    className="flex items-start gap-4 rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-3"
-                  >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
-                      <f.icon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-0.5">
-                        {f.title}
-                      </p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                        {f.text}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
 
               <motion.div variants={item} className="space-y-2.5">
                 <motion.button
@@ -1403,6 +1317,16 @@ export function SetupPage({ onComplete }: SetupPageProps) {
       <AnimatePresence>
         {showDnsGuide && <DnsGuideModal onClose={() => setShowDnsGuide(false)} />}
       </AnimatePresence>
+
+      {import.meta.env.DEV && (
+        <button
+          type="button"
+          onClick={onComplete}
+          className="fixed bottom-4 right-4 z-50 rounded-lg border border-dashed border-violet-500/40 bg-white/70 px-2.5 py-1 text-[10px] font-bold tracking-wider text-violet-500 hover:bg-violet-500/10 transition-colors dark:bg-zinc-950/60"
+        >
+          [DEV] ALLER A L&apos;APP
+        </button>
+      )}
     </main>
   );
 }
