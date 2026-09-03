@@ -273,6 +273,8 @@ function App() {
     // bibliothèque. Seule l'action "Voir" d'une fiche pré-ouvre une oeuvre.
     if (p === "mangalibrary") {
       setMangaLibraryId(null);
+      setLibraryExpandedHash(null);
+      setLibraryExpandedGroupId(null);
       setLibraryTab("manga");
       setPage("library");
       return;
@@ -290,12 +292,16 @@ function App() {
       setLibraryExpandedHash(infoHash);
       setLibraryExpandedGroupId(null);
     }
+    setMangaLibraryId(null);
+    setLibraryTab("media");
     setPage("library");
   }
 
   // Depuis une fiche manga : ouvre la bibliothèque manga sur cette oeuvre.
   function openMangaEntry(mangaId?: string) {
     setMangaLibraryId(mangaId ?? null);
+    setLibraryExpandedHash(null);
+    setLibraryExpandedGroupId(null);
     setLibraryTab("manga");
     setPage("library");
   }

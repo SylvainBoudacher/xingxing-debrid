@@ -65,6 +65,8 @@ interface LibraryMangaSectionProps {
   getAllDebridKey: () => string;
   /** Oeuvre a ouvrir a l'arrivee (action "Voir" depuis la decouverte). */
   initialMangaId?: string | null;
+  /** La fiche pre-ouverte a ete consommee : ne pas la rouvrir au remontage */
+  onInitialConsumed?: () => void;
   /** Ouvre la decouverte sur l'onglet Mangas. */
   onDiscover: () => void;
   /** Lecteur ou modale ouverts : la page hote suspend son raccourci Escape. */
@@ -84,6 +86,7 @@ export function LibraryMangaSection({
   getC411Key,
   getAllDebridKey,
   initialMangaId,
+  onInitialConsumed,
   onDiscover,
   onBusyChange,
   onLayoutChange,
@@ -95,8 +98,13 @@ export function LibraryMangaSection({
   // transition de page avant de l'animer, sinon tout apparait d'un coup.
   useEffect(() => {
     if (!initialMangaId) return;
-    const timer = setTimeout(() => setSelectedId(initialMangaId), 350);
+    const timer = setTimeout(() => {
+      setSelectedId(initialMangaId);
+      onInitialConsumed?.();
+    }, 350);
     return () => clearTimeout(timer);
+    // onInitialConsumed est stable cote appelant : dep sur l'id seul.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialMangaId]);
   const [downloading, setDownloading] = useState<Set<string>>(() => new Set());
   const [bulkDownloading, setBulkDownloading] = useState(false);

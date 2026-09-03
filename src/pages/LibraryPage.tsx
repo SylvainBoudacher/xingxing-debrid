@@ -204,6 +204,9 @@ export function LibraryPage({
   const [naming, setNaming] = useState<
     { mode: "create"; hashes: string[] } | { mode: "rename"; category: LibraryCategory } | null
   >(null);
+  // Fiche manga pre-ouverte : consommee une seule fois, sinon un aller-retour
+  // entre les onglets (qui demonte la section) la rouvrirait tout seul.
+  const [pendingMangaId, setPendingMangaId] = useState<string | null>(initialMangaId ?? null);
   const [expandedHash, setExpandedHash] = useState<string | null>(null);
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
@@ -873,7 +876,8 @@ export function LibraryPage({
           <LibraryMangaSection
             getC411Key={() => initialC411Key ?? ""}
             getAllDebridKey={() => initialAllDebridKey ?? ""}
-            initialMangaId={initialMangaId}
+            initialMangaId={pendingMangaId}
+            onInitialConsumed={() => setPendingMangaId(null)}
             onDiscover={() => onNavigate("manga")}
             onBusyChange={setMangaBusy}
             onLayoutChange={setMangaLayout}
