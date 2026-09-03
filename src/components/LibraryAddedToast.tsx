@@ -1,7 +1,8 @@
+import { LibraryToastCard } from "@/components/LibraryToastCard";
 import { posterUrl } from "@/lib/posterPreload";
 import { parseRelease, parseReleaseScope } from "@/lib/parseRelease";
 import type { TmdbItem } from "@/lib/tmdbItem";
-import { ArrowRight, Check, Film, LoaderCircle } from "lucide-react";
+import { Film } from "lucide-react";
 import { toast } from "sonner";
 
 interface LibraryAddedToastProps {
@@ -28,62 +29,17 @@ function badges(releaseName: string): string[] {
 }
 
 export function LibraryAddedToast({ item, releaseName, pending, onOpen }: LibraryAddedToastProps) {
-  const tags = badges(releaseName);
-
   return (
-    <div className="bg-background border-border flex w-[380px] items-center gap-3 rounded-2xl border p-3 shadow-lg">
-      <div className="bg-muted h-[84px] w-14 shrink-0 overflow-hidden rounded-lg">
-        {item.posterPath ? (
-          <img
-            src={posterUrl(item.posterPath, "w154")}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="text-muted-foreground flex h-full w-full items-center justify-center">
-            <Film className="h-5 w-5" />
-          </div>
-        )}
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
-          {pending ? (
-            <LoaderCircle className="h-3 w-3 animate-spin" />
-          ) : (
-            <Check className="h-3 w-3 text-emerald-500" />
-          )}
-          {pending ? "Débridage en cours" : "Ajouté à la bibliothèque"}
-        </div>
-        <div className="text-foreground truncate text-sm font-semibold">
-          {item.title}
-          {item.year ? (
-            <span className="text-muted-foreground font-normal"> ({item.year})</span>
-          ) : null}
-        </div>
-        {tags.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {tags.map((t) => (
-              <span
-                key={t}
-                className="bg-muted text-muted-foreground rounded-md px-1.5 py-0.5 text-[10px] font-medium"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <button
-        type="button"
-        onClick={onOpen}
-        className="bg-primary text-primary-foreground hover:bg-primary/90 flex shrink-0 items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors"
-      >
-        Voir
-        <ArrowRight className="h-3.5 w-3.5" />
-      </button>
-    </div>
+    <LibraryToastCard
+      posterSrc={item.posterPath ? posterUrl(item.posterPath, "w154") : null}
+      fallbackIcon={<Film className="h-5 w-5" />}
+      pending={pending}
+      statusLabel={pending ? "Débridage en cours" : "Ajouté à la bibliothèque"}
+      title={item.title}
+      year={item.year || undefined}
+      badges={badges(releaseName)}
+      onOpen={onOpen}
+    />
   );
 }
 

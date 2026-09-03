@@ -1,3 +1,4 @@
+import { toastMangaLibraryAdded } from "@/components/MangaLibraryAddedToast";
 import { flattenFiles } from "@/lib/debrid";
 import type { MangaItem } from "@/lib/mangaItem";
 import { upsertMangaRelease, volumesFromFiles, type MangaEntry } from "@/lib/mangaLibrary";
@@ -61,7 +62,7 @@ export function useAddMangaRelease({
       }
 
       const seeAction = (mangaId: string) =>
-        onOpenLibrary ? { action: { label: "Voir", onClick: () => onOpenLibrary(mangaId) } } : {};
+        onOpenLibrary ? () => onOpenLibrary(mangaId) : undefined;
 
       setAddingHash(release.infoHash);
       try {
@@ -86,7 +87,12 @@ export function useAddMangaRelease({
             },
           });
           onAdded(entry);
-          toast.success(`${item.title} ajoute (debridage en cours)`, seeAction(entry.mangaId));
+          toastMangaLibraryAdded({
+            item,
+            release,
+            pending: true,
+            onOpen: seeAction(entry.mangaId),
+          });
           return;
         }
 
@@ -99,12 +105,12 @@ export function useAddMangaRelease({
 
         const entry = await upsertMangaRelease(item, { volumes });
         onAdded(entry);
-        toast.success(
-          volumes.length === 1
-            ? `${item.title} : 1 tome ajoute`
-            : `${item.title} : ${volumes.length} tomes ajoutes`,
-          seeAction(entry.mangaId),
-        );
+        toastMangaLibraryAdded({
+          item,
+          release,
+          volumeCount: volumes.length,
+          onOpen: seeAction(entry.mangaId),
+        });
       } catch (err) {
         toastNetworkError(err, () => latest.current?.(release, item));
       } finally {
