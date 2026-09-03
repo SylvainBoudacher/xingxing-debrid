@@ -1,31 +1,22 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
-  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   Check,
-  CheckCircle2,
-  Clapperboard,
-  CreditCard,
   Download,
   ExternalLink,
   FileText,
-  Globe,
   KeyRound,
   Loader2,
   FolderOpen,
   Magnet,
   Moon,
-  MonitorPlay,
   Search,
   Settings,
   Sparkles,
   Sun,
   Upload,
-  UserRound,
-  Wifi,
-  XCircle,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -40,6 +31,9 @@ import { httpFetch } from "@/lib/networkError";
 import { pickBackupFile } from "@/lib/profileBackup";
 import { ImportProfileModal } from "@/components/ImportProfileModal";
 import { DnsGuideModal } from "@/components/DnsGuideModal";
+import { ServicesStep } from "@/components/setup/ServicesStep";
+import { NetworkStep, type DnsStatus } from "@/components/setup/NetworkStep";
+import { item, stagger } from "@/components/setup/motionVariants";
 import { validateKey as validateTmdbKey } from "@/lib/services/tmdb";
 import { applyTheme, type Theme } from "@/lib/theme";
 
@@ -73,17 +67,6 @@ const TMDB_STEPS = [
   'Copiez la "Clé d\'API" (v3) et collez-la ci-dessous.',
   "Sans cette clé, l'application est bridée : pas de page Découverte, et votre bibliothèque perd les jaquettes et les infos de vos films et séries.",
 ];
-
-const item = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
-  },
-};
-
-const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.08 } } };
 
 function KeyCard({
   number,
@@ -297,9 +280,9 @@ interface SetupPageProps {
 
 export function SetupPage({ onComplete }: SetupPageProps) {
   const [step, setStep] = useState<
-    "intro" | "prereqs" | "keys" | "display" | "downloads" | "theme"
+    "intro" | "services" | "network" | "keys" | "display" | "downloads" | "theme"
   >("intro");
-  const [dnsStatus, setDnsStatus] = useState<"idle" | "checking" | "ok" | "fail">("idle");
+  const [dnsStatus, setDnsStatus] = useState<DnsStatus>("idle");
   const [showDnsGuide, setShowDnsGuide] = useState(false);
   const [dnsError, setDnsError] = useState("");
   const [c411Key, setC411Key] = useState("");
@@ -352,9 +335,8 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     }
   }
 
-  function goToPrereqs() {
-    setStep("prereqs");
-    setDnsStatus("checking");
+  function goToServices() {
+    setStep("services");
     checkDns();
   }
 
@@ -494,7 +476,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 </motion.button>
                 <motion.button
                   whileTap={{ scale: 0.98 }}
-                  onClick={goToPrereqs}
+                  onClick={goToServices}
                   className="flex w-full items-center justify-center gap-2 h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold text-white transition-colors"
                 >
                   Nouveau profil
@@ -504,325 +486,19 @@ export function SetupPage({ onComplete }: SetupPageProps) {
             </motion.div>
           )}
 
-          {step === "prereqs" && (
-            <motion.div
-              key="prereqs"
-              initial="hidden"
-              animate="visible"
-              exit={{ opacity: 0, x: -24, transition: { duration: 0.2 } }}
-              variants={stagger}
-              className="relative mx-auto w-full max-w-xl px-6 pt-10 pb-12 sm:px-8 space-y-4"
-            >
-              <motion.div variants={item}>
-                <motion.button
-                  whileTap={{ scale: 0.93 }}
-                  onClick={() => setStep("intro")}
-                  className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span className="text-sm font-medium">Retour</span>
-                </motion.button>
+          {step === "services" && (
+            <ServicesStep onBack={() => setStep("intro")} onNext={() => setStep("network")} />
+          )}
 
-                <div className="text-center mb-2">
-                  <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
-                    Avant de commencer
-                  </h1>
-                  <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-                    XingXing Debrid s'appuie sur des services externes. Voici ce dont vous avez
-                    besoin.
-                  </p>
-                </div>
-              </motion.div>
-
-              {/* AllDebrid */}
-              <motion.div
-                variants={item}
-                className="flex items-start gap-4 rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-4"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/12 ring-1 ring-amber-500/20">
-                  <CreditCard className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                      Compte AllDebrid
-                    </p>
-                    <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
-                      Payant
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    Service de debridage premium indispensable. Il convertit les liens magnets en
-                    telechargements directs a haute vitesse. Un abonnement est requis.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => openUrl("https://alldebrid.fr")}
-                    className="mt-2 flex items-center gap-1 text-xs font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300 transition-colors"
-                  >
-                    alldebrid.fr
-                    <ExternalLink className="h-3 w-3" />
-                  </button>
-                </div>
-              </motion.div>
-
-              {/* C411 */}
-              <motion.div
-                variants={item}
-                className="flex items-start gap-4 rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-4"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/12 ring-1 ring-indigo-500/20">
-                  <UserRound className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                      Compte C411
-                    </p>
-                    <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                      Gratuit
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    Moteur de recherche indexant films, series et musiques. L'inscription est
-                    gratuite et suffisante pour utiliser toutes les fonctionnalites.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => openUrl("https://c411.org")}
-                    className="mt-2 flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-                  >
-                    c411.org
-                    <ExternalLink className="h-3 w-3" />
-                  </button>
-                </div>
-              </motion.div>
-
-              {/* TMDB */}
-              <motion.div
-                variants={item}
-                className="flex items-start gap-4 rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-4"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/12 ring-1 ring-emerald-500/20">
-                  <Clapperboard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                      Compte TMDB
-                    </p>
-                    <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                      Gratuit
-                    </span>
-                    <span className="rounded-md bg-zinc-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                      Optionnel
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    Base de donnees de films et series. Fait tourner la page Decouverte et affiche
-                    les jaquettes et les infos des films et series de votre bibliotheque.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => openUrl("https://www.themoviedb.org")}
-                    className="mt-2 flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-500 dark:text-emerald-400 dark:hover:text-emerald-300 transition-colors"
-                  >
-                    themoviedb.org
-                    <ExternalLink className="h-3 w-3" />
-                  </button>
-                </div>
-              </motion.div>
-
-              {/* VLC */}
-              <motion.div
-                variants={item}
-                className="flex items-start gap-4 rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-4"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-orange-500/12 ring-1 ring-orange-500/20">
-                  <MonitorPlay className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white">VLC</p>
-                    <span className="rounded-md bg-emerald-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-                      Gratuit
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    Lecteur video utilise pour lire les contenus en streaming, sans attendre la fin
-                    du telechargement. Il doit etre installe sur votre machine.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => openUrl("https://www.videolan.org/vlc/")}
-                    className="mt-2 flex items-center gap-1 text-xs font-medium text-orange-600 hover:text-orange-500 dark:text-orange-400 dark:hover:text-orange-300 transition-colors"
-                  >
-                    videolan.org
-                    <ExternalLink className="h-3 w-3" />
-                  </button>
-                </div>
-              </motion.div>
-
-              {/* Internet */}
-              <motion.div
-                variants={item}
-                className="flex items-start gap-4 rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-4"
-              >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500/12 ring-1 ring-sky-500/20">
-                  <Wifi className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-0.5">
-                    Connexion internet
-                  </p>
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    L'application necessite une connexion internet active pour rechercher du contenu
-                    et interagir avec les services externes.
-                  </p>
-                </div>
-              </motion.div>
-
-              {/* DNS */}
-              <motion.div
-                variants={item}
-                className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-4"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-500/12 ring-1 ring-violet-500/20">
-                    <Globe className="h-4 w-4 text-violet-600 dark:text-violet-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-0.5">
-                      DNS compatible C411
-                    </p>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                      C411 peut etre bloque par les DNS par defaut de certains fournisseurs d'acces.
-                      Si le site n'est pas accessible, configurez un DNS alternatif tel que{" "}
-                      <span className="font-mono text-zinc-600 dark:text-zinc-300">1.1.1.1</span>{" "}
-                      (Cloudflare) ou{" "}
-                      <span className="font-mono text-zinc-600 dark:text-zinc-300">8.8.8.8</span>{" "}
-                      (Google).
-                    </p>
-                    <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                      Changer le DNS pour l'
-                      <span className="font-semibold text-zinc-600 dark:text-zinc-300">
-                        IPv4
-                      </span>{" "}
-                      peut ne pas suffire : pensez a faire de meme pour l'
-                      <span className="font-semibold text-zinc-600 dark:text-zinc-300">IPv6</span>,
-                      sinon votre systeme peut continuer a utiliser l'ancien DNS. Par ailleurs,
-                      certains logiciels de securite (antivirus, pare-feu, VPN) peuvent bloquer
-                      l'application au niveau reseau : verifiez leurs reglages si l'acces echoue
-                      malgre un DNS correct.
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  className="mt-4 rounded-xl px-4 py-3 flex items-center gap-3
-                bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6"
-                >
-                  {dnsStatus === "checking" && (
-                    <>
-                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-zinc-400" />
-                      <p className="text-xs text-zinc-500">Verification de l'acces a c411.org...</p>
-                    </>
-                  )}
-                  {dnsStatus === "ok" && (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                      <p className="text-xs text-zinc-700 dark:text-zinc-300">
-                        c411.org est accessible depuis votre reseau.
-                      </p>
-                    </>
-                  )}
-                  {dnsStatus === "fail" && (
-                    <>
-                      <XCircle className="h-4 w-4 shrink-0 text-red-500" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-red-600 dark:text-red-400">
-                          c411.org n'est pas accessible.
-                        </p>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          Votre DNS bloque peut-etre l'acces.{" "}
-                          <button
-                            type="button"
-                            onClick={() => setShowDnsGuide(true)}
-                            className="underline underline-offset-2 text-violet-600 dark:text-violet-400 hover:text-violet-500 transition-colors"
-                          >
-                            Voir le guide DNS
-                          </button>
-                        </p>
-                        {dnsError && (
-                          <p className="text-[10px] text-zinc-500 mt-1 font-mono break-all select-text">
-                            {dnsError}
-                          </p>
-                        )}
-                      </div>
-                    </>
-                  )}
-                  {dnsStatus === "idle" && (
-                    <>
-                      <AlertTriangle className="h-4 w-4 shrink-0 text-zinc-400" />
-                      <p className="text-xs text-zinc-500">Acces a c411.org non verifie.</p>
-                    </>
-                  )}
-                  {dnsStatus === "fail" && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDnsStatus("checking");
-                        checkDns();
-                      }}
-                      className="ml-auto shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-                    >
-                      Reessayer
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-
-              {import.meta.env.DEV && (
-                <motion.div variants={item}>
-                  <button
-                    type="button"
-                    onClick={() => setShowDnsGuide(true)}
-                    className="w-full h-9 rounded-xl border border-dashed border-violet-500/40 text-xs font-medium text-violet-500 hover:bg-violet-500/6 transition-colors"
-                  >
-                    [DEV] Ouvrir le guide DNS
-                  </button>
-                </motion.div>
-              )}
-
-              <motion.div variants={item} className="pt-2">
-                <motion.button
-                  whileTap={{ scale: dnsStatus === "ok" ? 0.98 : 1 }}
-                  onClick={() => setStep("keys")}
-                  disabled={dnsStatus !== "ok"}
-                  className="flex w-full items-center justify-center gap-2 h-11 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-indigo-600 text-sm font-semibold text-white transition-colors"
-                >
-                  {dnsStatus === "checking" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      Continuer
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </motion.button>
-                {dnsStatus === "fail" && (
-                  <p className="mt-2 text-center text-[11px] text-red-500 dark:text-red-400">
-                    c411.org doit etre accessible pour continuer. Sans cela, l'application ne pourra
-                    pas fonctionner. Suivez le guide DNS puis reessayez.
-                  </p>
-                )}
-                {dnsStatus === "idle" && (
-                  <p className="mt-2 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
-                    Verifiez l'acces a c411.org pour continuer.
-                  </p>
-                )}
-              </motion.div>
-            </motion.div>
+          {step === "network" && (
+            <NetworkStep
+              dnsStatus={dnsStatus}
+              dnsError={dnsError}
+              onCheck={checkDns}
+              onOpenGuide={() => setShowDnsGuide(true)}
+              onBack={() => setStep("services")}
+              onNext={() => setStep("keys")}
+            />
           )}
 
           {step === "keys" && (
@@ -837,7 +513,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               <motion.div variants={item}>
                 <motion.button
                   whileTap={{ scale: 0.93 }}
-                  onClick={() => setStep("prereqs")}
+                  onClick={() => setStep("network")}
                   className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
                 >
                   <ArrowLeft className="h-4 w-4" />
