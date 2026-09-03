@@ -105,7 +105,7 @@ type KeyCheck = "valid" | "invalid" | "unreachable";
 ```
 
 - C411 : `searchTorrents` minimal (`perPage=1`) ; 401/403 -> `invalid`.
-- AllDebrid : `GET /v4/user` ; reponse `status !== "success"` ou 401 ->
+- AllDebrid : `GET /v4/user?agent=c411` (Bearer, comme `fetchMagnets`) ; reponse `status !== "success"` ou 401 ->
   `invalid`.
 - TMDB : `validateKey` existe deja et renvoie un booleen en levant sur reseau ;
   on l'enveloppe pour rendre les trois signatures identiques.
