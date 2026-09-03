@@ -166,14 +166,13 @@ function App() {
       store.get<boolean>("setup_complete"),
       store.get<boolean>("welcome_v1_seen"),
       loadStartupPage(store),
-      store.get<boolean>("manga_welcome_v160_seen"),
     ])
-      .then(([done, welcomeSeen, startupPage, mangaWelcomeSeen]) => {
+      .then(([done, welcomeSeen, startupPage]) => {
         const installed = Boolean(done && welcomeSeen);
         setPage(installed ? startupPage : "setup");
-        // Seuls les utilisateurs qui avaient deja l'app installee voient la
-        // presentation Manga : un nouvel arrivant decouvre tout via le setup.
-        if (installed && !mangaWelcomeSeen) setShowMangaWelcome(true);
+        // La modale de presentation Manga (1.6.0) ne se declenche plus
+        // automatiquement : la mise a jour est passee. On la garde accessible
+        // via onShowMangaWelcome pour reutiliser le mecanisme aux futures MAJ.
       })
       .catch((err) => {
         console.error("Store read failed:", err);
