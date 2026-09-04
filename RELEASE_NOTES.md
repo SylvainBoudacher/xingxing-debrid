@@ -1,4 +1,4 @@
-- Ma bibliotheque : nombreux bugs corriges lors du passage entre films, series et mangas
-- Barre de recherche principale : pastille sur le contenu deja dans votre bibliotheque
-- Toasts d'ajout a la bibliotheque (film, serie, manga) redesignes
-- Page de bienvenue entierement repensee : nouvelles animations et parcours simplifie
+- Découverte : les saisons des séries sont triées par ordre d'épisode par défaut, et non plus par seed
+- Découverte : les intégrales de séries ont leur propre section, proposée en premier choix quand le torrent est disponible
+- Découverte : boutons modernisés sur les fiches d'œuvres et interactions de la roulette améliorées
+- Page de bienvenue : refonte graphique et logique pour un parcours plus simple à suivre
