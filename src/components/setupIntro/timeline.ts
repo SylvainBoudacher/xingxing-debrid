@@ -12,13 +12,13 @@ const FINAL_FRAME = 13800;
 /** Cadrage serre avant lecture, qui s'ouvre au clic sur play. */
 const FILM_START_SCALE = 1.12;
 const FILM_VEIL_OPACITY = 0.45;
-
 /**
  * Quatre temps joues par un curseur : on cherche, on ajoute a la bibliotheque,
  * on lance la lecture depuis la bibliotheque, on regarde. Puis la boucle repart.
  */
 export function playIntroSequence(root: HTMLElement, reduced: boolean): IntroSequence {
-  const captions = Array.from(root.querySelectorAll<HTMLElement>("[data-caption]"));
+  const steps = Array.from(root.querySelectorAll<HTMLElement>("[data-step]"));
+  const stepIcons = Array.from(root.querySelectorAll<HTMLElement>("[data-step-icon]"));
   const tiles = Array.from(root.querySelectorAll<HTMLElement>("[data-tile]"));
   const rows = Array.from(root.querySelectorAll<HTMLElement>("[data-row]"));
   const timeEl = root.querySelector<HTMLElement>("[data-time]");
@@ -39,6 +39,11 @@ export function playIntroSequence(root: HTMLElement, reduced: boolean): IntroSeq
     ease: "inOutQuad",
   });
 
+  /** Entree du libelle du temps en cours, avec l'icone qui eclot. */
+  const stepIn = { opacity: [0, 1], y: [10, 0], duration: 500, ease: "outQuart" };
+  const stepIconIn = { scale: [0.6, 1.12, 1], duration: 700, ease: "outBack" };
+  const stepOut = { opacity: 0, y: -8, duration: 400, ease: "inQuad" };
+
   const click = { scale: [1, 1.9], opacity: [0.9, 0], duration: 650, ease: "outQuad" };
 
   // anime ne restaure que les proprietes qu'on lui a confiees : a chaque tour de
@@ -57,7 +62,7 @@ export function playIntroSequence(root: HTMLElement, reduced: boolean): IntroSeq
     "[data-download-pill]",
     "[data-controls]",
     "[data-cursor]",
-    "[data-caption]",
+    "[data-stage-glow]",
   ];
 
   const resetScene = () => {
@@ -83,6 +88,11 @@ export function playIntroSequence(root: HTMLElement, reduced: boolean): IntroSeq
     if (veil) veil.style.opacity = String(FILM_VEIL_OPACITY);
     const query = root.querySelector<HTMLElement>("[data-query]");
     if (query) query.style.clipPath = "inset(0 100% 0 0)";
+    for (const el of steps) {
+      el.style.opacity = "0";
+      el.style.transform = "translateY(0)";
+    }
+    for (const el of stepIcons) el.style.transform = "scale(1)";
     playhead.seconds = 0;
     renderPlayhead();
   };
@@ -99,7 +109,8 @@ export function playIntroSequence(root: HTMLElement, reduced: boolean): IntroSeq
     // Temps 1 : cherchez
     .set("[data-cursor]", { x: CURSOR_MARKS.start.x, y: CURSOR_MARKS.start.y })
     .add("[data-cursor]", { opacity: [0, 1], duration: 450 }, 0)
-    .add(captions[0], { opacity: [0, 1], y: [6, 0] }, 250)
+    .add(steps[0], stepIn, 250)
+    .add(stepIcons[0], stepIconIn, 250)
     .add("[data-searchbar]", { opacity: [0, 1], y: [8, 0] }, 250)
     .add("[data-cursor]", moveCursor(CURSOR_MARKS.searchBar), 650)
     .add("[data-ripple]", click, 1450)
@@ -112,8 +123,9 @@ export function playIntroSequence(root: HTMLElement, reduced: boolean): IntroSeq
     .add(rows, { opacity: [0, 1], y: [10, 0], duration: 700, delay: stagger(140) }, 2500)
 
     // Temps 2 : ajoutez
-    .add(captions[0], { opacity: 0, duration: 400 }, 2950)
-    .add(captions[1], { opacity: [0, 1], y: [6, 0] }, 3050)
+    .add(steps[0], stepOut, 2950)
+    .add(steps[1], stepIn, 3050)
+    .add(stepIcons[1], stepIconIn, 3050)
     .add("[data-cursor]", moveCursor(CURSOR_MARKS.addButton), 3050)
     .add("[data-ripple]", click, 3850)
     .add("[data-add]", { scale: [1, 0.82, 1], duration: 620, ease: "outBack" }, 3850)
@@ -122,8 +134,9 @@ export function playIntroSequence(root: HTMLElement, reduced: boolean): IntroSeq
     .add("[data-added]", { opacity: [0, 1], x: [-8, 0], duration: 620 }, 4100)
 
     // Temps 3 : lancez, depuis la bibliotheque
-    .add(captions[1], { opacity: 0, duration: 400 }, 5000)
-    .add(captions[2], { opacity: [0, 1], y: [6, 0] }, 5100)
+    .add(steps[1], stepOut, 5000)
+    .add(steps[2], stepIn, 5100)
+    .add(stepIcons[2], stepIconIn, 5100)
     .add("[data-scene-search]", { opacity: 0, scale: 0.96, duration: 700 }, 5150)
     .add(
       "[data-scene-library]",
@@ -144,8 +157,9 @@ export function playIntroSequence(root: HTMLElement, reduced: boolean): IntroSeq
     .add("[data-stream-pill]", { scale: [1, 0.92, 1], duration: 550, ease: "outBack" }, 8150)
 
     // Temps 4 : regardez
-    .add(captions[2], { opacity: 0, duration: 400 }, 8850)
-    .add(captions[3], { opacity: [0, 1], y: [6, 0] }, 8950)
+    .add(steps[2], stepOut, 8850)
+    .add(steps[3], stepIn, 8950)
+    .add(stepIcons[3], stepIconIn, 8950)
     .add("[data-scene-library]", { opacity: 0, scale: 0.96, duration: 700 }, 9000)
     // Revelation de la vignette en pause : image et voile montent ensemble, a la
     // meme vitesse (le voile est deja plein a 0.45 sur l'image, pas ajoute apres coup).
@@ -160,14 +174,23 @@ export function playIntroSequence(root: HTMLElement, reduced: boolean): IntroSeq
     .add("[data-play]", { scale: [1, 1.25, 1], duration: 650, ease: "outBack" }, 10750)
     .add("[data-film-veil]", { opacity: [FILM_VEIL_OPACITY, 0], duration: 800 }, 10750)
     .add("[data-film]", { scale: [FILM_START_SCALE, 1], duration: 2600, ease: "outQuart" }, 10750)
+    // La lueur monte sous le cadre au moment ou l'image s'eclaire, et redescend
+    // avec elle a la fin du visionnage.
+    .add("[data-stage-glow]", { opacity: [0, 1], duration: 1400, ease: "outQuart" }, 10750)
     .add(playhead, { seconds: 95, duration: 2700, ease: "linear", onUpdate: renderPlayhead }, 10850)
     .add("[data-cursor]", { opacity: 0, duration: 600 }, 11250)
     // Sortie en fondu, apres un temps de visionnage, avant que la boucle ne reparte.
-    .add(captions[3], { opacity: 0, duration: 400 }, 13950)
+    .add(steps[3], stepOut, 13950)
+    .add("[data-stage-glow]", { opacity: 0, duration: 700, ease: "inQuad" }, 13950)
     .add("[data-scene-player]", { opacity: 0, duration: 600, ease: "inQuad" }, 13950);
 
   if (reduced) {
     tl.seek(FINAL_FRAME);
+    const glow = root.querySelector<HTMLElement>("[data-stage-glow]");
+    if (glow) glow.style.opacity = "1";
+    for (const el of steps) el.style.opacity = "0";
+    const last = steps[steps.length - 1];
+    if (last) last.style.opacity = "1";
     playhead.seconds = 95;
     renderPlayhead();
     return { revert: () => tl.revert() };

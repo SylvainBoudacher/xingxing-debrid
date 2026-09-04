@@ -35,7 +35,8 @@ export const CURSOR_MARKS = {
   playButton: { x: 28, y: 212 },
 };
 
-export const CAPTIONS = ["Cherchez", "Ajoutez", "Lancez", "Regardez"];
+/** Les quatre temps du scenario, dans l'ordre joue par la timeline. */
+export const STEPS = ["Cherchez", "Ajoutez", "Lancez", "Regardez"];
 
 /** Duree fictive du film, pour que la barre de progression avance a une vitesse credible. */
 export const FILM_SECONDS = 8340;
