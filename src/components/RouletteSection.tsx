@@ -139,7 +139,7 @@ export function RouletteSection({
         <AnimatePresence mode="wait">
           {r.shown && (
             <RouletteResult
-              key={r.shown.id}
+              key="result"
               item={r.shown}
               stale={r.status !== "revealed"}
               scale={scale}

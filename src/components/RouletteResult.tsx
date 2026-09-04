@@ -37,12 +37,17 @@ export function RouletteResult({
 
   return (
     <motion.div
+      layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: stale ? 0.35 : 1, y: 0 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: stale ? 0.3 : 0.45, ease: [0.22, 1, 0.36, 1] }}
+      transition={{
+        duration: stale ? 0.3 : 0.45,
+        ease: [0.22, 1, 0.36, 1],
+        layout: { duration: 0.4, ease: [0.22, 1, 0.36, 1] },
+      }}
       style={{ borderColor: `${rarity.color}55`, pointerEvents: stale ? "none" : undefined }}
-      className="mt-6 flex gap-5 rounded-2xl border bg-white/70 p-5 ring-1 ring-black/5 backdrop-blur-xl dark:bg-zinc-900/60 dark:ring-white/5"
+      className="mt-6 flex gap-5 rounded-2xl border bg-white/70 transition-colors duration-300 p-5 ring-1 ring-black/5 backdrop-blur-xl dark:bg-zinc-900/60 dark:ring-white/5"
     >
       {/* self-start : sans lui la boite s'etire sur la hauteur de la ligne flex
           et laisse une bande vide sous l'affiche. */}
@@ -95,6 +100,7 @@ export function RouletteResult({
 
         {item.overview && (
           <ExpandableText
+            key={item.id}
             text={item.overview}
             lines={3}
             className="mt-3 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400"
