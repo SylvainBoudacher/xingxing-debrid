@@ -6,6 +6,7 @@ import { ExpandableText } from "@/components/ExpandableText";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
 import { TmdbGenres } from "@/components/TmdbGenres";
 import {
+  compareScope,
   filterMovieReleases,
   filterTvReleases,
   releasesQueryKey,
@@ -13,6 +14,7 @@ import {
   searchC411,
   sortOccupants,
   type Occupant,
+  type SeasonSelection,
 } from "@/lib/discoverReleases";
 import { networkErrorMessage } from "@/lib/networkError";
 import { tmdbKeys, tvDetail as tmdbTvDetail } from "@/lib/services/tmdb";
@@ -57,8 +59,10 @@ export function DiscoverReleasesModal({
   onSend,
   onSearchTracker,
 }: DiscoverReleasesModalProps) {
-  const [selectedSeason, setSelectedSeason] = useState<number | null>(null);
-  const [releaseSort, setReleaseSort] = useState<ReleaseSort>("seeders");
+  const [selectedSeason, setSelectedSeason] = useState<SeasonSelection | null>(null);
+  const [releaseSort, setReleaseSort] = useState<ReleaseSort>(
+    item.mediaType === "tv" ? "episode" : "seeders",
+  );
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [resFilter, setResFilter] = useState<string | null>(null);
   const [langFilter, setLangFilter] = useState<string | null>(null);
@@ -81,7 +85,26 @@ export function DiscoverReleasesModal({
       .map((s) => ({ number: s.season_number, episodeCount: s.episode_count }));
   }, [item, tvDetailQuery.data]);
 
-  const activeSeason = selectedSeason ?? seasons?.[0]?.number ?? null;
+  // Toutes les releases TV (saison null) : deja prefetchee par openItem(), sert
+  // uniquement a savoir si une integrale existe pour choisir l'onglet par defaut.
+  const allTvReleasesQuery = useQuery({
+    queryKey: releasesQueryKey(item.mediaType, item.id, null),
+    enabled: item.mediaType === "tv",
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { torrents, nTitles } = await searchC411(item, getC411Key());
+      return sortOccupants(filterTvReleases(torrents, nTitles, null));
+    },
+  });
+
+  const defaultSeason = useMemo<SeasonSelection | null>(() => {
+    if (!seasons || !allTvReleasesQuery.data) return null;
+    return allTvReleasesQuery.data.some((o) => o.scope?.kind === "complete")
+      ? "complete"
+      : (seasons[0]?.number ?? null);
+  }, [seasons, allTvReleasesQuery.data]);
+
+  const activeSeason: SeasonSelection | null = selectedSeason ?? defaultSeason;
 
   // Releases C411 du film / de la saison selectionnee. TanStack gere la course
   // (les resultats perimes sont ignores) et le cache (re-ouverture, switch saison).
@@ -95,7 +118,7 @@ export function DiscoverReleasesModal({
       item.id,
       item.mediaType === "tv" ? activeSeason : null,
     ),
-    enabled: item.mediaType === "movie" || tvDetailQuery.isSuccess,
+    enabled: item.mediaType === "movie" || activeSeason !== null,
     staleTime: 60_000,
     queryFn: async () => {
       const { torrents, nTitles } = await searchC411(item, getC411Key());
@@ -108,12 +131,15 @@ export function DiscoverReleasesModal({
   const releases = releasesQuery.data ?? null;
   const releasesError = tvDetailQuery.isError
     ? networkErrorMessage(tvDetailQuery.error)
-    : releasesQuery.isError
-      ? networkErrorMessage(releasesQuery.error)
-      : null;
+    : allTvReleasesQuery.isError
+      ? networkErrorMessage(allTvReleasesQuery.error)
+      : releasesQuery.isError
+        ? networkErrorMessage(releasesQuery.error)
+        : null;
 
   function retryReleases() {
     if (tvDetailQuery.isError) tvDetailQuery.refetch();
+    if (allTvReleasesQuery.isError) allTvReleasesQuery.refetch();
     if (releasesQuery.isError) releasesQuery.refetch();
   }
 
@@ -143,19 +169,21 @@ export function DiscoverReleasesModal({
             )
             .sort((a, b) => {
               const cmp =
-                releaseSort === "size"
-                  ? b.fileSize - a.fileSize
-                  : releaseSort === "resolution"
-                    ? (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) -
-                        (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) || b.seeders - a.seeders
-                    : b.seeders - a.seeders;
+                releaseSort === "episode"
+                  ? compareScope(a, b) || b.seeders - a.seeders
+                  : releaseSort === "size"
+                    ? b.fileSize - a.fileSize
+                    : releaseSort === "resolution"
+                      ? (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) -
+                          (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) || b.seeders - a.seeders
+                      : b.seeders - a.seeders;
               return sortDir === "asc" ? -cmp : cmp;
             })
         : null,
     [releases, resFilter, langFilter, releaseSort, sortDir],
   );
 
-  function changeSeason(season: number) {
+  function changeSeason(season: SeasonSelection) {
     if (season === activeSeason) return;
     setSelectedSeason(season);
     setResFilter(null);
@@ -246,7 +274,19 @@ export function DiscoverReleasesModal({
             {...seasonDragProps}
             className="flex gap-1.5 overflow-x-auto px-5 pt-0.5 pb-3 cursor-grab select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {seasons === null
+            {activeSeason !== null && (
+              <button
+                onClick={() => changeSeason("complete")}
+                className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-medium leading-normal ring-1 transition-colors ${
+                  activeSeason === "complete"
+                    ? "bg-indigo-600 text-white ring-indigo-500"
+                    : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+              >
+                Intégrale
+              </button>
+            )}
+            {seasons === null || activeSeason === null
               ? Array.from({ length: 4 }, (_, i) => (
                   <div
                     key={i}
@@ -290,6 +330,7 @@ export function DiscoverReleasesModal({
         {releases !== null && releases.length > 0 && (
           <DiscoverReleaseFilters
             sort={releaseSort}
+            showEpisodeSort={item.mediaType === "tv"}
             sortDir={sortDir}
             resOptions={resOptions}
             langOptions={langOptions}
@@ -339,7 +380,9 @@ export function DiscoverReleasesModal({
             <div className="flex h-full flex-col items-center justify-center gap-5 px-6">
               <p className="text-center text-sm text-zinc-500">
                 {item.mediaType === "tv"
-                  ? "Aucune version disponible pour cette saison."
+                  ? activeSeason === "complete"
+                    ? "Aucune intégrale disponible pour cette série."
+                    : "Aucune version disponible pour cette saison."
                   : "Aucune version disponible pour ce film."}
               </p>
               <div className="flex flex-col items-center gap-3">

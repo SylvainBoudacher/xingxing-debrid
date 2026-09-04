@@ -1,8 +1,9 @@
 import { ArrowDown, ArrowUp, SlidersHorizontal } from "lucide-react";
 
-export type ReleaseSort = "seeders" | "size" | "resolution";
+export type ReleaseSort = "episode" | "seeders" | "size" | "resolution";
 
 const SORTS = [
+  ["episode", "Épisode"],
   ["seeders", "Seeders"],
   ["size", "Taille"],
   ["resolution", "Qualité"],
@@ -10,6 +11,8 @@ const SORTS = [
 
 interface DiscoverReleaseFiltersProps {
   sort: ReleaseSort;
+  /** Le tri par épisode n'a de sens que pour les séries */
+  showEpisodeSort: boolean;
   sortDir: "asc" | "desc";
   resOptions: string[];
   langOptions: string[];
@@ -20,10 +23,11 @@ interface DiscoverReleaseFiltersProps {
   onLangFilter: (l: string | null) => void;
 }
 
-// Barre de tri (seeders / taille / qualité) et filtres résolution / langue
+// Barre de tri (épisode / seeders / taille / qualité) et filtres résolution / langue
 // des releases d'une fiche.
 export function DiscoverReleaseFilters({
   sort,
+  showEpisodeSort,
   sortDir,
   resOptions,
   langOptions,
@@ -36,7 +40,7 @@ export function DiscoverReleaseFilters({
   return (
     <div className="flex flex-wrap items-center gap-1.5 px-5 pb-3">
       <SlidersHorizontal className="mr-0.5 h-3.5 w-3.5 text-zinc-500" />
-      {SORTS.map(([key, label]) => (
+      {SORTS.filter(([key]) => key !== "episode" || showEpisodeSort).map(([key, label]) => (
         <button
           key={key}
           onClick={() => onSort(key)}

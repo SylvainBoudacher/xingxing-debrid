@@ -84,9 +84,27 @@ export const RESOLUTION_RANK: Record<string, number> = {
   "480p": 1,
 };
 
+// Integrale et packs saison d'abord, puis les episodes par ordre croissant
+function scopeRank(scope: ReleaseScope | null): number {
+  if (scope === null) return 2;
+  if (scope.kind === "complete") return 0;
+  if (scope.kind === "season") return 1;
+  return 3;
+}
+
+function episodeNumber(scope: ReleaseScope | null): number {
+  return scope?.kind === "episode" ? scope.episode : 0;
+}
+
+// Intégrale et packs saison d'abord, puis les épisodes croissants
+export function compareScope(a: Occupant, b: Occupant): number {
+  return scopeRank(a.scope) - scopeRank(b.scope) || episodeNumber(a.scope) - episodeNumber(b.scope);
+}
+
 export function sortOccupants(occupants: Occupant[]): Occupant[] {
   return [...occupants].sort(
     (a, b) =>
+      compareScope(a, b) ||
       (RESOLUTION_RANK[b.resolution ?? ""] ?? 0) - (RESOLUTION_RANK[a.resolution ?? ""] ?? 0) ||
       b.fileSize - a.fileSize,
   );
@@ -110,14 +128,16 @@ export function filterMovieReleases(
   return occupants;
 }
 
+export type SeasonSelection = number | "complete";
+
 export function filterTvReleases(
   torrents: C411Torrent[],
   nTitles: string[],
-  season: number | null,
+  season: SeasonSelection | null,
 ): Occupant[] {
-  // Matche "S01", "S01E05", "Saison 1", ou une integrale sans numero de saison
+  // Matche "S01", "S01E05", "Saison 1" pour une saison donnee
   const seasonRe =
-    season !== null
+    typeof season === "number"
       ? new RegExp(`\\bs0*${season}(?:e\\d+)?\\b|\\bsaison 0*${season}\\b|\\bseason 0*${season}\\b`)
       : null;
   const anySeasonRe = /\bs\d{1,2}(?:e\d+)?\b|\bsaison \d+\b|\bseason \d+\b/;
@@ -128,14 +148,18 @@ export function filterTvReleases(
     if (!SERIES_SLUGS.has(t.subcategory?.slug ?? "")) continue;
     const nName = normalize(t.name);
     if (!nTitles.some((nt) => nName.includes(nt))) continue;
-    if (seasonRe && !seasonRe.test(nName) && !(completeRe.test(nName) && !anySeasonRe.test(nName)))
-      continue;
+    // "Integrale" = toutes les saisons dans un seul torrent : aucun numero de
+    // saison dans le nom. Les packs d'une saison unique restent dans leur saison.
+    const isComplete = completeRe.test(nName) && !anySeasonRe.test(nName);
+    if (season === "complete") {
+      if (!isComplete) continue;
+    } else if (seasonRe && (isComplete || !seasonRe.test(nName))) continue;
     occupants.push(toOccupant(t));
   }
   return occupants;
 }
 
-export function releasesQueryKey(mediaType: MediaType, id: number, season: number | null) {
+export function releasesQueryKey(mediaType: MediaType, id: number, season: SeasonSelection | null) {
   return ["c411-releases", mediaType, id, season] as const;
 }
 
