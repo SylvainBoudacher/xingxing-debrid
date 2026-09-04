@@ -49,75 +49,75 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.6.5",
     date: "3 septembre 2026",
     intro:
-      "La 1.6.5 corrige de nombreux bugs de la page Ma bibliotheque, ajoute une pastille dans la barre de recherche principale pour le contenu deja possede, redesigne les toasts d'ajout a la bibliotheque et repense entierement la page de bienvenue.",
+      "La 1.6.5 corrige de nombreux bugs de la page Ma bibliothèque, ajoute une pastille dans la barre de recherche principale pour le contenu déjà possédé, redesigné les toasts d'ajout à la bibliothèque et repense entièrement la page de bienvenue.",
     sections: [
       {
-        title: "Ma bibliotheque : corrections",
+        title: "Ma bibliothèque : corrections",
         items: [
-          "Plusieurs bugs corriges lors du passage entre les films, les series et les mangas.",
-          "L'affichage restait incoherent quand on basculait d'un type de contenu a l'autre : c'est desormais stable.",
+          "Plusieurs bugs corrigés lors du passage entre les films, les séries et les mangas.",
+          "L'affichage restait incohérent quand on basculait d'un type de contenu à l'autre : c'est désormais stable.",
         ],
       },
       {
-        title: "Barre de recherche principale : pastille bibliotheque",
+        title: "Barre de recherche principale : pastille bibliothèque",
         items: [
-          "Une pastille apparait maintenant dans la barre de recherche principale quand le contenu est deja dans votre bibliotheque.",
-          "Plus besoin d'ouvrir la fiche pour savoir si vous l'avez deja ajoute.",
+          "Une pastille apparaît maintenant dans la barre de recherche principale quand le contenu est déjà dans votre bibliothèque.",
+          "Plus besoin d'ouvrir la fiche pour savoir si vous l'avez déjà ajouté.",
         ],
       },
       {
-        title: "Toasts d'ajout a la bibliotheque redesignes",
+        title: "Toasts d'ajout à la bibliothèque redesignés",
         items: [
-          "Les notifications affichees lors de l'ajout d'un film, d'une serie ou d'un manga a votre bibliotheque ont ete entierement redesignees.",
+          "Les notifications affichées lors de l'ajout d'un film, d'une série ou d'un manga à votre bibliothèque ont été entièrement redesignées.",
         ],
       },
       {
-        title: "Page de bienvenue repensee",
+        title: "Page de bienvenue repensée",
         items: [
-          "La page de bienvenue des nouveaux utilisateurs est totalement revue pour etre comprehensible par tout le monde.",
-          "Nouvelles animations et decoupage plus simple pour suivre chaque etape sans se perdre.",
+          "La page de bienvenue des nouveaux utilisateurs est totalement revue pour être compréhensible par tout le monde.",
+          "Nouvelles animations et découpage plus simple pour suivre chaque étape sans se perdre.",
         ],
       },
     ],
   },
   {
     version: "1.6.4",
-    date: "29 aout 2026",
+    date: "29 août 2026",
     intro:
-      "La 1.6.4 apporte une grosse mise a jour de la roulette dans la page Decouverte : nouveau design, corrections de bugs et deux nouvelles categories de tirage.",
+      "La 1.6.4 apporte une grosse mise à jour de la roulette dans la page Découverte : nouveau design, corrections de bugs et deux nouvelles catégories de tirage.",
     sections: [
       {
-        title: "Decouverte",
+        title: "Découverte",
         items: [
           "Grosse refonte de la roulette : design revu et plusieurs corrections de bugs.",
-          "Nouvelle categorie de tirage : Top 200 Letterboxd, le haut du classement sans filtre.",
-          "Nouvelle categorie de tirage : Top 200 des pires, les films les plus mal notes de TMDB.",
+          "Nouvelle catégorie de tirage : Top 200 Letterboxd, le haut du classement sans filtre.",
+          "Nouvelle catégorie de tirage : Top 200 des pires, les films les plus mal notes de TMDB.",
         ],
-        images: [{ src: rouletteV164Img, caption: "La roulette repensee" }],
+        images: [{ src: rouletteV164Img, caption: "La roulette repensée" }],
       },
       {
-        title: "Bibliotheque",
-        items: ["Correction d'un bug d'affichage dans la Bibliotheque."],
+        title: "Bibliothèque",
+        items: ["Correction d'un bug d'affichage dans la Bibliothèque."],
       },
     ],
   },
   {
     version: "1.6.3",
-    date: "9 aout 2026",
+    date: "9 août 2026",
     intro:
-      "La 1.6.3 ajoute la roulette de film aleatoire et le Top 200 manga dans la page Decouverte, un acces rapide a la Bibliotheque depuis toutes les pages, et plusieurs ameliorations pour les mangas et la Bibliotheque.",
+      "La 1.6.3 ajoute la roulette de film aléatoire et le Top 200 manga dans la page Découverte, un accès rapide à la Bibliothèque depuis toutes les pages, et plusieurs améliorations pour les mangas et la Bibliothèque.",
     sections: [
       {
-        title: "Decouverte",
+        title: "Découverte",
         items: [
-          "Nouvelle roulette de film aleatoire : choisissez un genre ou laissez-la piocher parmi tout le catalogue.",
+          "Nouvelle roulette de film aléatoire : choisissez un genre ou laissez-la piocher parmi tout le catalogue.",
           "Nouvelle section Top 200 manga.",
         ],
       },
       {
         title: "Navigation",
         items: [
-          "Un bouton Bibliotheque apparait a cote du menu sur toutes les pages, sauf la page principale.",
+          "Un bouton Bibliothèque apparaît à côté du menu sur toutes les pages, sauf la page principale.",
         ],
       },
       {
@@ -125,27 +125,27 @@ export const PATCH_NOTES: PatchNote[] = [
         items: ["Les fichiers non lisibles ne s'affichent plus dans les listes de torrents."],
       },
       {
-        title: "Bibliotheque",
+        title: "Bibliothèque",
         items: [
-          "Correction de l'animation des listes : elle ne se joue plus a l'ouverture, seulement a la fermeture.",
-          "Ajout d'un bouton de recherche d'autres episodes ou saisons pour les films et series, comme deja disponible pour les mangas.",
-          "La description des films et series peut desormais etre depliee au lieu d'etre simplement tronquee.",
+          "Correction de l'animation des listes : elle ne se joue plus à l'ouverture, seulement à la fermeture.",
+          "Ajout d'un bouton de recherche d'autres épisodes ou saisons pour les films et séries, comme déjà disponible pour les mangas.",
+          "La description des films et séries peut désormais être dépliée au lieu d'être simplement tronquée.",
         ],
       },
       {
         title: "Mac",
         items: [
-          "L'application verifie maintenant si VLC est installe et affiche un message d'erreur clair si ce n'est pas le cas.",
+          "L'application vérifie maintenant si VLC est installe et affiche un message d'erreur clair si ce n'est pas le cas.",
         ],
       },
       {
         title: "Performances",
-        items: ["Les images sont desormais pre-chargees des le lancement de l'application."],
+        items: ["Les images sont désormais pre-chargees des le lancement de l'application."],
       },
       {
         title: "Coin des Canards",
         items: [
-          "Nouvelle case a cocher lors de l'enregistrement d'un canard : choisissez s'il retourne directement a l'eau ou s'il rejoint votre inventaire.",
+          "Nouvelle case à cocher lors de l'enregistrement d'un canard : choisissez s'il retourne directement à l'eau ou s'il rejoint votre inventaire.",
           "Un canard cadeau vous attend. Amusez-vous bien.",
         ],
       },
@@ -153,30 +153,30 @@ export const PATCH_NOTES: PatchNote[] = [
   },
   {
     version: "1.6.2",
-    date: "1 aout 2026",
+    date: "1 août 2026",
     intro:
-      "La 1.6.2 enrichit la page Decouverte avec le Top 500 Letterboxd, ameliore la lecture et la recherche dans la bibliotheque, et reequilibre le Coin des Canards.",
+      "La 1.6.2 enrichit la page Découverte avec le Top 500 Letterboxd, améliore la lecture et la recherche dans la bibliothèque, et rééquilibre le Coin des Canards.",
     sections: [
       {
-        title: "Decouverte",
+        title: "Découverte",
         items: [
           "Nouvelle section Top 500 Letterboxd.",
-          "Scroll infini sur la section manga, a la place du bouton Charger plus.",
+          "Scroll infini sur la section manga, à la place du bouton Charger plus.",
           "Suppression de la sous-section Populaire, qui faisait doublon avec Tendance.",
         ],
       },
       {
-        title: "Bibliotheque et lecture",
+        title: "Bibliothèque et lecture",
         items: [
-          "Bloc de recherche de la page Bibliotheque refondu.",
-          "Bouton plein ecran pour la lecture de livres.",
+          "Bloc de recherche de la page Bibliothèque refondu.",
+          "Bouton plein écran pour la lecture de livres.",
         ],
       },
       {
         title: "Coin des Canards",
         items: [
           "Le drapeau reste affiche plus longtemps.",
-          "Pity nerfe : il etait trop genereux et la completion trop rapide.",
+          "Pity nerfe : il était trop généreux et la completion trop rapide.",
         ],
       },
       {
@@ -189,20 +189,20 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.6.1",
     date: "29 juillet 2026",
     intro:
-      "La 1.6.1 corrige plusieurs bugs de la 1.6.0 lies aux mangas et ameliore la possibilite d'enrichir sa bibliotheque avec des oeuvres externes.",
+      "La 1.6.1 corrige plusieurs bugs de la 1.6.0 liés aux mangas et améliore la possibilité d'enrichir sa bibliothèque avec des œuvres externes.",
     sections: [
       {
-        title: "Mangas : import et bibliotheque",
+        title: "Mangas : import et bibliothèque",
         items: [
-          "Ajout d'oeuvres a la bibliotheque manga depuis l'exterieur de l'application desormais possible.",
+          "Ajout d'œuvres à la bibliothèque manga depuis l'extérieur de l'application désormais possible.",
         ],
       },
       {
         title: "Corrections",
         items: [
-          "Correction d'un probleme avec certains dossiers torrent lors de l'import dans la bibliotheque de manga.",
-          "Correction du dossier manga par defaut sous Windows.",
-          "Correction d'un probleme lors de la recherche de certaines oeuvres.",
+          "Correction d'un problème avec certains dossiers torrent lors de l'import dans la bibliothèque de manga.",
+          "Correction du dossier manga par défaut sous Windows.",
+          "Correction d'un problème lors de la recherche de certaines œuvres.",
         ],
       },
     ],
@@ -271,35 +271,35 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.5.4",
     date: "24 juillet 2026",
     intro:
-      "La 1.5.4 enrichit la collection de canards avec de nouvelles recompenses, des drops plus justes, et corrige plusieurs points de confusion dans l'app.",
+      "La 1.5.4 enrichit la collection de canards avec de nouvelles récompenses, des drops plus justes, et corrige plusieurs points de confusion dans l'app.",
     sections: [
       {
-        title: "Collection : nouvelles recompenses",
+        title: "Collection : nouvelles récompenses",
         items: [
-          "Trois nouveaux canards a debloquer en completant la collection de couleurs.",
-          "Les canards identiques se cumulent desormais sur une seule carte, avec le nombre d'exemplaires possedes.",
+          "Trois nouveaux canards à débloquer en complétant la collection de couleurs.",
+          "Les canards identiques se cumulent désormais sur une seule carte, avec le nombre d'exemplaires possedes.",
         ],
       },
       {
         title: "Drops : pity progressif",
         items: [
           "Plus vous obtenez de doublons, plus vos chances de tomber sur un canard que vous n'avez pas augmentent.",
-          "Cela s'applique aux familles comme aux shiny : chaque shiny deja possede rend les shiny manquants plus probables.",
+          "Cela s'applique aux familles comme aux shiny : chaque shiny déjà possédé rend les shiny manquants plus probables.",
         ],
       },
       {
-        title: "Reglages",
+        title: "Réglages",
         items: [
-          "Choisissez la page sur laquelle l'application s'ouvre au demarrage.",
-          "Nouveau reglage pour indiquer manuellement l'emplacement de VLC sous Windows, si l'application ne le trouve pas toute seule.",
+          "Choisissez la page sur laquelle l'application s'ouvre au démarrage.",
+          "Nouveau réglage pour indiquer manuellement l'emplacement de VLC sous Windows, si l'application ne le trouve pas toute seule.",
         ],
       },
       {
         title: "Corrections",
         items: [
-          "Le bouton de telechargement a ete retire de la page Decouverte pour eviter la confusion.",
-          "La notification d'ajout a la bibliotheque ouvre maintenant la fiche du film ou de la serie concernee, et plus seulement la page Bibliotheque.",
-          "Corrections mineures dans la Bibliotheque.",
+          "Le bouton de téléchargement a été retiré de la page Découverte pour éviter la confusion.",
+          "La notification d'ajout à la bibliothèque ouvre maintenant la fiche du film ou de la série concernée, et plus seulement la page Bibliothèque.",
+          "Corrections mineures dans la Bibliothèque.",
         ],
       },
     ],
@@ -308,35 +308,35 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.5.3",
     date: "23 juillet 2026",
     intro:
-      "La 1.5.3 renforce la page de bienvenue avec une protection contre les problemes de connexion a C411, et enrichit la Bibliotheque avec des genres automatiques issus de TMDB, un systeme de tri et de filtrage par genre, ainsi qu'une vue personnalisee pour creer ses propres categories.",
+      "La 1.5.3 renforce la page de bienvenue avec une protection contre les problèmes de connexion à C411, et enrichit la Bibliothèque avec des genres automatiques issus de TMDB, un système de tri et de filtrage par genre, ainsi qu'une vue personnalisée pour créer ses propres catégories.",
     sections: [
       {
         title: "Page de bienvenue : protection connexion C411",
         items: [
-          "Les utilisateurs qui n'ont pas acces a C411 sont desormais bloques sur la page de verification de connexion, avec un message clair expliquant la situation.",
-          "Un guide integre explique les causes possibles : probleme DNS, IPv6 actif sur le reseau, ou autre complexite reseau pouvant empecher l'acces au site.",
-          "Des solutions sont proposees directement dans l'interface pour aider a resoudre ces problemes sans quitter l'application.",
+          "Les utilisateurs qui n'ont pas accès à C411 sont désormais bloqués sur la page de vérification de connexion, avec un message clair expliquant la situation.",
+          "Un guide integre explique les causes possibles : problème DNS, IPv6 actif sur le réseau, ou autre complexité réseau pouvant empêcher l'accès au site.",
+          "Des solutions sont proposées directement dans l'interface pour aider à résoudre ces problèmes sans quitter l'application.",
         ],
       },
       {
-        title: "Bibliotheque : genres automatiques depuis TMDB",
+        title: "Bibliothèque : genres automatiques depuis TMDB",
         items: [
-          "Chaque titre de votre bibliotheque affiche maintenant ses genres (Action, Horreur, Comedie, etc.) recuperes automatiquement depuis TMDB.",
-          "Les genres apparaissent directement sur les cartes pour identifier le type de contenu en un coup d'oeil.",
+          "Chaque titre de votre bibliothèque affiche maintenant ses genres (Action, Horreur, Comédie, etc.) récupérés automatiquement depuis TMDB.",
+          "Les genres apparaissent directement sur les cartes pour identifier le type de contenu en un coup d'œil.",
         ],
       },
       {
-        title: "Bibliotheque : tri et filtrage par genre",
+        title: "Bibliothèque : tri et filtrage par genre",
         items: [
-          "Triez votre bibliotheque par genre pour regrouper automatiquement les contenus de meme type.",
-          "Filtrez l'integralite de votre bibliotheque par genre pour n'afficher que les titres correspondant a la categorie choisie.",
+          "Triez votre bibliothèque par genre pour regrouper automatiquement les contenus de même type.",
+          "Filtrez l'intégralité de votre bibliothèque par genre pour n'afficher que les titres correspondant à la catégorie choisie.",
         ],
       },
       {
-        title: "Bibliotheque : vue personnalisee",
+        title: "Bibliothèque : vue personnalisée",
         items: [
-          "Une nouvelle vue de tri « Personnalise » est disponible pour ceux qui souhaitent organiser leur bibliotheque a leur facon.",
-          "Creez vos propres categories, donnez-leur le nom que vous voulez, et classez vos titres selon votre propre logique.",
+          "Une nouvelle vue de tri « Personnalisé » est disponible pour ceux qui souhaitent organiser leur bibliothèque à leur façon.",
+          "Créez vos propres catégories, donnez-leur le nom que vous voulez, et classez vos titres selon votre propre logique.",
           "Cette vue coexiste avec les tris automatiques existants et se sauvegarde entre les sessions.",
         ],
       },
@@ -346,42 +346,42 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.5.2",
     date: "11 juillet 2026",
     intro:
-      "La 1.5.2 enrichit la gestion des dossiers de serie dans la bibliotheque, ajoute des raccourcis clavier pour le Coin des Canards, corrige un bug sur les cles API, et equilibre les taux de drop des canards rares.",
+      "La 1.5.2 enrichit la gestion des dossiers de série dans la bibliothèque, ajoute des raccourcis clavier pour le Coin des Canards, corrige un bug sur les clés API, et équilibre les taux de drop des canards rares.",
     sections: [
       {
-        title: "Bibliotheque : gestion avancee des dossiers de serie",
+        title: "Bibliothèque : gestion avancée des dossiers de série",
         items: [
-          "Ajoutez un seul episode d'une saison dans la bibliotheque : l'application cree automatiquement le bon dossier de saison et y place l'episode.",
-          "Ajoutez une autre saison de la meme serie : les deux saisons se regroupent automatiquement sous une seule oeuvre, sans intervention.",
-          "Personnalisez entierement la structure de vos dossiers : ajout, suppression et renommage de saisons directement depuis la bibliotheque.",
+          "Ajoutez un seul épisode d'une saison dans la bibliothèque : l'application créé automatiquement le bon dossier de saison et y place l'épisode.",
+          "Ajoutez une autre saison de la même série : les deux saisons se regroupent automatiquement sous une seule œuvre, sans intervention.",
+          "Personnalisez entièrement la structure de vos dossiers : ajout, suppression et renommage de saisons directement depuis la bibliothèque.",
         ],
       },
       {
-        title: "Bibliotheque : debridage et selection avancee",
+        title: "Bibliothèque : débridage et sélection avancée",
         items: [
-          "Les films et series en cours de debridage sont desormais visibles et gerable directement depuis la bibliotheque.",
-          "Les saisons et episodes d'une serie peuvent etre selectionnes et supprimes depuis la bibliotheque.",
+          "Les films et séries en cours de débridage sont désormais visibles et gérable directement depuis la bibliothèque.",
+          "Les saisons et épisodes d'une série peuvent être sélectionnés et supprimés depuis la bibliothèque.",
         ],
       },
       {
         title: "Coin des Canards : raccourcis clavier",
         items: [
-          "Un raccourci clavier permet desormais de capturer un canard directement au clavier. Par defaut : C.",
-          "Un deuxieme raccourci permet d'activer l'aspirateur sans passer par la souris. Par defaut : V.",
-          "Les deux raccourcis sont entierement configurables depuis la page Parametres.",
+          "Un raccourci clavier permet désormais de capturer un canard directement au clavier. Par défaut : C.",
+          "Un deuxième raccourci permet d'activer l'aspirateur sans passer par la souris. Par défaut : V.",
+          "Les deux raccourcis sont entièrement configurables depuis la page Paramètres.",
         ],
       },
       {
         title: "Corrections",
         items: [
-          "Correction d'un bug ou les canards pouvaient ne pas apparaitre si des appels API etaient encore en cours ou bloques au demarrage. Le spawn des canards se base desormais uniquement sur le lancement de l'application.",
-          "Correction d'un bug ou certaines cles API pouvaient etre mal enregistrees au lancement de l'application et depuis la page Reglages.",
+          "Correction d'un bug ou les canards pouvaient ne pas apparaître si des appels API étaient encore en cours ou bloqués au démarrage. Le spawn des canards se base désormais uniquement sur le lancement de l'application.",
+          "Correction d'un bug ou certaines clés API pouvaient être mal enregistrées au lancement de l'application et depuis la page Réglages.",
         ],
       },
       {
         title: "Equilibrage : canards rares",
         items: [
-          "Le Roi des Canards et les versions shiny etaient apparus un peu trop souvent. Leurs taux de drop ont ete divises par deux pour retrouver leur caractere exceptionnel.",
+          "Le Roi des Canards et les versions shiny étaient apparus un peu trop souvent. Leurs taux de drop ont été divisés par deux pour retrouver leur caractère exceptionnel.",
         ],
       },
     ],
@@ -390,24 +390,24 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.5.1",
     date: "8 juillet 2026",
     intro:
-      "La 1.5.1 corrige un bug graphique mineur, ajoute le support natif Apple Silicon pour Mac, et ameliore la lisibilite des resultats de series.",
+      "La 1.5.1 corrige un bug graphique mineur, ajoute le support natif Apple Silicon pour Mac, et améliore la lisibilité des résultats de séries.",
     sections: [
       {
         title: "Corrections graphiques",
-        items: ["Resolution d'un bug graphique mineur affectant l'affichage de l'interface."],
+        items: ["Résolution d'un bug graphique mineur affectant l'affichage de l'interface."],
       },
       {
         title: "Support Apple Silicon",
         items: [
-          "Les Mac equipes d'une puce Apple Silicon (M1, M2, M3...) disposent desormais de leur propre build natif.",
-          "L'application tourne nativement sur ARM, sans emulation Rosetta, pour de meilleures performances et une consommation reduite.",
+          "Les Mac équipes d'une puce Apple Silicon (M1, M2, M3...) disposent désormais de leur propre build natif.",
+          "L'application tourne nativement sur ARM, sans émulation Rosetta, pour de meilleures performances et une consommation réduite.",
         ],
       },
       {
-        title: "Resultats de series : labels saison ou episode",
+        title: "Résultats de séries : labels saison ou épisode",
         items: [
-          "Dans les resultats de recherche pour les series, un label indique desormais en un coup d'oeil si le fichier correspond a une saison complete ou a un episode unique.",
-          "Plus besoin de lire le nom de fichier en entier pour savoir ce que vous allez telecharger.",
+          "Dans les résultats de recherche pour les séries, un label indique désormais en un coup d'œil si le fichier correspond à une saison complète ou à un épisode unique.",
+          "Plus besoin de lire le nom de fichier en entier pour savoir ce que vous allez télécharger.",
         ],
       },
     ],
@@ -416,15 +416,15 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.5.0",
     date: "7 juillet 2026",
     intro:
-      "La 1.5.0 recentre l'application autour de la barre de recherche principale, integre l'import/export de profil pour faciliter le multi-device, et renforce TMDB comme element clé de l'experience.",
+      "La 1.5.0 recentre l'application autour de la barre de recherche principale, integre l'import/export de profil pour faciliter le multi-device, et renforce TMDB comme élément clé de l'expérience.",
     sections: [
       {
         title: "La barre de recherche redevient principale",
         items: [
-          "La barre de recherche sur la page d'accueil devient l'element principal de l'application pour faire vos recherches.",
-          "Avec l'auto-completion des noms de series et films, retrouver vos contenus est plus rapide et plus fluide.",
-          "L'application tourne desormais bien autour de la page Decouvrir et de son mode de fonctionnement, ce qui simplifie l'utilisation globalement.",
-          "Rien n'empeche d'utiliser la recherche brute sur C411 ou Nyaa pour autant - les deux approches coexistent.",
+          "La barre de recherche sur la page d'accueil devient l'élément principal de l'application pour faire vos recherches.",
+          "Avec l'auto-completion des noms de séries et films, retrouver vos contenus est plus rapide et plus fluide.",
+          "L'application tourne désormais bien autour de la page Découvrir et de son mode de fonctionnement, ce qui simplifie l'utilisation globalement.",
+          "Rien n'empêche d'utiliser la recherche brute sur C411 ou Nyaa pour autant - les deux approches coexistent.",
         ],
         images: [
           {
@@ -434,18 +434,18 @@ export const PATCH_NOTES: PatchNote[] = [
         ],
       },
       {
-        title: "Decouvrir : auto-completion globale",
+        title: "Découvrir : auto-completion globale",
         items: [
-          "La page Decouvrir obtient aussi un systeme d'auto-completion des recherches.",
-          "Les recherches sont maintenant globales et ne ciblent plus uniquement films, series ou animation - trouvez ce que vous cherchez quel que soit le type de contenu.",
+          "La page Découvrir obtient aussi un système d'auto-completion des recherches.",
+          "Les recherches sont maintenant globales et ne ciblent plus uniquement films, séries ou animation - trouvez ce que vous cherchez quel que soit le type de contenu.",
         ],
       },
       {
         title: "Import/Export de profil pour multi-device",
         items: [
-          "Exportez votre profil complet dans un fichier encrypte par un mot de passe : reglages, informations, cles API, canards, bibliotheque, et tout le reste.",
-          "Importez ce fichier sur une autre installation de Xingxing pour retrouver l'integralite de votre configuration.",
-          "Attention : ne partagez votre profil avec n'importe qui, car il contient vos cles API et donnees personnelles.",
+          "Exportez votre profil complet dans un fichier encrypte par un mot de passe : réglages, informations, clés API, canards, bibliothèque, et tout le reste.",
+          "Importez ce fichier sur une autre installation de Xingxing pour retrouver l'intégralité de votre configuration.",
+          "Attention : ne partagez votre profil avec n'importe qui, car il contient vos clés API et données personnelles.",
         ],
         images: [
           {
@@ -457,27 +457,27 @@ export const PATCH_NOTES: PatchNote[] = [
       {
         title: "TMDB devient obligatoire",
         items: [
-          "La cle API du service TMDB est maintenant obligatoire pour le bon fonctionnement de l'application et du user flow global.",
-          "TMDB est essential pour enrichir votre experience de recherche et de decouverte.",
+          "La clé API du service TMDB est maintenant obligatoire pour le bon fonctionnement de l'application et du user flow global.",
+          "TMDB est essential pour enrichir votre expérience de recherche et de découverte.",
         ],
       },
       {
-        title: "Coin des Canards : canards nommes par defaut",
+        title: "Coin des Canards : canards nommés par défaut",
         items: [
-          "Les canards ne sont plus des « sans nom » : ils portent desormais par defaut le nom de leur famille, comme « Canard moustachu ».",
-          "Vous pouvez toujours les renommer comme bon vous semble, mais cette amelioration rend votre collection plus vivante.",
+          "Les canards ne sont plus des « sans nom » : ils portent désormais par défaut le nom de leur famille, comme « Canard moustachu ».",
+          "Vous pouvez toujours les renommer comme bon vous semble, mais cette amélioration rend votre collection plus vivante.",
         ],
       },
       {
-        title: "Coin des Canards : bateau securise",
+        title: "Coin des Canards : bateau sécurisé",
         items: [
           "Le bateau de XingXing ne peut plus lancer le jeu tout seul sans une action du joueur avec le typhon.",
-          "Cela evite les interactions involontaires et rend le jeu plus intentionnel.",
+          "Cela évite les interactions involontaires et rend le jeu plus intentionnel.",
         ],
         images: [
           {
             src: canardsNomesV150Img,
-            caption: "Les canards nommes et le bateau de XingXing securise",
+            caption: "Les canards nommés et le bateau de XingXing sécurisé",
           },
         ],
       },
@@ -487,26 +487,26 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.4.3",
     date: "6 juillet 2026",
     intro:
-      "La 1.4.3 ajoute des raccourcis clavier pour naviguer entre les pages et un label sur la page Decouvrir pour reperer les titres deja dans votre bibliotheque.",
+      "La 1.4.3 ajoute des raccourcis clavier pour naviguer entre les pages et un label sur la page Découvrir pour repérer les titres déjà dans votre bibliothèque.",
     sections: [
       {
         title: "Raccourcis clavier",
         items: [
           "Naviguez entre les pages de l'application directement au clavier, sans passer par le menu.",
-          "Les raccourcis sont entierement configurables depuis la page Parametres.",
+          "Les raccourcis sont entièrement configurables depuis la page Paramètres.",
         ],
         images: [
           {
             src: raccourcisV143Img,
-            caption: "Les raccourcis clavier configurables dans les Parametres",
+            caption: "Les raccourcis clavier configurables dans les Paramètres",
           },
         ],
       },
       {
-        title: "Decouvrir : label bibliotheque",
+        title: "Découvrir : label bibliothèque",
         items: [
-          "Les films et series deja presents dans votre bibliotheque affichent desormais un petit label directement sur leur carte dans la page Decouvrir.",
-          "Plus besoin de cliquer pour savoir si vous l'avez deja : c'est visible en un coup d'oeil.",
+          "Les films et séries déjà présents dans votre bibliothèque affichent désormais un petit label directement sur leur carte dans la page Découvrir.",
+          "Plus besoin de cliquer pour savoir si vous l'avez déjà : c'est visible en un coup d'œil.",
         ],
       },
     ],
@@ -515,27 +515,27 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.4.2",
     date: "3 juillet 2026",
     intro:
-      "La 1.4.2 corrige plusieurs bugs signales apres la 1.4.0 : direction du bateau de XingXing, hitbox de Frisson, effet retro de l'easter egg, et quelques skins de canards.",
+      "La 1.4.2 corrige plusieurs bugs signales après la 1.4.0 : direction du bateau de XingXing, hitbox de Frisson, effet rétro de l'easter egg, et quelques skins de canards.",
     sections: [
       {
         title: "Piscine",
         items: [
-          "Le bateau de XingXing retrouve la bonne direction : il se deplace desormais comme dans le jeu, et non plus a l'envers.",
+          "Le bateau de XingXing retrouve la bonne direction : il se déplace désormais comme dans le jeu, et non plus à l'envers.",
         ],
       },
       {
         title: "Jeux",
         items: [
-          "L'effet retro de l'easter egg beneficie d'une resolution plus elevee - le rendu pixelise etait trop grossier.",
-          "Correction de la hitbox de Frisson : la detection de collision etait trop grande par rapport a son sprite.",
+          "L'effet rétro de l'easter egg bénéficie d'une résolution plus élevée - le rendu pixelise était trop grossier.",
+          "Correction de la hitbox de Frisson : la détection de collision était trop grande par rapport à son sprite.",
         ],
       },
       {
         title: "Coin des Canards",
         items: [
           "Des tooltips sont maintenant affichés sur les boutons d'action du stand pour mieux comprendre leur role.",
-          "Le bouton « Supprimer de la liste » a ete renomme en « Relacher le canard ».",
-          "Une confirmation s'affiche avant de relacher un canard, pour eviter les accidents.",
+          "Le bouton « Supprimer de la liste » a été renommé en « Relâcher le canard ».",
+          "Une confirmation s'affiche avant de relacher un canard, pour éviter les accidents.",
         ],
       },
       {
@@ -550,38 +550,38 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.4.0",
     date: "2 juillet 2026",
     intro:
-      "La 1.4.0 introduit le Pokedex des canards : une collection a completer, 9 nouvelles especes, des versions shiny pour chaque famille, et des recompenses pour les plus achernes.",
+      "La 1.4.0 introduit le Pokedex des canards : une collection à compléter, 9 nouvelles espèces, des versions shiny pour chaque famille, et des récompenses pour les plus achernes.",
     sections: [
       {
         title: "Le Pokedex des canards",
         items: [
-          "Un Pokedex fait son apparition dans le Coin des Canards. Retrouvez-y toutes les especes de canards a debloquer et suivez votre progression.",
-          "9 nouvelles especes de canards viennent agrandir la famille : partez a la chasse pour les decouvrir.",
-          "Chaque famille dispose desormais d'une version shiny, plus rare et reconnaissable entre mille.",
+          "Un Pokedex fait son apparition dans le Coin des Canards. Retrouvez-y toutes les espèces de canards à débloquer et suivez votre progression.",
+          "9 nouvelles espèces de canards viennent agrandir la famille : partez à la chasse pour les découvrir.",
+          "Chaque famille dispose désormais d'une version shiny, plus rare et reconnaissable entre mille.",
         ],
         images: [
           {
             src: pokedexV140Img,
-            caption: "Le Pokedex des canards - toutes les especes a debloquer",
+            caption: "Le Pokedex des canards - toutes les espèces à débloquer",
           },
         ],
       },
       {
-        title: "Recompenses",
+        title: "Récompenses",
         items: [
-          "Remplir votre Pokedex completement debloque une nouvelle recompense.",
-          "Posseder toutes les familles ET toutes leurs versions shiny offre une recompense exceptionnelle.",
+          "Remplir votre Pokedex complètement débloqué une nouvelle récompense.",
+          "Posséder toutes les familles ET toutes leurs versions shiny offre une récompense exceptionnelle.",
         ],
       },
       {
-        title: "Un visiteur mysterieux",
+        title: "Un visiteur mystérieux",
         items: [
-          "Un mysterieux XingXing se balade dans la piscine... il y a peut-etre quelque chose a faire avec. Je vous laisse trouver !",
+          "Un mystérieux XingXing se balade dans la piscine... il y a peut-être quelque chose à faire avec. Je vous laisse trouver !",
         ],
         images: [
           {
             src: xingxingV140Img,
-            caption: "XingXing dans la piscine - a vous de decouvrir son secret",
+            caption: "XingXing dans la piscine - a vous de découvrir son secret",
           },
         ],
       },
@@ -591,47 +591,47 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.3.6",
     date: "1 juillet 2026",
     intro:
-      "La 1.3.6 apporte des ameliorations au Coin des Canards avec un tri par rarete, un aspirateur pour la collection, un idle timer pour economiser vos ressources, et une meilleure experience dans la Bibliotheque avec la selection multiple et la suppression directe.",
+      "La 1.3.6 apporte des améliorations au Coin des Canards avec un tri par rareté, un aspirateur pour la collection, un idle timer pour économiser vos ressources, et une meilleure expérience dans la Bibliothèque avec la sélection multiple et la suppression directe.",
     sections: [
       {
-        title: "Parametres : validation du nombre de canards",
+        title: "Paramètres : validation du nombre de canards",
         items: [
-          "La modification du nombre de canards dans les Parametres est maintenant validee avant d'etre appliquee.",
-          "Cela evite d'effacer accidentellement tout votre board en cas de clic involontaire.",
+          "La modification du nombre de canards dans les Paramètres est maintenant validée avant d'être appliquee.",
+          "Cela évite d'effacer accidentellement tout votre board en cas de clic involontaire.",
         ],
       },
       {
-        title: "Coin des Canards : tri par rarete",
+        title: "Coin des Canards : tri par rareté",
         items: [
-          "Une nouvelle option de tri permet de classer vos canards par niveau de rarete.",
-          "Identifiez rapidement vos canards les plus precieux ou ceux qui vous manquent encore.",
+          "Une nouvelle option de tri permet de classer vos canards par niveau de rareté.",
+          "Identifiez rapidement vos canards les plus précieux ou ceux qui vous manquent encore.",
         ],
       },
       {
         title: "Coin des Canards : idle timer",
         items: [
-          "Un nouveau parametre permet de masquer automatiquement l'interface de la piscine apres 30 secondes d'inactivite.",
-          "Utile pour economiser des ressources lorsque vous n'interagissez pas avec les canards.",
-          "Configurez cette duree dans les Parametres selon votre preference.",
+          "Un nouveau paramètre permet de masquer automatiquement l'interface de la piscine après 30 secondes d'inactivité.",
+          "Utile pour économiser des ressources lorsque vous n'interagissez pas avec les canards.",
+          "Configurez cette durée dans les Paramètres selon votre préférence.",
         ],
       },
       {
         title: "Coin des Canards : aspirateur",
         items: [
-          "Un nouvel item special fait son apparition dans la piscine : un aspirateur capable de collecter les canards.",
+          "Un nouvel item spécial fait son apparition dans la piscine : un aspirateur capable de collecter les canards.",
           "Utilisez-le pour capturer automatiquement vos canards.",
         ],
       },
       {
-        title: "Bibliotheque : selection multiple et suppression directe",
+        title: "Bibliothèque : sélection multiple et suppression directe",
         items: [
-          "Selectionnez plusieurs titres a la fois pour les valider, les dé-valider ou les supprimer d'un seul geste.",
-          "Un bouton de suppression sur chaque vignette permet egalement de supprimer un titre directement sans passer par la selection multiple.",
+          "Sélectionnez plusieurs titres à la fois pour les valider, les dé-valider ou les supprimer d'un seul geste.",
+          "Un bouton de suppression sur chaque vignette permet également de supprimer un titre directement sans passer par la sélection multiple.",
         ],
       },
       {
         title: "Corrections",
-        items: ["Resolution de quelques bugs mineurs et ameliorations mineures."],
+        items: ["Résolution de quelques bugs mineurs et améliorations mineures."],
       },
     ],
   },
@@ -639,38 +639,38 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.3.5",
     date: "1 juillet 2026",
     intro:
-      "La 1.3.5 introduit un nouveau canard ultra legendaire, un parametre d'affichage personnalise au lancement, et une section « Pour vous » dans la page Decouvrir.",
+      "La 1.3.5 introduit un nouveau canard ultra légendaire, un paramètre d'affichage personnalise au lancement, et une section « Pour vous » dans la page Découvrir.",
     sections: [
       {
         title: "Nouveau canard : Roi des Canards",
         items: [
-          "Le Roi des Canards fait son entree dans la piscine. Ultra legendaire, il n'apparait qu'avec 1% de chance.",
+          "Le Roi des Canards fait son entrée dans la piscine. Ultra légendaire, il n'apparaît qu'avec 1% de chance.",
           "Bonne chance.",
         ],
         images: [
           {
             src: roiDesCanardsV135Img,
-            caption: "Le Roi des Canards - ultra legendaire, drop 1%",
+            caption: "Le Roi des Canards - ultra légendaire, drop 1%",
           },
         ],
       },
       {
-        title: "Parametre d'affichage au lancement « personnalise »",
+        title: "Paramètre d'affichage au lancement « personnalise »",
         items: [
-          "Une nouvelle option « Personnalise » est disponible dans le parametre de taille au lancement.",
-          "L'application memorise la derniere taille et position de la fenetre et les restaure exactement au prochain demarrage.",
+          "Une nouvelle option « Personnalise » est disponible dans le paramètre de taille au lancement.",
+          "L'application mémorise la dernière taille et position de la fenêtre et les restaure exactement au prochain démarrage.",
         ],
       },
       {
-        title: "Section « Pour vous » dans la page Decouvrir",
+        title: "Section « Pour vous » dans la page Découvrir",
         items: [
-          "Une nouvelle section « Pour vous » apparait dans la page Decouvrir.",
-          "Elle analyse vos likes et votre bibliotheque pour identifier vos gouts et vous proposer des titres qui correspondent vraiment a ce que vous aimez.",
+          "Une nouvelle section « Pour vous » apparaît dans la page Découvrir.",
+          "Elle analyse vos likes et votre bibliothèque pour identifier vos gouts et vous proposer des titres qui correspondent vraiment à ce que vous aimez.",
         ],
       },
       {
         title: "Corrections",
-        items: ["Resolution de quelques bugs mineurs."],
+        items: ["Résolution de quelques bugs mineurs."],
       },
     ],
   },
@@ -678,51 +678,51 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.3.4",
     date: "27 juin 2026",
     intro:
-      "La 1.3.4 apporte le telechargement natif directement dans l'application, une selection multiple revue, des modales plus lisibles et une page Parametres entierement reorganisee.",
+      "La 1.3.4 apporte le téléchargement natif directement dans l'application, une sélection multiple revue, des modales plus lisibles et une page Paramètres entièrement réorganisée.",
     sections: [
       {
-        title: "Page Parametres reorganisee",
+        title: "Page Paramètres réorganisée",
         items: [
-          "La page Parametres a ete revisee pour accueillir toutes les nouvelles options : les sections sont mieux decoupees et plus faciles a parcourir.",
+          "La page Paramètres a été révisée pour accueillir toutes les nouvelles options : les sections sont mieux découpées et plus faciles à parcourir.",
         ],
         images: [
           {
             src: parametresV134Img,
-            caption: "La page Parametres reorganisee avec les nouvelles sections",
+            caption: "La page Paramètres réorganisée avec les nouvelles sections",
           },
         ],
       },
       {
-        title: "Telechargement depuis l'application",
+        title: "Téléchargement depuis l'application",
         items: [
-          "Il est desormais possible de telecharger vos fichiers directement depuis l'application, sans passer par un navigateur ou un gestionnaire externe.",
-          "Un dossier de destination peut etre configure dans les Parametres pour choisir ou vos telechargements atterrissent.",
-          "Un parametre permet egalement de definir combien de fichiers sont telecharges en parallele lors d'une selection multiple.",
+          "Il est désormais possible de télécharger vos fichiers directement depuis l'application, sans passer par un navigateur ou un gestionnaire externe.",
+          "Un dossier de destination peut être configure dans les Paramètres pour choisir ou vos téléchargements atterrissent.",
+          "Un paramètre permet également de définir combien de fichiers sont téléchargés en parallèle lors d'une sélection multiple.",
         ],
         images: [
           {
             src: modaleV134Img,
-            caption: "Le telechargement natif depuis l'application",
+            caption: "Le téléchargement natif depuis l'application",
           },
         ],
       },
       {
-        title: "Selection multiple",
+        title: "Sélection multiple",
         items: [
-          "La selection de plusieurs fichiers est desormais disponible sur la page Magnets et dans la Bibliotheque.",
-          "Selectionnez plusieurs elements d'un coup pour les telecharger ou les supprimer en une seule action.",
+          "La sélection de plusieurs fichiers est désormais disponible sur la page Magnets et dans la Bibliothèque.",
+          "Sélectionnez plusieurs éléments d'un coup pour les télécharger ou les supprimer en une seule action.",
         ],
         images: [
           {
             src: multiSelectionV134Img,
-            caption: "La selection multiple sur la page Magnets et dans la Bibliotheque",
+            caption: "La sélection multiple sur la page Magnets et dans la Bibliothèque",
           },
         ],
       },
       {
         title: "Modales de fichier revisitees",
         items: [
-          "Les modales de detail de fichier sur la page Magnets ont ete entierement refaites pour etre plus claires et plus lisibles.",
+          "Les modales de détail de fichier sur la page Magnets ont été entièrement refaites pour être plus claires et plus lisibles.",
         ],
       },
     ],
@@ -731,33 +731,33 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.3.3",
     date: "27 juin 2026",
     intro:
-      "La piscine s'enrichit d'un canon a balles de tennis, d'un drapeau de parade et d'une belle refonte de l'affichage des raretes.",
+      "La piscine s'enrichit d'un canon à balles de tennis, d'un drapeau de parade et d'une belle refonte de l'affichage des raretés.",
     sections: [
       {
-        title: "Rarete visible avec des etoiles",
+        title: "Rareté visible avec des étoiles",
         items: [
-          "La rarete de chaque canard s'affiche desormais sous forme d'etoiles directement dans le stand, pour identifier d'un coup d'oeil vos canards les plus rares.",
-          "Les effets visuels des canards legendaires ont ete ameliores : les animations sont plus intenses et plus fideles a leur statut exceptionnel.",
+          "La rareté de chaque canard s'affiche désormais sous forme d'étoiles directement dans le stand, pour identifier d'un coup d'œil vos canards les plus rares.",
+          "Les effets visuels des canards légendaires ont été améliorés : les animations sont plus intenses et plus fidèles à leur statut exceptionnel.",
         ],
       },
       {
         title: "Canon a balles de tennis",
         items: [
-          "Un canon a balles de tennis fait son apparition dans la piscine. Ajustez la trajectoire et faites-en partir pour perturber (gentiment) vos canards.",
-          "Les canards reagissent aux impacts et sont propulses dans la direction du tir. La chasse est ouverte.",
-          "Des nenuphars flottent egalement sur l'eau : les canards peuvent y prendre appui et les balles ricochent dessus.",
+          "Un canon à balles de tennis fait son apparition dans la piscine. Ajustez la trajectoire et faites-en partir pour perturber (gentiment) vos canards.",
+          "Les canards réagissent aux impacts et sont propulsés dans la direction du tir. La chasse est ouverte.",
+          "Des nénuphars flottent également sur l'eau : les canards peuvent y prendre appui et les balles ricochent dessus.",
         ],
       },
       {
         title: "Mode parade",
         items: [
-          "Un drapeau de parade est disponible dans la piscine. Il ne sert a rien. Mais il est la.",
+          "Un drapeau de parade est disponible dans la piscine. Il ne sert à rien. Mais il est là.",
         ],
       },
       {
         title: "Corrections",
         items: [
-          "Correction d'un bug qui empechait de relacher un canard depuis le stand - le bouton fonctionne correctement desormais.",
+          "Correction d'un bug qui empêchait de relacher un canard depuis le stand - le bouton fonctionne correctement désormais.",
         ],
       },
     ],
@@ -765,13 +765,13 @@ export const PATCH_NOTES: PatchNote[] = [
   {
     version: "1.3.2",
     date: "27 juin 2026",
-    intro: "Ameliorations de performances sur la page Ma bibliotheque.",
+    intro: "Améliorations de performances sur la page Ma bibliothèque.",
     sections: [
       {
-        title: "Performances de la bibliotheque",
+        title: "Performances de la bibliothèque",
         items: [
-          "La page Ma bibliotheque a ete optimisee pour rester fluide meme avec un grand nombre d'elements.",
-          "Des tests de scalabilite ont ete realises pour valider le comportement avec des collections importantes.",
+          "La page Ma bibliothèque a été optimisée pour rester fluide même avec un grand nombre d'éléments.",
+          "Des tests de scalabilité ont été réalisés pour valider le comportement avec des collections importantes.",
         ],
       },
     ],
@@ -780,38 +780,38 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.3.1",
     date: "26 juin 2026",
     intro:
-      "La page Ma bibliotheque est entierement revue : nouvelle vue en jaquettes, enrichissement TMDB, tri par type de contenu, et regroupement automatique des saisons.",
+      "La page Ma bibliothèque est entièrement revue : nouvelle vue en jaquettes, enrichissement TMDB, tri par type de contenu, et regroupement automatique des saisons.",
     introImage: {
       src: bibliothequeV131Img,
-      caption: "La page Ma bibliotheque revisitee - jaquettes, TMDB et tri par type",
+      caption: "La page Ma bibliothèque revisitée - jaquettes, TMDB et tri par type",
     },
     sections: [
       {
         title: "Nouvelle interface : vue en jaquettes",
         items: [
-          "La bibliotheque affiche desormais les jaquettes de vos films et series, pour une navigation plus visuelle et agreable.",
-          "De nouveaux boutons permettent d'agir rapidement sur chaque element sans avoir a ouvrir sa fiche.",
-          "L'avancement est visible en un coup d'oeil directement sur chaque carte.",
+          "La bibliothèque affiche désormais les jaquettes de vos films et séries, pour une navigation plus visuelle et agréable.",
+          "De nouveaux boutons permettent d'agir rapidement sur chaque élément sans avoir à ouvrir sa fiche.",
+          "L'avancement est visible en un coup d'œil directement sur chaque carte.",
         ],
       },
       {
         title: "Enrichissement TMDB",
         items: [
-          "Chaque element de la bibliotheque peut etre relie aux donnees TMDB : affiche officielle, titre, synopsis, note.",
-          "Le lien se fait automatiquement lors de l'ajout, ou manuellement depuis la fiche de l'element.",
+          "Chaque élément de la bibliothèque peut être relié aux données TMDB : affiche officielle, titre, synopsis, note.",
+          "Le lien se fait automatiquement lors de l'ajout, ou manuellement depuis la fiche de l'élément.",
         ],
       },
       {
-        title: "Tri par films et series",
+        title: "Tri par films et séries",
         items: [
-          "Un nouveau filtre permet d'afficher uniquement les films, uniquement les series, ou tout le contenu en une seule vue.",
+          "Un nouveau filtre permet d'afficher uniquement les films, uniquement les séries, ou tout le contenu en une seule vue.",
         ],
       },
       {
         title: "Regroupement automatique des saisons",
         items: [
-          "Si deux saisons d'une meme serie sont detectees dans votre bibliotheque, elles sont automatiquement regroupees en une seule carte.",
-          "Toutes les saisons restent accessibles depuis cette carte unifiee, sans encombrer la vue principale.",
+          "Si deux saisons d'une même série sont détectées dans votre bibliothèque, elles sont automatiquement regroupées en une seule carte.",
+          "Toutes les saisons restent accessibles depuis cette carte unifiée, sans encombrer la vue principale.",
         ],
       },
     ],
@@ -820,19 +820,19 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.3.0",
     date: "26 juin 2026",
     intro:
-      "La version 1.3 apporte la page Bibliotheque : votre hub personnel pour suivre ce que vous avez vu, episode par episode, et reprendre exactement ou vous en etiez.",
+      "La version 1.3 apporte la page Bibliothèque : votre hub personnel pour suivre ce que vous avez vu, épisode par épisode, et reprendre exactement ou vous en étiez.",
     sections: [
       {
-        title: "Nouvelle page : Bibliotheque",
+        title: "Nouvelle page : Bibliothèque",
         items: [
-          "Un hub personnel centralise tout ce que vous avez ajoute : films et series, avec leur statut de visionnage.",
-          "Pour les series, le suivi se fait episode par episode - cochez chaque episode vu au fur et a mesure.",
-          "Vous pouvez ajouter une serie entiere dans VLC en un seul clic pour l'ouvrir directement.",
+          "Un hub personnel centralise tout ce que vous avez ajouté : films et séries, avec leur statut de visionnage.",
+          "Pour les séries, le suivi se fait épisode par épisode - cochez chaque épisode vu au fur et à mesure.",
+          "Vous pouvez ajouter une série entière dans VLC en un seul clic pour l'ouvrir directement.",
         ],
         images: [
           {
             src: bibliothequeImg,
-            caption: "La page Bibliotheque - votre suivi personnel episode par episode",
+            caption: "La page Bibliothèque - votre suivi personnel épisode par épisode",
           },
         ],
       },
@@ -840,38 +840,38 @@ export const PATCH_NOTES: PatchNote[] = [
         title: "Bouton Reprendre",
         items: [
           'Un nouveau bouton "Reprendre" detecte automatiquement le prochain episode non coche et le lance dans l\'application.',
-          "Plus besoin de se souvenir ou vous en etiez : un seul clic et vous continuez exactement la ou vous vous etes arrete.",
+          "Plus besoin de se souvenir ou vous en étiez : un seul clic et vous continuez exactement la ou vous vous êtes arrête.",
         ],
         images: [
           {
             src: reprendreImg,
-            caption: "Le bouton Reprendre - lance le prochain episode non vu automatiquement",
+            caption: "Le bouton Reprendre - lance le prochain épisode non vu automatiquement",
           },
         ],
       },
       {
-        title: "Nouveau parametre : marquage automatique a la lecture",
+        title: "Nouveau paramètre : marquage automatique à la lecture",
         items: [
-          "Un nouveau parametre dans la section Bibliotheque des Preferences permet de choisir si un film ou un episode est automatiquement coche comme visionne lorsque vous cliquez sur le bouton VLC.",
-          "Par defaut, le marquage est actif : jouer un contenu le coche immediatement. Desactivez l'option si vous preferez cocher manuellement apres avoir regarde.",
+          "Un nouveau paramètre dans la section Bibliothèque des Préférences permet de choisir si un film ou un épisode est automatiquement coche comme visionne lorsque vous cliquez sur le bouton VLC.",
+          "Par défaut, le marquage est actif : jouer un contenu le coche immédiatement. Désactivez l'option si vous préférez cocher manuellement après avoir regarde.",
         ],
         images: [
           {
             src: marquageAutoImg,
-            caption: "Le parametre de marquage automatique dans les preferences de la Bibliotheque",
+            caption: "Le paramètre de marquage automatique dans les préférences de la Bibliothèque",
           },
         ],
       },
       {
-        title: "Nouveau parametre : taille au lancement",
+        title: "Nouveau paramètre : taille au lancement",
         items: [
-          "Un nouveau parametre general permet de choisir la taille de la fenetre au demarrage de l'application : compacte, normale ou maximisee.",
-          "Le reglage est sauvegarde et applique automatiquement a chaque lancement.",
+          "Un nouveau paramètre général permet de choisir la taille de la fenêtre au démarrage de l'application : compacte, normale ou maximisée.",
+          "Le réglage est sauvegarde et applique automatiquement à chaque lancement.",
         ],
         images: [
           {
             src: tailleLancementImg,
-            caption: "Le parametre de taille au lancement dans les preferences generales",
+            caption: "Le paramètre de taille au lancement dans les préférences générales",
           },
         ],
       },
@@ -880,14 +880,14 @@ export const PATCH_NOTES: PatchNote[] = [
   {
     version: "1.2.2",
     date: "25 juin 2026",
-    intro: "Mise a jour de la page de configuration pour les nouveaux utilisateurs.",
+    intro: "Mise à jour de la page de configuration pour les nouveaux utilisateurs.",
     sections: [
       {
-        title: "Page de configuration revisitee",
+        title: "Page de configuration revisitée",
         items: [
-          "La page d'accueil pour les nouveaux utilisateurs a ete entierement mise a jour : les etapes sont plus claires, mieux organisees et plus faciles a suivre.",
-          "Une etape de verification des prerequis permet de s'assurer que tout est en ordre avant de commencer la configuration.",
-          "Une etape de personnalisation du theme a ete ajoutee pour choisir l'apparence de l'application des la premiere utilisation.",
+          "La page d'accueil pour les nouveaux utilisateurs a été entièrement mise à jour : les étapes sont plus claires, mieux organisées et plus faciles à suivre.",
+          "Une étape de vérification des prérequis permet de s'assurer que tout est en ordre avant de commencer la configuration.",
+          "Une étape de personnalisation du thème a été ajoutée pour choisir l'apparence de l'application dès la première utilisation.",
         ],
       },
     ],
@@ -896,37 +896,37 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.2.1",
     date: "24 juin 2026",
     intro:
-      "Le Coin des Canards passe au niveau superieur : mettez vos canards en reserve, retrouvez-les grace a la recherche et aux filtres, et gardez une piscine toujours a la bonne taille.",
+      "Le Coin des Canards passe au niveau supérieur : mettez vos canards en réserve, retrouvez-les grâce à la recherche et aux filtres, et gardez une piscine toujours à la bonne taille.",
     sections: [
       {
-        title: "Mettre un canard en reserve",
+        title: "Mettre un canard en réserve",
         items: [
-          "Chaque canard enregistre peut desormais etre mis a l'eau ou range en reserve directement depuis le stand, d'un seul clic.",
-          "Un canard mis en reserve quitte la piscine avec une petite animation de rangement vers le stand, et reste conserve entre les sessions.",
-          "Le compteur du stand indique en permanence combien de canards sont a l'eau.",
+          "Chaque canard enregistre peut désormais être mis à l'eau ou range en réserve directement depuis le stand, d'un seul clic.",
+          "Un canard mis en réserve quitte la piscine avec une petite animation de rangement vers le stand, et reste conserve entre les sessions.",
+          "Le compteur du stand indique en permanence combien de canards sont à l'eau.",
         ],
       },
       {
         title: "Recherche et filtres dans la collection",
         items: [
           "Une barre de recherche permet de retrouver un canard par son nom.",
-          "Un filtre dedie affiche tous les canards, uniquement ceux a l'eau, ou uniquement ceux en reserve.",
+          "Un filtre dédié affiche tous les canards, uniquement ceux à l'eau, ou uniquement ceux en réserve.",
         ],
       },
       {
-        title: "La piscine reste a la bonne taille",
+        title: "La piscine reste à la bonne taille",
         items: [
-          "Au demarrage, si vous avez plus de canards a l'eau que la limite d'affichage, le surplus est automatiquement mis en reserve et vous etes prevenu.",
-          "Impossible de remettre un canard a l'eau quand la piscine est pleine : un message vous invite a en retirer un, ou a augmenter la limite dans les parametres.",
-          "Si vous baissez la limite d'affichage, les canards non enregistres disparaissent en premier, puis juste assez de canards enregistres passent en reserve pour respecter la nouvelle limite.",
+          "Au démarrage, si vous avez plus de canards à l'eau que la limite d'affichage, le surplus est automatiquement mis en réserve et vous êtes prévenu.",
+          "Impossible de remettre un canard à l'eau quand la piscine est pleine : un message vous invite à en retirer un, ou à augmenter la limite dans les paramètres.",
+          "Si vous baissez la limite d'affichage, les canards non enregistrés disparaissent en premier, puis juste assez de canards enregistrés passent en réserve pour respecter la nouvelle limite.",
         ],
       },
       {
         title: "Confort du stand",
         items: [
-          "Le panneau du stand s'ouvre desormais au-dessus de son icone pour ne plus la masquer.",
+          "Le panneau du stand s'ouvre désormais au-dessus de son icone pour ne plus la masquer.",
           "Cliquer en dehors du panneau le ferme automatiquement.",
-          "La liste de la collection est limitee en hauteur et devient defilante, avec un indice visuel clair lorsqu'il reste des canards a voir.",
+          "La liste de la collection est limitée en hauteur et devient défilante, avec un indice visuel clair lorsqu'il reste des canards à voir.",
         ],
       },
     ],
@@ -935,38 +935,38 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.2.0",
     date: "24 juin 2026",
     intro:
-      "Deux grandes nouveautes : une nouvelle source de recherche Nyaa avec ses filtres dedies, et le Coin des Canards pour adopter, nommer et collectionner vos canards.",
+      "Deux grandes nouveautés : une nouvelle source de recherche Nyaa avec ses filtres dédiés, et le Coin des Canards pour adopter, nommer et collectionner vos canards.",
     sections: [
       {
         title: "Nouvelle source de recherche : Nyaa",
         items: [
-          "En plus de C411, vous pouvez desormais rechercher directement sur nyaa.si. Une bascule sous la barre de recherche permet de choisir la source.",
-          "Des filtres dedies affinent vos recherches Nyaa : team, qualite (2160p, 1080p, 720p, 480p), codec (x265, x264, hevc, av1) et langue (vostfr, vost, multi, truefrench, french, vf).",
-          "Vos filtres Nyaa par defaut sont configurables dans les Preferences pour les retrouver automatiquement a chaque recherche.",
+          "En plus de C411, vous pouvez désormais rechercher directement sur nyaa.si. Une bascule sous la barre de recherche permet de choisir la source.",
+          "Des filtres dédiés affinent vos recherches Nyaa : team, qualité (2160p, 1080p, 720p, 480p), codec (x265, x264, hevc, av1) et langue (vostfr, vost, multi, truefrench, french, vf).",
+          "Vos filtres Nyaa par défaut sont configurables dans les Préférences pour les retrouver automatiquement à chaque recherche.",
         ],
-        images: [{ src: nyaaPatchImg, caption: "La recherche Nyaa et ses filtres dedies" }],
+        images: [{ src: nyaaPatchImg, caption: "La recherche Nyaa et ses filtres dédiés" }],
       },
       {
         title: "Le Coin des Canards",
         items: [
-          "Un petit stand est apparu en bas a gauche de la piscine. Attrapez un canard et deposez-le dedans pour lui donner un nom et l'enregistrer.",
-          "Vos canards enregistres reviennent nager automatiquement a chaque ouverture de l'application.",
+          "Un petit stand est apparu en bas à gauche de la piscine. Attrapez un canard et déposez-le dedans pour lui donner un nom et l'enregistrer.",
+          "Vos canards enregistrés reviennent nager automatiquement à chaque ouverture de l'application.",
           "Survolez un canard nomme pour afficher son nom au-dessus de lui.",
-          "Gerez votre collection depuis le stand : renommer, relacher dans la piscine, ou supprimer un canard.",
-          "Les canards enregistres sont proteges : impossible de les jeter dans le siphon par accident.",
+          "Gérez votre collection depuis le stand : renommer, relacher dans la piscine, ou supprimer un canard.",
+          "Les canards enregistrés sont protégés : impossible de les jeter dans le siphon par accident.",
         ],
         images: [{ src: shopPatchImg, caption: "Le Coin des Canards et votre collection" }],
       },
       {
         title: "Des canards uniques",
         items: [
-          "L'apparence des canards est desormais generee aleatoirement a chaque apparition, avec de vraies raretes : couleurs, accessoires, motifs et canards legendaires.",
+          "L'apparence des canards est désormais générée aléatoirement à chaque apparition, avec de vraies raretés : couleurs, accessoires, motifs et canards légendaires.",
         ],
       },
       {
         title: "Import / Export",
         items: [
-          "Sauvegardez ou restaurez votre collection de canards dans un fichier JSON depuis les parametres Summer.",
+          "Sauvegardez ou restaurez votre collection de canards dans un fichier JSON depuis les paramètres Summer.",
         ],
       },
     ],
@@ -975,13 +975,13 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.1.4",
     date: "23 juin 2026",
     intro:
-      "Corrections visuelles et amelioration du comportement de la notification de mise a jour.",
+      "Corrections visuelles et amélioration du comportement de la notification de mise à jour.",
     sections: [
       {
         title: "Corrections",
         items: [
-          "Le positionnement du halo sur les accessoires de canard a ete ajuste pour un meilleur alignement visuel.",
-          "La dialog de mise a jour n'apparait plus avant que l'application soit completement chargee.",
+          "Le positionnement du halo sur les accessoires de canard a été ajusté pour un meilleur alignement visuel.",
+          "La dialog de mise à jour n'apparaît plus avant que l'application soit complètement chargee.",
         ],
       },
     ],
@@ -989,12 +989,12 @@ export const PATCH_NOTES: PatchNote[] = [
   {
     version: "1.1.3",
     date: "23 juin 2026",
-    intro: "Version de test du systeme de mise a jour automatique sur Windows.",
+    intro: "Version de test du système de mise à jour automatique sur Windows.",
     sections: [
       {
-        title: "Test mise a jour automatique",
+        title: "Test mise à jour automatique",
         items: [
-          "Verification que l'installation via le systeme integre fonctionne correctement sans passer par le .exe.",
+          "Vérification que l'installation via le système integre fonctionne correctement sans passer par le .exe.",
         ],
       },
     ],
@@ -1003,13 +1003,13 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.1.2",
     date: "23 juin 2026",
     intro:
-      "Correction d'un bug ou la mise a jour se telechargait mais l'application ne redemarrait pas sur Windows.",
+      "Correction d'un bug ou la mise à jour se téléchargeait mais l'application ne redémarrait pas sur Windows.",
     sections: [
       {
-        title: "Correction de la mise a jour automatique (Windows)",
+        title: "Correction de la mise à jour automatique (Windows)",
         items: [
-          "L'installeur de mise a jour tournait sans les droits necessaires sur certaines configurations Windows, causant un echec silencieux apres le telechargement.",
-          "L'application se fermait correctement mais ne redemarrait jamais. Le probleme est desormais resolu.",
+          "L'installeur de mise à jour tournait sans les droits nécessaires sur certaines configurations Windows, causant un échec silencieux après le téléchargement.",
+          "L'application se fermait correctement mais ne redémarrait jamais. Le problème est désormais résolu.",
         ],
       },
     ],
@@ -1018,31 +1018,31 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.1.1",
     date: "23 juin 2026",
     intro:
-      "Cette mise à jour introduit le systeme de mise a jour automatique et apporte de nouvelles peaux de canard ainsi que des ameliorations de la physique dans la piscine.",
+      "Cette mise à jour introduit le système de mise à jour automatique et apporte de nouvelles peaux de canard ainsi que des améliorations de la physique dans la piscine.",
     sections: [
       {
-        title: "Mises a jour automatiques",
+        title: "Mises à jour automatiques",
         items: [
-          "L'application verifie desormais automatiquement si une nouvelle version est disponible a chaque demarrage.",
-          "Une notification discrete apparait en haut de l'interface lorsqu'une mise a jour est prete a etre installee - rien de force, vous choisissez quand installer.",
-          "Le telechargement et l'installation se font en arriere-plan. Une fois termine, l'application vous propose de redemarrer pour appliquer la mise a jour.",
-          "Plus besoin de telecharger manuellement le programme d'installation : tout se passe depuis l'interieur de l'application.",
+          "L'application vérifie désormais automatiquement si une nouvelle version est disponible à chaque démarrage.",
+          "Une notification discrète apparaît en haut de l'interface lorsqu'une mise à jour est prête à être installée - rien de forcé, vous choisissez quand installer.",
+          "Le téléchargement et l'installation se font en arrière-plan. Une fois termine, l'application vous propose de redémarrer pour appliquer la mise à jour.",
+          "Plus besoin de télécharger manuellement le programme d'installation : tout se passe depuis l'intérieur de l'application.",
         ],
       },
       {
         title: "Nouvelles peaux de canard",
         items: [
           "Quatre nouveaux canards font leur apparition dans la piscine : le canard pirate, le canard astronaute, le canard chef cuisinier et le canard detective.",
-          "Les peaux sont selectionnees aleatoirement a chaque lancement de la piscine, pour ne jamais avoir deux fois la meme ambiance.",
+          "Les peaux sont sélectionnées aléatoirement à chaque lancement de la piscine, pour ne jamais avoir deux fois la même ambiance.",
         ],
       },
       {
-        title: "Physique de la piscine amelioree",
+        title: "Physique de la piscine améliorée",
         items: [
-          "Les canards peuvent maintenant etre lances avec de l'elan : maintenez le clic et relacher pour propulser le canard dans la direction choisie.",
-          "Les canards rebondissent desormais les uns contre les autres lors des collisions, au lieu de se traverser.",
-          "De petites eclaboussures apparaissent a chaque impact contre les bords ou lors des collisions entre canards.",
-          "La physique de flottaison a ete revue : les canards se balancent plus naturellement sur l'eau.",
+          "Les canards peuvent maintenant être lances avec de l'élan : maintenez le clic et relacher pour propulser le canard dans la direction choisie.",
+          "Les canards rebondissent désormais les uns contre les autres lors des collisions, au lieu de se traverser.",
+          "De petites éclaboussures apparaissent à chaque impact contre les bords ou lors des collisions entre canards.",
+          "La physique de flottaison a été revue : les canards se balancent plus naturellement sur l'eau.",
         ],
       },
     ],
@@ -1131,7 +1131,7 @@ export const PATCH_NOTES: PatchNote[] = [
       {
         title: "Recherche plus lisible",
         items: [
-          "Les résultats affichent des badges de qualité (2160P, 1080P) et de format (X265, X264, HEVC) en un coup d'oeil.",
+          "Les résultats affichent des badges de qualité (2160P, 1080P) et de format (X265, X264, HEVC) en un coup d'œil.",
           "Les filtres par catégorie, qualité et format se combinent avec le tri par pertinence, taille ou date.",
         ],
         images: [

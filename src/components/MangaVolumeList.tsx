@@ -71,7 +71,7 @@ export function MangaVolumeList({
             {lost ? (
               <button
                 onClick={() => onRemoveVolume(volume)}
-                title="Retirer ce tome de l'oeuvre"
+                title="Retirer ce tome de l'œuvre"
                 className="flex h-7 flex-none items-center gap-1.5 rounded-lg bg-red-500/10 px-2.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-500/20 dark:bg-red-500/15 dark:text-red-400 dark:hover:bg-red-500/25"
               >
                 <Trash2 className="h-3.5 w-3.5" />

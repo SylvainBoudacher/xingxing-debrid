@@ -75,7 +75,7 @@ export function LibraryTransferPanel() {
     });
 
   // Le fichier est dechiffre et la fusion simulee avant d'afficher quoi que ce
-  // soit : rien n'est ecrit tant que l'utilisateur n'a pas tranche.
+  // soit : rien n'est écrit tant que l'utilisateur n'a pas tranche.
   function handleImportPassphrase(passphrase: string) {
     if (!importFile) return;
     setBusy(true);

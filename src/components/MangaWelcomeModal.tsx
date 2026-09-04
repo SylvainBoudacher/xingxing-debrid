@@ -143,7 +143,7 @@ export function MangaWelcomeModal({ onClose }: { onClose: () => void }) {
                   setDirection(i > index ? 1 : -1);
                   setIndex(i);
                 }}
-                aria-label={`Etape ${i + 1}`}
+                aria-label={`Étape ${i + 1}`}
                 className={`h-1.5 rounded-full transition-all ${
                   i === index
                     ? "w-5 bg-violet-600"

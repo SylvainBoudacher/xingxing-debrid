@@ -93,3 +93,9 @@ The app follows standard Tauri 2 architecture:
 - Plain hyphens and straight quotes only.
 - Natural language characters (accented letters, CJK, etc.) are fine when the content requires them.
 - Code output must be copy-paste safe.
+
+## French UI Text
+
+- Every string displayed to the user is French and MUST be correctly accented ("Paramètres", "Clés API", "téléchargement", "à jour"). Writing them unaccented is a bug.
+- Identifiers stay ASCII: keys, ids, union members, store keys, filenames, CSS classes. Only display text is accented.
+- `src/lib/accents.test.ts` fails CI on the most common unaccented words. Add a word to its `WRONG` list when you spot a new one; never silence the test.

@@ -1,6 +1,6 @@
 // Taille du vivier annoncee par TMDB. Avec des genres cumulatifs, certaines
 // combinaisons ne donnent rien : le dire avant le lancer plutot qu'apres.
-// null = pas encore connue, on n'affiche rien plutot qu'un chiffre faux.
+// null = pas encore connue, on n'affiche rien plutôt qu'un chiffre faux.
 export function RoulettePoolCount({ count }: { count: number | null }) {
   if (count === null) return null;
 

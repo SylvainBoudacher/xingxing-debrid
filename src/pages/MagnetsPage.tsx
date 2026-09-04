@@ -417,7 +417,7 @@ function FilesModal({
                   ) : (
                     <>
                       <Download className="h-3.5 w-3.5 text-white" />
-                      <span className="text-xs font-medium text-white">Telecharger</span>
+                      <span className="text-xs font-medium text-white">Télécharger</span>
                     </>
                   )}
                 </motion.button>
@@ -452,7 +452,7 @@ function FilesModal({
                   ) : (
                     <>
                       <Download className="h-3.5 w-3.5 text-white" />
-                      <span className="text-xs font-medium text-white">Tout telecharger</span>
+                      <span className="text-xs font-medium text-white">Tout télécharger</span>
                     </>
                   )}
                 </motion.button>
@@ -555,7 +555,7 @@ function FilesModal({
                       </motion.button>
                       <motion.button
                         whileTap={{ scale: 0.9 }}
-                        title="Telecharger"
+                        title="Télécharger"
                         onClick={() => handleDownload(file.link)}
                         disabled={busy}
                         className="flex h-7 w-7 flex-none items-center justify-center rounded-lg bg-indigo-600 transition-colors hover:bg-indigo-500 disabled:opacity-40"
@@ -775,7 +775,7 @@ export function MagnetsPage({
         await deleteMagnet(apiKeyRef.current, id);
         deleted.push(id);
       });
-      toast.success(ids.length > 1 ? `${ids.length} magnets supprimes` : "Magnet supprime");
+      toast.success(ids.length > 1 ? `${ids.length} magnets supprimés` : "Magnet supprime");
       setConfirmDelete(null);
       // Invalide le cache pour que le prochain chargement soit à jour
       queryClient.invalidateQueries({ queryKey: allDebridKeys.magnets() });
@@ -874,7 +874,7 @@ export function MagnetsPage({
   const tabs: { key: StatusFilter; label: string }[] = [
     { key: "all", label: `Tous (${counts.all})` },
     { key: "active", label: `En cours (${counts.active})` },
-    { key: "ready", label: `Termine (${counts.ready})` },
+    { key: "ready", label: `Terminé (${counts.ready})` },
     { key: "error", label: `Erreur (${counts.error})` },
   ];
 
@@ -976,7 +976,7 @@ export function MagnetsPage({
           <div className="flex items-center justify-between gap-3">
             <p className="text-[11px] text-zinc-400 dark:text-zinc-600 uppercase tracking-wider font-medium">
               {filtered.length === 0
-                ? "Aucun resultat"
+                ? "Aucun résultat"
                 : `${filtered.length} magnet${filtered.length > 1 ? "s" : ""}${search ? ` pour "${search}"` : ""}`}
             </p>
             <div className="flex shrink-0 items-center gap-2">
@@ -1187,7 +1187,7 @@ export function MagnetsPage({
               ) : (
                 <>
                   <Download className="h-3.5 w-3.5 text-white" />
-                  <span className="text-xs font-medium text-white">Tout telecharger</span>
+                  <span className="text-xs font-medium text-white">Tout télécharger</span>
                 </>
               )}
             </motion.button>

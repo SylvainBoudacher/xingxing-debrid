@@ -22,9 +22,9 @@ const BADGES = {
 
 function warning(service: KeyService, status: ScreenStatus): string | null {
   if (status === "invalid")
-    return `Cette cle semble incorrecte : ${service.name} l'a refusee. Vous pouvez continuer, mais l'application ne pourra pas s'y connecter tant qu'elle n'est pas corrigee.`;
+    return `Cette clé semble incorrecte : ${service.name} l'a refusée. Vous pouvez continuer, mais l'application ne pourra pas s'y connecter tant qu'elle n'est pas corrigée.`;
   if (status === "unreachable")
-    return `Impossible de joindre ${service.name} pour verifier la cle. Elle sera peut-etre valide une fois votre connexion retablie.`;
+    return `Impossible de joindre ${service.name} pour vérifier la clé. Elle sera peut-être valide une fois votre connexion rétablie.`;
   return null;
 }
 
@@ -103,7 +103,7 @@ export function KeyScreen({
         <button
           type="button"
           onClick={() => setRevealed((r) => !r)}
-          aria-label={revealed ? "Masquer la cle" : "Afficher la cle"}
+          aria-label={revealed ? "Masquer la clé" : "Afficher la clé"}
           className="absolute right-3 text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
         >
           {revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

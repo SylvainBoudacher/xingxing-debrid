@@ -10,12 +10,12 @@ export interface AchievementDef {
 
 export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "first_win", label: "PREMIER TRIOMPHE - terminer la course" },
-  { id: "perfect", label: "SANS UNE EGRATIGNURE - finir sans perdre un coeur" },
-  { id: "rank_s", label: "CLASSE S - decrocher le rang S" },
+  { id: "perfect", label: "SANS UNE ÉGRATIGNURE - finir sans perdre un cœur" },
+  { id: "rank_s", label: "CLASSE S - décrocher le rang S" },
   { id: "grazes30", label: "FROLEUR FOU - 30 frissons en un run" },
   { id: "bananas20", label: "REGIME COMPLET - 20 bananes en un run" },
-  { id: "tempete_win", label: "MARIN D'EAU TROUBLE - vaincre en Tempete" },
-  { id: "ouragan_win", label: "OEIL DU CYCLONE - vaincre en Ouragan" },
+  { id: "tempete_win", label: "MARIN D'EAU TROUBLE - vaincre en Tempête" },
+  { id: "ouragan_win", label: "ŒIL DU CYCLONE - vaincre en Ouragan" },
   { id: "endless120", label: "INSUBMERSIBLE - tenir 2 min au Typhon sans fin" },
 ];
 

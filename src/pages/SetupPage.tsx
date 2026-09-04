@@ -88,7 +88,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     setDnsStatus("checking");
     if (import.meta.env.DEV && dnsSim !== "none") {
       await new Promise((r) => setTimeout(r, 600));
-      setDnsError(dnsSim === "fail" ? "[DEV] echec simule" : "");
+      setDnsError(dnsSim === "fail" ? "[DEV] échec simule" : "");
       setDnsStatus(dnsSim);
       return;
     }
@@ -205,7 +205,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={goBack}
-              aria-label="Revenir a l'etape precedente"
+              aria-label="Revenir à l'étape precedente"
               className="-mt-3.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/10 dark:ring-white/10 text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -518,7 +518,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 </div>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
                   Toutes ces options et bien d'autres sont accessibles dans les{" "}
-                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">Parametres</span>
+                  <span className="font-semibold text-zinc-700 dark:text-zinc-300">Paramètres</span>
                   . Il y a surement des choses a decouvrir pour vous dans cette page.
                 </p>
               </motion.div>
@@ -564,7 +564,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               onClick={() => {
                 setDnsSim(mode);
                 if (mode !== "none") {
-                  setDnsError(mode === "fail" ? "[DEV] echec simule" : "");
+                  setDnsError(mode === "fail" ? "[DEV] échec simule" : "");
                   setDnsStatus(mode);
                 }
               }}
@@ -574,7 +574,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                   : "border-violet-500/40 bg-white/70 text-violet-500/70 hover:bg-violet-500/10 dark:bg-zinc-950/60"
               }`}
             >
-              {mode === "none" ? "[DEV] DNS REEL" : mode === "ok" ? "DNS OK" : "DNS KO"}
+              {mode === "none" ? "[DEV] DNS RÉEL" : mode === "ok" ? "DNS OK" : "DNS KO"}
             </button>
           ))}
         </div>

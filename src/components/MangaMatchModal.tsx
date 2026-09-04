@@ -23,7 +23,7 @@ interface MangaMatchModalProps {
 
 /**
  * Arbitrage manuel : l'utilisateur cherche lui-meme sur C411 le titre de
- * l'edition francaise. Le titre retenu est memorise comme alias de l'oeuvre,
+ * l'édition française. Le titre retenu est mémorise comme alias de l'oeuvre,
  * pour que la recherche automatique le trouve ensuite toute seule.
  */
 export function MangaMatchModal({

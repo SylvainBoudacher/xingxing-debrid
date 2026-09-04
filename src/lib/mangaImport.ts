@@ -61,7 +61,7 @@ export interface ImportOutcome {
 
 /**
  * Copie les .cbz choisis dans le dossier de la serie, puis rattache les tomes
- * a l'oeuvre (creee si elle n'est pas encore dans la bibliotheque). Un fichier
+ * a l'œuvre (créée si elle n'est pas encore dans la bibliotheque). Un fichier
  * en echec de copie n'est pas ajoute, les autres passent quand meme.
  */
 export async function importLocalVolumes(

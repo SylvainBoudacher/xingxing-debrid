@@ -56,7 +56,7 @@ export function NetworkCheck({
             {dnsStatus === "checking" && (
               <>
                 <Loader2 className="h-4 w-4 shrink-0 animate-spin text-zinc-400" />
-                <p className="text-xs text-zinc-500">Verification de l'acces a c411.org...</p>
+                <p className="text-xs text-zinc-500">Vérification de l'accès a c411.org...</p>
               </>
             )}
             {dnsStatus === "ok" && (
@@ -94,7 +94,7 @@ export function NetworkCheck({
             {dnsStatus === "idle" && (
               <>
                 <AlertTriangle className="h-4 w-4 shrink-0 text-zinc-400" />
-                <p className="text-xs text-zinc-500">Acces a c411.org non verifie.</p>
+                <p className="text-xs text-zinc-500">Accès a c411.org non vérifie.</p>
               </>
             )}
           </div>

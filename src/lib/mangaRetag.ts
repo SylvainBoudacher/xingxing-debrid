@@ -43,7 +43,7 @@ export function retagEntry(entries: MangaEntry[], mangaId: string, item: MangaIt
 }
 
 /**
- * Corrige la fiche MangaDex d'une oeuvre : l'entree change d'identite, garde
+ * Corrige la fiche MangaDex d'une œuvre : l'entree change d'identite, garde
  * ses tomes, et ses fichiers locaux suivent dans le dossier du nouveau titre.
  * La categorie personnalisee et les alias C411 suivent aussi.
  */

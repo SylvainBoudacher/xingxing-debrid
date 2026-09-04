@@ -10,7 +10,7 @@ interface RouletteGenrePickerProps {
 }
 
 // Selection cumulative : le tirage ne garde que les films portant TOUS les
-// genres coches. Le bouton de remise a zero n'apparait que s'il a un effet.
+// genres coches. Le bouton de remise a zero n'apparaît que s'il a un effet.
 export function RouletteGenrePicker({
   selected,
   disabled,

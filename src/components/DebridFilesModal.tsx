@@ -124,7 +124,7 @@ export function DebridFilesModal({ modal, getAllDebridKey, onClose }: DebridFile
                     ) : (
                       <>
                         <Download className="h-3.5 w-3.5 text-white" />
-                        <span className="text-xs font-medium text-white">Telecharger</span>
+                        <span className="text-xs font-medium text-white">Télécharger</span>
                       </>
                     )}
                   </motion.button>

@@ -55,7 +55,7 @@ function TutorialBlock({
           ))}
         </ol>
         <div className="space-y-2">
-          <Label htmlFor={inputId}>Cle API</Label>
+          <Label htmlFor={inputId}>Clé API</Label>
           <Input
             id={inputId}
             type="password"
@@ -128,11 +128,11 @@ export function ApiKeysForm({ onSaved }: { onSaved?: (keys: Partial<ApiKeys>) =>
       // Hors-ligne / TMDB injoignable : impossible de verifier, on ne bloque pas.
       const valid = await validateTmdbKey(value).catch(() => true);
       if (!valid) {
-        toast.error("Cle TMDB invalide : verifiez-la sur themoviedb.org.");
+        toast.error("Clé TMDB invalide : vérifiez-la sur themoviedb.org.");
         return;
       }
     }
-    toast.success("Cle sauvegardee.");
+    toast.success("Clé sauvegardee.");
   }
 
   const fields: Record<string, { field: keyof ApiKeys; value: string; set: (v: string) => void }> =
@@ -150,7 +150,7 @@ export function ApiKeysForm({ onSaved }: { onSaved?: (keys: Partial<ApiKeys>) =>
           <TutorialBlock
             key={service.id}
             number={i + 1}
-            title={`Cle API ${service.name}`}
+            title={`Clé API ${service.name}`}
             url={service.url}
             steps={service.steps}
             inputId={`${service.id}-key`}

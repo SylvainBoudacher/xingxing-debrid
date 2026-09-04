@@ -24,7 +24,7 @@ export function sanitizeFolderName(title: string): string {
 }
 
 /**
- * Dossier de destination d'un tome : le dossier manga dedie s'il est
+ * Dossier de destination d'un tome : le dossier manga dédié s'il est
  * configure, sinon le sous-dossier "manga" du dossier de telechargement.
  * Le nom de la serie forme toujours le dernier segment.
  */

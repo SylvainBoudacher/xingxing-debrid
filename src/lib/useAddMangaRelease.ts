@@ -38,7 +38,7 @@ interface UseAddMangaReleaseOptions {
 /**
  * Envoie une release manga vers AllDebrid puis enregistre ses tomes dans la
  * bibliotheque manga. Meme sequence que useSendToDebrid cote video, mais
- * l'unite enregistree est l'oeuvre et non le torrent.
+ * l'unité enregistrée est l'oeuvre et non le torrent.
  */
 export function useAddMangaRelease({
   getC411Key,
@@ -57,7 +57,7 @@ export function useAddMangaRelease({
       if (addingHash) return;
       const allDebridKey = getAllDebridKey();
       if (!allDebridKey) {
-        toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
+        toast.error("Clé AllDebrid manquante. Configurez-la dans les paramètres.");
         return;
       }
 

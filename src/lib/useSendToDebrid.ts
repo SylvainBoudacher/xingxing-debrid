@@ -34,7 +34,7 @@ export function useSendToDebrid({
     if (sendingHash !== null || libraryHash !== null) return;
     const allDebridKey = getAllDebridKey();
     if (!allDebridKey) {
-      toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
+      toast.error("Clé AllDebrid manquante. Configurez-la dans les paramètres.");
       return;
     }
     const torrentUrl = `https://c411.org/api?t=get&id=${encodeURIComponent(occ.infoHash)}&apikey=${getC411Key()}`;
@@ -116,7 +116,7 @@ export function useSendToDebrid({
           });
         } else {
           toast.success(
-            `Envoye vers AllDebrid : ${uploaded.name ?? occ.torrentName} (en cours de debridage)`,
+            `Envoyé vers AllDebrid : ${uploaded.name ?? occ.torrentName} (en cours de débridage)`,
           );
         }
         await recordDownload({

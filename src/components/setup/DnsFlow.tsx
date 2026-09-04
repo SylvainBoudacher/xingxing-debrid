@@ -11,13 +11,13 @@ const PHASES = [
   {
     key: "blocked",
     dnsLabel: "DNS de votre box",
-    dnsHint: "celui de votre operateur",
+    dnsHint: "celui de votre opérateur",
     caption:
-      "Certains operateurs ne repondent pas pour c411.org : l'annuaire renvoie une erreur et le site semble hors ligne.",
+      "Certains opérateurs ne répondent pas pour c411.org : l'annuaire renvoie une erreur et le site semble hors ligne.",
     liveLabel: "Votre DNS actuel",
-    liveHint: "celui de votre reseau",
+    liveHint: "celui de votre réseau",
     liveCaption:
-      "C'est ce qui se passe chez vous : votre annuaire ne repond pas pour c411.org. Changez de DNS, puis relancez le test.",
+      "C'est ce qui se passe chez vous : votre annuaire ne répond pas pour c411.org. Changez de DNS, puis relancez le test.",
     ok: false,
   },
   {
@@ -25,11 +25,11 @@ const PHASES = [
     dnsLabel: "DNS 1.1.1.1",
     dnsHint: "Cloudflare, gratuit et public",
     caption:
-      "Avec un autre annuaire, l'adresse est renvoyee normalement et XingXing joint le site. Rien d'autre ne change sur votre connexion.",
+      "Avec un autre annuaire, l'adresse est renvoyée normalement et XingXing joint le site. Rien d'autre ne change sur votre connexion.",
     liveLabel: "Votre DNS actuel",
-    liveHint: "celui de votre reseau",
+    liveHint: "celui de votre réseau",
     liveCaption:
-      "C'est ce qui se passe chez vous : votre annuaire repond pour c411.org et XingXing joint le site.",
+      "C'est ce qui se passe chez vous : votre annuaire répond pour c411.org et XingXing joint le site.",
     ok: true,
   },
 ];

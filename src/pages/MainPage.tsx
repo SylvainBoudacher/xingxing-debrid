@@ -438,7 +438,7 @@ export function MainPage({
   async function handleSendToDebrid(result: SearchResult, index: number, addToLibrary = false) {
     if (sendingIndex !== null || libraryIndex !== null) return;
     if (!allDebridKeyRef.current) {
-      toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
+      toast.error("Clé AllDebrid manquante. Configurez-la dans les paramètres.");
       return;
     }
 
@@ -486,7 +486,7 @@ export function MainPage({
         const files = flattenFiles(rawFiles);
         const hasVideo = files.some((f) => isVideoFile(f.name));
         if (addToLibrary) {
-          toast.success(`Ajoute a la bibliotheque : ${uploaded.name ?? result.title}`, {
+          toast.success(`Ajouté à la bibliothèque : ${uploaded.name ?? result.title}`, {
             action: { label: "Voir", onClick: () => onNavigate("library") },
           });
         } else {
@@ -507,8 +507,8 @@ export function MainPage({
       } else {
         toast.success(
           addToLibrary
-            ? `Ajoute a la bibliotheque : ${uploaded.name ?? result.title} (en cours de debridage)`
-            : `Envoye vers AllDebrid : ${uploaded.name ?? result.title} (en cours de debridage)`,
+            ? `Ajouté à la bibliothèque : ${uploaded.name ?? result.title} (en cours de débridage)`
+            : `Envoyé vers AllDebrid : ${uploaded.name ?? result.title} (en cours de débridage)`,
           addToLibrary
             ? { action: { label: "Voir", onClick: () => onNavigate("library") } }
             : undefined,
@@ -979,7 +979,7 @@ export function MainPage({
                   placeholder={
                     source === "manga"
                       ? "Rechercher un manga..."
-                      : "Rechercher un film, une serie..."
+                      : "Rechercher un film, une série..."
                   }
                   className="flex-1 min-w-0 bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-500 outline-none text-lg"
                 />
@@ -1636,7 +1636,7 @@ export function MainPage({
                           ) : (
                             <>
                               <Download className="h-3.5 w-3.5 text-white" />
-                              <span className="text-xs font-medium text-white">Telecharger</span>
+                              <span className="text-xs font-medium text-white">Télécharger</span>
                             </>
                           )}
                         </motion.button>

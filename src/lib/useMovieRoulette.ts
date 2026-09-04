@@ -26,7 +26,7 @@ function sample(items: TmdbItem[], n: number): TmdbItem[] {
   return out.slice(0, n);
 }
 
-// Apercu d'un vivier TMDB, estampille de la selection qui l'a produit.
+// Apercu d'un vivier TMDB, estampille de la sélection qui l'a produit.
 interface PoolInfo {
   key: string;
   count: number;
@@ -109,7 +109,7 @@ export function useMovieRoulette(tmdbKey: string, ownedKeys: Set<string>) {
     setWinner(null);
     try {
       const fetchedPool = await loadVivier(source, genreIds, tmdbKey);
-      // Le filtre s'applique apres coup : TMDB ne sait pas ce qu'on possede.
+      // Le filtre s'applique après coup : TMDB ne sait pas ce qu'on possede.
       const pool = excludeOwned
         ? fetchedPool.filter((m) => !ownedKeys.has(`movie-${m.id}`))
         : fetchedPool;

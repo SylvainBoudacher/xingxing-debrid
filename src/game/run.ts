@@ -18,7 +18,7 @@ export interface ActDef {
 
 export const ACTS: ActDef[] = [
   { name: "ACTE 1 - LA MER DES CANARDS", dur: 35 },
-  { name: "ACTE 2 - LA TEMPETE", dur: 40 },
+  { name: "ACTE 2 - LA TEMPÊTE", dur: 40 },
   { name: "ACTE 3 - LE ROI CANARD", dur: 40 },
 ];
 

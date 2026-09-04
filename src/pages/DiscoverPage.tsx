@@ -123,7 +123,7 @@ export function DiscoverPage({
 
   const recosApi = useRecommendations(tmdbKey, likes);
 
-  // Ids TMDB deja presents dans la bibliotheque : badge "Dans la bibliotheque"
+  // Ids TMDB deja presents dans la bibliotheque : badge "Dans la bibliothèque"
   // sur les affiches. Rafraichi apres chaque ajout depuis cette page.
   const [ownedKeys, setOwnedKeys] = useState<Set<string>>(() =>
     ownedTmdbKeys(getCachedLibrary() ?? []),

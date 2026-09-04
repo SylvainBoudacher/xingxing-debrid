@@ -18,7 +18,7 @@ export function UpdateDialog({ update, onDismiss }: Props) {
 
   return (
     <div className="fixed bottom-5 right-5 z-50 w-80 rounded-xl border border-border bg-card p-4 shadow-xl">
-      <div className="mb-1 text-sm font-semibold">Mise a jour disponible</div>
+      <div className="mb-1 text-sm font-semibold">Mise à jour disponible</div>
       <div className="mb-3 text-xs text-muted-foreground">
         Version <span className="font-mono font-medium text-foreground">{update.version}</span>
         {update.body && <p className="mt-1 line-clamp-3 whitespace-pre-wrap">{update.body}</p>}

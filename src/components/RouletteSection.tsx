@@ -94,7 +94,7 @@ export function RouletteSection({
         </button>
       </div>
 
-      {/* Vivier vide : ce n'est pas une panne, relancer a l'identique ne
+      {/* Vivier vide : ce n'est pas une panne, relancer à l'identique ne
           donnerait rien. Le bouton Reessayer est reserve aux erreurs reseau. */}
       {(r.error === EMPTY_POOL_MESSAGE || r.error === ALL_OWNED_MESSAGE) && (
         <p className="mx-auto mt-4 max-w-md text-center text-sm text-zinc-500">{r.error}</p>

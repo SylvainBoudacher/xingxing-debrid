@@ -11,7 +11,7 @@ export interface GuideStep {
 
 export const WINDOWS_STEPS: GuideStep[] = [
   {
-    title: "Ouvrir vos connexions reseau",
+    title: "Ouvrir vos connexions réseau",
     lines: [
       <>
         Appuyez sur <WinKey /> + <Key>R</Key>.
@@ -22,11 +22,11 @@ export const WINDOWS_STEPS: GuideStep[] = [
     ],
   },
   {
-    title: "Ouvrir les proprietes de votre connexion",
+    title: "Ouvrir les propriétés de votre connexion",
     lines: [
       <>Faites un clic droit sur votre connexion active (Wi-Fi ou Ethernet).</>,
       <>
-        Cliquez sur <Strong>Proprietes</Strong>.
+        Cliquez sur <Strong>Propriétés</Strong>.
       </>,
     ],
   },
@@ -68,7 +68,7 @@ export const WINDOWS_STEPS: GuideStep[] = [
     ],
     note: (
       <>
-        Presque toutes les box utilisent l'IPv6 en priorite. Si vous ne reglez que l'IPv4, votre
+        Presque toutes les box utilisent l'IPv6 en priorité. Si vous ne réglez que l'IPv4, votre
         ordinateur continue d'interroger l'annuaire de votre operateur et rien ne change.
       </>
     ),
@@ -92,22 +92,22 @@ export const WINDOWS_STEPS: GuideStep[] = [
 
 export const MACOS_STEPS: GuideStep[] = [
   {
-    title: "Ouvrir les reglages reseau",
+    title: "Ouvrir les réglages réseau",
     lines: [
       <>
-        Ouvrez le menu Pomme puis <Strong>Reglages Systeme</Strong>.
+        Ouvrez le menu Pomme puis <Strong>Réglages Système</Strong>.
       </>,
       <>
-        Cliquez sur <Strong>Reseau</Strong> dans la barre laterale.
+        Cliquez sur <Strong>Réseau</Strong> dans la barre laterale.
       </>,
     ],
   },
   {
-    title: "Ouvrir les details de votre connexion",
+    title: "Ouvrir les détails de votre connexion",
     lines: [
-      <>Selectionnez votre connexion active (Wi-Fi ou Ethernet).</>,
+      <>Sélectionnez votre connexion active (Wi-Fi ou Ethernet).</>,
       <>
-        Cliquez sur <Strong>Details...</Strong>.
+        Cliquez sur <Strong>Détails...</Strong>.
       </>,
     ],
   },
@@ -136,7 +136,7 @@ export const MACOS_STEPS: GuideStep[] = [
     note: (
       <>
         Les deux premieres sont l'IPv4, les deux suivantes l'IPv6. Presque toutes les box utilisent
-        l'IPv6 en priorite : s'arreter aux deux premieres laisse le blocage en place.
+        l'IPv6 en priorité : s'arreter aux deux premieres laisse le blocage en place.
       </>
     ),
   },
@@ -150,7 +150,7 @@ export const MACOS_STEPS: GuideStep[] = [
         Collez <CopyChip value="sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder" />{" "}
         puis Entree.
       </>,
-      <>Tapez le mot de passe de votre Mac puis Entree.</>,
+      <>Tapez le mot de passe de votre Mac puis Entrée.</>,
       <>
         Revenez sur XingXing et cliquez sur <Strong>Retester ma connexion</Strong>.
       </>,

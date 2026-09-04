@@ -2087,7 +2087,7 @@ export function PixelPool({
     resize();
     ensureSpawning();
     syncDexWithCollection() // warm the dex cache for hover badges + le pity du bassin
-      .then(() => refreshClaimableRewards()) // pastille "recompense a reclamer"
+      .then(() => refreshClaimableRewards()) // pastille "récompense à réclamer"
       .catch(() => {});
     loadPityState().catch(() => {}); // compteurs de secheresse du bassin
     getSlotState().catch(() => {}); // etat du bandit manchot, pour l'icone allumee

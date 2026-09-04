@@ -13,7 +13,7 @@ interface MangaImportSearchProps {
 }
 
 /**
- * Choix d'une oeuvre dans la base MangaDex : etape 1 de l'import, et selection
+ * Choix d'une œuvre dans la base MangaDex : étape 1 de l'import, et selection
  * de la fiche lors d'une correction. La recherche part a la frappe, amortie,
  * sans bouton a actionner.
  */
@@ -28,7 +28,7 @@ export function MangaImportSearch({ knownIds, initialQuery, onPick }: MangaImpor
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Titre de l'oeuvre"
+          placeholder="Titre de l'œuvre"
           autoFocus
           className="pl-9 pr-9"
         />
@@ -42,7 +42,7 @@ export function MangaImportSearch({ knownIds, initialQuery, onPick }: MangaImpor
           <p className="py-8 text-center text-xs text-zinc-400">
             {loading
               ? "Recherche..."
-              : "L'oeuvre choisie sert de fiche : couverture, résumé et tags viennent de MangaDex."}
+              : "L'œuvre choisie sert de fiche : couverture, résumé et tags viennent de MangaDex."}
           </p>
         ) : results.length === 0 ? (
           <p className="py-8 text-center text-sm text-zinc-500">Aucun résultat.</p>

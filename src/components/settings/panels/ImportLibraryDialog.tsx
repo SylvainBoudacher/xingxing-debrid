@@ -94,7 +94,7 @@ export function ImportLibraryDialog({
 }
 
 // Titres presents en local mais absents du fichier alors qu'ils existaient a
-// l'export : coches par defaut, l'hypothese la plus probable etant qu'ils ont
+// l'export : coches par défaut, l'hypothese la plus probable etant qu'ils ont
 // ete supprimes sur l'autre machine.
 function MissingList({
   entries,

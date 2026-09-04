@@ -108,7 +108,7 @@ export function NyaaSearchFilters({
       <NyaaSelect
         value={quality}
         options={QUALITIES}
-        placeholder="Qualite"
+        placeholder="Qualité"
         icon={MonitorPlay}
         itemVariants={itemVariants}
         onChange={onQuality}

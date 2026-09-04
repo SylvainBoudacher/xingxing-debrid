@@ -74,7 +74,7 @@ export function MangaLinkModal({ release, busy, onPick, onClose }: MangaLinkModa
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Titre de l'oeuvre"
+            placeholder="Titre de l'œuvre"
             autoFocus
           />
           <p className="mt-2 text-xs text-zinc-500">
@@ -88,7 +88,7 @@ export function MangaLinkModal({ release, busy, onPick, onClose }: MangaLinkModa
               <Loader2 className="h-5 w-5 animate-spin text-zinc-400" />
             </div>
           ) : results === null ? null : results.length === 0 ? (
-            <p className="py-8 text-center text-sm text-zinc-500">Aucune oeuvre trouvée.</p>
+            <p className="py-8 text-center text-sm text-zinc-500">Aucune œuvre trouvée.</p>
           ) : (
             <div className="space-y-2">
               {results.map((item) => {

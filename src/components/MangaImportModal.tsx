@@ -17,7 +17,7 @@ interface MangaImportModalProps {
 }
 
 /**
- * Import de .cbz venus de l'exterieur : l'utilisateur identifie l'oeuvre dans
+ * Import de .cbz venus de l'extérieur : l'utilisateur identifie l'oeuvre dans
  * MangaDex, confirme le numero de chaque fichier, et les tomes rejoignent le
  * dossier de la serie ainsi que l'entree de bibliotheque (creee si besoin).
  */
@@ -81,7 +81,7 @@ export function MangaImportModal({
         <div className="flex items-center gap-3 border-b border-black/5 p-4 dark:border-white/5">
           <div className="min-w-0 flex-1">
             <h2 className="text-sm font-semibold text-zinc-900 dark:text-white">
-              {item ? "Numéroter les tomes" : "À quelle oeuvre appartiennent ces fichiers ?"}
+              {item ? "Numéroter les tomes" : "À quelle œuvre appartiennent ces fichiers ?"}
             </h2>
             <p className="truncate text-xs text-zinc-500">
               {planned.length} fichier{planned.length > 1 ? "s" : ""} .cbz

@@ -7,7 +7,7 @@ export function posterUrl(path: string, size: string = POSTER_SIZE): string {
 }
 
 // Le webview ne telecharge que ~6 images par hote en parallele : on borne la
-// file nous-memes pour garder l'ordre de priorite (premiere grille d'abord).
+// file nous-memes pour garder l'ordre de priorité (première grille d'abord).
 const CONCURRENCY = 6;
 const requested = new Set<string>();
 

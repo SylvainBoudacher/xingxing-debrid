@@ -115,7 +115,7 @@ export function DuckShopRow({
         <div className="flex shrink-0 items-center [&_button]:cursor-pointer">
           {stackCount !== undefined && stackCount > 1 && (
             <IconAction
-              label={stackOpen ? "Replier la pile" : `Deplier les ${stackCount} doublons`}
+              label={stackOpen ? "Replier la pile" : `Déplier les ${stackCount} doublons`}
               onClick={() => onToggleStack?.()}
             >
               <ChevronDown
@@ -124,11 +124,11 @@ export function DuckShopRow({
             </IconAction>
           )}
           {d.reserved ? (
-            <IconAction label="Remettre a l'eau" onClick={onPutInWater}>
+            <IconAction label="Remettre à l'eau" onClick={onPutInWater}>
               <Waves className="h-3 w-3" />
             </IconAction>
           ) : (
-            <IconAction label="Mettre en reserve" onClick={onPutInReserve}>
+            <IconAction label="Mettre en réserve" onClick={onPutInReserve}>
               <Archive className="h-3 w-3" />
             </IconAction>
           )}

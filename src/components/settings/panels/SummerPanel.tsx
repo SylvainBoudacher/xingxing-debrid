@@ -88,7 +88,7 @@ export function SummerPanel({
         <div className="mt-3">
           <SettingRow
             title="Masquage automatique"
-            description="Cache l'interface apres 30 s d'inactivite. Un mouvement de souris la restaure."
+            description="Cache l'interface après 30 s d'inactivité. Un mouvement de souris la restaure."
           >
             <Toggle checked={idleAutoHide} onChange={onSetIdleAutoHide} />
           </SettingRow>

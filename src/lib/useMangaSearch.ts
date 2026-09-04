@@ -9,8 +9,8 @@ const DEBOUNCE_MS = 400;
 
 /**
  * Recherche MangaDex amortie, pour les modales ou l'utilisateur tape le titre
- * d'une oeuvre. `results` reste null tant qu'aucune recherche n'a abouti, ce
- * qui distingue "pas encore cherche" de "aucun resultat".
+ * d'une œuvre. `results` reste null tant qu'aucune recherche n'a abouti, ce
+ * qui distingue "pas encore cherche" de "aucun résultat".
  */
 export function useMangaSearch(query: string): { results: MangaItem[] | null; loading: boolean } {
   const [results, setResults] = useState<MangaItem[] | null>(null);

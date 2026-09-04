@@ -26,7 +26,7 @@ export interface MangaVolume {
   /** Torrent d'ou provient le fichier. */
   infoHash: string;
   magnetId?: number;
-  /** Nom du fichier dans le torrent, cle d'identite au sein d'une release. */
+  /** Nom du fichier dans le torrent, cle d'identité au sein d'une release. */
   fileName: string;
   fileSize: number;
   /** Lien AllDebrid, a debloquer avant telechargement. */
@@ -200,7 +200,7 @@ function preferVolume(a: MangaVolume, b: MangaVolume): MangaVolume {
 }
 
 /**
- * Ajoute ou complete l'entree d'une oeuvre avec les tomes d'un torrent. Un
+ * Ajoute ou complete l'entrée d'une oeuvre avec les tomes d'un torrent. Un
  * torrent encore en cours de debridage n'apporte pas de tomes : il est place en
  * attente et resolu plus tard par `resolvePendingTorrent`.
  */

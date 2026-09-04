@@ -654,7 +654,7 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
       c.fillStyle = "#04070f";
       c.fillRect(0, 0, LW, LH);
       pixelText(c, "LE TYPHON", LW / 2, 58, 30, "#ffe066");
-      pixelText(c, "XINGXING A ETE ASPIRE DANS L'ENVERS DE LA PISCINE", LW / 2, 92, 8, "#bcd6ee");
+      pixelText(c, "XINGXING A ÉTÉ ASPIRE DANS L'ENVERS DE LA PISCINE", LW / 2, 92, 8, "#bcd6ee");
 
       // mode selector
       const modeLabel = selEndless ? "TYPHON SANS FIN" : "LA COURSE";
@@ -663,7 +663,7 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
       if (!endlessUnlocked)
         pixelText(
           c,
-          "TERMINE LA COURSE POUR DEBLOQUER LE MODE SANS FIN",
+          "TERMINE LA COURSE POUR DÉBLOQUER LE MODE SANS FIN",
           LW / 2,
           150,
           6,
@@ -680,14 +680,14 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
           ? "LA MER EST CALME. ENFIN, PRESQUE."
           : diff === "tempete"
             ? "TIRS +30%, CANARDS +50%. TIRAGE SANS COMMUN."
-            : "UN SEUL COEUR. UN SHINY GARANTI AU TIRAGE.";
+            : "UN SEUL CŒUR. UN SHINY GARANTI AU TIRAGE.";
       pixelText(c, diffHint, LW / 2, 194, 6, "rgba(200,220,240,0.55)");
 
       if (Math.floor(t * 2) % 2 === 0 && run.phaseT > 0.3)
-        pixelText(c, "ENTREE : LARGUER LES AMARRES", LW / 2, 224, 10, "#ffffff");
+        pixelText(c, "ENTRÉE : LARGUER LES AMARRES", LW / 2, 224, 10, "#ffffff");
       pixelText(
         c,
-        "ZQSD / FLECHES : PILOTER ET CHOISIR   ECHAP : RETOUR",
+        "ZQSD / FLÈCHES : PILOTER ET CHOISIR   ÉCHAP : RETOUR",
         LW / 2,
         252,
         7,
@@ -701,7 +701,7 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
       c.fillRect(0, 0, LW, LH);
       const s = results.score;
 
-      pixelText(c, run.endless ? "FIN DE LA DERIVE" : "RESULTATS", LW / 2, 36, 16, "#ffe066");
+      pixelText(c, run.endless ? "FIN DE LA DÉRIVE" : "RESULTATS", LW / 2, 36, 16, "#ffe066");
 
       // rank medallion
       pixelText(c, "RANG", LW / 2 - 150, 76, 8, "rgba(220,230,240,0.6)");
@@ -711,7 +711,7 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
       pixelText(c, `CHRONO  ${fmtChrono(run.totalT)}   +${s.timeBonus}`, lx, 68, 9, "#e8f4ff");
       pixelText(c, `BANANES x${run.bananas}   +${s.bananas}`, lx, 84, 9, "#ffe066");
       pixelText(c, `FRISSONS x${run.grazes}   +${s.grazes}`, lx, 100, 9, "#8be9fd");
-      if (s.perfect > 0) pixelText(c, `SANS UNE EGRATIGNURE  +${s.perfect}`, lx, 116, 9, "#7bd850");
+      if (s.perfect > 0) pixelText(c, `SANS UNE ÉGRATIGNURE  +${s.perfect}`, lx, 116, 9, "#7bd850");
       pixelText(c, `TOTAL  ${s.total}`, lx, 138, 14, "#ffffff");
       if (results.newRecord && Math.floor(t * 2) % 2 === 0)
         pixelText(c, "NOUVEAU RECORD !", lx, 156, 9, "#ff9a3c");
@@ -726,13 +726,13 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
         );
 
       if (results.boost > 0)
-        pixelText(c, `TIRAGE AMELIORE +${results.boost}`, LW / 2, 182, 9, "#c9a8ff");
+        pixelText(c, `TIRAGE AMÉLIORE +${results.boost}`, LW / 2, 182, 9, "#c9a8ff");
 
       for (let i = 0; i < Math.min(2, results.newAch.length); i++) {
-        pixelText(c, `SUCCES : ${labelOf(results.newAch[i])}`, LW / 2, 198 + i * 12, 7, "#7bd850");
+        pixelText(c, `SUCCÈS : ${labelOf(results.newAch[i])}`, LW / 2, 198 + i * 12, 7, "#7bd850");
       }
 
-      pixelText(c, "ENTREE : RECOMPENSE   R : REJOUER   M : MENU", LW / 2, 240, 10, "#ffffff");
+      pixelText(c, "ENTRÉE : RÉCOMPENSE   R : REJOUER   M : MENU", LW / 2, 240, 10, "#ffffff");
     }
 
     // ---- frame loop ----
@@ -776,13 +776,13 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
           c.fillRect(0, 0, LW, LH);
           pixelText(c, "NAUFRAGE !", LW / 2, LH / 2 - 22, 24, "#ff4d6d");
           pixelText(c, `R : REESSAYER L'ACTE ${run.act + 1}`, LW / 2, LH / 2 + 12, 10, "#ffffff");
-          pixelText(c, "ECHAP : ABANDONNER", LW / 2, LH / 2 + 28, 8, "rgba(220,230,240,0.6)");
+          pixelText(c, "ÉCHAP : ABANDONNER", LW / 2, LH / 2 + 28, 8, "rgba(220,230,240,0.6)");
         } else if (run.phase === "finish") {
           updateSparks(sparks, dt);
           updatePopups(popups, dt);
           drawWorld(t);
           drawHud();
-          pixelText(c, "ARRIVEE !", LW / 2, LH / 2 - 10, 26, "#ffe066");
+          pixelText(c, "ARRIVÉE !", LW / 2, LH / 2 - 10, 26, "#ffe066");
           if (run.phaseT >= 1.8) {
             results = finishRun(true);
             setPhase("results");
@@ -851,7 +851,7 @@ export function BoatGamePage({ onExit }: { onExit: () => void }) {
               />
             ))}
           </div>
-          <div className="font-mono text-[11px] text-slate-500">Echap : repartir sans canard</div>
+          <div className="font-mono text-[11px] text-slate-500">Échap : repartir sans canard</div>
         </div>
       )}
     </div>

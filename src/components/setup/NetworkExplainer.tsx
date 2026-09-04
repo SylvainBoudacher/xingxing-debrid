@@ -3,8 +3,8 @@ import { Collapse } from "../Collapse";
 import { DnsFlow } from "./DnsFlow";
 
 const REASSURANCE = [
-  "Ce n'est pas un VPN : votre connexion, votre debit et votre adresse IP ne changent pas.",
-  "C'est un reglage systeme standard, reversible en trente secondes.",
+  "Ce n'est pas un VPN : votre connexion, votre débit et votre adresse IP ne changent pas.",
+  "C'est un réglage système standard, réversible en trente secondes.",
   "1.1.1.1 (Cloudflare) et 8.8.8.8 (Google) sont des annuaires publics et gratuits.",
 ];
 

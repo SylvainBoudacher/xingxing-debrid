@@ -95,7 +95,7 @@ export function LibraryMangaSection({
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Fiche pre-ouverte (action "Voir" d'un toast) : attendre la fin de la
-  // transition de page avant de l'animer, sinon tout apparait d'un coup.
+  // transition de page avant de l'animer, sinon tout apparaît d'un coup.
   useEffect(() => {
     if (!initialMangaId) return;
     const timer = setTimeout(() => {
@@ -276,7 +276,7 @@ export function LibraryMangaSection({
       }
       const key = getAllDebridKey();
       if (!key) {
-        toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
+        toast.error("Clé AllDebrid manquante. Configurez-la dans les paramètres.");
         return null;
       }
       markDownloading(volumeKey(volume), true);
@@ -301,7 +301,7 @@ export function LibraryMangaSection({
     async (entry: MangaEntry) => {
       const key = getAllDebridKey();
       if (!key) {
-        toast.error("Cle AllDebrid manquante. Configurez-la dans les parametres.");
+        toast.error("Clé AllDebrid manquante. Configurez-la dans les paramètres.");
         return;
       }
       const queue = entry.volumes.filter(

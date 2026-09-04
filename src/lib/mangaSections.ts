@@ -73,7 +73,7 @@ function toBlock(key: string, label: string, items: MangaEntry[]): MangaBlock {
   return { key, label, count: items.length, items };
 }
 
-/** Retire les affectations dont l'oeuvre n'est plus en bibliothèque. */
+/** Retire les affectations dont l'œuvre n'est plus en bibliothèque. */
 export function pruneMangaCategories(
   config: CategoryConfig,
   existing: Set<string>,

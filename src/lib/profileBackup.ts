@@ -6,7 +6,7 @@ export const PASSPHRASE_MIN_LENGTH = 8;
 export const BACKUP_EXTENSION = "c411backup";
 
 // Ouvre la boite d'enregistrement puis delegue la collecte (stores + keyring),
-// le chiffrement et l'ecriture au backend. Retourne null si l'utilisateur annule.
+// le chiffrement et l'écriture au backend. Retourne null si l'utilisateur annule.
 export async function exportProfile(passphrase: string): Promise<string | null> {
   const path = await save({
     defaultPath: `profil-c411.${BACKUP_EXTENSION}`,

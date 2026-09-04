@@ -78,7 +78,7 @@ export function KeyWizard({
           Connectez l'application a vos comptes
         </h1>
         <p className="mx-auto max-w-lg text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
-          Chaque service a besoin d'une cle pour que XingXing puisse s'y connecter. On les recupere
+          Chaque service a besoin d'une clé pour que XingXing puisse s'y connecter. On les recupere
           une par une. Elles restent sur votre machine et ne sont envoyees a personne d'autre.
         </p>
       </div>
