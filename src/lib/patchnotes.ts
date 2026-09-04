@@ -46,6 +46,44 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.6.6",
+    date: "4 septembre 2026",
+    intro:
+      "La 1.6.6 se concentre sur la page Découverte : tri des saisons par épisode, intégrales de séries dans leur propre section, boutons modernisés et roulette plus agréable. La page de bienvenue reçoit aussi une refonte graphique et logique.",
+    sections: [
+      {
+        title: "Découverte : saisons triées par épisode",
+        items: [
+          "Les saisons des séries sont désormais triées par ordre d'épisode par défaut, et non plus par nombre de seeds.",
+          "Vous suivez la saison dans l'ordre, sans avoir à reconstituer la liste vous-même.",
+        ],
+      },
+      {
+        title: "Découverte : intégrales séparées",
+        items: [
+          "Les intégrales de séries sont maintenant regroupées dans une section dédiée, distincte des épisodes.",
+          "Quand une intégrale est disponible, elle est proposée en premier choix.",
+        ],
+      },
+      {
+        title: "Découverte : boutons modernisés",
+        items: ["Légère modernisation des boutons sur les fiches d'œuvres de la page Découverte."],
+      },
+      {
+        title: "Découverte : roulette améliorée",
+        items: [
+          "Les interactions avec la roulette ont été améliorées : animations de résultat plus nettes et comportement plus stable.",
+        ],
+      },
+      {
+        title: "Page de bienvenue modernisée",
+        items: [
+          "Upgrade graphique et logique de la page de bienvenue pour que tout soit plus simple à comprendre et à suivre.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.6.5",
     date: "3 septembre 2026",
     intro:
@@ -1232,4 +1270,4 @@ export const PATCH_NOTES: PatchNote[] = [
   },
 ];
 
-export const LATEST_VERSION = "1.6.5";
+export const LATEST_VERSION = "1.6.6";
