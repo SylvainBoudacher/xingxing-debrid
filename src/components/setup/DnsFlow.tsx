@@ -14,6 +14,10 @@ const PHASES = [
     dnsHint: "celui de votre operateur",
     caption:
       "Certains operateurs ne repondent pas pour c411.org : l'annuaire renvoie une erreur et le site semble hors ligne.",
+    liveLabel: "Votre DNS actuel",
+    liveHint: "celui de votre reseau",
+    liveCaption:
+      "C'est ce qui se passe chez vous : votre annuaire ne repond pas pour c411.org. Changez de DNS, puis relancez le test.",
     ok: false,
   },
   {
@@ -22,13 +26,20 @@ const PHASES = [
     dnsHint: "Cloudflare, gratuit et public",
     caption:
       "Avec un autre annuaire, l'adresse est renvoyee normalement et XingXing joint le site. Rien d'autre ne change sur votre connexion.",
+    liveLabel: "Votre DNS actuel",
+    liveHint: "celui de votre reseau",
+    liveCaption:
+      "C'est ce qui se passe chez vous : votre annuaire repond pour c411.org et XingXing joint le site.",
     ok: true,
   },
 ];
 
-const NODE = { width: 100, height: 72, top: 26 };
+/** Bandeau reserve a la legende en bas de scene : les noeuds se centrent dans
+ *  ce qui reste, pas dans la scene entiere. */
+const CAPTION_H = 44;
+const NODE = { width: 100, height: 72, top: (STAGE.height - CAPTION_H - 72) / 2 };
 const MID_W = 140;
-const LEFT_X = 10;
+const LEFT_X = 24;
 const RIGHT_X = STAGE.width - LEFT_X - NODE.width;
 /** Le noeud DNS est le pivot du schema : il doit tomber pile au centre de la scene. */
 const MID_X = (STAGE.width - MID_W) / 2;
@@ -70,16 +81,18 @@ function Node({
   );
 }
 
-export function DnsFlow() {
+/** Sans `live`, le schema alterne les deux cas pour expliquer le principe.
+ *  Avec `live`, il fige le cas reellement mesure chez l'utilisateur. */
+export function DnsFlow({ live }: { live?: "ok" | "fail" }) {
   const reduced = useReducedMotion();
   const [index, setIndex] = useState(0);
-  const phase = PHASES[index];
+  const phase = live ? PHASES[live === "ok" ? 1 : 0] : PHASES[index];
 
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || live) return;
     const id = setInterval(() => setIndex((i) => (i + 1) % PHASES.length), PHASE_MS);
     return () => clearInterval(id);
-  }, [reduced]);
+  }, [reduced, live]);
 
   const packetStart = LEFT_X + NODE.width;
   const packetEnd = RIGHT_X - packetStart;
@@ -142,8 +155,8 @@ export function DnsFlow() {
             x={0}
             width={MID_W}
             icon={Server}
-            title={phase.dnsLabel}
-            subtitle={phase.dnsHint}
+            title={live ? phase.liveLabel : phase.dnsLabel}
+            subtitle={live ? phase.liveHint : phase.dnsHint}
             tone={phase.ok ? "ok" : "fail"}
           />
           <motion.span
@@ -179,25 +192,27 @@ export function DnsFlow() {
               transition={{ duration: 0.25 }}
               className="text-center text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400"
             >
-              {phase.caption}
+              {live ? phase.liveCaption : phase.caption}
             </motion.p>
           </AnimatePresence>
         </div>
       </div>
 
-      <div className="mt-2 flex items-center justify-center gap-1.5">
-        {PHASES.map((p, i) => (
-          <button
-            key={p.key}
-            type="button"
-            onClick={() => setIndex(i)}
-            aria-label={p.dnsLabel}
-            className={`h-1.5 rounded-full transition-all ${
-              i === index ? "w-5 bg-indigo-500" : "w-1.5 bg-zinc-300 dark:bg-zinc-700"
-            }`}
-          />
-        ))}
-      </div>
+      {!live && (
+        <div className="mt-2 flex items-center justify-center gap-1.5">
+          {PHASES.map((p, i) => (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => setIndex(i)}
+              aria-label={p.dnsLabel}
+              className={`h-1.5 rounded-full transition-all ${
+                i === index ? "w-5 bg-indigo-500" : "w-1.5 bg-zinc-300 dark:bg-zinc-700"
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

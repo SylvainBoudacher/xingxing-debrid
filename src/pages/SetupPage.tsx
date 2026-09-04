@@ -22,7 +22,6 @@ import { setApiKey } from "@/lib/apiKeys";
 import { httpFetch } from "@/lib/networkError";
 import { pickBackupFile } from "@/lib/profileBackup";
 import { ImportProfileModal } from "@/components/ImportProfileModal";
-import { DnsGuideModal } from "@/components/DnsGuideModal";
 import { ServicesStep } from "@/components/setup/ServicesStep";
 import { NetworkStep, type DnsStatus } from "@/components/setup/NetworkStep";
 import { KeyWizard } from "@/components/setup/keys/KeyWizard";
@@ -65,8 +64,10 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   const [step, setStep] = useState<"intro" | StepId>("intro");
   const [keyIndex, setKeyIndex] = useState(0);
   const [dnsStatus, setDnsStatus] = useState<DnsStatus>("idle");
-  const [showDnsGuide, setShowDnsGuide] = useState(false);
   const [dnsError, setDnsError] = useState("");
+  // Simulation dev : le resultat force survit aux retests, sinon le vrai
+  // reseau reprend la main des le clic suivant.
+  const [dnsSim, setDnsSim] = useState<"none" | "ok" | "fail">("none");
   const [downloadDir, setDownloadDir] = useState("");
   const [batchSize, setBatchSize] = useState(2);
   const [theme, setThemeState] = useState<Theme>("dark");
@@ -85,6 +86,12 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   async function checkDns() {
     setDnsError("");
     setDnsStatus("checking");
+    if (import.meta.env.DEV && dnsSim !== "none") {
+      await new Promise((r) => setTimeout(r, 600));
+      setDnsError(dnsSim === "fail" ? "[DEV] echec simule" : "");
+      setDnsStatus(dnsSim);
+      return;
+    }
     try {
       await httpFetch("https://c411.org", { method: "HEAD", signal: AbortSignal.timeout(6000) });
       setDnsStatus("ok");
@@ -260,7 +267,6 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               dnsStatus={dnsStatus}
               dnsError={dnsError}
               onCheck={checkDns}
-              onOpenGuide={() => setShowDnsGuide(true)}
               onNext={() => setStep("keys")}
             />
           )}
@@ -549,9 +555,30 @@ export function SetupPage({ onComplete }: SetupPageProps) {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {showDnsGuide && <DnsGuideModal onClose={() => setShowDnsGuide(false)} />}
-      </AnimatePresence>
+      {import.meta.env.DEV && step === "network" && (
+        <div className="fixed bottom-14 right-4 z-50 flex gap-1">
+          {(["none", "ok", "fail"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => {
+                setDnsSim(mode);
+                if (mode !== "none") {
+                  setDnsError(mode === "fail" ? "[DEV] echec simule" : "");
+                  setDnsStatus(mode);
+                }
+              }}
+              className={`rounded-lg border border-dashed px-2.5 py-1 text-[10px] font-bold tracking-wider transition-colors ${
+                dnsSim === mode
+                  ? "border-violet-500 bg-violet-500/15 text-violet-500"
+                  : "border-violet-500/40 bg-white/70 text-violet-500/70 hover:bg-violet-500/10 dark:bg-zinc-950/60"
+              }`}
+            >
+              {mode === "none" ? "[DEV] DNS REEL" : mode === "ok" ? "DNS OK" : "DNS KO"}
+            </button>
+          ))}
+        </div>
+      )}
 
       {import.meta.env.DEV && (
         <button
