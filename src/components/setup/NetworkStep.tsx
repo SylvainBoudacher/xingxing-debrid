@@ -1,7 +1,6 @@
 import { motion } from "motion/react";
 import {
   AlertTriangle,
-  ArrowLeft,
   ArrowRight,
   BookOpen,
   CheckCircle2,
@@ -13,6 +12,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { DnsFlow } from "./DnsFlow";
+import { StepKindBadge } from "./StepKindBadge";
 import { item, stagger } from "./motionVariants";
 
 export type DnsStatus = "idle" | "checking" | "ok" | "fail";
@@ -28,14 +28,12 @@ export function NetworkStep({
   dnsError,
   onCheck,
   onOpenGuide,
-  onBack,
   onNext,
 }: {
   dnsStatus: DnsStatus;
   dnsError: string;
   onCheck: () => void;
   onOpenGuide: () => void;
-  onBack: () => void;
   onNext: () => void;
 }) {
   return (
@@ -48,16 +46,10 @@ export function NetworkStep({
       className="relative mx-auto w-full max-w-2xl px-6 pt-10 pb-12 sm:px-8 space-y-4"
     >
       <motion.div variants={item}>
-        <motion.button
-          whileTap={{ scale: 0.93 }}
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="text-sm font-medium">Retour</span>
-        </motion.button>
-
         <div className="text-center mb-4">
+          <div className="mb-2 flex justify-center">
+            <StepKindBadge kind="check" />
+          </div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
             Votre connexion internet
           </h1>

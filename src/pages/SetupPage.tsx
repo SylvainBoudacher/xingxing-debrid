@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowLeft,
@@ -28,6 +28,9 @@ import { NetworkStep, type DnsStatus } from "@/components/setup/NetworkStep";
 import { KeyWizard } from "@/components/setup/keys/KeyWizard";
 import { KEY_SERVICES } from "@/lib/keyServices";
 import { item, stagger } from "@/components/setup/motionVariants";
+import { SetupStepper } from "@/components/setup/SetupStepper";
+import { StepKindBadge } from "@/components/setup/StepKindBadge";
+import type { StepId } from "@/components/setup/steps";
 import { applyTheme, type Theme } from "@/lib/theme";
 
 const PixelPool = lazy(() =>
@@ -59,9 +62,8 @@ interface SetupPageProps {
 }
 
 export function SetupPage({ onComplete }: SetupPageProps) {
-  const [step, setStep] = useState<
-    "intro" | "services" | "network" | "keys" | "downloads" | "theme"
-  >("intro");
+  const [step, setStep] = useState<"intro" | StepId>("intro");
+  const [keyIndex, setKeyIndex] = useState(0);
   const [dnsStatus, setDnsStatus] = useState<DnsStatus>("idle");
   const [showDnsGuide, setShowDnsGuide] = useState(false);
   const [dnsError, setDnsError] = useState("");
@@ -71,6 +73,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   const [summerEnabled, setSummerEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importPath, setImportPath] = useState<string | null>(null);
+  const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     store.get<string>("download_dir").then((v) => setDownloadDir(v ?? ""));
@@ -143,8 +146,26 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     }
   }
 
+  // Chaque etape repart en haut : sinon la barre d'etapes reste hors champ
+  // quand on arrive depuis le bas d'une page longue. Le <main> est en
+  // overflow-hidden : il accumule un scrollTop invisible qu'il faut vider aussi.
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+  }, [step]);
+
+  // Un seul retour pour tout le parcours : il vit dans la barre d'etapes.
+  function goBack() {
+    if (step === "services") return setStep("intro");
+    if (step === "network") return setStep("services");
+    if (step === "keys") return keyIndex > 0 ? setKeyIndex(keyIndex - 1) : setStep("network");
+    if (step === "downloads") return setStep("keys");
+    if (step === "theme") return setStep("downloads");
+  }
+
   return (
     <main
+      ref={mainRef}
       className={`relative flex min-h-screen flex-col overflow-hidden transition-colors duration-700 ${step === "theme" && summerEnabled ? "bg-[#06183F]" : "bg-[#f4f6fc] dark:bg-[#04050c]"}`}
     >
       {step === "theme" && (
@@ -172,6 +193,23 @@ export function SetupPage({ onComplete }: SetupPageProps) {
       </div>
 
       <div className="relative z-10 flex flex-1 flex-col">
+        {step !== "intro" && (
+          <div className="mx-auto flex w-full max-w-2xl items-start gap-3 px-6 pt-6 sm:px-8">
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={goBack}
+              aria-label="Revenir a l'etape precedente"
+              className="-mt-3.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/10 dark:ring-white/10 text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </motion.button>
+            <SetupStepper
+              currentId={step}
+              progress={step === "keys" ? keyIndex / KEY_SERVICES.length : 0}
+              onNavigate={setStep}
+            />
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {step === "intro" && (
             <motion.div
@@ -215,9 +253,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
             </motion.div>
           )}
 
-          {step === "services" && (
-            <ServicesStep onBack={() => setStep("intro")} onNext={() => setStep("network")} />
-          )}
+          {step === "services" && <ServicesStep onNext={() => setStep("network")} />}
 
           {step === "network" && (
             <NetworkStep
@@ -225,13 +261,12 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               dnsError={dnsError}
               onCheck={checkDns}
               onOpenGuide={() => setShowDnsGuide(true)}
-              onBack={() => setStep("services")}
               onNext={() => setStep("keys")}
             />
           )}
 
           {step === "keys" && (
-            <KeyWizard onBack={() => setStep("network")} onDone={handleKeysDone} />
+            <KeyWizard index={keyIndex} onIndexChange={setKeyIndex} onDone={handleKeysDone} />
           )}
 
           {step === "downloads" && (
@@ -244,16 +279,10 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               className="relative mx-auto w-full max-w-xl px-6 pt-10 pb-12 sm:px-8 space-y-4"
             >
               <motion.div variants={item}>
-                <motion.button
-                  whileTap={{ scale: 0.93 }}
-                  onClick={() => setStep("keys")}
-                  className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span className="text-sm font-medium">Retour</span>
-                </motion.button>
-
                 <div className="text-center mb-2">
+                  <div className="mb-2 flex justify-center">
+                    <StepKindBadge kind="config" />
+                  </div>
                   <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
                     Telechargement
                   </h1>
@@ -386,16 +415,10 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               className="relative mx-auto w-full max-w-xl px-6 pt-10 pb-12 sm:px-8 space-y-4"
             >
               <motion.div variants={item}>
-                <motion.button
-                  whileTap={{ scale: 0.93 }}
-                  onClick={() => setStep("downloads")}
-                  className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  <span className="text-sm font-medium">Retour</span>
-                </motion.button>
-
                 <div className="text-center mb-2">
+                  <div className="mb-2 flex justify-center">
+                    <StepKindBadge kind="config" />
+                  </div>
                   <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
                     Choisissez votre theme
                   </h1>

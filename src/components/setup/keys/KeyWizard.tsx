@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowLeft, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { getApiKey } from "@/lib/apiKeys";
 import { KEY_SERVICES } from "@/lib/keyServices";
 import { KeyScreen, type ScreenStatus } from "./KeyScreen";
 import { KeyServiceTabs } from "./KeyServiceTabs";
+import { StepKindBadge } from "../StepKindBadge";
 
 /** Delai avant de glisser vers l'ecran suivant : laisse voir la coche verte. */
 const ADVANCE_MS = 400;
@@ -13,14 +14,15 @@ type ById = Record<string, string>;
 type Statuses = Record<string, ScreenStatus>;
 
 export function KeyWizard({
-  onBack,
+  index,
+  onIndexChange,
   onDone,
 }: {
-  /** Retour depuis le premier service : sort du wizard. */
-  onBack: () => void;
+  /** Ecran courant, pilote par SetupPage : il porte le retour et la barre. */
+  index: number;
+  onIndexChange: (index: number) => void;
   onDone: (values: ById) => void;
 }) {
-  const [index, setIndex] = useState(0);
   const [values, setValues] = useState<ById>({});
   const [statuses, setStatuses] = useState<Statuses>({});
 
@@ -42,7 +44,7 @@ export function KeyWizard({
 
   function advance() {
     if (isLast) onDone(values);
-    else setIndex(index + 1);
+    else onIndexChange(index + 1);
   }
 
   async function verify() {
@@ -68,16 +70,10 @@ export function KeyWizard({
       exit={{ opacity: 0, transition: { duration: 0.15 } }}
       className="relative mx-auto w-full max-w-xl px-6 pt-10 pb-12 sm:px-8"
     >
-      <motion.button
-        whileTap={{ scale: 0.93 }}
-        onClick={() => (index === 0 ? onBack() : setIndex(index - 1))}
-        className="mb-6 flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        <span className="text-sm font-medium">Retour</span>
-      </motion.button>
-
       <div className="mb-5 text-center">
+        <div className="mb-2 flex justify-center">
+          <StepKindBadge kind="action" />
+        </div>
         <h1 className="mb-2 text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
           Connectez l'application a vos comptes
         </h1>
@@ -88,7 +84,7 @@ export function KeyWizard({
       </div>
 
       <div className="mb-4">
-        <KeyServiceTabs activeId={service.id} statuses={statuses} onSelect={setIndex} />
+        <KeyServiceTabs activeId={service.id} statuses={statuses} onSelect={onIndexChange} />
       </div>
 
       {/* Aucune transition entre les services : la carte n'est jamais

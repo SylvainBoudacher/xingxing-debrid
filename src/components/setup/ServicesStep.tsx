@@ -1,6 +1,5 @@
 import { motion } from "motion/react";
 import {
-  ArrowLeft,
   ArrowRight,
   Clapperboard,
   CreditCard,
@@ -10,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ServicesFlow } from "./ServicesFlow";
+import { StepKindBadge } from "./StepKindBadge";
 import { item, stagger } from "./motionVariants";
 
 type Badge = { label: string; tone: "free" | "paid" };
@@ -60,7 +60,7 @@ function ServiceCard({
   );
 }
 
-export function ServicesStep({ onBack, onNext }: { onBack: () => void; onNext: () => void }) {
+export function ServicesStep({ onNext }: { onNext: () => void }) {
   return (
     <motion.div
       key="services"
@@ -71,16 +71,10 @@ export function ServicesStep({ onBack, onNext }: { onBack: () => void; onNext: (
       className="relative mx-auto w-full max-w-xl px-6 pt-10 pb-12 sm:px-8 space-y-4"
     >
       <motion.div variants={item}>
-        <motion.button
-          whileTap={{ scale: 0.93 }}
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors mb-6"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="text-sm font-medium">Retour</span>
-        </motion.button>
-
         <div className="text-center mb-4">
+          <div className="mb-2 flex justify-center">
+            <StepKindBadge kind="read" />
+          </div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
             Trois services, une seule application
           </h1>

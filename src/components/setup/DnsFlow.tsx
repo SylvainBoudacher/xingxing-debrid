@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Check, Globe, Laptop, Server, X } from "lucide-react";
 
-const STAGE = { width: 540, height: 188 };
+/** Largeur interieure de la carte qui porte le schema : max-w-2xl (672) moins
+ *  les paddings de la page (sm:px-8) et de la carte (px-5). */
+const STAGE = { width: 568, height: 188 };
 const PHASE_MS = 5600;
 
 const PHASES = [
