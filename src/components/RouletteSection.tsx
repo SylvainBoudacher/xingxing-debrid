@@ -3,12 +3,13 @@ import { RouletteFilters } from "@/components/RouletteFilters";
 import { RouletteLegend } from "@/components/RouletteLegend";
 import { RouletteResult } from "@/components/RouletteResult";
 import { RouletteStrip } from "@/components/RouletteStrip";
+import { scrollToBottom } from "@/lib/scrollToBottom";
 import { scaleOf } from "@/lib/rouletteSource";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { ALL_OWNED_MESSAGE, EMPTY_POOL_MESSAGE, useMovieRoulette } from "@/lib/useMovieRoulette";
 import { Dices, Loader2 } from "lucide-react";
 import { AnimatePresence, useReducedMotion } from "motion/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 interface RouletteSectionProps {
   tmdbKey: string;
@@ -31,6 +32,19 @@ export function RouletteSection({
   const busy = r.status === "loading" || r.status === "spinning";
   const emptyPool = r.source === "tmdb" && r.poolCount === 0;
   const scale = scaleOf(r.source);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
+
+  // Relancer depuis le bas de page : on remonte doucement vers le ruban au
+  // lieu de laisser le navigateur y sauter quand la carte resultat change de
+  // taille. La carte, elle, reste montee et se contente de passer en retrait.
+  function roll() {
+    stripRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "center",
+    });
+    r.roll();
+  }
 
   // Mouvement reduit : le ruban se pose sans defiler, onAnimationComplete ne
   // suffit pas a garantir le passage en revealed sur une transition nulle.
@@ -38,6 +52,21 @@ export function RouletteSection({
     if (prefersReducedMotion && r.status === "spinning") r.finishSpin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prefersReducedMotion, r.status]);
+
+  // Le ruban vient de s'arreter : on amene le resultat sous les yeux plutot que
+  // de laisser l'utilisateur le chercher plus bas.
+  useEffect(() => {
+    if (r.status !== "revealed" || !r.shown) return;
+    let stop: (() => void) | undefined;
+    // Retarde d'une frame : la carte doit d'abord etre dans le DOM.
+    const id = requestAnimationFrame(() => {
+      if (resultRef.current) stop = scrollToBottom(resultRef.current, !prefersReducedMotion);
+    });
+    return () => {
+      cancelAnimationFrame(id);
+      stop?.();
+    };
+  }, [r.status, r.shown, prefersReducedMotion]);
 
   return (
     <div>
@@ -63,7 +92,10 @@ export function RouletteSection({
 
       {/* Meme surface que la carte des filtres : sans elle la legende se perd
           sur le fond anime de la page. */}
-      <div className="mt-6 rounded-2xl bg-white/60 p-1 ring-1 ring-black/5 backdrop-blur-xl dark:bg-zinc-900/50 dark:ring-white/5">
+      <div
+        ref={stripRef}
+        className="mt-6 rounded-2xl bg-white/60 p-1 ring-1 ring-black/5 backdrop-blur-xl dark:bg-zinc-900/50 dark:ring-white/5"
+      >
         <RouletteStrip
           strip={r.strip}
           preview={r.preview}
@@ -81,7 +113,7 @@ export function RouletteSection({
 
       <div className="mt-6 flex justify-center">
         <button
-          onClick={r.roll}
+          onClick={roll}
           disabled={busy || emptyPool}
           className="flex cursor-pointer items-center gap-2.5 rounded-full bg-indigo-600 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition-all hover:bg-indigo-500 hover:shadow-indigo-500/30 active:translate-y-px disabled:cursor-default disabled:opacity-50 disabled:shadow-none"
         >
@@ -100,23 +132,26 @@ export function RouletteSection({
         <p className="mx-auto mt-4 max-w-md text-center text-sm text-zinc-500">{r.error}</p>
       )}
       {r.error && r.error !== EMPTY_POOL_MESSAGE && r.error !== ALL_OWNED_MESSAGE && (
-        <NetworkErrorState message={r.error} onRetry={r.roll} className="mt-4" />
+        <NetworkErrorState message={r.error} onRetry={roll} className="mt-4" />
       )}
 
-      <AnimatePresence mode="wait">
-        {r.status === "revealed" && r.winner && (
-          <RouletteResult
-            key={r.winner.id}
-            item={r.winner}
-            scale={scale}
-            liked={likedKeys.has(`movie-${r.winner.id}`)}
-            tmdbKey={tmdbKey}
-            onOpen={onOpen}
-            onToggleLike={onToggleLike}
-            onReroll={r.roll}
-          />
-        )}
-      </AnimatePresence>
+      <div ref={resultRef}>
+        <AnimatePresence mode="wait">
+          {r.shown && (
+            <RouletteResult
+              key={r.shown.id}
+              item={r.shown}
+              stale={r.status !== "revealed"}
+              scale={scale}
+              liked={likedKeys.has(`movie-${r.shown.id}`)}
+              tmdbKey={tmdbKey}
+              onOpen={onOpen}
+              onToggleLike={onToggleLike}
+              onReroll={roll}
+            />
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

@@ -11,6 +11,8 @@ interface RouletteResultProps {
   item: TmdbItem;
   /** Echelle de raretes du vivier qui a produit ce tirage. */
   scale: RarityScale;
+  /** Un nouveau tirage est en cours : la carte reste en place, en retrait. */
+  stale: boolean;
   liked: boolean;
   tmdbKey: string;
   onOpen: (item: TmdbItem) => void;
@@ -21,6 +23,7 @@ interface RouletteResultProps {
 export function RouletteResult({
   item,
   scale,
+  stale,
   liked,
   tmdbKey,
   onOpen,
@@ -35,10 +38,10 @@ export function RouletteResult({
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      style={{ borderColor: `${rarity.color}55` }}
+      animate={{ opacity: stale ? 0.35 : 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: stale ? 0.3 : 0.45, ease: [0.22, 1, 0.36, 1] }}
+      style={{ borderColor: `${rarity.color}55`, pointerEvents: stale ? "none" : undefined }}
       className="mt-6 flex gap-5 rounded-2xl border bg-white/70 p-5 ring-1 ring-black/5 backdrop-blur-xl dark:bg-zinc-900/60 dark:ring-white/5"
     >
       {/* self-start : sans lui la boite s'etire sur la hauteur de la ligne flex

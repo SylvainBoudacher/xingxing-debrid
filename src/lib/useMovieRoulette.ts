@@ -41,6 +41,11 @@ export function useMovieRoulette(tmdbKey: string, ownedKeys: Set<string>) {
   const [status, setStatus] = useState<RouletteStatus>("idle");
   const [strip, setStrip] = useState<TmdbItem[]>([]);
   const [winner, setWinner] = useState<TmdbItem | null>(null);
+  // Le film affiche dans la carte resultat : ne suit `winner` qu'a la reveal,
+  // sinon un nouveau tirage devoilerait le gagnant pendant que le ruban tourne.
+  // Il reste en place pendant le tirage suivant, ce qui evite que la page
+  // raccourcisse et fasse sauter le scroll.
+  const [shown, setShown] = useState<TmdbItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Incremente a chaque tirage : remonte le ruban pour repartir de x = 0.
   const [spin, setSpin] = useState(0);
@@ -106,7 +111,6 @@ export function useMovieRoulette(tmdbKey: string, ownedKeys: Set<string>) {
     if (busy) return;
     setStatus("loading");
     setError(null);
-    setWinner(null);
     try {
       const fetchedPool = await loadVivier(source, genreIds, tmdbKey);
       // Le filtre s'applique après coup : TMDB ne sait pas ce qu'on possede.
@@ -130,7 +134,9 @@ export function useMovieRoulette(tmdbKey: string, ownedKeys: Set<string>) {
   }
 
   function finishSpin() {
-    setStatus((s) => (s === "spinning" ? "revealed" : s));
+    if (status !== "spinning") return;
+    setShown(winner);
+    setStatus("revealed");
   }
 
   return {
@@ -144,6 +150,7 @@ export function useMovieRoulette(tmdbKey: string, ownedKeys: Set<string>) {
     preview,
     poolCount,
     winner,
+    shown,
     error,
     spin,
     toggleGenre,
