@@ -1,6 +1,6 @@
 import { formatSize } from "@/lib/debrid";
 import { scopeLabel, type Occupant } from "@/lib/discoverReleases";
-import { BookmarkPlus, Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { motion } from "motion/react";
 
 interface DiscoverReleaseRowProps {
@@ -89,24 +89,21 @@ export function DiscoverReleaseRow({
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <div className="group relative">
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => onSend(occ, true)}
-            disabled={busy}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600/80 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {libraryHash === occ.infoHash ? (
-              <Loader2 className="h-4 w-4 text-white animate-spin" />
-            ) : (
-              <BookmarkPlus className="h-4 w-4 text-white" />
-            )}
-          </motion.button>
-          <span className="pointer-events-none absolute right-0 bottom-full mb-2 whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 ring-1 ring-black/10 dark:ring-white/10 shadow-lg opacity-0 transition-opacity duration-150 delay-500 group-hover:opacity-100">
-            Ajouter à la bibliothèque
-          </span>
-        </div>
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={() => onSend(occ, true)}
+          disabled={busy}
+          title="Ajouter à la bibliothèque"
+          className="flex h-8 items-center gap-1.5 rounded-full bg-indigo-600/90 pl-2.5 pr-3.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {libraryHash === occ.infoHash ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+          )}
+          Ajouter
+        </motion.button>
       </div>
     </motion.div>
   );

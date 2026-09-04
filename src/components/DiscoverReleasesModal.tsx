@@ -2,6 +2,7 @@ import c411Logo from "@/assets/sources/C411.webp";
 import nyaaLogo from "@/assets/sources/nyaa.webp";
 import { DiscoverReleaseFilters, type ReleaseSort } from "@/components/DiscoverReleaseFilters";
 import { DiscoverReleaseRow } from "@/components/DiscoverReleaseRow";
+import { DiscoverSeasonTabs, type TmdbSeason } from "@/components/DiscoverSeasonTabs";
 import { ExpandableText } from "@/components/ExpandableText";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
 import { TmdbGenres } from "@/components/TmdbGenres";
@@ -20,16 +21,10 @@ import { networkErrorMessage } from "@/lib/networkError";
 import { tmdbKeys, tvDetail as tmdbTvDetail } from "@/lib/services/tmdb";
 import { TMDB_STALE_MS } from "@/lib/tmdbCache";
 import type { TmdbItem } from "@/lib/tmdbItem";
-import { useDragScroll } from "@/lib/useDragScroll";
 import { useQuery } from "@tanstack/react-query";
-import { Heart, SlidersHorizontal, Star, X } from "lucide-react";
+import { Heart, Star, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
-
-interface TmdbSeason {
-  number: number;
-  episodeCount: number;
-}
 
 interface DiscoverReleasesModalProps {
   item: TmdbItem;
@@ -66,8 +61,6 @@ export function DiscoverReleasesModal({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [resFilter, setResFilter] = useState<string | null>(null);
   const [langFilter, setLangFilter] = useState<string | null>(null);
-
-  const { ref: seasonScrollRef, dragProps: seasonDragProps } = useDragScroll<HTMLDivElement>();
 
   // Detail TV (saisons) : sert a peupler le selecteur de saison et a defaut
   // d'une saison choisie, la premiere.
@@ -269,54 +262,16 @@ export function DiscoverReleasesModal({
         {item.overview && <ExpandableText text={item.overview} className="mx-5 mb-4" />}
 
         {item.mediaType === "tv" && (
-          <div
-            ref={seasonScrollRef}
-            {...seasonDragProps}
-            className="flex gap-1.5 overflow-x-auto px-5 pt-0.5 pb-3 cursor-grab select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {activeSeason !== null && hasComplete && (
-              <button
-                onClick={() => changeSeason("complete")}
-                className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-medium leading-normal ring-1 transition-colors ${
-                  activeSeason === "complete"
-                    ? "bg-indigo-600 text-white ring-indigo-500"
-                    : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                }`}
-              >
-                Intégrale
-              </button>
-            )}
-            {seasons === null || activeSeason === null
-              ? Array.from({ length: 4 }, (_, i) => (
-                  <div
-                    key={i}
-                    className="h-[26px] w-24 shrink-0 rounded-full bg-white/80 dark:bg-zinc-800/60 animate-pulse"
-                  />
-                ))
-              : seasons.map((s) => (
-                  <button
-                    key={s.number}
-                    onClick={() => changeSeason(s.number)}
-                    className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-medium leading-normal ring-1 transition-colors ${
-                      activeSeason === s.number
-                        ? "bg-indigo-600 text-white ring-indigo-500"
-                        : "bg-white/90 dark:bg-zinc-800/80 text-zinc-500 dark:text-zinc-400 ring-black/10 dark:ring-white/10 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 hover:text-zinc-900 dark:hover:text-white"
-                    }`}
-                  >
-                    Saison {s.number}
-                    <span
-                      className={`ml-1 ${activeSeason === s.number ? "text-indigo-200" : "text-zinc-400 dark:text-zinc-600"}`}
-                    >
-                      {s.episodeCount} ép.
-                    </span>
-                  </button>
-                ))}
-          </div>
+          <DiscoverSeasonTabs
+            seasons={seasons}
+            activeSeason={activeSeason}
+            hasComplete={hasComplete}
+            onChange={changeSeason}
+          />
         )}
 
         {releases === null && !releasesError && (
           <div className="flex flex-wrap items-center gap-1.5 px-5 pb-3">
-            <SlidersHorizontal className="mr-0.5 h-3.5 w-3.5 text-zinc-400 dark:text-zinc-600" />
             {[64, 48, 56, 52, 44, 48].map((w, i) => (
               <div
                 key={i}
