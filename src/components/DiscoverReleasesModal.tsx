@@ -97,12 +97,12 @@ export function DiscoverReleasesModal({
     },
   });
 
+  const hasComplete = !!allTvReleasesQuery.data?.some((o) => o.scope?.kind === "complete");
+
   const defaultSeason = useMemo<SeasonSelection | null>(() => {
     if (!seasons || !allTvReleasesQuery.data) return null;
-    return allTvReleasesQuery.data.some((o) => o.scope?.kind === "complete")
-      ? "complete"
-      : (seasons[0]?.number ?? null);
-  }, [seasons, allTvReleasesQuery.data]);
+    return hasComplete ? "complete" : (seasons[0]?.number ?? null);
+  }, [seasons, allTvReleasesQuery.data, hasComplete]);
 
   const activeSeason: SeasonSelection | null = selectedSeason ?? defaultSeason;
 
@@ -274,7 +274,7 @@ export function DiscoverReleasesModal({
             {...seasonDragProps}
             className="flex gap-1.5 overflow-x-auto px-5 pt-0.5 pb-3 cursor-grab select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            {activeSeason !== null && (
+            {activeSeason !== null && hasComplete && (
               <button
                 onClick={() => changeSeason("complete")}
                 className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-[11px] font-medium leading-normal ring-1 transition-colors ${
