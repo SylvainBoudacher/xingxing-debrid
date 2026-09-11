@@ -2,8 +2,6 @@ import {
   Checkbox,
   DebridActions,
   EntryEpisodes,
-  PROVIDER_CLASS,
-  PROVIDER_LABEL,
   ResumeButton,
   type DebridControls,
   type EpisodeSelection,
@@ -34,6 +32,8 @@ import {
   type LibraryEntry,
 } from "@/lib/library";
 import { parseRelease } from "@/lib/parseRelease";
+import { hasReleaseTags, parseReleaseTags } from "@/lib/releaseTags";
+import { ReleaseTagBadges } from "@/components/ReleaseTagBadges";
 import { MagnetProgress } from "@/components/MagnetProgress";
 import type { MagnetEntry } from "@/lib/services/allDebrid";
 import {
@@ -99,6 +99,7 @@ export function LibraryDetailModal({
   const seasonCount = multiSeason ? groupBySeason(vids).length : 0;
   const allLinks = vids.map((f) => f.link);
   const parsed = simple ? parseRelease(entry.title) : null;
+  const releaseTags = parseReleaseTags(entry.releaseName ?? entry.title);
   const title = tmdb?.title ?? (parsed ? parsed.title : entry.title);
   const next = series && !whole ? nextUnwatched(entry) : null;
   const ratio = progressRatio(entry);
@@ -201,11 +202,6 @@ export function LibraryDetailModal({
               {title}
             </p>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-              <span
-                className={`rounded px-1.5 py-0.5 font-medium ring-1 ${PROVIDER_CLASS[entry.provider]}`}
-              >
-                {PROVIDER_LABEL[entry.provider]}
-              </span>
               {tmdb?.year && <span>{tmdb.year}</span>}
               {tmdb && tmdb.voteAverage > 0 && (
                 <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
@@ -221,6 +217,9 @@ export function LibraryDetailModal({
                 </span>
               )}
             </div>
+            {hasReleaseTags(releaseTags) && (
+              <ReleaseTagBadges tags={releaseTags} showScope={series} className="mt-1.5" />
+            )}
             {tmdb && (
               <TmdbGenres
                 mediaType={tmdb.mediaType}

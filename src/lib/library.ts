@@ -32,6 +32,10 @@ export interface LibraryEntry {
   watched: Record<string, boolean>;
   // Présent uniquement pour les entrées provenant de Découverte.
   tmdb?: TmdbMeta;
+  // Nom brut de la release, conservé pour retrouver les tags (qualité, langues,
+  // portée) que title perd quand AllDebrid renvoie un nom nettoyé. Absent des
+  // entrées écrites avant son introduction : on retombe alors sur title.
+  releaseName?: string;
   // Horodatage de la dernière modification, posé automatiquement à
   // l'enregistrement. Absent des entrées écrites avant son introduction : la
   // fusion retombe alors sur addedAt.
@@ -133,6 +137,7 @@ export interface RecordDownloadInput {
   files: DebridFile[];
   enriched: boolean;
   tmdb?: TmdbMeta;
+  releaseName?: string;
 }
 
 // Upsert par infoHash. Préserve l'état de visionnage d'une entrée existante et
@@ -153,6 +158,7 @@ export async function recordDownload(input: RecordDownloadInput): Promise<void> 
     enriched: input.enriched || (existing?.enriched ?? false),
     watched: { ...(existing?.watched ?? {}) },
     tmdb: input.tmdb ?? existing?.tmdb,
+    releaseName: input.releaseName ?? existing?.releaseName,
   };
 
   migrateWholeToSingle(next);

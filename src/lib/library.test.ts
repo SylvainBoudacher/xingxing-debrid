@@ -222,6 +222,30 @@ describe("recordDownload", () => {
     expect(lib[0].title).toBe("New");
   });
 
+  it("conserve releaseName quand une mise à jour ne le fournit pas", async () => {
+    await recordDownload({
+      infoHash: "h1",
+      title: "New",
+      provider: "c411",
+      category: 0,
+      size: 10,
+      files: [],
+      enriched: false,
+      releaseName: "Aventures.Croisees.2026.MULTI.VFF.1080p.WEBRip.x265-TyHD",
+    });
+    await recordDownload({
+      infoHash: "h1",
+      title: "Swapped",
+      provider: "c411",
+      category: 0,
+      size: 10,
+      files: [ep1],
+      enriched: true,
+    });
+    const lib = await loadLibrary();
+    expect(lib[0].releaseName).toBe("Aventures.Croisees.2026.MULTI.VFF.1080p.WEBRip.x265-TyHD");
+  });
+
   it("met à jour en préservant addedAt et l'état de visionnage", async () => {
     backing.set("library", [
       entry({ infoHash: "h1", addedAt: 123, files: [ep1], watched: { [ep1.name]: true } }),

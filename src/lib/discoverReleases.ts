@@ -1,23 +1,16 @@
 import type { C411Torrent } from "@/lib/c411";
 import { normalize } from "@/lib/normalizeTitle";
-import { parseRelease, parseReleaseScope, type ReleaseScope } from "@/lib/parseRelease";
+import { type ReleaseScope } from "@/lib/parseRelease";
+import { parseReleaseTags, type ReleaseTags } from "@/lib/releaseTags";
 import { queryClient } from "@/lib/queryClient";
 import { c411Keys, searchTorrents } from "@/lib/services/c411";
 import type { MediaType, TmdbItem } from "@/lib/tmdbItem";
 
-export interface Occupant {
+export interface Occupant extends ReleaseTags {
   infoHash: string;
-  languages: string[];
   fileSize: number;
   seeders: number;
-  source: string | null;
-  videoCodec: string | null;
-  audioCodec: string | null;
-  audioChannels: string | null;
-  resolution: string | null;
   torrentName: string;
-  specialVersion: string | null;
-  scope: ReleaseScope | null;
 }
 
 export function scopeLabel(scope: ReleaseScope): string {
@@ -31,47 +24,13 @@ const SERIES_SLUGS = new Set(["serie-tv", "serie-documentaire", "emission-tv", "
 
 export { normalize };
 
-const LANG_TOKENS = ["MULTI", "VFF", "VFQ", "VF2", "VOSTFR", "TRUEFRENCH", "FRENCH", "VF", "VO"];
-
-function parseLanguages(name: string): string[] {
-  const up = ` ${name.toUpperCase().replace(/[._-]/g, " ")} `;
-  return LANG_TOKENS.filter((t) => up.includes(` ${t} `));
-}
-
-const SOURCE_RE = /\b(remux|blu-?ray|bdrip|brrip|web-?dl|webrip|web|hdtv|dvdrip|hdlight)\b/i;
-const SOURCE_LABELS: Record<string, string> = {
-  remux: "REMUX",
-  bluray: "BluRay",
-  bdrip: "BDRip",
-  brrip: "BRRip",
-  webdl: "WEB-DL",
-  webrip: "WEBRip",
-  web: "WEB",
-  hdtv: "HDTV",
-  dvdrip: "DVDRip",
-  hdlight: "HDLight",
-};
-const SPECIAL_RE = /\b(extended|remastered|unrated|imax|uncut|director'?s[ ._-]?cut)\b/i;
-const AUDIO_RE = /\b(dts[ ._-]?hd[ ._-]?ma|dts|truehd|atmos|eac3|ddp|ac3|aac|flac|opus)\b/i;
-const CHANNELS_RE = /\b(7\.1|5\.1|2\.0)\b/;
-
 function toOccupant(t: C411Torrent): Occupant {
-  const flat = t.name.replace(/[._]/g, " ");
-  const parsed = parseRelease(t.name);
-  const sourceMatch = flat.match(SOURCE_RE)?.[1];
   return {
     infoHash: t.infoHash,
     torrentName: t.name,
     fileSize: t.size,
     seeders: t.seeders,
-    resolution: parsed.quality,
-    videoCodec: parsed.codec,
-    languages: parseLanguages(t.name),
-    source: sourceMatch ? SOURCE_LABELS[sourceMatch.toLowerCase().replace(/[^a-z]/g, "")] : null,
-    audioCodec: flat.match(AUDIO_RE)?.[1].toUpperCase().replace(/[._-]/g, " ") ?? null,
-    audioChannels: flat.match(CHANNELS_RE)?.[1] ?? null,
-    specialVersion: flat.match(SPECIAL_RE)?.[1].toUpperCase() ?? null,
-    scope: parseReleaseScope(t.name),
+    ...parseReleaseTags(t.name),
   };
 }
 

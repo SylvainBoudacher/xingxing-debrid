@@ -21,8 +21,6 @@ import {
   Checkbox,
   DebridActions,
   EntryEpisodes,
-  PROVIDER_CLASS,
-  PROVIDER_LABEL,
   ResumeButton,
   type DebridControls,
 } from "@/components/libraryParts";
@@ -100,11 +98,6 @@ export const LibraryEntryCard = memo(function LibraryEntryCard({
               )}
             </div>
             <div className="mt-0.5 flex items-center gap-2 text-[11px] text-zinc-500 dark:text-zinc-400">
-              <span
-                className={`rounded px-1.5 py-0.5 font-medium ring-1 ${PROVIDER_CLASS[entry.provider]}`}
-              >
-                {PROVIDER_LABEL[entry.provider]}
-              </span>
               {parsed?.quality && (
                 <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 font-semibold uppercase text-indigo-600 dark:text-indigo-300">
                   {parsed.quality}

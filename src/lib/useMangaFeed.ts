@@ -20,7 +20,7 @@ export const MANGA_FEED_LABELS: Record<MangaSource, string> = {
   latest: "Nouveautés",
   senscritique: "Top 100 SensCritique",
 };
-export const MANGA_SOURCES: MangaSource[] = [...MANGA_FEEDS, SENSCRITIQUE_FEED];
+export const MANGA_SOURCES: MangaSource[] = [SENSCRITIQUE_FEED, ...MANGA_FEEDS];
 
 // La recherche ignore la source affichée : "senscritique" n'étant pas une
 // source MangaDex, elle retombe sur "popular" pour la clé de cache.
@@ -48,7 +48,7 @@ export interface MangaFeedState {
 
 // `query` est piloté par la page (barre de recherche partagée avec TMDB).
 export function useMangaFeed(query: string): MangaFeedState {
-  const [feed, setFeed] = useState<MangaSource>("popular");
+  const [feed, setFeed] = useState<MangaSource>(SENSCRITIQUE_FEED);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -62,7 +62,7 @@ export function useMangaFeed(query: string): MangaFeedState {
   // appel par caractere.
   // Une requete deja presente au montage (arrivee depuis la barre de la page
   // principale) part sans amortissement : sinon la page afficherait d'abord le
-  // feed "Populaires" avant d'etre remplacee par les resultats.
+  // feed par defaut avant d'etre remplacee par les resultats.
   const [activeQuery, setActiveQuery] = useState(() => {
     const trimmed = query.trim();
     return trimmed.length >= LIVE_SEARCH_MIN ? trimmed : "";

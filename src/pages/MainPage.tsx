@@ -502,6 +502,7 @@ export function MainPage({
             magnetId: uploaded.id,
             files,
             enriched: true,
+            releaseName: result.title,
           });
         }
       } else {
@@ -522,6 +523,7 @@ export function MainPage({
           magnetId: uploaded.id,
           files: [],
           enriched: false,
+          releaseName: result.title,
         });
       }
     } catch (err) {

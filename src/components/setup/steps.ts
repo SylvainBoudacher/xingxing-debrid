@@ -1,4 +1,4 @@
-export type StepId = "services" | "network" | "keys" | "downloads" | "theme";
+export type StepId = "services" | "network" | "keys" | "player" | "downloads" | "theme";
 
 export type StepKind = "read" | "check" | "action" | "config";
 
@@ -29,6 +29,12 @@ export const SETUP_STEPS: SetupStep[] = [
     label: "Clés API",
     kind: "action",
     blurb: "Récupérer et coller vos trois clés, une par service.",
+  },
+  {
+    id: "player",
+    label: "Lecteur",
+    kind: "check",
+    blurb: "Vérifier que VLC est installé pour lire les vidéos.",
   },
   {
     id: "downloads",

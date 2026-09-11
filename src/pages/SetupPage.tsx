@@ -25,6 +25,7 @@ import { ImportProfileModal } from "@/components/ImportProfileModal";
 import { ServicesStep } from "@/components/setup/ServicesStep";
 import { NetworkStep, type DnsStatus } from "@/components/setup/NetworkStep";
 import { KeyWizard } from "@/components/setup/keys/KeyWizard";
+import { PlayerStep, type VlcSim } from "@/components/setup/PlayerStep";
 import { KEY_SERVICES } from "@/lib/keyServices";
 import { item, stagger } from "@/components/setup/motionVariants";
 import { SetupStepper } from "@/components/setup/SetupStepper";
@@ -68,6 +69,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   // Simulation dev : le resultat force survit aux retests, sinon le vrai
   // reseau reprend la main des le clic suivant.
   const [dnsSim, setDnsSim] = useState<"none" | "ok" | "fail">("none");
+  const [vlcSim, setVlcSim] = useState<VlcSim>("none");
   const [downloadDir, setDownloadDir] = useState("");
   const [batchSize, setBatchSize] = useState(2);
   const [theme, setThemeState] = useState<Theme>("dark");
@@ -117,7 +119,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
       for (const service of KEY_SERVICES) {
         await setApiKey(service.keyName, (values[service.id] ?? "").trim());
       }
-      setStep("downloads");
+      setStep("player");
     } catch (err) {
       toast.error(String(err));
     } finally {
@@ -166,7 +168,8 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     if (step === "services") return setStep("intro");
     if (step === "network") return setStep("services");
     if (step === "keys") return keyIndex > 0 ? setKeyIndex(keyIndex - 1) : setStep("network");
-    if (step === "downloads") return setStep("keys");
+    if (step === "player") return setStep("keys");
+    if (step === "downloads") return setStep("player");
     if (step === "theme") return setStep("downloads");
   }
 
@@ -274,6 +277,8 @@ export function SetupPage({ onComplete }: SetupPageProps) {
           {step === "keys" && (
             <KeyWizard index={keyIndex} onIndexChange={setKeyIndex} onDone={handleKeysDone} />
           )}
+
+          {step === "player" && <PlayerStep sim={vlcSim} onNext={() => setStep("downloads")} />}
 
           {step === "downloads" && (
             <motion.div
@@ -575,6 +580,25 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               }`}
             >
               {mode === "none" ? "[DEV] DNS RÉEL" : mode === "ok" ? "DNS OK" : "DNS KO"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {import.meta.env.DEV && step === "player" && (
+        <div className="fixed bottom-14 right-4 z-50 flex gap-1">
+          {(["none", "ok", "fail"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setVlcSim(mode)}
+              className={`rounded-lg border border-dashed px-2.5 py-1 text-[10px] font-bold tracking-wider transition-colors ${
+                vlcSim === mode
+                  ? "border-violet-500 bg-violet-500/15 text-violet-500"
+                  : "border-violet-500/40 bg-white/70 text-violet-500/70 hover:bg-violet-500/10 dark:bg-zinc-950/60"
+              }`}
+            >
+              {mode === "none" ? "[DEV] VLC RÉEL" : mode === "ok" ? "VLC OK" : "VLC KO"}
             </button>
           ))}
         </div>

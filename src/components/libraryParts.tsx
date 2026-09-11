@@ -20,7 +20,6 @@ import {
   toggleFile,
   videoFiles,
   type LibraryEntry,
-  type LibraryProvider,
   type SeasonGroup,
 } from "@/lib/library";
 import type { DebridFile } from "@/lib/debrid";
@@ -33,18 +32,6 @@ export interface DebridControls {
   copyMany: (links: string[], groupKey: string) => void;
   openVlcMany: (links: string[], groupKey: string) => void;
 }
-
-export const PROVIDER_LABEL: Record<LibraryProvider, string> = {
-  c411: "C411",
-  nyaa: "Nyaa",
-  discover: "Découverte",
-};
-
-export const PROVIDER_CLASS: Record<LibraryProvider, string> = {
-  c411: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 ring-indigo-500/20",
-  nyaa: "bg-sky-500/10 text-sky-600 dark:text-sky-300 ring-sky-500/20",
-  discover: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-300 ring-fuchsia-500/20",
-};
 
 export function DebridActions({
   links,

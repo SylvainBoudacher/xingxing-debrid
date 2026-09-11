@@ -1,5 +1,6 @@
+import { ReleaseTagBadges } from "@/components/ReleaseTagBadges";
 import { formatSize } from "@/lib/debrid";
-import { scopeLabel, type Occupant } from "@/lib/discoverReleases";
+import { type Occupant } from "@/lib/discoverReleases";
 import { Loader2, Plus } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -35,42 +36,7 @@ export function DiscoverReleaseRow({
       className="flex items-center gap-4 rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3"
     >
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-1.5 mb-1">
-          {isTv && occ.scope && (
-            <span
-              className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                occ.scope.kind === "episode"
-                  ? "bg-sky-500/12 text-sky-600 dark:text-sky-400"
-                  : "bg-fuchsia-500/12 text-fuchsia-700 dark:text-fuchsia-400"
-              }`}
-            >
-              {scopeLabel(occ.scope)}
-            </span>
-          )}
-          {occ.resolution && (
-            <span className="rounded-md bg-indigo-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">
-              {occ.resolution}
-            </span>
-          )}
-          {occ.videoCodec && (
-            <span className="rounded-md bg-black/6 dark:bg-white/6 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-              {occ.videoCodec}
-            </span>
-          )}
-          {occ.specialVersion && (
-            <span className="rounded-md bg-amber-500/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-              {occ.specialVersion}
-            </span>
-          )}
-          {occ.languages.map((l) => (
-            <span
-              key={l}
-              className="rounded-md bg-green-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-green-600 dark:text-green-400"
-            >
-              {l}
-            </span>
-          ))}
-        </div>
+        <ReleaseTagBadges tags={occ} showScope={isTv} className="mb-1" />
         <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-zinc-500">
           <span className="text-zinc-600 dark:text-zinc-300 font-medium">
             {formatSize(occ.fileSize)}

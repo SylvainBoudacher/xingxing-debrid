@@ -103,6 +103,7 @@ export function useSendToDebrid({
             files,
             enriched: true,
             tmdb: tmdbMeta,
+            releaseName: occ.torrentName,
           });
           onLibraryChange();
         }
@@ -129,6 +130,7 @@ export function useSendToDebrid({
           files: [],
           enriched: false,
           tmdb: tmdbMeta,
+          releaseName: occ.torrentName,
         });
         onLibraryChange();
       }
