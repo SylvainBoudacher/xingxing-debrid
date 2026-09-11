@@ -73,11 +73,13 @@ export function TitleHero({
             className="h-full w-full object-cover object-[center_25%]"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#f4f6fc] via-[#f4f6fc]/40 to-transparent dark:from-black dark:via-black/40" />
+        {/* Plus opaque sur le tiers bas : le titre y est posé. */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#f4f6fc] via-[#f4f6fc]/60 via-30% to-transparent dark:from-black dark:via-black/60" />
       </div>
 
-      <div className="relative mx-auto flex max-w-4xl items-start gap-6 px-6">
-        <div className="-mt-28 aspect-[2/3] w-36 flex-none overflow-hidden rounded-xl bg-zinc-200 shadow-2xl ring-1 ring-black/10 dark:bg-zinc-800 dark:ring-white/10">
+      {/* Jaquette et texte alignés en haut, remontés ensemble sur le bandeau. */}
+      <div className="relative mx-auto -mt-24 flex max-w-4xl items-start gap-6 px-6">
+        <div className="aspect-[2/3] w-36 flex-none overflow-hidden rounded-xl bg-zinc-200 shadow-2xl ring-1 ring-black/10 dark:bg-zinc-800 dark:ring-white/10">
           {tmdb?.posterPath ? (
             <img
               src={`https://image.tmdb.org/t/p/w342${tmdb.posterPath}`}
@@ -92,7 +94,7 @@ export function TitleHero({
           )}
         </div>
 
-        <div className="min-w-0 flex-1 pt-2">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold leading-tight tracking-tight text-zinc-900 dark:text-white">
             {title}
           </h1>

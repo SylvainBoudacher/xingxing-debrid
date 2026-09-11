@@ -15,8 +15,6 @@ interface TitleEpisodeRowProps {
   item: TitleItem;
   // Épisode TMDB correspondant, absent sans correspondance (nom de fichier).
   episode?: TmdbEpisode;
-  // Image de repli sans vignette d'épisode (backdrop d'un film).
-  fallbackImage?: string | null;
   isNext: boolean;
   simple: boolean;
   debrid: DebridControls;
@@ -28,7 +26,6 @@ interface TitleEpisodeRowProps {
 export function TitleEpisodeRow({
   item,
   episode,
-  fallbackImage,
   isNext,
   simple,
   debrid,
@@ -40,7 +37,7 @@ export function TitleEpisodeRow({
   const watched = isItemWatched(item);
   const playing = debrid.bulkVlc === file.link;
   const selected = selection?.has(file.link) ?? false;
-  const still = episode?.still_path ?? fallbackImage;
+  const still = episode?.still_path;
   const name = episode?.name || fileDisplayName(file.name, simple);
 
   return (

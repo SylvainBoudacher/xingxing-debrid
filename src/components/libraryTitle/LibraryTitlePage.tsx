@@ -1,7 +1,6 @@
 import { SeriesFolderOrganizer } from "@/components/SeriesFolderOrganizer";
 import type { DebridControls } from "@/components/libraryParts";
 import { TitleEpisodeList } from "@/components/libraryTitle/TitleEpisodeList";
-import { TitleEpisodeRow } from "@/components/libraryTitle/TitleEpisodeRow";
 import { TitleHero } from "@/components/libraryTitle/TitleHero";
 import { TitleHeroActions } from "@/components/libraryTitle/TitleHeroActions";
 import { TitleMoreMenu } from "@/components/libraryTitle/TitleMoreMenu";
@@ -92,7 +91,10 @@ export function LibraryTitlePage({
   const sections = useMemo(() => titleSections(subject, folderConfig), [subject, folderConfig]);
   const allItems = useMemo(() => sections.flatMap((s) => s.items), [sections]);
   const next = useMemo(() => nextTitleItem(sections), [sections]);
-  const single = allItems.length === 1 ? allItems[0] : null;
+  // Film (ou entrée brute) à fichier unique : le bandeau porte déjà lecture, vu
+  // et téléchargement, rien à lister dessous. Une série garde sa liste même
+  // avec un seul épisode (titre et résumé TMDB).
+  const single = subject.kind === "entry" && allItems.length === 1 ? allItems[0] : null;
 
   // Ouverture sur la saison du prochain épisode à voir.
   const [activeKey, setActiveKey] = useState(
@@ -266,19 +268,7 @@ export function LibraryTitlePage({
             <p className="py-10 text-center text-sm text-zinc-400 dark:text-zinc-500">
               Les fichiers apparaîtront à la fin du débridage.
             </p>
-          ) : single ? (
-            <ul className={CARD}>
-              <TitleEpisodeRow
-                item={single}
-                fallbackImage={detail?.backdrop_path ?? null}
-                isNext={false}
-                simple={false}
-                debrid={debrid}
-                onChange={onChange}
-                onPlay={play}
-              />
-            </ul>
-          ) : (
+          ) : single ? null : (
             <>
               {sections.length > 1 && (
                 <>
