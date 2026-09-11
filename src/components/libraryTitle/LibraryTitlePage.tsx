@@ -120,6 +120,18 @@ export function LibraryTitlePage({
   const allLinks = allItems.map((it) => it.file.link);
   const selectionKey = `${key}-selection`;
 
+  // La bibliothèque défile avec la fenêtre : bloquée tant que la fiche la
+  // couvre, sinon la molette la fait bouger dessous et sa barre de défilement
+  // s'ajoute à celle de la fiche. La position est conservée pour le retour.
+  useEffect(() => {
+    const root = document.documentElement;
+    const previous = root.style.overflow;
+    root.style.overflow = "hidden";
+    return () => {
+      root.style.overflow = previous;
+    };
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // defaultPrevented : un menu déroulant vient de se fermer sur Escape.
