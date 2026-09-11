@@ -63,6 +63,23 @@ export interface TmdbTvDetail {
 
 export interface TmdbDetail {
   genres?: Array<{ id: number; name: string }>;
+  backdrop_path?: string | null;
+  // Films uniquement.
+  runtime?: number | null;
+}
+
+export interface TmdbEpisode {
+  episode_number: number;
+  name: string;
+  overview: string;
+  still_path: string | null;
+  runtime: number | null;
+  air_date: string | null;
+}
+
+export interface TmdbSeasonDetail {
+  season_number: number;
+  episodes?: TmdbEpisode[];
 }
 
 // queryKeys sans la cle API : rotation sans invalidation, secret hors du cache.
@@ -78,6 +95,7 @@ export const tmdbKeys = {
   worst: (page: number) => ["tmdb", "roulette", "worst", page] as const,
   find: (imdbId: string) => ["tmdb", "find", imdbId.toLowerCase()] as const,
   tvDetail: (id: number) => ["tmdb", "tv", id] as const,
+  tvSeason: (id: number, season: number) => ["tmdb", "tv", id, "season", season] as const,
   detail: (mt: TmdbMediaType, id: number) => ["tmdb", "detail", mt, id] as const,
   recommendations: (mt: TmdbMediaType, id: number) => ["tmdb", "recommendations", mt, id] as const,
 };
@@ -188,6 +206,13 @@ export function detail(mt: TmdbMediaType, id: number, apiKey: string) {
 
 export function tvDetail(id: number, apiKey: string) {
   return get<TmdbTvDetail>(`${BASE}/tv/${id}?api_key=${apiKey}&language=fr-FR`);
+}
+
+// Episodes d'une saison (titres, vignettes, resumes) pour la fiche bibliotheque.
+export function tvSeason(id: number, season: number, apiKey: string) {
+  return get<TmdbSeasonDetail>(
+    `${BASE}/tv/${id}/season/${season}?api_key=${apiKey}&language=fr-FR`,
+  );
 }
 
 // Titres recommandes par TMDB pour un film / une serie donne (signal

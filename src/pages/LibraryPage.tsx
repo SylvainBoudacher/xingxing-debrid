@@ -1,8 +1,8 @@
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { DebridFilesModal } from "@/components/DebridFilesModal";
 import { DiscoverReleasesModal } from "@/components/DiscoverReleasesModal";
-import { LibraryDetailModal } from "@/components/LibraryDetailModal";
 import { LibraryBlocks } from "@/components/LibraryBlocks";
+import { LibraryTitlePage } from "@/components/libraryTitle/LibraryTitlePage";
 import { LibraryDisplayMenu } from "@/components/LibraryDisplayMenu";
 import { LibraryEntryCard, type DebridControls } from "@/components/LibraryEntryCard";
 import { LibraryCategoryMenu } from "@/components/LibraryCategoryMenu";
@@ -14,7 +14,6 @@ import { LibraryTabs, type LibraryTab } from "@/components/LibraryTabs";
 import { DEFAULT_MANGA_PREFS, getCachedMangaPrefs, type MangaLayout } from "@/lib/mangaPrefs";
 import { LibrarySelectionBar } from "@/components/LibrarySelectionBar";
 import { SeriesGroupCard } from "@/components/SeriesGroupCard";
-import { SeriesGroupDetailModal } from "@/components/SeriesGroupDetailModal";
 import { SeriesGroupPosterCard } from "@/components/SeriesGroupPosterCard";
 import { TmdbMatchModal } from "@/components/TmdbMatchModal";
 import { flattenFiles, isVideoFile, type DebridFile } from "@/lib/debrid";
@@ -41,6 +40,7 @@ import {
   type GroupMode,
   type LibraryBlock,
 } from "@/lib/librarySections";
+import { resolveTitleSubject } from "@/lib/libraryTitle";
 import {
   assignHashes,
   categoryOf,
@@ -214,6 +214,16 @@ export function LibraryPage({
   const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
   // Fiche C411 ouverte par-dessus une série : recherche d'épisodes manquants.
   const [findMore, setFindMore] = useState<TmdbItem | null>(null);
+  // Fiche plein écran ouverte (série ou titre seul), résolue sur toute la
+  // bibliothèque : un filtre ne la ferme pas en cours de route.
+  const titleSubject = useMemo(
+    () => resolveTitleSubject(entries, expandedHash, expandedGroupId),
+    [entries, expandedHash, expandedGroupId],
+  );
+  const closeTitle = useCallback(() => {
+    setExpandedHash(null);
+    setExpandedGroupId(null);
+  }, []);
   const debrid = useDebridActions(() => initialAllDebridKey ?? "");
 
   const { likedKeys, toggleLike } = useLikes();
@@ -390,15 +400,14 @@ export function LibraryPage({
         setFindMore(null);
         return;
       }
-      if (expandedHash || expandedGroupId || matchingHash || matchingGroupId !== null) return;
+      if (titleSubject || matchingHash || matchingGroupId !== null) return;
       if (mangaBusy) return;
       onBack();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [
-    expandedHash,
-    expandedGroupId,
+    titleSubject,
     matchingHash,
     matchingGroupId,
     mangaBusy,
@@ -637,15 +646,6 @@ export function LibraryPage({
 
   useLibraryGenres(entries, initialTmdbKey, true, applyGenres);
 
-  // Entrée affichée dans le panneau latéral (vue grille). Null si l'entrée
-  // sélectionnée n'est plus visible après un changement de filtre/recherche.
-  const expandedEntry = visible.find((e) => e.infoHash === expandedHash) ?? null;
-  const expandedGroup =
-    expandedGroupId !== null
-      ? (displayItems.find(
-          (item) => item.type === "group" && item.group.tmdbId === expandedGroupId,
-        ) ?? null)
-      : null;
   const matchingEntry = entries.find((e) => e.infoHash === matchingHash) ?? null;
   // Entrées d'un groupe série en cours de ré-association TMDB : le nouveau
   // choix s'applique à toutes les entrées du groupe.
@@ -769,6 +769,7 @@ export function LibraryPage({
           entry={item.entry}
           onChange={handleChange}
           onRemove={handleRemove}
+          onOpen={setExpandedHash}
           debrid={debrid}
           simple={viewMode === "simple"}
           autoWatchOnPlay={autoWatchOnPlay}
@@ -782,8 +783,8 @@ export function LibraryPage({
           group={item.group}
           onChange={handleChange}
           onRemove={handleRemove}
+          onOpen={setExpandedGroupId}
           debrid={debrid}
-          simple={viewMode === "simple"}
           autoWatchOnPlay={autoWatchOnPlay}
         />
       ),
@@ -834,8 +835,11 @@ export function LibraryPage({
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
       {/* Header */}
+      {/* inert : la grille reste montée sous la fiche plein écran, hors d'atteinte
+      du clavier. */}
       <motion.div
         ref={headerRef}
+        inert={titleSubject !== null}
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -866,6 +870,7 @@ export function LibraryPage({
       </motion.div>
 
       <div
+        inert={titleSubject !== null}
         className={`mx-auto w-full flex-1 px-6 pt-6 pb-10 sm:px-8 ${
           (tab === "manga" ? mangaLayout : layout) === "grid" ? "max-w-5xl" : "max-w-3xl"
         }`}
@@ -1061,6 +1066,7 @@ export function LibraryPage({
                     entry={e}
                     onChange={handleChange}
                     onRemove={handleRemove}
+                    onOpen={setExpandedHash}
                     debrid={debrid}
                     simple={viewMode === "simple"}
                     autoWatchOnPlay={autoWatchOnPlay}
@@ -1084,45 +1090,45 @@ export function LibraryPage({
       </div>
 
       <AnimatePresence>
-        {expandedEntry && (
-          <LibraryDetailModal
-            entry={expandedEntry}
-            onChange={handleChange}
-            onRemove={handleRemove}
-            onClose={() => setExpandedHash(null)}
-            debrid={debrid}
-            simple={viewMode === "simple"}
-            autoWatchOnPlay={autoWatchOnPlay}
-            onEnrichTmdb={
-              initialTmdbKey ? () => setMatchingHash(expandedEntry.infoHash) : undefined
+        {titleSubject && (
+          <LibraryTitlePage
+            key={
+              titleSubject.kind === "group"
+                ? `g${titleSubject.group.tmdbId}`
+                : titleSubject.entry.infoHash
             }
-            tmdbKey={initialTmdbKey ?? undefined}
-            enrichOpen={matchingHash !== null}
-            magnet={magnetFor(expandedEntry)}
-            onCancelDebrid={cancelDebrid}
-            cancellingDebrid={cancellingHash === expandedEntry.infoHash}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {expandedGroup?.type === "group" && (
-          <SeriesGroupDetailModal
-            group={expandedGroup.group}
+            subject={titleSubject}
             onChange={handleChange}
             onRemove={handleRemove}
-            onClose={() => setExpandedGroupId(null)}
+            onClose={closeTitle}
             debrid={debrid}
             simple={viewMode === "simple"}
             autoWatchOnPlay={autoWatchOnPlay}
+            tmdbKey={initialTmdbKey ?? undefined}
             onEnrichTmdb={
-              initialTmdbKey ? () => setMatchingGroupId(expandedGroup.group.tmdbId) : undefined
+              initialTmdbKey
+                ? () =>
+                    titleSubject.kind === "group"
+                      ? setMatchingGroupId(titleSubject.group.tmdbId)
+                      : setMatchingHash(titleSubject.entry.infoHash)
+                : undefined
             }
             onFindMore={
-              initialTmdbKey ? () => setFindMore(tmdbItemOf(expandedGroup.group.tmdb)) : undefined
+              initialTmdbKey && titleSubject.kind === "group"
+                ? () => setFindMore(tmdbItemOf(titleSubject.group.tmdb))
+                : undefined
             }
-            tmdbKey={initialTmdbKey ?? undefined}
-            enrichOpen={matchingGroupId !== null || findMore !== null}
+            overlayOpen={
+              matchingHash !== null ||
+              matchingGroupId !== null ||
+              findMore !== null ||
+              debridModal !== null
+            }
+            magnet={titleSubject.kind === "entry" ? magnetFor(titleSubject.entry) : undefined}
+            onCancelDebrid={cancelDebrid}
+            cancellingDebrid={
+              titleSubject.kind === "entry" && cancellingHash === titleSubject.entry.infoHash
+            }
           />
         )}
       </AnimatePresence>
@@ -1232,6 +1238,7 @@ interface ReorderableCardProps {
   entry: LibraryEntry;
   onChange: (entry: LibraryEntry) => void;
   onRemove: (infoHash: string) => void;
+  onOpen: (infoHash: string) => void;
   debrid: DebridControls;
   simple: boolean;
   autoWatchOnPlay?: boolean;

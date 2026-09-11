@@ -1,0 +1,114 @@
+import { TitleEpisodeRow } from "@/components/libraryTitle/TitleEpisodeRow";
+import { TitleMissingNote } from "@/components/libraryTitle/TitleMissingNote";
+import { TitleSectionBar } from "@/components/libraryTitle/TitleSectionBar";
+import type { DebridControls } from "@/components/libraryParts";
+import type { LibraryEntry } from "@/lib/library";
+import {
+  episodeRanges,
+  isItemWatched,
+  missingEpisodes,
+  RANGE_SIZE,
+  type TitleItem,
+  type TitleSection,
+} from "@/lib/libraryTitle";
+import type { EpisodeSelection } from "@/lib/useEpisodeSelection";
+import { useTmdbSeasons } from "@/lib/useTitleTmdb";
+import { useMemo, useState } from "react";
+
+interface TitleEpisodeListProps {
+  section: TitleSection;
+  // Série TMDB : active titres, vignettes et épisodes manquants.
+  tvId: number | null;
+  tmdbKey?: string;
+  nextLink: string | null;
+  sectionKey: string;
+  debrid: DebridControls;
+  onChange: (entry: LibraryEntry) => void;
+  onPlay: (item: TitleItem, key: string) => void;
+  simple: boolean;
+  autoWatchOnPlay: boolean;
+  selection?: EpisodeSelection;
+  onFindMore?: () => void;
+}
+
+// Liste d'une section. Montée avec key={section.key} : chaque changement de
+// saison repart sur la plage du prochain épisode à voir.
+export function TitleEpisodeList({
+  section,
+  tvId,
+  tmdbKey,
+  nextLink,
+  sectionKey,
+  debrid,
+  onChange,
+  onPlay,
+  simple,
+  autoWatchOnPlay,
+  selection,
+  onFindMore,
+}: TitleEpisodeListProps) {
+  const items = section.items;
+  const ranges = useMemo(() => episodeRanges(items.length), [items.length]);
+  const [rangeIndex, setRangeIndex] = useState(() => {
+    const i = items.findIndex((it) => !isItemWatched(it));
+    return i < 0 ? 0 : Math.floor(i / RANGE_SIZE);
+  });
+  const range = ranges[Math.min(rangeIndex, ranges.length - 1)];
+  const visible = useMemo(
+    () => (range ? items.slice(range.start, range.end) : items),
+    [items, range],
+  );
+
+  // Saisons TMDB utiles : celle de la section et celles des épisodes affichés
+  // (un dossier personnalisé peut mêler plusieurs saisons).
+  const seasons = useMemo(() => {
+    if (tvId === null) return [];
+    const set = new Set<number>();
+    if (section.season !== null) set.add(section.season);
+    for (const it of visible) if (it.season !== null) set.add(it.season);
+    return [...set].sort((a, b) => a - b);
+  }, [tvId, section.season, visible]);
+  const tmdbSeasons = useTmdbSeasons(tvId, seasons, tmdbKey);
+
+  const sectionEpisodes =
+    section.season !== null ? [...(tmdbSeasons.get(section.season)?.values() ?? [])] : [];
+  const missing = missingEpisodes(section, sectionEpisodes, new Date().toISOString().slice(0, 10));
+
+  return (
+    <div className="overflow-hidden rounded-2xl bg-white/70 ring-1 ring-black/5 dark:bg-zinc-900/60 dark:ring-white/10">
+      <TitleSectionBar
+        section={section}
+        ranges={ranges}
+        rangeIndex={Math.min(rangeIndex, Math.max(ranges.length - 1, 0))}
+        onRangeChange={setRangeIndex}
+        sectionKey={sectionKey}
+        debrid={debrid}
+        onChange={onChange}
+        autoWatchOnPlay={autoWatchOnPlay}
+        selection={selection}
+      />
+      <ul className="divide-y divide-black/5 dark:divide-white/5">
+        {visible.map((it) => (
+          <TitleEpisodeRow
+            key={`${it.entry.infoHash}-${it.file.name}`}
+            item={it}
+            episode={
+              it.season !== null && it.episode !== null
+                ? tmdbSeasons.get(it.season)?.get(it.episode)
+                : undefined
+            }
+            isNext={it.file.link === nextLink}
+            simple={simple}
+            debrid={debrid}
+            onChange={onChange}
+            onPlay={onPlay}
+            selection={selection}
+          />
+        ))}
+      </ul>
+      {missing.length > 0 && !selection && (
+        <TitleMissingNote episodes={missing} onFindMore={onFindMore} />
+      )}
+    </div>
+  );
+}

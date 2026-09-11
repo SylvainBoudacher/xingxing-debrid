@@ -66,7 +66,7 @@ et `LibraryEntryCard` (clic = ouverture), `libraryParts` (nettoyage, options
 `vlc` / `label` de `DebridActions`), `library.ts` (`seasonsOf`), service TMDB
 (`tvSeason`, backdrop et durée dans `TmdbDetail`).
 
-Supprimés : `SeriesGroupDetailModal`, `LibraryDetailModal`, `Collapse`.
+Supprimés : `SeriesGroupDetailModal`, `LibraryDetailModal`.
 
 ## Hors périmètre
 
