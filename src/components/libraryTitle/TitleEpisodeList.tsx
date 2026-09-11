@@ -27,8 +27,8 @@ interface TitleEpisodeListProps {
   onChange: (entry: LibraryEntry) => void;
   onPlay: (item: TitleItem, key: string) => void;
   simple: boolean;
-  autoWatchOnPlay: boolean;
   selection?: EpisodeSelection;
+  onSelectEpisodes?: () => void;
   onFindMore?: () => void;
 }
 
@@ -44,8 +44,8 @@ export function TitleEpisodeList({
   onChange,
   onPlay,
   simple,
-  autoWatchOnPlay,
   selection,
+  onSelectEpisodes,
   onFindMore,
 }: TitleEpisodeListProps) {
   const items = section.items;
@@ -72,8 +72,8 @@ export function TitleEpisodeList({
         sectionKey={sectionKey}
         debrid={debrid}
         onChange={onChange}
-        autoWatchOnPlay={autoWatchOnPlay}
         selection={selection}
+        onSelectEpisodes={onSelectEpisodes}
       />
       <ul className="divide-y divide-black/5 dark:divide-white/5">
         {visible.map((it, i) => (

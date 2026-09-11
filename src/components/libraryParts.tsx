@@ -86,6 +86,23 @@ export function DebridActions({
           </motion.button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {/* Le bouton VLC dédié est masqué ici : l'action reste accessible. */}
+          {!vlc && (
+            <DropdownMenuItem
+              onClick={() => {
+                debrid.openVlcMany(links, groupKey);
+                onVlcClick?.();
+              }}
+              disabled={vlcing}
+            >
+              {vlcing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <img src={vlcLogo} className="h-4 w-4" alt="" />
+              )}
+              {multi ? "Tout lire avec VLC" : "Lire avec VLC"}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             onClick={() => debrid.downloadMany(links, groupKey)}
             disabled={downloading}
@@ -99,7 +116,7 @@ export function DebridActions({
             ) : (
               <Copy className="h-4 w-4" />
             )}
-            {multi ? "Copier les liens" : "Copier le lien"}
+            {multi ? "Partager les liens" : "Partager le lien"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

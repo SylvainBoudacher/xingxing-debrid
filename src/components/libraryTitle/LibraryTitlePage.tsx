@@ -325,8 +325,8 @@ export function LibraryTitlePage({
                   onChange={onChange}
                   onPlay={play}
                   simple={simple}
-                  autoWatchOnPlay={autoWatchOnPlay}
                   selection={selecting ? selection : undefined}
+                  onSelectEpisodes={allItems.length > 1 ? startSelecting : undefined}
                   onFindMore={onFindMore}
                 />
               </>

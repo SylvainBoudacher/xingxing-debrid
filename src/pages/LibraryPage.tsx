@@ -1,4 +1,5 @@
 import { AppMenu, type Page } from "@/components/AppMenu";
+import { BulkConfirmDialog } from "@/components/BulkConfirmDialog";
 import { DebridFilesModal } from "@/components/DebridFilesModal";
 import { DiscoverReleasesModal } from "@/components/DiscoverReleasesModal";
 import { LibraryBlocks } from "@/components/LibraryBlocks";
@@ -1254,6 +1255,12 @@ export function LibraryPage({
           />
         )}
       </AnimatePresence>
+
+      <BulkConfirmDialog
+        pending={debrid.pendingBulk}
+        onConfirm={debrid.confirmBulk}
+        onCancel={debrid.cancelBulk}
+      />
     </main>
   );
 }

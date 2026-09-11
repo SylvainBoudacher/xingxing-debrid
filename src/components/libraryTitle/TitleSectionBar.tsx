@@ -1,17 +1,12 @@
-import {
-  Checkbox,
-  DebridActions,
-  ResumeButton,
-  SelectionBox,
-  type DebridControls,
-} from "@/components/libraryParts";
+import { SelectionBox, type DebridControls } from "@/components/libraryParts";
+import { TitleSectionMenu } from "@/components/libraryTitle/TitleSectionMenu";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { setSeasonItemsWatched, toggleFile, type LibraryEntry } from "@/lib/library";
+import { setSeasonItemsWatched, type LibraryEntry } from "@/lib/library";
 import {
   isItemWatched,
   rangeLabel,
@@ -30,12 +25,12 @@ interface TitleSectionBarProps {
   sectionKey: string;
   debrid: DebridControls;
   onChange: (entry: LibraryEntry) => void;
-  autoWatchOnPlay: boolean;
   selection?: EpisodeSelection;
+  onSelectEpisodes?: () => void;
 }
 
-// En-tête de la saison affichée : tout vu, plage d'épisodes, reprise, VLC et
-// téléchargement de toute la saison.
+// En-tête de la saison affichée : plage d'épisodes et menu regroupant les
+// actions qui portent sur la saison entière.
 export function TitleSectionBar({
   section,
   ranges,
@@ -44,14 +39,13 @@ export function TitleSectionBar({
   sectionKey,
   debrid,
   onChange,
-  autoWatchOnPlay,
   selection,
+  onSelectEpisodes,
 }: TitleSectionBarProps) {
   const items = section.items;
   const seen = items.filter(isItemWatched).length;
   const allSeen = seen === items.length;
   const links = items.map((it) => it.file.link);
-  const next = items.find((it) => !isItemWatched(it)) ?? null;
   const allSelected = !!selection && links.every((l) => selection.has(l));
 
   return (
@@ -63,12 +57,7 @@ export function TitleSectionBar({
         >
           <SelectionBox checked={allSelected} />
         </button>
-      ) : (
-        <Checkbox
-          checked={allSeen}
-          onClick={() => setSeasonItemsWatched(items, !allSeen, onChange)}
-        />
-      )}
+      ) : null}
       <span className="truncate text-sm font-semibold text-zinc-800 dark:text-zinc-100">
         {section.label}
       </span>
@@ -93,18 +82,16 @@ export function TitleSectionBar({
         </DropdownMenu>
       )}
       {!selection && (
-        <div className="ml-auto flex flex-none items-center gap-3">
-          {next && (
-            <ResumeButton
-              next={next.file}
-              groupKey={`resume-${sectionKey}`}
-              debrid={debrid}
-              started={seen > 0}
-              hideSeason
-              onResume={() => autoWatchOnPlay && onChange(toggleFile(next.entry, next.file.name))}
-            />
-          )}
-          <DebridActions links={links} groupKey={sectionKey} debrid={debrid} />
+        <div className="ml-auto flex-none">
+          <TitleSectionMenu
+            count={items.length}
+            links={links}
+            sectionKey={sectionKey}
+            debrid={debrid}
+            allSeen={allSeen}
+            onToggleSeenAll={() => setSeasonItemsWatched(items, !allSeen, onChange)}
+            onSelectEpisodes={onSelectEpisodes}
+          />
         </div>
       )}
     </div>
