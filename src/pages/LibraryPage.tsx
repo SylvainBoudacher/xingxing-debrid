@@ -40,8 +40,6 @@ import {
   type GroupMode,
   type LibraryBlock,
 } from "@/lib/librarySections";
-import { resolveTitleSubject } from "@/lib/libraryTitle";
-import { preloadTitle } from "@/lib/preloadTitle";
 import {
   assignHashes,
   categoryOf,
@@ -68,6 +66,7 @@ import {
   type LibraryLayout,
   type LibrarySort,
 } from "@/lib/libraryPrefs";
+import { cardKey } from "@/lib/libraryTitle";
 import { toastNetworkError } from "@/lib/networkError";
 import { queryClient } from "@/lib/queryClient";
 import {
@@ -82,6 +81,7 @@ import { useSendToDebrid } from "@/lib/useSendToDebrid";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { useDragScroll } from "@/lib/useDragScroll";
 import { useStickyBar } from "@/lib/useStickyBar";
+import { useTitleTransition } from "@/lib/useTitleTransition";
 import { useLibraryGenres } from "@/lib/useLibraryGenres";
 import { useLibraryMagnetStatus } from "@/lib/useLibraryMagnetStatus";
 import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
@@ -128,6 +128,10 @@ const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 function tmdbItemOf(meta: TmdbMeta): TmdbItem {
   return { ...meta, originalTitle: "" };
 }
+
+// Recul de la bibliothèque sous la fiche, façon modale iOS.
+const RECEDE_SCALE = 0.985;
+const RECEDE_TRANSITION = { duration: 0.3, ease: [0.22, 1, 0.36, 1] } as const;
 
 type Filter = LibraryFilter;
 type Layout = LibraryLayout;
@@ -208,43 +212,25 @@ export function LibraryPage({
   // Fiche manga pre-ouverte : consommee une seule fois, sinon un aller-retour
   // entre les onglets (qui demonte la section) la rouvrirait tout seul.
   const [pendingMangaId, setPendingMangaId] = useState<string | null>(initialMangaId ?? null);
-  const [expandedHash, setExpandedHash] = useState<string | null>(null);
-  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
   const [matchingGroupId, setMatchingGroupId] = useState<number | null>(null);
   const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
   // Fiche C411 ouverte par-dessus une série : recherche d'épisodes manquants.
   const [findMore, setFindMore] = useState<TmdbItem | null>(null);
-  // Fiche plein écran ouverte (série ou titre seul), résolue sur toute la
-  // bibliothèque : un filtre ne la ferme pas en cours de route.
-  const titleSubject = useMemo(
-    () => resolveTitleSubject(entries, expandedHash, expandedGroupId),
-    [entries, expandedHash, expandedGroupId],
-  );
-  // Ouverture après préchargement (données TMDB, bandeau, vignettes) : la
-  // fiche apparaît complète. Seule la dernière demande l'emporte.
-  const openSeq = useRef(0);
-  const openTitle = useCallback(
-    (hash: string | null, groupId: number | null) => {
-      const seq = ++openSeq.current;
-      const subject = resolveTitleSubject(entries, hash, groupId);
-      void (subject ? preloadTitle(subject, initialTmdbKey ?? undefined) : Promise.resolve()).then(
-        () => {
-          if (seq !== openSeq.current) return;
-          setExpandedHash(hash);
-          setExpandedGroupId(groupId);
-        },
-      );
-    },
-    [entries, initialTmdbKey],
-  );
+  // Fiche plein écran ouverte (série ou titre seul).
+  const {
+    subject: titleSubject,
+    expandedHash,
+    expandedGroupId,
+    setExpandedGroupId,
+    ready: titleReady,
+    open: openTitle,
+    close: closeTitle,
+    hoverProps,
+  } = useTitleTransition(entries, initialTmdbKey ?? undefined);
   const openEntry = useCallback((hash: string) => openTitle(hash, null), [openTitle]);
   const openGroup = useCallback((groupId: number) => openTitle(null, groupId), [openTitle]);
-  const closeTitle = useCallback(() => {
-    openSeq.current++;
-    setExpandedHash(null);
-    setExpandedGroupId(null);
-  }, []);
+  const receded = titleSubject !== null;
   const debrid = useDebridActions(() => initialAllDebridKey ?? "");
 
   const { likedKeys, toggleLike } = useLikes();
@@ -345,8 +331,7 @@ export function LibraryPage({
   useEffect(() => {
     if (!initialExpandedHash && initialExpandedGroupId == null) return;
     const timer = setTimeout(() => {
-      setExpandedHash(initialExpandedHash ?? null);
-      setExpandedGroupId(initialExpandedGroupId ?? null);
+      openTitle(initialExpandedHash ?? null, initialExpandedGroupId ?? null);
     }, 420);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -695,7 +680,7 @@ export function LibraryPage({
   }, [selectMode, displayItems, selected]);
 
   const itemKey = (item: DisplayItem) =>
-    item.type === "group" ? `g${item.group.tmdbId}` : item.entry.infoHash;
+    item.type === "group" ? cardKey(null, item.group.tmdbId) : cardKey(item.entry.infoHash, null);
 
   // Menu d'un bloc catégorie (les non classés n'en ont pas : rien à renommer).
   const categoryBlockMenu = (block: LibraryBlock) => {
@@ -853,260 +838,279 @@ export function LibraryPage({
 
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
-      {/* Header */}
-      {/* inert : la grille reste montée sous la fiche plein écran, hors d'atteinte
-      du clavier. */}
+      {/* Recul façon modale iOS sous la fiche, centré sur la partie visible de
+      la page. Le survol d'une carte précharge sa fiche. */}
       <motion.div
-        ref={headerRef}
-        inert={titleSubject !== null}
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="sticky top-0 z-30 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl"
+        {...hoverProps}
+        initial={false}
+        animate={{ scale: receded ? RECEDE_SCALE : 1 }}
+        transition={RECEDE_TRANSITION}
+        style={{ transformOrigin: `50% ${window.scrollY + window.innerHeight / 2}px` }}
+        className="flex flex-1 flex-col"
       >
-        <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
-          <motion.button
-            whileTap={{ scale: 0.93 }}
-            onClick={onBack}
-            className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="text-sm font-medium">Retour</span>
-          </motion.button>
+        {/* Header */}
+        {/* inert : la grille reste montée sous la fiche plein écran, hors d'atteinte
+      du clavier. */}
+        <motion.div
+          ref={headerRef}
+          inert={titleSubject !== null}
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="sticky top-0 z-30 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl"
+        >
+          <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
+            <motion.button
+              whileTap={{ scale: 0.93 }}
+              onClick={onBack}
+              className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-sm font-medium">Retour</span>
+            </motion.button>
 
-          <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-semibold tracking-tight text-zinc-900 dark:text-white">
-            Ma bibliothèque
-          </h1>
+            <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-semibold tracking-tight text-zinc-900 dark:text-white">
+              Ma bibliothèque
+            </h1>
 
-          <AppMenu
-            currentPage="library"
-            onNavigate={onNavigate}
-            onBack={onBack}
-            hasPendingUpdate={hasPendingUpdate}
-            onShowPendingUpdate={onShowPendingUpdate}
-          />
-        </div>
-      </motion.div>
+            <AppMenu
+              currentPage="library"
+              onNavigate={onNavigate}
+              onBack={onBack}
+              hasPendingUpdate={hasPendingUpdate}
+              onShowPendingUpdate={onShowPendingUpdate}
+            />
+          </div>
+        </motion.div>
 
-      <div
-        inert={titleSubject !== null}
-        className={`mx-auto w-full flex-1 px-6 pt-6 pb-10 sm:px-8 ${
-          (tab === "manga" ? mangaLayout : layout) === "grid" ? "max-w-5xl" : "max-w-3xl"
-        }`}
-      >
-        <LibraryTabs tab={tab} onSwitch={setTab} />
+        <div
+          inert={titleSubject !== null}
+          className={`mx-auto w-full flex-1 px-6 pt-6 pb-10 sm:px-8 ${
+            (tab === "manga" ? mangaLayout : layout) === "grid" ? "max-w-5xl" : "max-w-3xl"
+          }`}
+        >
+          <LibraryTabs tab={tab} onSwitch={setTab} />
 
-        {tab === "manga" && (
-          <LibraryMangaSection
-            getC411Key={() => initialC411Key ?? ""}
-            getAllDebridKey={() => initialAllDebridKey ?? ""}
-            initialMangaId={pendingMangaId}
-            onInitialConsumed={() => setPendingMangaId(null)}
-            onDiscover={() => onNavigate("manga")}
-            onBusyChange={setMangaBusy}
-            onLayoutChange={setMangaLayout}
-          />
-        )}
+          {tab === "manga" && (
+            <LibraryMangaSection
+              getC411Key={() => initialC411Key ?? ""}
+              getAllDebridKey={() => initialAllDebridKey ?? ""}
+              initialMangaId={pendingMangaId}
+              onInitialConsumed={() => setPendingMangaId(null)}
+              onDiscover={() => onNavigate("manga")}
+              onBusyChange={setMangaBusy}
+              onLayoutChange={setMangaLayout}
+            />
+          )}
 
-        {tab === "media" && (
-          <>
-            {/* Recherche + filtres : collés sous le header, pour rester à portée
+          {tab === "media" && (
+            <>
+              {/* Recherche + filtres : collés sous le header, pour rester à portée
             sans remonter en haut d'une grosse bibliothèque. Une fois accrochés,
             ils prennent l'aspect d'une carte flottante (verre + ombre) ; posés,
             ils se fondent dans la page. Le padding et la bordure existent dans
             les deux états (-mx compensé) pour que rien ne bouge à la bascule.
             Le z-index dépasse celui des pastilles des jaquettes (z-10), qui
             sinon défileraient par-dessus. */}
-            <div
-              ref={barRef}
-              style={{ top: barTop }}
-              className={`sticky z-20 -mx-3 mb-4 rounded-2xl border p-3 transition-[background-color,border-color,box-shadow] duration-200 ${
-                barStuck
-                  ? "border-black/10 bg-white/70 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/70"
-                  : "border-transparent"
-              }`}
-            >
-              <div className="relative mb-3">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Rechercher un titre..."
-                  className="w-full rounded-lg border border-black/10 bg-white/70 py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-zinc-900/60 dark:text-white"
-                />
-              </div>
+              <div
+                ref={barRef}
+                style={{ top: barTop }}
+                className={`sticky z-20 -mx-3 mb-4 rounded-2xl border p-3 transition-[background-color,border-color,box-shadow] duration-200 ${
+                  barStuck
+                    ? "border-black/10 bg-white/70 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/70"
+                    : "border-transparent"
+                }`}
+              >
+                <div className="relative mb-3">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Rechercher un titre..."
+                    className="w-full rounded-lg border border-black/10 bg-white/70 py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-zinc-900/60 dark:text-white"
+                  />
+                </div>
 
-              {/* La barre défile horizontalement plutôt que d'écraser ses
+                {/* La barre défile horizontalement plutôt que d'écraser ses
               libellés quand elle déborde (min-w-max), le glisser reproduit le
               défilement là où la molette horizontale manque. */}
-              <div
-                ref={toolbarRef}
-                {...toolbarDrag}
-                className="cursor-grab overflow-x-auto select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                <div className="flex w-full min-w-max items-center justify-between gap-2">
-                  <div className="flex flex-none items-center gap-1.5">
-                    {FILTERS.map((f) => (
-                      <button
-                        key={f.id}
-                        onClick={() => changeFilter(f.id)}
-                        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                          filter === f.id
-                            ? "bg-indigo-600 text-white"
-                            : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                        }`}
-                      >
-                        {f.label} ({counts[f.id]})
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-none items-center gap-2">
-                    {layout === "grid" && (
-                      <button
-                        onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
-                        title="Sélection multiple"
-                        className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
-                          selectMode
-                            ? "bg-indigo-600 text-white"
-                            : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                        }`}
-                      >
-                        <CheckSquare className="h-3.5 w-3.5" />
-                        Sélection
-                      </button>
-                    )}
-
-                    <LibraryDisplayMenu
-                      sort={sort}
-                      onSortChange={changeSort}
-                      allowManualSort={layout === "list"}
-                      grouping={grouping}
-                      onGroupingChange={changeGrouping}
-                      genreOptions={genreOpts}
-                      genreFilter={genreFilter}
-                      onToggleGenre={toggleGenre}
-                      onClearGenres={() => changeGenreFilter(new Set())}
-                    />
-
-                    <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
-                      {(
-                        [
-                          ["list", List],
-                          ["grid", LayoutGrid],
-                        ] as const
-                      ).map(([id, Icon]) => (
+                <div
+                  ref={toolbarRef}
+                  {...toolbarDrag}
+                  className="cursor-grab overflow-x-auto select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  <div className="flex w-full min-w-max items-center justify-between gap-2">
+                    <div className="flex flex-none items-center gap-1.5">
+                      {FILTERS.map((f) => (
                         <button
-                          key={id}
-                          onClick={() => changeLayout(id)}
-                          title={id === "list" ? "Vue liste" : "Vue grille"}
-                          className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                            layout === id
-                              ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-700 dark:text-indigo-300"
-                              : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
+                          key={f.id}
+                          onClick={() => changeFilter(f.id)}
+                          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                            filter === f.id
+                              ? "bg-indigo-600 text-white"
+                              : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
                           }`}
                         >
-                          <Icon className="h-4 w-4" />
+                          {f.label} ({counts[f.id]})
                         </button>
                       ))}
+                    </div>
+
+                    <div className="flex flex-none items-center gap-2">
+                      {layout === "grid" && (
+                        <button
+                          onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+                          title="Sélection multiple"
+                          className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
+                            selectMode
+                              ? "bg-indigo-600 text-white"
+                              : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                          }`}
+                        >
+                          <CheckSquare className="h-3.5 w-3.5" />
+                          Sélection
+                        </button>
+                      )}
+
+                      <LibraryDisplayMenu
+                        sort={sort}
+                        onSortChange={changeSort}
+                        allowManualSort={layout === "list"}
+                        grouping={grouping}
+                        onGroupingChange={changeGrouping}
+                        genreOptions={genreOpts}
+                        genreFilter={genreFilter}
+                        onToggleGenre={toggleGenre}
+                        onClearGenres={() => changeGenreFilter(new Set())}
+                      />
+
+                      <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
+                        {(
+                          [
+                            ["list", List],
+                            ["grid", LayoutGrid],
+                          ] as const
+                        ).map(([id, Icon]) => (
+                          <button
+                            key={id}
+                            onClick={() => changeLayout(id)}
+                            title={id === "list" ? "Vue liste" : "Vue grille"}
+                            className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                              layout === id
+                                ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-700 dark:text-indigo-300"
+                                : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
+                            }`}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <AnimatePresence>
-              {grouping === "category" && (
-                <LibraryCustomBar
-                  categoryCount={categories.categories.length}
-                  selectMode={selectMode}
-                  onCreate={() => setNaming({ mode: "create", hashes: [] })}
-                  onToggleSelect={startClassifying}
-                />
-              )}
-            </AnimatePresence>
-
-            {visible.length === 0 ? (
-              <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
-                <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
-                <p className="text-sm">
-                  {entries.length === 0
-                    ? "Aucun téléchargement pour l'instant."
-                    : "Rien ne correspond à cette recherche."}
-                </p>
-                {entries.length === 0 && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      onClick={() => onNavigate("main")}
-                      className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500"
-                    >
-                      <Search className="h-3.5 w-3.5" />
-                      Rechercher
-                    </button>
-                    <button
-                      onClick={() => onNavigate("discover")}
-                      className="flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                    >
-                      <Compass className="h-3.5 w-3.5" />
-                      Découvrir
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : displayItems.length === 0 && genreFilter.size > 0 ? (
-              <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
-                <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
-                <p className="text-sm">Aucun titre dans ces genres.</p>
-                <button
-                  onClick={() => changeGenreFilter(new Set())}
-                  className="mt-1 flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                >
-                  Effacer les genres
-                </button>
-              </div>
-            ) : layout === "grid" ? (
-              <LibraryBlocks
-                blocks={blocks}
-                blockMenu={categoryBlockMenu}
-                activeDropId={hoveredDrop}
-              >
-                {(items) => (
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-                    {items.map(renderPoster)}
-                  </div>
-                )}
-              </LibraryBlocks>
-            ) : canReorder ? (
-              <Reorder.Group axis="y" values={visible} onReorder={persist} className="space-y-2">
-                {visible.map((e) => (
-                  <ReorderableCard
-                    key={e.infoHash}
-                    entry={e}
-                    onChange={handleChange}
-                    onRemove={handleRemove}
-                    onOpen={openEntry}
-                    debrid={debrid}
-                    simple={viewMode === "simple"}
-                    autoWatchOnPlay={autoWatchOnPlay}
-                    magnet={magnetFor(e)}
-                    onCancelDebrid={cancelDebrid}
-                    cancellingDebrid={cancellingHash === e.infoHash}
+              <AnimatePresence>
+                {grouping === "category" && (
+                  <LibraryCustomBar
+                    categoryCount={categories.categories.length}
+                    selectMode={selectMode}
+                    onCreate={() => setNaming({ mode: "create", hashes: [] })}
+                    onToggleSelect={startClassifying}
                   />
-                ))}
-              </Reorder.Group>
-            ) : (
-              <LibraryBlocks
-                blocks={blocks}
-                blockMenu={categoryBlockMenu}
-                activeDropId={hoveredDrop}
-              >
-                {(items) => <div className="space-y-2">{items.map(renderCard)}</div>}
-              </LibraryBlocks>
-            )}
-          </>
-        )}
-      </div>
+                )}
+              </AnimatePresence>
+
+              {visible.length === 0 ? (
+                <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
+                  <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
+                  <p className="text-sm">
+                    {entries.length === 0
+                      ? "Aucun téléchargement pour l'instant."
+                      : "Rien ne correspond à cette recherche."}
+                  </p>
+                  {entries.length === 0 && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        onClick={() => onNavigate("main")}
+                        className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500"
+                      >
+                        <Search className="h-3.5 w-3.5" />
+                        Rechercher
+                      </button>
+                      <button
+                        onClick={() => onNavigate("discover")}
+                        className="flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                      >
+                        <Compass className="h-3.5 w-3.5" />
+                        Découvrir
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : displayItems.length === 0 && genreFilter.size > 0 ? (
+                <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
+                  <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
+                  <p className="text-sm">Aucun titre dans ces genres.</p>
+                  <button
+                    onClick={() => changeGenreFilter(new Set())}
+                    className="mt-1 flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                  >
+                    Effacer les genres
+                  </button>
+                </div>
+              ) : layout === "grid" ? (
+                <LibraryBlocks
+                  blocks={blocks}
+                  blockMenu={categoryBlockMenu}
+                  activeDropId={hoveredDrop}
+                >
+                  {(items) => (
+                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+                      {items.map(renderPoster)}
+                    </div>
+                  )}
+                </LibraryBlocks>
+              ) : canReorder ? (
+                <Reorder.Group axis="y" values={visible} onReorder={persist} className="space-y-2">
+                  {visible.map((e) => (
+                    <ReorderableCard
+                      key={e.infoHash}
+                      entry={e}
+                      onChange={handleChange}
+                      onRemove={handleRemove}
+                      onOpen={openEntry}
+                      debrid={debrid}
+                      simple={viewMode === "simple"}
+                      autoWatchOnPlay={autoWatchOnPlay}
+                      magnet={magnetFor(e)}
+                      onCancelDebrid={cancelDebrid}
+                      cancellingDebrid={cancellingHash === e.infoHash}
+                    />
+                  ))}
+                </Reorder.Group>
+              ) : (
+                <LibraryBlocks
+                  blocks={blocks}
+                  blockMenu={categoryBlockMenu}
+                  activeDropId={hoveredDrop}
+                >
+                  {(items) => <div className="space-y-2">{items.map(renderCard)}</div>}
+                </LibraryBlocks>
+              )}
+            </>
+          )}
+        </div>
+      </motion.div>
+
+      <motion.div
+        aria-hidden
+        initial={false}
+        animate={{ opacity: receded ? 1 : 0 }}
+        transition={RECEDE_TRANSITION}
+        className="pointer-events-none fixed inset-0 z-[35] bg-black/35"
+      />
 
       <AnimatePresence>
         {titleSubject && (
@@ -1117,6 +1121,7 @@ export function LibraryPage({
                 : titleSubject.entry.infoHash
             }
             subject={titleSubject}
+            ready={titleReady}
             onChange={handleChange}
             onRemove={handleRemove}
             onClose={closeTitle}

@@ -13,11 +13,13 @@ vi.mock("@tauri-apps/plugin-store", () => ({
 import type { DebridFile } from "./debrid";
 import type { LibraryEntry, TmdbMeta } from "./library";
 import {
+  cardKey,
   episodeRanges,
   fileDisplayName,
   formatRuntime,
   missingEpisodes,
   nextTitleItem,
+  parseCardKey,
   rangeLabel,
   resolveTitleSubject,
   titleSections,
@@ -223,5 +225,14 @@ describe("resolveTitleSubject", () => {
   it("renvoie null pour un titre disparu", () => {
     expect(resolveTitleSubject([movie], "zz", null)).toBeNull();
     expect(resolveTitleSubject([movie], null, 42)).toBeNull();
+  });
+});
+
+describe("cardKey", () => {
+  it("distingue une entrée seule d'une série regroupée", () => {
+    expect(cardKey("a1b2", null)).toBe("a1b2");
+    expect(cardKey(null, 42)).toBe("g42");
+    expect(parseCardKey("a1b2")).toEqual({ hash: "a1b2", groupId: null });
+    expect(parseCardKey("g42")).toEqual({ hash: null, groupId: 42 });
   });
 });

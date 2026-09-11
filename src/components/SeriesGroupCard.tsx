@@ -70,7 +70,10 @@ export const SeriesGroupCard = memo(function SeriesGroupCard({
   }
 
   return (
-    <div className="rounded-xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm overflow-hidden">
+    <div
+      data-title-key={`g${group.tmdbId}`}
+      className="rounded-xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm overflow-hidden"
+    >
       <div className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-black/[0.025] dark:hover:bg-white/[0.04]">
         <Checkbox checked={whole} onClick={handleAllWatched} />
 

@@ -42,6 +42,10 @@ const HERO_SCROLL = 200;
 const CARD =
   "overflow-hidden rounded-2xl bg-white/70 ring-1 ring-black/5 dark:bg-zinc-900/60 dark:ring-white/10";
 
+// La fiche vient au premier plan : fondu et montée d'échelle à peine
+// perceptible, sans glissement ni objet qui se déplace.
+const PAGE_HIDDEN = { opacity: 0, scale: 0.985 };
+
 interface LibraryTitlePageProps {
   subject: TitleSubject;
   onChange: (entry: LibraryEntry) => void;
@@ -61,6 +65,8 @@ interface LibraryTitlePageProps {
   magnet?: MagnetEntry;
   onCancelDebrid?: (entry: LibraryEntry) => void;
   cancellingDebrid?: boolean;
+  // Données et images préchargées (ou délai dépassé) : le contenu apparaît.
+  ready: boolean;
 }
 
 // Fiche plein écran d'un titre de la bibliothèque (série ou film). Calque fixe
@@ -81,6 +87,7 @@ export function LibraryTitlePage({
   magnet,
   onCancelDebrid,
   cancellingDebrid,
+  ready,
 }: LibraryTitlePageProps) {
   const group = subject.kind === "group" ? subject.group : null;
   const entries = subjectEntries(subject);
@@ -198,10 +205,10 @@ export function LibraryTitlePage({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 12 }}
-      transition={{ duration: 0.22, ease: "easeInOut" }}
+      initial={PAGE_HIDDEN}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ ...PAGE_HIDDEN, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
+      transition={{ duration: 0.26, ease: [0.22, 1, 0.36, 1] }}
       className="fixed inset-0 z-40 bg-[#f4f6fc] dark:bg-black"
     >
       <div
@@ -219,6 +226,8 @@ export function LibraryTitlePage({
               onSelectEpisodes={allItems.length > 1 ? startSelecting : undefined}
               onOrganize={group ? startOrganize : undefined}
               onChangeTmdb={tmdb ? onEnrichTmdb : undefined}
+              onToggleWatched={single ? undefined : toggleAllWatched}
+              watched={whole}
               onDelete={deleteAll}
             />
           }
@@ -249,6 +258,7 @@ export function LibraryTitlePage({
           }
           cancellingDebrid={cancellingDebrid}
           onCompleteTmdb={tmdb ? undefined : onEnrichTmdb}
+          revealed={ready}
         >
           <TitleHeroActions
             playItem={single ?? next}
@@ -259,61 +269,70 @@ export function LibraryTitlePage({
             whole={whole}
             debrid={debrid}
             onPlay={play}
-            onToggleWatched={toggleAllWatched}
+            onToggleWatched={single ? toggleAllWatched : undefined}
             onFindMore={onFindMore}
           />
         </TitleHero>
 
-        <div className="mx-auto max-w-4xl px-6 pb-28 pt-8">
-          {organize && group && folderConfig ? (
-            <div className={CARD}>
-              <SeriesFolderOrganizer
-                group={group}
-                config={folderConfig}
-                onConfigChange={setFolderConfig}
-                onDeleteFiles={deleteFiles}
-                onExit={() => setOrganize(false)}
-              />
-            </div>
-          ) : sections.length === 0 ? (
-            <p className="py-10 text-center text-sm text-zinc-400 dark:text-zinc-500">
-              Les fichiers apparaîtront à la fin du débridage.
-            </p>
-          ) : single ? null : (
-            <>
-              {sections.length > 1 && (
-                <>
-                  <div ref={anchorRef} />
-                  <div
-                    style={{ top: TOP_BAR }}
-                    className="sticky z-10 -mx-6 mb-3 bg-[#f4f6fc]/85 px-6 py-2.5 backdrop-blur-xl dark:bg-black/80"
-                  >
-                    <TitleSectionPicker
-                      sections={sections}
-                      activeKey={active.key}
-                      onChange={changeSection}
-                    />
-                  </div>
-                </>
-              )}
-              <TitleEpisodeList
-                key={active.key}
-                section={active}
-                tvId={group?.tmdbId ?? null}
-                tmdbKey={tmdbKey}
-                nextLink={next?.file.link ?? null}
-                sectionKey={`${key}-${active.key}`}
-                debrid={debrid}
-                onChange={onChange}
-                onPlay={play}
-                simple={simple}
-                autoWatchOnPlay={autoWatchOnPlay}
-                selection={selecting ? selection : undefined}
-                onFindMore={onFindMore}
-              />
-            </>
-          )}
-        </div>
+        {/* Montée une fois la fiche prête : les lignes arrivent en cascade avec
+        titres et vignettes TMDB, sans nom de fichier remplacé en route. */}
+        {ready && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="mx-auto max-w-4xl px-6 pb-28 pt-8"
+          >
+            {organize && group && folderConfig ? (
+              <div className={CARD}>
+                <SeriesFolderOrganizer
+                  group={group}
+                  config={folderConfig}
+                  onConfigChange={setFolderConfig}
+                  onDeleteFiles={deleteFiles}
+                  onExit={() => setOrganize(false)}
+                />
+              </div>
+            ) : sections.length === 0 ? (
+              <p className="py-10 text-center text-sm text-zinc-400 dark:text-zinc-500">
+                Les fichiers apparaîtront à la fin du débridage.
+              </p>
+            ) : single ? null : (
+              <>
+                {sections.length > 1 && (
+                  <>
+                    <div ref={anchorRef} />
+                    <div
+                      style={{ top: TOP_BAR }}
+                      className="sticky z-10 -mx-6 mb-3 bg-[#f4f6fc]/85 px-6 py-2.5 backdrop-blur-xl dark:bg-black/80"
+                    >
+                      <TitleSectionPicker
+                        sections={sections}
+                        activeKey={active.key}
+                        onChange={changeSection}
+                      />
+                    </div>
+                  </>
+                )}
+                <TitleEpisodeList
+                  key={active.key}
+                  section={active}
+                  tvId={group?.tmdbId ?? null}
+                  tmdbKey={tmdbKey}
+                  nextLink={next?.file.link ?? null}
+                  sectionKey={`${key}-${active.key}`}
+                  debrid={debrid}
+                  onChange={onChange}
+                  onPlay={play}
+                  simple={simple}
+                  autoWatchOnPlay={autoWatchOnPlay}
+                  selection={selecting ? selection : undefined}
+                  onFindMore={onFindMore}
+                />
+              </>
+            )}
+          </motion.div>
+        )}
       </div>
 
       <AnimatePresence>

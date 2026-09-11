@@ -5,7 +5,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FolderCog, ListChecks, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Check, FolderCog, ListChecks, Pencil, Settings, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 interface TitleMoreMenuProps {
@@ -14,6 +14,9 @@ interface TitleMoreMenuProps {
   onSelectEpisodes?: () => void;
   onOrganize?: () => void;
   onChangeTmdb?: () => void;
+  // Séries seulement : l'action vit ici au lieu de la barre du héros.
+  onToggleWatched?: () => void;
+  watched?: boolean;
   onDelete: () => void;
 }
 
@@ -24,27 +27,35 @@ export function TitleMoreMenu({
   onSelectEpisodes,
   onOrganize,
   onChangeTmdb,
+  onToggleWatched,
+  watched,
   onDelete,
 }: TitleMoreMenuProps) {
   const [confirm, setConfirm] = useState(false);
-  const hasActions = !!(onSelectEpisodes || onOrganize || onChangeTmdb);
+  const hasActions = !!(onToggleWatched || onSelectEpisodes || onOrganize || onChangeTmdb);
 
   return (
     <DropdownMenu onOpenChange={(open) => !open && setConfirm(false)}>
       <DropdownMenuTrigger asChild>
         <button
-          aria-label="Plus d'actions"
-          title="Plus d'actions"
+          aria-label="Réglages"
+          title="Réglages"
           className={`flex h-8 w-8 flex-none items-center justify-center rounded-full transition-colors ${
             solid
               ? "text-zinc-500 hover:bg-black/5 dark:text-zinc-400 dark:hover:bg-white/10"
               : "bg-black/35 text-white backdrop-blur-md hover:bg-black/50"
           }`}
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <Settings className="h-4 w-4" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {onToggleWatched && (
+          <DropdownMenuItem onClick={onToggleWatched}>
+            <Check className="h-4 w-4" strokeWidth={watched ? 3 : 2} />
+            {watched ? "Marquer comme non vu" : "Marquer comme vu"}
+          </DropdownMenuItem>
+        )}
         {onSelectEpisodes && (
           <DropdownMenuItem onClick={onSelectEpisodes}>
             <ListChecks className="h-4 w-4" />

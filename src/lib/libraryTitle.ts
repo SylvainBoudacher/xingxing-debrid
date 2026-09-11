@@ -51,6 +51,17 @@ export function subjectTmdb(subject: TitleSubject): TmdbMeta | undefined {
   return subject.kind === "group" ? subject.group.tmdb : subject.entry.tmdb;
 }
 
+// Clé de la carte d'un titre dans la bibliothèque (attribut data-title-key) :
+// hash d'une entrée seule, g<id TMDB> d'une série regroupée.
+export function cardKey(hash: string | null, groupId: number | null): string {
+  return hash ?? `g${groupId}`;
+}
+
+export function parseCardKey(key: string): { hash: string | null; groupId: number | null } {
+  const group = /^g(\d+)$/.exec(key);
+  return group ? { hash: null, groupId: Number(group[1]) } : { hash: key, groupId: null };
+}
+
 // Clé des actions AllDebrid groupées (spinners), reprise des anciennes modales.
 export function subjectKey(subject: TitleSubject): string {
   return subject.kind === "group" ? `series-${subject.group.tmdbId}` : subject.entry.infoHash;

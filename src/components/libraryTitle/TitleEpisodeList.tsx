@@ -76,9 +76,10 @@ export function TitleEpisodeList({
         selection={selection}
       />
       <ul className="divide-y divide-black/5 dark:divide-white/5">
-        {visible.map((it) => (
+        {visible.map((it, i) => (
           <TitleEpisodeRow
             key={`${it.entry.infoHash}-${it.file.name}`}
+            index={i}
             item={it}
             episode={
               it.season !== null && it.episode !== null

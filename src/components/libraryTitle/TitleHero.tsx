@@ -1,4 +1,5 @@
 import { ExpandableText } from "@/components/ExpandableText";
+import { FadeImage } from "@/components/FadeImage";
 import { MagnetProgress } from "@/components/MagnetProgress";
 import { ReleaseTagBadges } from "@/components/ReleaseTagBadges";
 import { TmdbGenres } from "@/components/TmdbGenres";
@@ -8,6 +9,7 @@ import { formatRuntime } from "@/lib/libraryTitle";
 import { hasReleaseTags, parseReleaseTags } from "@/lib/releaseTags";
 import type { MagnetEntry } from "@/lib/services/allDebrid";
 import { Clapperboard, Star } from "lucide-react";
+import { motion } from "motion/react";
 import type { ReactNode } from "react";
 
 interface TitleHeroProps {
@@ -30,6 +32,8 @@ interface TitleHeroProps {
   cancellingDebrid?: boolean;
   // Entrée C411 / Nyaa sans métadonnées : propose de la compléter.
   onCompleteTmdb?: () => void;
+  // Fiche prête : texte et actions apparaissent autour de la jaquette.
+  revealed: boolean;
   // Boutons d'action sous la présentation.
   children: ReactNode;
 }
@@ -51,6 +55,7 @@ export function TitleHero({
   onCancelDebrid,
   cancellingDebrid,
   onCompleteTmdb,
+  revealed,
   children,
 }: TitleHeroProps) {
   const tags = releaseName ? parseReleaseTags(releaseName) : null;
@@ -68,7 +73,7 @@ export function TitleHero({
         }`}
       >
         {backdropPath && (
-          <img
+          <FadeImage
             src={`https://image.tmdb.org/t/p/w1280${backdropPath}`}
             alt=""
             decoding="async"
@@ -81,9 +86,13 @@ export function TitleHero({
 
       {/* Jaquette et texte alignés en haut, remontés ensemble sur le bandeau. */}
       <div className="relative mx-auto -mt-24 flex max-w-4xl items-start gap-6 px-6">
-        <div className="aspect-[2/3] w-36 flex-none overflow-hidden rounded-xl bg-zinc-200 shadow-2xl ring-1 ring-black/10 dark:bg-zinc-800 dark:ring-white/10">
+        {/* Point d'arrivée du vol de la jaquette depuis la grille. */}
+        <div
+          data-hero-poster
+          className="aspect-[2/3] w-36 flex-none overflow-hidden rounded-xl bg-zinc-200 shadow-2xl ring-1 ring-black/10 dark:bg-zinc-800 dark:ring-white/10"
+        >
           {tmdb?.posterPath ? (
-            <img
+            <FadeImage
               src={`https://image.tmdb.org/t/p/w342${tmdb.posterPath}`}
               alt={title}
               decoding="async"
@@ -96,7 +105,12 @@ export function TitleHero({
           )}
         </div>
 
-        <div className="min-w-0 flex-1">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={revealed ? { opacity: 1, y: 0 } : { opacity: 0, y: 8 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="min-w-0 flex-1"
+        >
           <h1 className="text-2xl font-bold leading-tight tracking-tight text-zinc-900 dark:text-white">
             {title}
           </h1>
@@ -160,7 +174,7 @@ export function TitleHero({
             </div>
           )}
           <div className="mt-4 flex flex-wrap items-center gap-2">{children}</div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

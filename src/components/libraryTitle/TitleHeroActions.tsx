@@ -14,7 +14,8 @@ interface TitleHeroActionsProps {
   whole: boolean;
   debrid: DebridControls;
   onPlay: (item: TitleItem, key: string) => void;
-  onToggleWatched: () => void;
+  // Absent pour les séries : l'action est dans le menu de réglages.
+  onToggleWatched?: () => void;
   onFindMore?: () => void;
 }
 
@@ -54,19 +55,21 @@ export function TitleHeroActions({
           {label && <span className="font-mono text-xs opacity-70">{label}</span>}
         </motion.button>
       )}
-      <motion.button
-        whileTap={{ scale: 0.96 }}
-        onClick={onToggleWatched}
-        title={whole ? "Marquer comme non vu" : "Marquer comme vu"}
-        className={`${SECONDARY} ${
-          whole
-            ? "bg-emerald-500/15 text-emerald-700 ring-1 ring-emerald-500/30 dark:text-emerald-300"
-            : "bg-black/5 text-zinc-700 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-200 dark:hover:bg-white/15"
-        }`}
-      >
-        <Check className="h-4 w-4" strokeWidth={whole ? 3 : 2} />
-        {whole ? "Vu" : "Marquer comme vu"}
-      </motion.button>
+      {onToggleWatched && (
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={onToggleWatched}
+          title={whole ? "Marquer comme non vu" : "Marquer comme vu"}
+          className={`${SECONDARY} ${
+            whole
+              ? "bg-emerald-500/15 text-emerald-700 ring-1 ring-emerald-500/30 dark:text-emerald-300"
+              : "bg-black/5 text-zinc-700 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-200 dark:hover:bg-white/15"
+          }`}
+        >
+          <Check className="h-4 w-4" strokeWidth={whole ? 3 : 2} />
+          {whole ? "Vu" : "Marquer comme vu"}
+        </motion.button>
+      )}
       <DebridActions
         links={links}
         groupKey={downloadKey}
