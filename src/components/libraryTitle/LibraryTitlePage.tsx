@@ -15,6 +15,7 @@ import {
   type LibraryEntry,
 } from "@/lib/library";
 import {
+  initialSection,
   isItemWatched,
   nextTitleItem,
   subjectEntries,
@@ -97,9 +98,7 @@ export function LibraryTitlePage({
   const single = subject.kind === "entry" && allItems.length === 1 ? allItems[0] : null;
 
   // Ouverture sur la saison du prochain épisode à voir.
-  const [activeKey, setActiveKey] = useState(
-    () => sections.find((s) => next !== null && s.items.includes(next))?.key ?? null,
-  );
+  const [activeKey, setActiveKey] = useState(() => initialSection(sections)?.key ?? null);
   const active = sections.find((s) => s.key === activeKey) ?? sections[0];
 
   const {

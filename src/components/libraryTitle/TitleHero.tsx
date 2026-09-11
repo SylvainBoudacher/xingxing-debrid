@@ -58,11 +58,13 @@ export function TitleHero({
   return (
     <div className="relative">
       {/* Remonte sous la barre du haut, transparente tant qu'on n'a pas défilé. */}
+      {/* Hauteur fixée par la présence de TMDB, pas par le bandeau : s'il arrive
+          après le délai de préchargement, rien ne se décale. */}
       <div
-        className={`relative -mt-14 w-full overflow-hidden ${
+        className={`relative -mt-14 w-full overflow-hidden ${tmdb ? "h-80" : "h-44"} ${
           backdropPath
-            ? "h-80"
-            : "h-44 bg-gradient-to-br from-indigo-500/25 via-zinc-200 to-zinc-300 dark:from-indigo-500/20 dark:via-zinc-800 dark:to-zinc-900"
+            ? ""
+            : "bg-gradient-to-br from-indigo-500/25 via-zinc-200 to-zinc-300 dark:from-indigo-500/20 dark:via-zinc-800 dark:to-zinc-900"
         }`}
       >
         {backdropPath && (

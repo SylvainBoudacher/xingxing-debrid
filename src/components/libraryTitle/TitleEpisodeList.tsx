@@ -4,10 +4,11 @@ import { TitleSectionBar } from "@/components/libraryTitle/TitleSectionBar";
 import type { DebridControls } from "@/components/libraryParts";
 import type { LibraryEntry } from "@/lib/library";
 import {
+  displayedSeasons,
   episodeRanges,
-  isItemWatched,
+  initialRangeIndex,
   missingEpisodes,
-  RANGE_SIZE,
+  rangeItems,
   type TitleItem,
   type TitleSection,
 } from "@/lib/libraryTitle";
@@ -49,25 +50,12 @@ export function TitleEpisodeList({
 }: TitleEpisodeListProps) {
   const items = section.items;
   const ranges = useMemo(() => episodeRanges(items.length), [items.length]);
-  const [rangeIndex, setRangeIndex] = useState(() => {
-    const i = items.findIndex((it) => !isItemWatched(it));
-    return i < 0 ? 0 : Math.floor(i / RANGE_SIZE);
-  });
-  const range = ranges[Math.min(rangeIndex, ranges.length - 1)];
-  const visible = useMemo(
-    () => (range ? items.slice(range.start, range.end) : items),
-    [items, range],
+  const [rangeIndex, setRangeIndex] = useState(() => initialRangeIndex(items));
+  const visible = useMemo(() => rangeItems(items, ranges, rangeIndex), [items, ranges, rangeIndex]);
+  const seasons = useMemo(
+    () => (tvId === null ? [] : displayedSeasons(section, visible)),
+    [tvId, section, visible],
   );
-
-  // Saisons TMDB utiles : celle de la section et celles des épisodes affichés
-  // (un dossier personnalisé peut mêler plusieurs saisons).
-  const seasons = useMemo(() => {
-    if (tvId === null) return [];
-    const set = new Set<number>();
-    if (section.season !== null) set.add(section.season);
-    for (const it of visible) if (it.season !== null) set.add(it.season);
-    return [...set].sort((a, b) => a - b);
-  }, [tvId, section.season, visible]);
   const tmdbSeasons = useTmdbSeasons(tvId, seasons, tmdbKey);
 
   const sectionEpisodes =

@@ -41,6 +41,7 @@ import {
   type LibraryBlock,
 } from "@/lib/librarySections";
 import { resolveTitleSubject } from "@/lib/libraryTitle";
+import { preloadTitle } from "@/lib/preloadTitle";
 import {
   assignHashes,
   categoryOf,
@@ -220,7 +221,27 @@ export function LibraryPage({
     () => resolveTitleSubject(entries, expandedHash, expandedGroupId),
     [entries, expandedHash, expandedGroupId],
   );
+  // Ouverture après préchargement (données TMDB, bandeau, vignettes) : la
+  // fiche apparaît complète. Seule la dernière demande l'emporte.
+  const openSeq = useRef(0);
+  const openTitle = useCallback(
+    (hash: string | null, groupId: number | null) => {
+      const seq = ++openSeq.current;
+      const subject = resolveTitleSubject(entries, hash, groupId);
+      void (subject ? preloadTitle(subject, initialTmdbKey ?? undefined) : Promise.resolve()).then(
+        () => {
+          if (seq !== openSeq.current) return;
+          setExpandedHash(hash);
+          setExpandedGroupId(groupId);
+        },
+      );
+    },
+    [entries, initialTmdbKey],
+  );
+  const openEntry = useCallback((hash: string) => openTitle(hash, null), [openTitle]);
+  const openGroup = useCallback((groupId: number) => openTitle(null, groupId), [openTitle]);
   const closeTitle = useCallback(() => {
+    openSeq.current++;
     setExpandedHash(null);
     setExpandedGroupId(null);
   }, []);
@@ -769,7 +790,7 @@ export function LibraryPage({
           entry={item.entry}
           onChange={handleChange}
           onRemove={handleRemove}
-          onOpen={setExpandedHash}
+          onOpen={openEntry}
           debrid={debrid}
           simple={viewMode === "simple"}
           autoWatchOnPlay={autoWatchOnPlay}
@@ -783,7 +804,7 @@ export function LibraryPage({
           group={item.group}
           onChange={handleChange}
           onRemove={handleRemove}
-          onOpen={setExpandedGroupId}
+          onOpen={openGroup}
           debrid={debrid}
           autoWatchOnPlay={autoWatchOnPlay}
         />
@@ -803,9 +824,7 @@ export function LibraryPage({
           selectMode={selectMode}
           selected={selected.has(item.entry.infoHash)}
           onToggle={() =>
-            selectMode
-              ? toggleSelected([item.entry.infoHash])
-              : setExpandedHash(item.entry.infoHash)
+            selectMode ? toggleSelected([item.entry.infoHash]) : openEntry(item.entry.infoHash)
           }
           onEnrichTmdb={enrichHandler(item.entry)}
           onRemove={() => handleRemove(item.entry.infoHash)}
@@ -825,7 +844,7 @@ export function LibraryPage({
           onToggle={() =>
             selectMode
               ? toggleSelected(item.group.entries.map((e) => e.infoHash))
-              : setExpandedGroupId(item.group.tmdbId)
+              : openGroup(item.group.tmdbId)
           }
           onRemove={() => removeHashes(item.group.entries.map((e) => e.infoHash))}
         />
@@ -1066,7 +1085,7 @@ export function LibraryPage({
                     entry={e}
                     onChange={handleChange}
                     onRemove={handleRemove}
-                    onOpen={setExpandedHash}
+                    onOpen={openEntry}
                     debrid={debrid}
                     simple={viewMode === "simple"}
                     autoWatchOnPlay={autoWatchOnPlay}

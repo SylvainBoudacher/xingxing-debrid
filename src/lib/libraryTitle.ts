@@ -113,6 +113,33 @@ export function nextTitleItem(sections: TitleSection[]): TitleItem | null {
   return null;
 }
 
+// Section affichée à l'ouverture : celle du prochain épisode à voir.
+export function initialSection(sections: TitleSection[]): TitleSection | undefined {
+  const next = nextTitleItem(sections);
+  return sections.find((s) => next !== null && s.items.includes(next)) ?? sections[0];
+}
+
+// Plage affichée à l'ouverture d'une section : celle du premier épisode non vu.
+export function initialRangeIndex(items: TitleItem[]): number {
+  const i = items.findIndex((it) => !isItemWatched(it));
+  return i < 0 ? 0 : Math.floor(i / RANGE_SIZE);
+}
+
+// Items d'une plage (toute la section si elle n'est pas découpée).
+export function rangeItems(items: TitleItem[], ranges: EpisodeRange[], index: number): TitleItem[] {
+  const range = ranges[Math.min(index, ranges.length - 1)];
+  return range ? items.slice(range.start, range.end) : items;
+}
+
+// Saisons TMDB utiles : celle de la section et celles des épisodes affichés
+// (un dossier personnalisé peut mêler plusieurs saisons).
+export function displayedSeasons(section: TitleSection, visible: TitleItem[]): number[] {
+  const set = new Set<number>();
+  if (section.season !== null) set.add(section.season);
+  for (const it of visible) if (it.season !== null) set.add(it.season);
+  return [...set].sort((a, b) => a - b);
+}
+
 export function episodeRanges(count: number): EpisodeRange[] {
   if (count <= RANGE_THRESHOLD) return [];
   const ranges: EpisodeRange[] = [];
