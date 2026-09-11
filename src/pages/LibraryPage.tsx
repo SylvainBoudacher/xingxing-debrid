@@ -77,6 +77,7 @@ import {
   type MagnetEntry,
 } from "@/lib/services/allDebrid";
 import { useDebridActions } from "@/lib/useDebridActions";
+import { ownedTmdbKeys } from "@/lib/recommendations";
 import { useLikes } from "@/lib/useLikes";
 import { useSendToDebrid } from "@/lib/useSendToDebrid";
 import type { TmdbItem } from "@/lib/tmdbItem";
@@ -235,6 +236,8 @@ export function LibraryPage({
   const debrid = useDebridActions(() => initialAllDebridKey ?? "");
 
   const { likedKeys, toggleLike } = useLikes();
+  // Badge « Dans la bibliothèque » des suggestions de la fiche.
+  const ownedKeys = useMemo(() => ownedTmdbKeys(entries), [entries]);
   const { sendingHash, libraryHash, debridModal, setDebridModal, sendToDebrid } = useSendToDebrid({
     getC411Key: () => initialC411Key ?? "",
     getAllDebridKey: () => initialAllDebridKey ?? "",
@@ -1149,6 +1152,10 @@ export function LibraryPage({
               findMore !== null ||
               debridModal !== null
             }
+            ownedKeys={ownedKeys}
+            likedKeys={likedKeys}
+            onToggleLike={toggleLike}
+            onOpenSuggestion={initialTmdbKey ? setFindMore : undefined}
             magnet={titleSubject.kind === "entry" ? magnetFor(titleSubject.entry) : undefined}
             onCancelDebrid={cancelDebrid}
             cancellingDebrid={

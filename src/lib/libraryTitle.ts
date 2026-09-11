@@ -11,7 +11,7 @@ import {
   type TmdbMeta,
 } from "@/lib/library";
 import { parseRelease } from "@/lib/parseRelease";
-import type { TmdbEpisode } from "@/lib/services/tmdb";
+import type { TmdbDetail, TmdbEpisode } from "@/lib/services/tmdb";
 import { groupFolderSections, type SeriesFolderConfig } from "@/lib/seriesFolders";
 
 // Titre ouvert en fiche plein écran : une série TMDB regroupée, ou une entrée
@@ -187,6 +187,30 @@ export function missingEpisodes(
   return episodes
     .filter((e) => !!e.air_date && e.air_date <= today && !owned.has(e.episode_number))
     .map((e) => e.episode_number);
+}
+
+// Tête d'affiche montrée sous le résumé : au-delà de quatre noms la ligne
+// déborde et ne dit plus rien de plus.
+const CAST_SHOWN = 4;
+
+export interface TitleCredits {
+  // Réalisateur d'un film, créateur d'une série. Null si TMDB ne le donne pas.
+  // L'id ouvre sa filmographie (rangée « Du même réalisateur »).
+  director: { id: number; name: string } | null;
+  cast: string[];
+}
+
+// Réalisateur et tête d'affiche d'une fiche TMDB. Null quand les deux manquent :
+// la ligne ne s'affiche pas.
+export function titleCredits(detail: TmdbDetail | undefined): TitleCredits | null {
+  if (!detail) return null;
+  const crewDirector = detail.credits?.crew?.find((c) => c.job === "Director");
+  const creator = detail.created_by?.[0];
+  const source = crewDirector ?? creator;
+  const director = source ? { id: source.id, name: source.name } : null;
+  const cast = (detail.credits?.cast ?? []).slice(0, CAST_SHOWN).map((c) => c.name);
+  if (!director && cast.length === 0) return null;
+  return { director, cast };
 }
 
 // Durée TMDB en minutes : « 47 min », « 1 h 52 ».

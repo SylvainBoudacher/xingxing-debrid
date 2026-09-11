@@ -61,11 +61,43 @@ export interface TmdbTvDetail {
   seasons?: Array<{ season_number: number; episode_count: number }>;
 }
 
+export interface TmdbCastMember {
+  name: string;
+  character?: string;
+}
+
+export interface TmdbCrewMember {
+  id: number;
+  name: string;
+  job: string;
+}
+
+export interface TmdbCredits {
+  cast?: TmdbCastMember[];
+  crew?: TmdbCrewMember[];
+}
+
 export interface TmdbDetail {
   genres?: Array<{ id: number; name: string }>;
   backdrop_path?: string | null;
   // Films uniquement.
   runtime?: number | null;
+  // append_to_response=credits : realisateur et tete d'affiche sans appel en plus.
+  credits?: TmdbCredits;
+  // Series : TMDB ne met pas le createur dans crew.
+  created_by?: Array<{ id: number; name: string }>;
+}
+
+// Une entree de la filmographie d'une personne : un titre plus le poste occupe
+// dessus. media_type distingue film et serie, combined_credits melangeant les deux.
+export interface TmdbPersonCrewCredit extends TmdbRawResult {
+  media_type: "movie" | "tv";
+  job: string;
+  popularity?: number;
+}
+
+export interface TmdbPersonCredits {
+  crew?: TmdbPersonCrewCredit[];
 }
 
 export interface TmdbEpisode {
@@ -98,6 +130,7 @@ export const tmdbKeys = {
   tvSeason: (id: number, season: number) => ["tmdb", "tv", id, "season", season] as const,
   detail: (mt: TmdbMediaType, id: number) => ["tmdb", "detail", mt, id] as const,
   recommendations: (mt: TmdbMediaType, id: number) => ["tmdb", "recommendations", mt, id] as const,
+  personCredits: (personId: number) => ["tmdb", "person", personId, "credits"] as const,
 };
 
 async function get<T>(url: string): Promise<T> {
@@ -201,7 +234,9 @@ export function findByImdb(imdbId: string, apiKey: string) {
 // Fiche complete d'un film / d'une serie : sert a recuperer les genres des
 // entrees de bibliotheque enregistrees avant que genreIds ne soit stocke.
 export function detail(mt: TmdbMediaType, id: number, apiKey: string) {
-  return get<TmdbDetail>(`${BASE}/${mt}/${id}?api_key=${apiKey}&language=fr-FR`);
+  return get<TmdbDetail>(
+    `${BASE}/${mt}/${id}?api_key=${apiKey}&language=fr-FR&append_to_response=credits`,
+  );
 }
 
 export function tvDetail(id: number, apiKey: string) {
@@ -220,5 +255,13 @@ export function tvSeason(id: number, season: number, apiKey: string) {
 export function recommendations(mt: TmdbMediaType, id: number, apiKey: string) {
   return get<TmdbListResponse>(
     `${BASE}/${mt}/${id}/recommendations?api_key=${apiKey}&language=fr-FR&page=1`,
+  );
+}
+
+// Filmographie complete d'une personne (films et series melanges). Sert a la
+// rangee « Du meme realisateur » : on n'en garde que les postes de realisation.
+export function personCredits(personId: number, apiKey: string) {
+  return get<TmdbPersonCredits>(
+    `${BASE}/person/${personId}/combined_credits?api_key=${apiKey}&language=fr-FR`,
   );
 }

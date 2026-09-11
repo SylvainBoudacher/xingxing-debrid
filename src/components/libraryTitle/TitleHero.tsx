@@ -2,10 +2,11 @@ import { ExpandableText } from "@/components/ExpandableText";
 import { FadeImage } from "@/components/FadeImage";
 import { MagnetProgress } from "@/components/MagnetProgress";
 import { ReleaseTagBadges } from "@/components/ReleaseTagBadges";
+import { TitleCredits } from "@/components/libraryTitle/TitleCredits";
 import { TmdbGenres } from "@/components/TmdbGenres";
 import { formatSize } from "@/lib/debrid";
 import type { TmdbMeta } from "@/lib/library";
-import { formatRuntime } from "@/lib/libraryTitle";
+import { formatRuntime, type TitleCredits as Credits } from "@/lib/libraryTitle";
 import { hasReleaseTags, parseReleaseTags } from "@/lib/releaseTags";
 import type { MagnetEntry } from "@/lib/services/allDebrid";
 import { Clapperboard, Star } from "lucide-react";
@@ -19,6 +20,8 @@ interface TitleHeroProps {
   backdropPath: string | null;
   // Durée d'un film, en minutes.
   runtime: number | null;
+  // Réalisateur et tête d'affiche TMDB. Null tant que la fiche n'est pas chargée.
+  credits: Credits | null;
   size: number;
   sectionCount: number;
   sectionNoun: "saison" | "dossier";
@@ -44,6 +47,7 @@ export function TitleHero({
   tmdbKey,
   backdropPath,
   runtime,
+  credits,
   size,
   sectionCount,
   sectionNoun,
@@ -89,7 +93,7 @@ export function TitleHero({
         {/* Point d'arrivée du vol de la jaquette depuis la grille. */}
         <div
           data-hero-poster
-          className="aspect-[2/3] w-36 flex-none overflow-hidden rounded-xl bg-zinc-200 shadow-2xl ring-1 ring-black/10 dark:bg-zinc-800 dark:ring-white/10"
+          className={`aspect-[2/3] ${tmdb?.mediaType === "movie" ? "w-52" : "w-36"} flex-none overflow-hidden rounded-xl bg-zinc-200 shadow-2xl ring-1 ring-black/10 dark:bg-zinc-800 dark:ring-white/10`}
         >
           {tmdb?.posterPath ? (
             <FadeImage
@@ -148,6 +152,9 @@ export function TitleHero({
             />
           )}
           {tmdb?.overview && <ExpandableText text={tmdb.overview} lines={3} className="mt-3" />}
+          {credits && (
+            <TitleCredits credits={credits} series={tmdb?.mediaType === "tv"} className="mt-2.5" />
+          )}
           {onCompleteTmdb && (
             <button
               onClick={onCompleteTmdb}

@@ -6,6 +6,7 @@ import { TitleHeroActions } from "@/components/libraryTitle/TitleHeroActions";
 import { TitleMoreMenu } from "@/components/libraryTitle/TitleMoreMenu";
 import { TitleSectionPicker } from "@/components/libraryTitle/TitleSectionPicker";
 import { TitleSelectionBar } from "@/components/libraryTitle/TitleSelectionBar";
+import { TitleSuggestions } from "@/components/libraryTitle/TitleSuggestions";
 import { TitleTopBar } from "@/components/libraryTitle/TitleTopBar";
 import {
   isWholeWatched,
@@ -22,6 +23,7 @@ import {
   subjectKey,
   subjectTitle,
   subjectTmdb,
+  titleCredits,
   titleSections,
   type TitleItem,
   type TitleSubject,
@@ -30,7 +32,8 @@ import type { MagnetEntry } from "@/lib/services/allDebrid";
 import { materializeFolders } from "@/lib/seriesFolders";
 import { useEpisodeSelection } from "@/lib/useEpisodeSelection";
 import { useSeriesFolderConfig } from "@/lib/useSeriesFolderConfig";
-import { useTmdbDetail } from "@/lib/useTitleTmdb";
+import type { TmdbItem } from "@/lib/tmdbItem";
+import { useDirectorWorks, useTitleRecommendations, useTmdbDetail } from "@/lib/useTitleTmdb";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -67,6 +70,12 @@ interface LibraryTitlePageProps {
   cancellingDebrid?: boolean;
   // Données et images préchargées (ou délai dépassé) : le contenu apparaît.
   ready: boolean;
+  // Suggestions du bas de fiche : état partagé avec la page Découvrir.
+  ownedKeys: Set<string>;
+  likedKeys: Set<string>;
+  onToggleLike: (item: TmdbItem) => void;
+  // Ouvre la fiche de releases C411 d'un titre suggéré.
+  onOpenSuggestion?: (item: TmdbItem) => void;
 }
 
 // Fiche plein écran d'un titre de la bibliothèque (série ou film). Calque fixe
@@ -88,6 +97,10 @@ export function LibraryTitlePage({
   onCancelDebrid,
   cancellingDebrid,
   ready,
+  ownedKeys,
+  likedKeys,
+  onToggleLike,
+  onOpenSuggestion,
 }: LibraryTitlePageProps) {
   const group = subject.kind === "group" ? subject.group : null;
   const entries = subjectEntries(subject);
@@ -95,6 +108,14 @@ export function LibraryTitlePage({
   const key = subjectKey(subject);
   const title = subjectTitle(subject, simple);
   const detail = useTmdbDetail(tmdb, tmdbKey);
+  const credits = useMemo(() => titleCredits(detail), [detail]);
+  const suggestions = useTitleRecommendations(tmdb, tmdbKey, ready);
+  const directorWorks = useDirectorWorks(
+    credits?.director?.id,
+    tmdb?.id,
+    tmdbKey,
+    ready && tmdb?.mediaType === "movie",
+  );
   const [folderConfig, setFolderConfig] = useSeriesFolderConfig(group?.tmdbId ?? null);
   const sections = useMemo(() => titleSections(subject, folderConfig), [subject, folderConfig]);
   const allItems = useMemo(() => sections.flatMap((s) => s.items), [sections]);
@@ -239,6 +260,7 @@ export function LibraryTitlePage({
           tmdbKey={tmdbKey}
           backdropPath={detail?.backdrop_path ?? null}
           runtime={detail?.runtime ?? null}
+          credits={credits}
           size={size}
           sectionCount={sections.length}
           sectionNoun={folderConfig ? "dossier" : "saison"}
@@ -293,42 +315,70 @@ export function LibraryTitlePage({
                   onExit={() => setOrganize(false)}
                 />
               </div>
-            ) : sections.length === 0 ? (
-              <p className="py-10 text-center text-sm text-zinc-400 dark:text-zinc-500">
-                Les fichiers apparaîtront à la fin du débridage.
-              </p>
-            ) : single ? null : (
+            ) : (
               <>
-                {sections.length > 1 && (
+                {sections.length === 0 ? (
+                  <p className="py-10 text-center text-sm text-zinc-400 dark:text-zinc-500">
+                    Les fichiers apparaîtront à la fin du débridage.
+                  </p>
+                ) : single ? null : (
                   <>
-                    <div ref={anchorRef} />
-                    <div
-                      style={{ top: TOP_BAR }}
-                      className="sticky z-10 -mx-6 mb-3 bg-[#f4f6fc]/85 px-6 py-2.5 backdrop-blur-xl dark:bg-black/80"
-                    >
-                      <TitleSectionPicker
-                        sections={sections}
-                        activeKey={active.key}
-                        onChange={changeSection}
-                      />
-                    </div>
+                    {sections.length > 1 && (
+                      <>
+                        <div ref={anchorRef} />
+                        <div
+                          style={{ top: TOP_BAR }}
+                          className="sticky z-10 -mx-6 mb-3 bg-[#f4f6fc]/85 px-6 py-2.5 backdrop-blur-xl dark:bg-black/80"
+                        >
+                          <TitleSectionPicker
+                            sections={sections}
+                            activeKey={active.key}
+                            onChange={changeSection}
+                          />
+                        </div>
+                      </>
+                    )}
+                    <TitleEpisodeList
+                      key={active.key}
+                      section={active}
+                      tvId={group?.tmdbId ?? null}
+                      tmdbKey={tmdbKey}
+                      nextLink={next?.file.link ?? null}
+                      sectionKey={`${key}-${active.key}`}
+                      debrid={debrid}
+                      onChange={onChange}
+                      onPlay={play}
+                      simple={simple}
+                      selection={selecting ? selection : undefined}
+                      onSelectEpisodes={allItems.length > 1 ? startSelecting : undefined}
+                      onFindMore={onFindMore}
+                    />
                   </>
                 )}
-                <TitleEpisodeList
-                  key={active.key}
-                  section={active}
-                  tvId={group?.tmdbId ?? null}
-                  tmdbKey={tmdbKey}
-                  nextLink={next?.file.link ?? null}
-                  sectionKey={`${key}-${active.key}`}
-                  debrid={debrid}
-                  onChange={onChange}
-                  onPlay={play}
-                  simple={simple}
-                  selection={selecting ? selection : undefined}
-                  onSelectEpisodes={allItems.length > 1 ? startSelecting : undefined}
-                  onFindMore={onFindMore}
-                />
+                {onOpenSuggestion && (
+                  <>
+                    <TitleSuggestions
+                      heading="Recommandé par TMDB"
+                      items={suggestions}
+                      ownedKeys={ownedKeys}
+                      likedKeys={likedKeys}
+                      onOpen={onOpenSuggestion}
+                      onToggleLike={onToggleLike}
+                      className="mt-10"
+                    />
+                    {tmdb?.mediaType === "movie" && (
+                      <TitleSuggestions
+                        heading="Du même réalisateur"
+                        items={directorWorks}
+                        ownedKeys={ownedKeys}
+                        likedKeys={likedKeys}
+                        onOpen={onOpenSuggestion}
+                        onToggleLike={onToggleLike}
+                        className={suggestions.length > 0 ? "mt-8" : "mt-10"}
+                      />
+                    )}
+                  </>
+                )}
               </>
             )}
           </motion.div>

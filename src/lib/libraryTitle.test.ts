@@ -21,6 +21,7 @@ import {
   nextTitleItem,
   parseCardKey,
   rangeLabel,
+  titleCredits,
   resolveTitleSubject,
   titleSections,
   type TitleSection,
@@ -234,5 +235,36 @@ describe("cardKey", () => {
     expect(cardKey(null, 42)).toBe("g42");
     expect(parseCardKey("a1b2")).toEqual({ hash: "a1b2", groupId: null });
     expect(parseCardKey("g42")).toEqual({ hash: null, groupId: 42 });
+  });
+});
+
+describe("titleCredits", () => {
+  it("prend le réalisateur dans crew et les premiers acteurs", () => {
+    expect(
+      titleCredits({
+        credits: {
+          cast: [{ name: "A" }, { name: "B" }, { name: "C" }, { name: "D" }, { name: "E" }],
+          crew: [
+            { id: 1, name: "Monteur", job: "Editor" },
+            { id: 2, name: "Denis Villeneuve", job: "Director" },
+          ],
+        },
+      }),
+    ).toEqual({
+      director: { id: 2, name: "Denis Villeneuve" },
+      cast: ["A", "B", "C", "D"],
+    });
+  });
+
+  it("retombe sur created_by pour une série", () => {
+    expect(
+      titleCredits({ created_by: [{ id: 7, name: "Vince Gilligan" }], credits: { cast: [] } }),
+    ).toEqual({ director: { id: 7, name: "Vince Gilligan" }, cast: [] });
+  });
+
+  it("renvoie null sans crédits exploitables", () => {
+    expect(titleCredits(undefined)).toBeNull();
+    expect(titleCredits({})).toBeNull();
+    expect(titleCredits({ credits: { cast: [], crew: [] } })).toBeNull();
   });
 });
