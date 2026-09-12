@@ -73,7 +73,8 @@ export function LibraryBlocks({
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="overflow-hidden"
+                    // -m-3 p-3 : laisse de la marge au ring et au zoom au survol, sinon l'overflow les rogne.
+                    className="-m-3 overflow-hidden p-3"
                   >
                     <div className="space-y-5">
                       {block.sections.map((section) => (

@@ -5,7 +5,10 @@ import { fileDisplayName, isItemWatched, subjectTitle, subjectTmdb } from "@/lib
 import { setResume, type ResumeTarget } from "@/lib/resumeWatch";
 import { useTmdbDetail, useTmdbSeasons } from "@/lib/useTitleTmdb";
 import { ChevronRight, Loader2, Play } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useMemo } from "react";
+
+const VLC_LAUNCH_DELAY_MS = 1500;
 
 interface LibraryResumeCardProps {
   target: ResumeTarget;
@@ -54,7 +57,9 @@ export function LibraryResumeCard({
   function play() {
     debrid.openVlcMany([next.file.link], vlcKey);
     setResume(subject);
-    if (autoWatchOnPlay && !isItemWatched(next)) onChange(toggleFile(next.entry, next.file.name));
+    // Laisse VLC s'ouvrir avant que la carte ne passe à l'épisode suivant.
+    if (autoWatchOnPlay && !isItemWatched(next))
+      setTimeout(() => onChange(toggleFile(next.entry, next.file.name)), VLC_LAUNCH_DELAY_MS);
   }
 
   return (
@@ -81,22 +86,34 @@ export function LibraryResumeCard({
           poster ? "aspect-[2/3]" : "aspect-video"
         }`}
       >
-        {still && (
-          <FadeImage
-            src={`https://image.tmdb.org/t/p/w300${still}`}
-            alt=""
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        )}
-        {poster && (
-          <FadeImage
-            src={`https://image.tmdb.org/t/p/w154${poster}`}
-            alt=""
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        )}
+        {/* Fondu enchaîné entre l'ancienne et la nouvelle vignette au changement d'épisode. */}
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={still ?? poster ?? next.file.name}
+            initial={{ opacity: 0, scale: 1.12, filter: "blur(6px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-0"
+          >
+            {still && (
+              <FadeImage
+                src={`https://image.tmdb.org/t/p/w300${still}`}
+                alt=""
+                decoding="async"
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            )}
+            {poster && (
+              <FadeImage
+                src={`https://image.tmdb.org/t/p/w154${poster}`}
+                alt=""
+                decoding="async"
+                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
         {/* Deux affordances distinctes : la pastille permanente dit que la
         vignette lance l'épisode, le voile ne s'allume qu'au survol de la
         vignette elle-même (survoler la carte ouvre la fiche, pas VLC). */}
@@ -125,14 +142,23 @@ export function LibraryResumeCard({
         <p className="truncate text-[13px] leading-tight font-semibold text-zinc-900 dark:text-white">
           {subjectTitle(subject, simple)}
         </p>
-        <div className="mt-1.5 flex min-w-0 items-center gap-1.5">
-          {label ? (
-            <span className="flex-none rounded-md bg-indigo-500/10 px-1.5 py-0.5 font-mono text-[10px] leading-none font-semibold tracking-tight text-indigo-600 dark:bg-indigo-400/15 dark:text-indigo-300">
-              {label}
-            </span>
-          ) : null}
-          <span className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{name}</span>
-        </div>
+        <AnimatePresence initial={false} mode="wait">
+          <motion.div
+            key={next.file.name}
+            initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -8, filter: "blur(4px)" }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="mt-1.5 flex min-w-0 items-center gap-1.5"
+          >
+            {label ? (
+              <span className="flex-none rounded-md bg-indigo-500/10 px-1.5 py-0.5 font-mono text-[10px] leading-none font-semibold tracking-tight text-indigo-600 dark:bg-indigo-400/15 dark:text-indigo-300">
+                {label}
+              </span>
+            ) : null}
+            <span className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{name}</span>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Signal « ceci ouvre la fiche », réservé au survol de la carte. */}

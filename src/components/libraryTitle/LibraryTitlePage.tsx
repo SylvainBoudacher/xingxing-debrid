@@ -58,6 +58,8 @@ const CARD =
 // perceptible, sans glissement ni objet qui se déplace.
 const PAGE_HIDDEN = { opacity: 0, scale: 0.985 };
 
+let scrollLocks = 0;
+
 interface LibraryTitlePageProps {
   subject: TitleSubject;
   onChange: (entry: LibraryEntry) => void;
@@ -163,12 +165,12 @@ export function LibraryTitlePage({
   // La bibliothèque défile avec la fenêtre : bloquée tant que la fiche la
   // couvre, sinon la molette la fait bouger dessous et sa barre de défilement
   // s'ajoute à celle de la fiche. La position est conservée pour le retour.
+  // Compteur : deux fiches se chevauchent pendant une transition (redirection
+  // vers une autre oeuvre), le verrou ne tombe qu'à la dernière fermeture.
   useEffect(() => {
-    const root = document.documentElement;
-    const previous = root.style.overflow;
-    root.style.overflow = "hidden";
+    if (scrollLocks++ === 0) document.documentElement.style.overflow = "hidden";
     return () => {
-      root.style.overflow = previous;
+      if (--scrollLocks === 0) document.documentElement.style.overflow = "";
     };
   }, []);
 
