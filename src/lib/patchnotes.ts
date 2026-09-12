@@ -1,3 +1,6 @@
+import newPageSerieV170Img from "@/assets/patchnote/v1.7.0/newPageSerie.webp";
+import recoV170Img from "@/assets/patchnote/v1.7.0/reco.webp";
+import reprendreV170Img from "@/assets/patchnote/v1.7.0/reprendre.webp";
 import rouletteV164Img from "@/assets/patchnote/v1.6.4/roulette.webp";
 import discoverMangaV160Img from "@/assets/patchnote/v1.6.0/discover-manga.webp";
 import slotMachineV160Img from "@/assets/patchnote/v1.6.0/slot-machine.png";
@@ -45,6 +48,60 @@ export interface PatchNote {
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.7.0",
+    date: "12 septembre 2026",
+    intro:
+      "La 1.7.0 fait peau neuve du côté des œuvres de la bibliothèque : refonte totale. Fini la modale remplie de boutons, les films et les séries ont maintenant leur propre page, beaucoup plus lisible.",
+    introImage: {
+      src: newPageSerieV170Img,
+      caption: "La nouvelle page dédiée aux séries",
+    },
+    sections: [
+      {
+        title: "Bibliothèque : une vraie page par œuvre",
+        items: [
+          "Les films et les séries quittent la modale surchargée de boutons pour une page dédiée, bien plus lisible.",
+          "Toutes les actions et les informations de l'œuvre sont regroupées au même endroit.",
+        ],
+      },
+      {
+        title: "Recommandations en bas de page",
+        items: [
+          "Un nouveau bandeau en bas de la page vous propose des recommandations en rapport avec l'œuvre que vous consultez.",
+        ],
+        images: [{ src: recoV170Img, caption: "Les recommandations liées à l'œuvre" }],
+      },
+      {
+        title: "Reprendre la lecture",
+        items: [
+          "Un nouveau bandeau dans la page Bibliothèque vous permet de reprendre le dernier épisode en cours des 3 dernières séries que vous avez regardées.",
+        ],
+        images: [{ src: reprendreV170Img, caption: "Reprendre là où vous vous êtes arrêté" }],
+      },
+      {
+        title: "Labels complétés",
+        items: [
+          "Les labels manquants sont de retour sur les œuvres de la bibliothèque : résolution, VFF, et les autres.",
+        ],
+      },
+      {
+        title: "Détection des doublons dans les séries",
+        items: [
+          "Les doublons sont maintenant détectés dans les séries.",
+          "Une action vous permet de choisir et de supprimer rapidement les doublons quand vous ajoutez plusieurs fois des saisons qui se chevauchent dans la même œuvre.",
+        ],
+      },
+      {
+        title: "Page de bienvenue",
+        items: [
+          "Plusieurs lignes du tutoriel ont été reformulées pour être mieux comprises.",
+          "Le lien du tutoriel TMDB renvoie désormais vers la bonne page.",
+          "Une nouvelle section demande l'installation de VLC dès le départ, pour éviter les problèmes de lecture.",
+        ],
+      },
+    ],
+  },
   {
     version: "1.6.6",
     date: "4 septembre 2026",

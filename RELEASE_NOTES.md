@@ -1,4 +1,4 @@
-- Découverte : les saisons des séries sont triées par ordre d'épisode par défaut, et non plus par seed
-- Découverte : les intégrales de séries ont leur propre section, proposée en premier choix quand le torrent est disponible
-- Découverte : boutons modernisés sur les fiches d'œuvres et interactions de la roulette améliorées
-- Page de bienvenue : refonte graphique et logique pour un parcours plus simple à suivre
+- Bibliothèque : refonte totale des œuvres, les films et séries ont maintenant leur propre page
+- Nouveau bandeau de recommandations lié à l'œuvre consultée
+- Nouveau bandeau pour reprendre le dernier épisode des 3 dernières séries regardées
+- Détection des doublons dans les séries, labels complétés et page de bienvenue clarifiée
