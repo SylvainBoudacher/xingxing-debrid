@@ -187,6 +187,9 @@ export function LibraryPage({
   const [layout, setLayout] = useState<Layout>(prefs.layout);
   const [grouping, setGrouping] = useState<GroupMode>(prefs.grouping);
   const [genreFilter, setGenreFilter] = useState<Set<string>>(() => new Set(prefs.genres));
+  const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(
+    () => new Set(prefs.collapsed),
+  );
   const [categories, setCategories] = useState<CategoryConfig>(
     () => getCachedCategories() ?? EMPTY_CATEGORIES,
   );
@@ -362,6 +365,15 @@ export function LibraryPage({
     if (selectMode) return exitSelect();
     if (layout === "list") changeLayout("grid");
     setSelectMode(true);
+  }
+
+  function toggleCollapsedBlock(key: string) {
+    setCollapsedBlocks((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(key)) next.add(key);
+      saveLibraryPref("collapsed", [...next]);
+      return next;
+    });
   }
 
   function changeGrouping(next: GroupMode) {
@@ -1069,6 +1081,8 @@ export function LibraryPage({
                   blocks={blocks}
                   blockMenu={categoryBlockMenu}
                   activeDropId={hoveredDrop}
+                  collapsedKeys={collapsedBlocks}
+                  onToggleCollapsed={toggleCollapsedBlock}
                 >
                   {(items) => (
                     <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
@@ -1099,6 +1113,8 @@ export function LibraryPage({
                   blocks={blocks}
                   blockMenu={categoryBlockMenu}
                   activeDropId={hoveredDrop}
+                  collapsedKeys={collapsedBlocks}
+                  onToggleCollapsed={toggleCollapsedBlock}
                 >
                   {(items) => <div className="space-y-2">{items.map(renderCard)}</div>}
                 </LibraryBlocks>

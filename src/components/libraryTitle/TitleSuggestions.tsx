@@ -1,4 +1,5 @@
 import { DiscoverPosterCard } from "@/components/DiscoverPosterCard";
+import { useEdgeFade } from "@/lib/useEdgeFade";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { motion } from "motion/react";
 
@@ -24,6 +25,8 @@ export function TitleSuggestions({
   onToggleLike,
   className,
 }: TitleSuggestionsProps) {
+  const { ref, fadeStyle } = useEdgeFade<HTMLDivElement>();
+
   if (items.length === 0) return null;
 
   return (
@@ -34,8 +37,14 @@ export function TitleSuggestions({
       className={className}
     >
       <h2 className="mb-3 text-sm font-semibold text-zinc-900 dark:text-white">{heading}</h2>
-      {/* Déborde des marges de la fiche : la rangée file jusqu'aux bords. */}
-      <div className="-mx-6 flex gap-4 overflow-x-auto px-6 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {/* Déborde des marges de la fiche : la rangée file jusqu'aux bords. Le
+          rembourrage vertical laisse respirer le survol (lever + ombre) sans
+          être rogné ; les marges négatives l'annulent dans la mise en page. */}
+      <div
+        ref={ref}
+        style={fadeStyle}
+        className="-mx-6 -mb-6 -mt-3 flex gap-4 overflow-x-auto px-6 pb-8 pt-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {items.map((item, i) => {
           const key = `${item.mediaType}-${item.id}`;
           return (
