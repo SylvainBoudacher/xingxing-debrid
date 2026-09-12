@@ -93,7 +93,7 @@ export function TitleHero({
         {/* Point d'arrivée du vol de la jaquette depuis la grille. */}
         <div
           data-hero-poster
-          className={`aspect-[2/3] ${tmdb?.mediaType === "movie" ? "w-52" : "w-36"} flex-none overflow-hidden rounded-xl bg-zinc-200 shadow-2xl ring-1 ring-black/10 dark:bg-zinc-800 dark:ring-white/10`}
+          className={`aspect-[2/3] ${tmdb?.mediaType === "movie" ? "w-52" : "w-[11.7rem]"} flex-none overflow-hidden rounded-xl bg-zinc-200 shadow-2xl ring-1 ring-black/10 dark:bg-zinc-800 dark:ring-white/10`}
         >
           {tmdb?.posterPath ? (
             <FadeImage

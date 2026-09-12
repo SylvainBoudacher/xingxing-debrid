@@ -4,7 +4,7 @@ import { episodeLabel, toggleFile, type LibraryEntry } from "@/lib/library";
 import { fileDisplayName, isItemWatched, subjectTitle, subjectTmdb } from "@/lib/libraryTitle";
 import { setResume, type ResumeTarget } from "@/lib/resumeWatch";
 import { useTmdbDetail, useTmdbSeasons } from "@/lib/useTitleTmdb";
-import { Loader2, Play } from "lucide-react";
+import { ChevronRight, Loader2, Play } from "lucide-react";
 import { useMemo } from "react";
 
 interface LibraryResumeCardProps {
@@ -69,8 +69,15 @@ export function LibraryResumeCard({
       }
       className="group relative flex cursor-pointer items-center gap-3 rounded-2xl border border-black/5 bg-gradient-to-br from-white/80 to-white/50 p-2 transition-colors hover:border-black/10 hover:from-white hover:to-white dark:border-white/10 dark:from-zinc-900/80 dark:to-zinc-900/40 dark:hover:border-white/20 dark:hover:from-zinc-800/80 dark:hover:to-zinc-800/50"
     >
-      <div
-        className={`relative h-16 flex-none overflow-hidden rounded-xl bg-zinc-200 dark:bg-zinc-800 ${
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          play();
+        }}
+        disabled={busy}
+        title="Lancer l'épisode dans VLC"
+        // rounded-lg = rayon concentrique avec le rounded-2xl de la carte moins son p-2.
+        className={`group/play relative h-16 flex-none overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800 ${
           poster ? "aspect-[2/3]" : "aspect-video"
         }`}
       >
@@ -90,9 +97,31 @@ export function LibraryResumeCard({
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         )}
-      </div>
+        {/* Deux affordances distinctes : la pastille permanente dit que la
+        vignette lance l'épisode, le voile ne s'allume qu'au survol de la
+        vignette elle-même (survoler la carte ouvre la fiche, pas VLC). */}
+        <span
+          className={`absolute inset-0 flex items-center justify-center transition-colors duration-200 ${
+            busy ? "bg-black/50" : "bg-black/0 group-hover/play:bg-black/50"
+          }`}
+        >
+          <span
+            className={`flex items-center justify-center rounded-full text-white backdrop-blur-sm transition-all duration-200 ${
+              busy
+                ? "h-8 w-8 bg-white/0"
+                : "h-6 w-6 bg-black/45 ring-1 ring-white/25 group-hover/play:h-8 group-hover/play:w-8 group-hover/play:bg-white/0 group-hover/play:ring-0"
+            }`}
+          >
+            {busy ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Play className="ml-0.5 h-3 w-3 fill-current transition-all duration-200 group-hover/play:h-5 group-hover/play:w-5" />
+            )}
+          </span>
+        </span>
+      </button>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 pr-1">
         <p className="truncate text-[13px] leading-tight font-semibold text-zinc-900 dark:text-white">
           {subjectTitle(subject, simple)}
         </p>
@@ -106,21 +135,8 @@ export function LibraryResumeCard({
         </div>
       </div>
 
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          play();
-        }}
-        disabled={busy}
-        title="Lancer l'épisode dans VLC"
-        className="mr-1 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 transition-colors hover:bg-emerald-400 disabled:opacity-40"
-      >
-        {busy ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Play className="ml-0.5 h-4 w-4 fill-current" />
-        )}
-      </button>
+      {/* Signal « ceci ouvre la fiche », réservé au survol de la carte. */}
+      <ChevronRight className="mr-1 h-4 w-4 flex-none text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-zinc-600" />
     </div>
   );
 }
