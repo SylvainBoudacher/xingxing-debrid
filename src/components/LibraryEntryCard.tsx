@@ -24,6 +24,7 @@ import {
   type DebridControls,
 } from "@/components/libraryParts";
 import { MagnetProgress } from "@/components/MagnetProgress";
+import { setResume } from "@/lib/resumeWatch";
 import type { MagnetEntry } from "@/lib/services/allDebrid";
 
 export type { DebridControls };
@@ -143,7 +144,10 @@ export const LibraryEntryCard = memo(function LibraryEntryCard({
             groupKey={resumeKey}
             debrid={debrid}
             started={watchedCount(entry) > 0}
-            onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
+            onResume={() => {
+              setResume({ kind: "entry", entry });
+              if (autoWatchOnPlay) onChange(toggleFile(entry, next.name));
+            }}
           />
         )}
 

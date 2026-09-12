@@ -26,6 +26,7 @@ interface TitleEpisodeListProps {
   debrid: DebridControls;
   onChange: (entry: LibraryEntry) => void;
   onPlay: (item: TitleItem, key: string) => void;
+  onWatch: (item: TitleItem) => void;
   simple: boolean;
   selection?: EpisodeSelection;
   onSelectEpisodes?: () => void;
@@ -43,6 +44,7 @@ export function TitleEpisodeList({
   debrid,
   onChange,
   onPlay,
+  onWatch,
   simple,
   selection,
   onSelectEpisodes,
@@ -89,8 +91,8 @@ export function TitleEpisodeList({
             isNext={it.file.link === nextLink}
             simple={simple}
             debrid={debrid}
-            onChange={onChange}
             onPlay={onPlay}
+            onWatch={onWatch}
             selection={selection}
           />
         ))}

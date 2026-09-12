@@ -11,6 +11,7 @@ import { LibraryCustomBar } from "@/components/LibraryCustomBar";
 import { LibraryListNameModal } from "@/components/LibraryListNameModal";
 import { LibraryMangaSection } from "@/components/LibraryMangaSection";
 import { LibraryPosterCard } from "@/components/LibraryPosterCard";
+import { LibraryResumeBanner } from "@/components/LibraryResumeBanner";
 import { LibraryTabs, type LibraryTab } from "@/components/LibraryTabs";
 import { DEFAULT_MANGA_PREFS, getCachedMangaPrefs, type MangaLayout } from "@/lib/mangaPrefs";
 import { LibrarySelectionBar } from "@/components/LibrarySelectionBar";
@@ -1026,6 +1027,22 @@ export function LibraryPage({
                   </div>
                 </div>
               </div>
+
+              {/* Reprise du prochain épisode : masquée dès qu'une recherche,
+              un filtre ou un genre est actif, on cherche alors autre chose. */}
+              <AnimatePresence>
+                {!query && filter === "all" && genreFilter.size === 0 && (
+                  <LibraryResumeBanner
+                    entries={entries}
+                    onOpen={openTitle}
+                    onChange={handleChange}
+                    debrid={debrid}
+                    autoWatchOnPlay={autoWatchOnPlay}
+                    simple={viewMode === "simple"}
+                    tmdbKey={initialTmdbKey ?? undefined}
+                  />
+                )}
+              </AnimatePresence>
 
               <AnimatePresence>
                 {grouping === "category" && (

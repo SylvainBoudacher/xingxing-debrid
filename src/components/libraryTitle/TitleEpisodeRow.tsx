@@ -1,7 +1,6 @@
 import { FadeImage } from "@/components/FadeImage";
 import { DebridActions, SelectionBox, type DebridControls } from "@/components/libraryParts";
 import { formatSize } from "@/lib/debrid";
-import { toggleFile, type LibraryEntry } from "@/lib/library";
 import { fileDisplayName, formatRuntime, isItemWatched, type TitleItem } from "@/lib/libraryTitle";
 import type { TmdbEpisode } from "@/lib/services/tmdb";
 import type { EpisodeSelection } from "@/lib/useEpisodeSelection";
@@ -21,8 +20,9 @@ interface TitleEpisodeRowProps {
   isNext: boolean;
   simple: boolean;
   debrid: DebridControls;
-  onChange: (entry: LibraryEntry) => void;
   onPlay: (item: TitleItem, key: string) => void;
+  // Bascule vu/non vu de l'épisode.
+  onWatch: (item: TitleItem) => void;
   selection?: EpisodeSelection;
 }
 
@@ -33,8 +33,8 @@ export function TitleEpisodeRow({
   isNext,
   simple,
   debrid,
-  onChange,
   onPlay,
+  onWatch,
   selection,
 }: TitleEpisodeRowProps) {
   const { file } = item;
@@ -93,7 +93,7 @@ export function TitleEpisodeRow({
         n'est pas vu et que la ligne n'est pas survolée. */}
         {!selection && (
           <button
-            onClick={() => onChange(toggleFile(item.entry, file.name))}
+            onClick={() => onWatch(item)}
             title={watched ? "Marquer comme non vu" : "Marquer comme vu"}
             className={`group/mark absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full shadow transition hover:scale-110 active:scale-95 ${
               watched

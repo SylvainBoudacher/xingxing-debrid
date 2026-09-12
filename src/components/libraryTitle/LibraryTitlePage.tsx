@@ -30,6 +30,7 @@ import {
 } from "@/lib/libraryTitle";
 import type { MagnetEntry } from "@/lib/services/allDebrid";
 import { materializeFolders } from "@/lib/seriesFolders";
+import { setResume } from "@/lib/resumeWatch";
 import { useEpisodeSelection } from "@/lib/useEpisodeSelection";
 import { useSeriesFolderConfig } from "@/lib/useSeriesFolderConfig";
 import type { TmdbItem } from "@/lib/tmdbItem";
@@ -173,7 +174,15 @@ export function LibraryTitlePage({
 
   function play(item: TitleItem, vlcKey: string) {
     debrid.openVlcMany([item.file.link], vlcKey);
+    setResume(subject);
     if (autoWatchOnPlay && !isItemWatched(item)) onChange(toggleFile(item.entry, item.file.name));
+  }
+
+  // Cocher un épisode fait de ce titre celui à reprendre ; le décocher non,
+  // c'est une correction.
+  function watch(item: TitleItem) {
+    if (!isItemWatched(item)) setResume(subject);
+    onChange(toggleFile(item.entry, item.file.name));
   }
 
   function toggleAllWatched() {
@@ -348,6 +357,7 @@ export function LibraryTitlePage({
                       debrid={debrid}
                       onChange={onChange}
                       onPlay={play}
+                      onWatch={watch}
                       simple={simple}
                       selection={selecting ? selection : undefined}
                       onSelectEpisodes={allItems.length > 1 ? startSelecting : undefined}

@@ -22,6 +22,7 @@ import {
   ResumeButton,
   type DebridControls,
 } from "@/components/libraryParts";
+import { setResume } from "@/lib/resumeWatch";
 
 interface SeriesGroupCardProps {
   group: SeriesGroup;
@@ -114,9 +115,10 @@ export const SeriesGroupCard = memo(function SeriesGroupCard({
             groupKey={`resume-${groupKey}`}
             debrid={debrid}
             started={groupWatchedCount(group) > 0}
-            onResume={() =>
-              autoWatchOnPlay && onChange(toggleFile(nextData.entry, nextData.file.name))
-            }
+            onResume={() => {
+              setResume({ kind: "group", group });
+              if (autoWatchOnPlay) onChange(toggleFile(nextData.entry, nextData.file.name));
+            }}
           />
         )}
 
