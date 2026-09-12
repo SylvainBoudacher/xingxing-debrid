@@ -1,8 +1,6 @@
 import {
-  Compass,
-  DatabaseBackup,
+  ArchiveRestore,
   Download,
-  FolderSync,
   Keyboard,
   KeyRound,
   Layers,
@@ -18,16 +16,14 @@ import type { LucideIcon } from "lucide-react";
 export type PanelId =
   | "appearance"
   | "api-keys"
-  | "backup"
   | "shortcuts"
   | "display"
   | "magnets"
   | "playback"
   | "downloads"
   | "library"
-  | "library-transfer"
   | "nyaa"
-  | "discover"
+  | "backup-transfer"
   | "summer";
 
 export type PanelAccent = "indigo" | "amber";
@@ -48,8 +44,8 @@ export interface SettingsNavGroup {
 
 const ALL_SETTINGS_GROUPS: SettingsNavGroup[] = [
   {
-    id: "general",
-    label: "Général",
+    id: "interface",
+    label: "Interface",
     items: [
       {
         id: "appearance",
@@ -58,46 +54,46 @@ const ALL_SETTINGS_GROUPS: SettingsNavGroup[] = [
         icon: Monitor,
       },
       {
-        id: "api-keys",
-        label: "Comptes et clés API",
-        subtitle: "Les clés C411 et AllDebrid utilisées par l'application.",
-        icon: KeyRound,
-      },
-      {
-        id: "backup",
-        label: "Sauvegarde du profil",
-        subtitle: "Exporter votre profil complet dans un fichier chiffré.",
-        icon: DatabaseBackup,
-      },
-      {
-        id: "shortcuts",
-        label: "Raccourcis clavier",
-        subtitle: "Naviguer entre les pages au clavier.",
-        icon: Keyboard,
-      },
-    ],
-  },
-  {
-    id: "contenu",
-    label: "Contenu",
-    items: [
-      {
         id: "display",
         label: "Affichage des listes",
         subtitle: "Comment les noms de release s'affichent partout dans l'app.",
         icon: Layers,
       },
       {
+        id: "shortcuts",
+        label: "Raccourcis clavier",
+        subtitle: "Naviguer entre les pages et agir sur le bassin au clavier.",
+        icon: Keyboard,
+      },
+    ],
+  },
+  {
+    id: "sources",
+    label: "Sources",
+    items: [
+      {
+        id: "api-keys",
+        label: "Comptes et clés API",
+        subtitle: "Les clés C411, AllDebrid et TMDB utilisées par l'application.",
+        icon: KeyRound,
+      },
+      {
+        id: "nyaa",
+        label: "Nyaa",
+        subtitle: "Préremplissage des filtres de recherche Nyaa.",
+        icon: Sparkles,
+      },
+    ],
+  },
+  {
+    id: "files",
+    label: "Fichiers et lecture",
+    items: [
+      {
         id: "magnets",
         label: "Magnets et fichiers",
         subtitle: "Filtrage des fichiers .nfo et suppression.",
         icon: Magnet,
-      },
-      {
-        id: "playback",
-        label: "Lecture",
-        subtitle: "Le lecteur utilisé pour ouvrir les vidéos.",
-        icon: MonitorPlay,
       },
       {
         id: "downloads",
@@ -106,28 +102,28 @@ const ALL_SETTINGS_GROUPS: SettingsNavGroup[] = [
         icon: Download,
       },
       {
+        id: "playback",
+        label: "Lecture",
+        subtitle: "Le lecteur utilisé pour ouvrir les vidéos.",
+        icon: MonitorPlay,
+      },
+      {
         id: "library",
         label: "Bibliothèque",
         subtitle: "Marquage automatique des contenus vus.",
         icon: Library,
       },
+    ],
+  },
+  {
+    id: "data",
+    label: "Données",
+    items: [
       {
-        id: "library-transfer",
-        label: "Transfert de bibliothèque",
-        subtitle: "Emporter votre bibliothèque sur un autre ordinateur.",
-        icon: FolderSync,
-      },
-      {
-        id: "nyaa",
-        label: "Nyaa",
-        subtitle: "Préremplissage des filtres de recherche Nyaa.",
-        icon: Sparkles,
-      },
-      {
-        id: "discover",
-        label: "Découverte et listes",
-        subtitle: "Sauvegarde et restauration de votre liste.",
-        icon: Compass,
+        id: "backup-transfer",
+        label: "Sauvegarde et transfert",
+        subtitle: "Exporter et importer votre profil, votre bibliothèque et votre liste.",
+        icon: ArchiveRestore,
       },
     ],
   },

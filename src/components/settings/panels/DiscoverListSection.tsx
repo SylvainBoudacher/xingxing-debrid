@@ -3,10 +3,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { useRef } from "react";
 import { toast } from "sonner";
 import { getLikes, parseLikesJson, saveLikes } from "@/lib/likes";
-import { SettingsPanel } from "../SettingsPanel";
-import { FieldTitle } from "../controls";
+import { FieldTitle, SectionHeading } from "../controls";
 
-export function DiscoverPanel() {
+export function DiscoverListSection() {
   const importInputRef = useRef<HTMLInputElement>(null);
 
   async function handleExport() {
@@ -43,11 +42,12 @@ export function DiscoverPanel() {
   }
 
   return (
-    <SettingsPanel
-      icon={Compass}
-      title="Découverte et listes"
-      subtitle="Sauvegarde et restauration de votre liste."
-    >
+    <div>
+      <SectionHeading
+        icon={Compass}
+        title="Découverte et listes"
+        subtitle="Sauvegarde et restauration de votre liste."
+      />
       <FieldTitle
         title="Ma liste"
         hint="Sauvegardez les contenus likés dans un fichier JSON ou restaurez une liste depuis un fichier. L'import fusionne avec la liste actuelle sans créer de doublons."
@@ -76,6 +76,6 @@ export function DiscoverPanel() {
           onChange={handleImport}
         />
       </div>
-    </SettingsPanel>
+    </div>
   );
 }

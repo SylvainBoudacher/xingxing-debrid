@@ -4,10 +4,9 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { exportProfile, PASSPHRASE_MIN_LENGTH } from "@/lib/profileBackup";
-import { SettingsPanel } from "../SettingsPanel";
-import { FieldTitle } from "../controls";
+import { FieldTitle, SectionHeading } from "../controls";
 
-export function BackupPanel() {
+export function ProfileBackupSection() {
   const [passphrase, setPassphrase] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -33,11 +32,12 @@ export function BackupPanel() {
   }
 
   return (
-    <SettingsPanel
-      icon={DatabaseBackup}
-      title="Sauvegarde du profil"
-      subtitle="Exportez tout votre profil dans un fichier chiffré."
-    >
+    <div>
+      <SectionHeading
+        icon={DatabaseBackup}
+        title="Sauvegarde du profil"
+        subtitle="Exportez tout votre profil dans un fichier chiffré."
+      />
       <FieldTitle
         title="Exporter mon profil"
         hint="Regroupe vos clés API, votre bibliothèque, vos paramètres, vos likes et vos canards dans un seul fichier chiffré. Sans la phrase secrète, le fichier est illisible : notez-la, elle n'est enregistrée nulle part et ne peut pas être récupérée."
@@ -81,6 +81,6 @@ export function BackupPanel() {
           {busy ? "Export en cours..." : "Exporter mon profil"}
         </button>
       </div>
-    </SettingsPanel>
+    </div>
   );
 }

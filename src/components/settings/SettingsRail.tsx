@@ -23,7 +23,7 @@ export function SettingsRail({
 
   return (
     <aside className="w-56 shrink-0">
-      <div className="sticky top-24 flex flex-col gap-4">
+      <div className="sticky top-24 flex flex-col gap-5">
         <div className="flex items-center gap-2 rounded-lg bg-white dark:bg-zinc-900/80 ring-1 ring-black/8 dark:ring-white/8 px-2.5 py-2">
           <Search className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
           <input
@@ -38,9 +38,12 @@ export function SettingsRail({
 
         {groups.map((g) => (
           <div key={g.id}>
-            <p className="px-3 mb-1.5 text-[11px] font-medium tracking-wide text-zinc-400 dark:text-zinc-500">
-              {g.label}
-            </p>
+            <div className="mb-2 flex items-center gap-2 px-3">
+              <p className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-900 dark:text-white">
+                {g.label}
+              </p>
+              <div className="h-px flex-1 bg-black/8 dark:bg-white/8" />
+            </div>
             <div className="flex flex-col gap-1">
               {g.items.map((item) => {
                 const isActive = active === item.id;

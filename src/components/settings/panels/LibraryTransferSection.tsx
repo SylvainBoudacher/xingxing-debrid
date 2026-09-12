@@ -12,12 +12,11 @@ import {
   readLibraryFile,
 } from "@/lib/librarySync/file";
 import { mergeLibrary } from "@/lib/librarySync/merge";
-import { SettingsPanel } from "../SettingsPanel";
-import { FieldTitle, PanelDivider } from "../controls";
+import { FieldTitle, SectionHeading } from "../controls";
 import { ImportLibraryDialog, type ImportPreview } from "./ImportLibraryDialog";
 import { PassphraseDialog } from "./PassphraseDialog";
 
-export function LibraryTransferPanel() {
+export function LibraryTransferSection() {
   const [path, setPath] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -116,11 +115,12 @@ export function LibraryTransferPanel() {
     });
 
   return (
-    <SettingsPanel
-      icon={FolderSync}
-      title="Transfert de bibliothèque"
-      subtitle="Emportez votre bibliothèque d'un ordinateur à l'autre."
-    >
+    <div>
+      <SectionHeading
+        icon={FolderSync}
+        title="Transfert de bibliothèque"
+        subtitle="Emportez votre bibliothèque d'un ordinateur à l'autre."
+      />
       <FieldTitle
         title="Exporter"
         hint="Écrit vos titres et vos catégories dans un fichier chiffré. Placez-le dans un dossier synchronisé (Google Drive, Dropbox, Syncthing) pour le retrouver sur vos autres ordinateurs. Une phrase secrète vous est demandée à chaque export : choisissez celle que vous voulez, elle n'est enregistrée nulle part."
@@ -149,7 +149,7 @@ export function LibraryTransferPanel() {
         </button>
       </div>
 
-      <PanelDivider />
+      <div className="mt-6" />
 
       <FieldTitle
         title="Importer"
@@ -196,6 +196,6 @@ export function LibraryTransferPanel() {
         onMerge={handleMerge}
         onReplace={handleReplace}
       />
-    </SettingsPanel>
+    </div>
   );
 }

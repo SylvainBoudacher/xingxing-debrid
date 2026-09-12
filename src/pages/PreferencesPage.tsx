@@ -4,9 +4,7 @@ import { SettingsRail } from "@/components/settings/SettingsRail";
 import { ALL_NAV_ITEMS, type PanelId } from "@/components/settings/settingsNav";
 import { AppearancePanel } from "@/components/settings/panels/AppearancePanel";
 import { ApiKeysPanel } from "@/components/settings/panels/ApiKeysPanel";
-import { BackupPanel } from "@/components/settings/panels/BackupPanel";
-import { LibraryTransferPanel } from "@/components/settings/panels/LibraryTransferPanel";
-import { DiscoverPanel } from "@/components/settings/panels/DiscoverPanel";
+import { BackupTransferPanel } from "@/components/settings/panels/BackupTransferPanel";
 import { DisplayPanel } from "@/components/settings/panels/DisplayPanel";
 import { LibraryPanel } from "@/components/settings/panels/LibraryPanel";
 import { DownloadsPanel } from "@/components/settings/panels/DownloadsPanel";
@@ -69,8 +67,6 @@ export function PreferencesPage({
         return <AppearancePanel />;
       case "api-keys":
         return <ApiKeysPanel onSaved={onKeysSaved} />;
-      case "backup":
-        return <BackupPanel />;
       case "shortcuts":
         return <ShortcutsPanel />;
       case "display":
@@ -83,12 +79,10 @@ export function PreferencesPage({
         return <DownloadsPanel />;
       case "library":
         return <LibraryPanel />;
-      case "library-transfer":
-        return <LibraryTransferPanel />;
       case "nyaa":
         return <NyaaPanel />;
-      case "discover":
-        return <DiscoverPanel />;
+      case "backup-transfer":
+        return <BackupTransferPanel />;
       case "summer":
         return (
           <SummerPanel

@@ -37,7 +37,7 @@ export function MagnetsPanel() {
     <SettingsPanel
       icon={Magnet}
       title="Magnets et fichiers"
-      subtitle="Téléchargements et fichiers .nfo."
+      subtitle="Filtrage des fichiers .nfo et suppression."
     >
       <FieldTitle
         title="Fichiers .nfo"

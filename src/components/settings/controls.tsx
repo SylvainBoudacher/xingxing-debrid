@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { motion } from "motion/react";
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function ViewOptionCard({
@@ -121,6 +122,29 @@ export function FieldTitle({ title, hint }: { title: string; hint?: string }) {
       <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">{title}</h3>
       {hint && <p className="text-xs text-zinc-500 mb-5 leading-relaxed">{hint}</p>}
     </>
+  );
+}
+
+/** En-tête d'une section quand un panneau en regroupe plusieurs. */
+export function SectionHeading({
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  icon: LucideIcon;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <div className="mb-5 flex items-center gap-2.5">
+      <Icon className="h-4 w-4 shrink-0 text-indigo-600 dark:text-indigo-400" />
+      <div>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-zinc-900 dark:text-white">
+          {title}
+        </h3>
+        <p className="text-xs text-zinc-500">{subtitle}</p>
+      </div>
+    </div>
   );
 }
 
