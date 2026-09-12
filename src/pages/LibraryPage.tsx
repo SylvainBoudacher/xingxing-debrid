@@ -246,7 +246,11 @@ export function LibraryPage({
   const { sendingHash, libraryHash, debridModal, setDebridModal, sendToDebrid } = useSendToDebrid({
     getC411Key: () => initialC411Key ?? "",
     getAllDebridKey: () => initialAllDebridKey ?? "",
-    onOpenLibrary: () => setFindMore(null),
+    onOpenLibrary: (item, infoHash) => {
+      setFindMore(null);
+      if (item.mediaType === "tv") openTitle(null, item.id);
+      else openTitle(infoHash, null);
+    },
     onLibraryChange: () => void loadLibrary().then(setEntries),
   });
 
