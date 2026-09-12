@@ -15,6 +15,8 @@ export interface LibraryPrefs {
   genres: string[];
   /** Clés des blocs (Films, Séries, catégories) repliés par l'utilisateur. */
   collapsed: string[];
+  /** Rangée « Reprendre » repliée. */
+  resumeCollapsed: boolean;
 }
 
 export const DEFAULT_LIBRARY_PREFS: LibraryPrefs = {
@@ -24,6 +26,7 @@ export const DEFAULT_LIBRARY_PREFS: LibraryPrefs = {
   filter: "all",
   genres: [],
   collapsed: [],
+  resumeCollapsed: false,
 };
 
 const KEYS = {
@@ -33,6 +36,7 @@ const KEYS = {
   filter: "library_filter",
   genres: "library_genres",
   collapsed: "library_collapsed",
+  resumeCollapsed: "library_resume_collapsed",
   legacySplit: "library_split",
 } as const;
 
@@ -46,17 +50,19 @@ export function getCachedLibraryPrefs(): LibraryPrefs | null {
 }
 
 export async function loadLibraryPrefs(): Promise<LibraryPrefs> {
-  const [layout, grouping, sort, filter, genres, collapsed, legacySplit] = await Promise.all([
-    store.get<LibraryLayout>(KEYS.layout),
-    store.get<GroupMode>(KEYS.grouping),
-    store.get<LibrarySort>(KEYS.sort),
-    store.get<LibraryFilter>(KEYS.filter),
-    store.get<string[]>(KEYS.genres),
-    store.get<string[]>(KEYS.collapsed),
-    // Ancien réglage films/séries (booléen) : repli tant que le nouveau mode
-    // de regroupement n'a jamais été choisi.
-    store.get<boolean>(KEYS.legacySplit),
-  ]);
+  const [layout, grouping, sort, filter, genres, collapsed, resumeCollapsed, legacySplit] =
+    await Promise.all([
+      store.get<LibraryLayout>(KEYS.layout),
+      store.get<GroupMode>(KEYS.grouping),
+      store.get<LibrarySort>(KEYS.sort),
+      store.get<LibraryFilter>(KEYS.filter),
+      store.get<string[]>(KEYS.genres),
+      store.get<string[]>(KEYS.collapsed),
+      store.get<boolean>(KEYS.resumeCollapsed),
+      // Ancien réglage films/séries (booléen) : repli tant que le nouveau mode
+      // de regroupement n'a jamais été choisi.
+      store.get<boolean>(KEYS.legacySplit),
+    ]);
 
   const legacyGrouping: GroupMode | null =
     legacySplit === null || legacySplit === undefined ? null : legacySplit ? "type" : "none";
@@ -68,6 +74,7 @@ export async function loadLibraryPrefs(): Promise<LibraryPrefs> {
     filter: filter ?? DEFAULT_LIBRARY_PREFS.filter,
     genres: genres ?? DEFAULT_LIBRARY_PREFS.genres,
     collapsed: collapsed ?? DEFAULT_LIBRARY_PREFS.collapsed,
+    resumeCollapsed: resumeCollapsed ?? DEFAULT_LIBRARY_PREFS.resumeCollapsed,
   };
   return cache;
 }

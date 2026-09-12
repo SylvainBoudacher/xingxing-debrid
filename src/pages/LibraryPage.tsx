@@ -191,6 +191,7 @@ export function LibraryPage({
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(
     () => new Set(prefs.collapsed),
   );
+  const [resumeCollapsed, setResumeCollapsed] = useState(prefs.resumeCollapsed);
   const [categories, setCategories] = useState<CategoryConfig>(
     () => getCachedCategories() ?? EMPTY_CATEGORIES,
   );
@@ -321,6 +322,7 @@ export function LibraryPage({
         setLayout(p.layout);
         setGrouping(p.grouping);
         setGenreFilter(new Set(p.genres));
+        setResumeCollapsed(p.resumeCollapsed);
       });
     }
     // Purge des références mortes au chargement seulement : pendant la session,
@@ -366,6 +368,13 @@ export function LibraryPage({
     if (selectMode) return exitSelect();
     if (layout === "list") changeLayout("grid");
     setSelectMode(true);
+  }
+
+  function toggleResumeCollapsed() {
+    setResumeCollapsed((prev) => {
+      saveLibraryPref("resumeCollapsed", !prev);
+      return !prev;
+    });
   }
 
   function toggleCollapsedBlock(key: string) {
@@ -1040,6 +1049,8 @@ export function LibraryPage({
                     autoWatchOnPlay={autoWatchOnPlay}
                     simple={viewMode === "simple"}
                     tmdbKey={initialTmdbKey ?? undefined}
+                    collapsed={resumeCollapsed}
+                    onToggleCollapsed={toggleResumeCollapsed}
                   />
                 )}
               </AnimatePresence>
