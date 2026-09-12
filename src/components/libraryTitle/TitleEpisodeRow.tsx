@@ -18,6 +18,8 @@ interface TitleEpisodeRowProps {
   // Épisode TMDB correspondant, absent sans correspondance (nom de fichier).
   episode?: TmdbEpisode;
   isNext: boolean;
+  // Un autre fichier de la bibliothèque couvre déjà cet épisode.
+  duplicate: boolean;
   simple: boolean;
   debrid: DebridControls;
   onPlay: (item: TitleItem, key: string) => void;
@@ -31,6 +33,7 @@ export function TitleEpisodeRow({
   item,
   episode,
   isNext,
+  duplicate,
   simple,
   debrid,
   onPlay,
@@ -121,6 +124,11 @@ export function TitleEpisodeRow({
             </span>
           )}
           <span className="truncate">{name}</span>
+          {duplicate && (
+            <span className="flex-none rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+              Doublon
+            </span>
+          )}
         </p>
         {episode?.overview && (
           <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">

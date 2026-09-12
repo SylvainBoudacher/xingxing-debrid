@@ -1,5 +1,6 @@
 import { SeriesFolderOrganizer } from "@/components/SeriesFolderOrganizer";
 import type { DebridControls } from "@/components/libraryParts";
+import { TitleDuplicateDialog } from "@/components/libraryTitle/TitleDuplicateDialog";
 import { TitleEpisodeList } from "@/components/libraryTitle/TitleEpisodeList";
 import { TitleHero } from "@/components/libraryTitle/TitleHero";
 import { TitleHeroActions } from "@/components/libraryTitle/TitleHeroActions";
@@ -11,10 +12,17 @@ import { TitleTopBar } from "@/components/libraryTitle/TitleTopBar";
 import {
   isWholeWatched,
   removeFilesByLink,
+  setFilesWatched,
   setWholeWatched,
   toggleFile,
   type LibraryEntry,
 } from "@/lib/library";
+import {
+  conflictingReleases,
+  duplicateGroups,
+  duplicateLinks,
+  filesToDrop,
+} from "@/lib/libraryDuplicates";
 import {
   initialSection,
   isItemWatched,
@@ -121,6 +129,9 @@ export function LibraryTitlePage({
   const sections = useMemo(() => titleSections(subject, folderConfig), [subject, folderConfig]);
   const allItems = useMemo(() => sections.flatMap((s) => s.items), [sections]);
   const next = useMemo(() => nextTitleItem(sections), [sections]);
+  const dupeGroups = useMemo(() => duplicateGroups(sections), [sections]);
+  const dupeLinks = useMemo(() => duplicateLinks(dupeGroups), [dupeGroups]);
+  const dupeReleases = useMemo(() => conflictingReleases(dupeGroups), [dupeGroups]);
   // Film (ou entrée brute) à fichier unique : le bandeau porte déjà lecture, vu
   // et téléchargement, rien à lister dessous. Une série garde sa liste même
   // avec un seul épisode (titre et résumé TMDB).
@@ -138,6 +149,7 @@ export function LibraryTitlePage({
     exit: exitSelect,
   } = useEpisodeSelection();
   const [organize, setOrganize] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
   const [solid, setSolid] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -164,13 +176,14 @@ export function LibraryTitlePage({
     const onKey = (e: KeyboardEvent) => {
       // defaultPrevented : un menu déroulant vient de se fermer sur Escape.
       if (e.key !== "Escape" || e.defaultPrevented || overlayOpen) return;
-      if (organize) setOrganize(false);
+      if (cleaning) setCleaning(false);
+      else if (organize) setOrganize(false);
       else if (selecting) exitSelect();
       else onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [overlayOpen, organize, selecting, exitSelect, onClose]);
+  }, [overlayOpen, cleaning, organize, selecting, exitSelect, onClose]);
 
   function play(item: TitleItem, vlcKey: string) {
     debrid.openVlcMany([item.file.link], vlcKey);
@@ -203,6 +216,21 @@ export function LibraryTitlePage({
       if (updated !== e) onChange(updated);
     }
     if (remaining === 0) onClose();
+  }
+
+  // Ne garde que les fichiers de la release choisie. La coche « vu » d'une copie
+  // supprimée passe au fichier conservé avant sa suppression, sinon la
+  // progression serait perdue.
+  function cleanDuplicates(keepHash: string) {
+    setCleaning(false);
+    const { links, promoteWatched } = filesToDrop(dupeGroups, keepHash);
+    const byEntry = new Map<LibraryEntry, string[]>();
+    for (const { entry, name } of promoteWatched) {
+      if (!byEntry.has(entry)) byEntry.set(entry, []);
+      byEntry.get(entry)!.push(name);
+    }
+    for (const [entry, names] of byEntry) onChange(setFilesWatched(entry, names, true));
+    deleteFiles(links);
   }
 
   function deleteAll() {
@@ -359,6 +387,8 @@ export function LibraryTitlePage({
                       onPlay={play}
                       onWatch={watch}
                       simple={simple}
+                      duplicates={dupeLinks}
+                      onCleanDuplicates={() => setCleaning(true)}
                       selection={selecting ? selection : undefined}
                       onSelectEpisodes={allItems.length > 1 ? startSelecting : undefined}
                       onFindMore={onFindMore}
@@ -394,6 +424,14 @@ export function LibraryTitlePage({
           </motion.div>
         )}
       </div>
+
+      <TitleDuplicateDialog
+        open={cleaning}
+        groups={dupeGroups}
+        releases={dupeReleases}
+        onConfirm={cleanDuplicates}
+        onCancel={() => setCleaning(false)}
+      />
 
       <AnimatePresence>
         {selecting && (

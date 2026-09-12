@@ -14,7 +14,7 @@ import {
   type TitleSection,
 } from "@/lib/libraryTitle";
 import type { EpisodeSelection } from "@/lib/useEpisodeSelection";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, CopyX } from "lucide-react";
 
 interface TitleSectionBarProps {
   section: TitleSection;
@@ -25,6 +25,9 @@ interface TitleSectionBarProps {
   sectionKey: string;
   debrid: DebridControls;
   onChange: (entry: LibraryEntry) => void;
+  // Épisodes de la saison couverts par plusieurs fichiers. Zéro : pas de bouton.
+  duplicates: number;
+  onCleanDuplicates: () => void;
   selection?: EpisodeSelection;
   onSelectEpisodes?: () => void;
 }
@@ -39,6 +42,8 @@ export function TitleSectionBar({
   sectionKey,
   debrid,
   onChange,
+  duplicates,
+  onCleanDuplicates,
   selection,
   onSelectEpisodes,
 }: TitleSectionBarProps) {
@@ -82,7 +87,16 @@ export function TitleSectionBar({
         </DropdownMenu>
       )}
       {!selection && (
-        <div className="ml-auto flex-none">
+        <div className="ml-auto flex flex-none items-center gap-2">
+          {duplicates > 0 && (
+            <button
+              onClick={onCleanDuplicates}
+              className="flex h-7 items-center gap-1.5 rounded-lg bg-amber-500/15 px-2.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/40 transition-colors hover:bg-amber-500/30 dark:text-amber-300"
+            >
+              <CopyX className="h-3.5 w-3.5" />
+              Gérer {duplicates > 1 ? "les doublons détectés" : "le doublon détecté"}
+            </button>
+          )}
           <TitleSectionMenu
             count={items.length}
             links={links}

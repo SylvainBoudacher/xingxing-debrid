@@ -28,6 +28,10 @@ interface TitleEpisodeListProps {
   onPlay: (item: TitleItem, key: string) => void;
   onWatch: (item: TitleItem) => void;
   simple: boolean;
+  // Liens des fichiers couverts en double, tous les titres de la fiche
+  // confondus : calculé une fois par la page.
+  duplicates: Set<string>;
+  onCleanDuplicates: () => void;
   selection?: EpisodeSelection;
   onSelectEpisodes?: () => void;
   onFindMore?: () => void;
@@ -46,6 +50,8 @@ export function TitleEpisodeList({
   onPlay,
   onWatch,
   simple,
+  duplicates,
+  onCleanDuplicates,
   selection,
   onSelectEpisodes,
   onFindMore,
@@ -63,6 +69,11 @@ export function TitleEpisodeList({
   const sectionEpisodes =
     section.season !== null ? [...(tmdbSeasons.get(section.season)?.values() ?? [])] : [];
   const missing = missingEpisodes(section, sectionEpisodes, new Date().toISOString().slice(0, 10));
+  // Épisodes distincts de la section touchés par un doublon (pas le nombre de
+  // fichiers en trop) : compté sur toute la section, pas la plage affichée.
+  const duplicated = new Set(
+    items.filter((it) => duplicates.has(it.file.link)).map((it) => `${it.season}:${it.episode}`),
+  ).size;
 
   return (
     <div className="overflow-hidden rounded-2xl bg-white/70 ring-1 ring-black/5 dark:bg-zinc-900/60 dark:ring-white/10">
@@ -74,6 +85,8 @@ export function TitleEpisodeList({
         sectionKey={sectionKey}
         debrid={debrid}
         onChange={onChange}
+        duplicates={duplicated}
+        onCleanDuplicates={onCleanDuplicates}
         selection={selection}
         onSelectEpisodes={onSelectEpisodes}
       />
@@ -89,6 +102,7 @@ export function TitleEpisodeList({
                 : undefined
             }
             isNext={it.file.link === nextLink}
+            duplicate={duplicates.has(it.file.link)}
             simple={simple}
             debrid={debrid}
             onPlay={onPlay}
