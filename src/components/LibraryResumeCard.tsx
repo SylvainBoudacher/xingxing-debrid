@@ -58,6 +58,8 @@ export function LibraryResumeCard({
   }
 
   return (
+    // Bordure « in-box » plutôt qu'un ring : le bandeau anime sa hauteur dans un
+    // conteneur overflow-hidden, qui rognerait un contour dessiné hors de la box.
     <div
       onClick={() =>
         onOpen(
@@ -65,10 +67,10 @@ export function LibraryResumeCard({
           subject.kind === "group" ? subject.group.tmdbId : null,
         )
       }
-      className="flex cursor-pointer items-center gap-3 overflow-hidden rounded-2xl bg-white/70 p-2 ring-1 ring-black/5 transition-colors hover:bg-white dark:bg-zinc-900/60 dark:ring-white/10 dark:hover:bg-zinc-900"
+      className="group relative flex cursor-pointer items-center gap-3 rounded-2xl border border-black/5 bg-gradient-to-br from-white/80 to-white/50 p-2 transition-colors hover:border-black/10 hover:from-white hover:to-white dark:border-white/10 dark:from-zinc-900/80 dark:to-zinc-900/40 dark:hover:border-white/20 dark:hover:from-zinc-800/80 dark:hover:to-zinc-800/50"
     >
       <div
-        className={`h-14 flex-none overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800 ${
+        className={`relative h-16 flex-none overflow-hidden rounded-xl bg-zinc-200 dark:bg-zinc-800 ${
           poster ? "aspect-[2/3]" : "aspect-video"
         }`}
       >
@@ -77,7 +79,7 @@ export function LibraryResumeCard({
             src={`https://image.tmdb.org/t/p/w300${still}`}
             alt=""
             decoding="async"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         )}
         {poster && (
@@ -85,24 +87,23 @@ export function LibraryResumeCard({
             src={`https://image.tmdb.org/t/p/w154${poster}`}
             alt=""
             decoding="async"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         )}
       </div>
 
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-zinc-900 dark:text-white">
+        <p className="truncate text-[13px] leading-tight font-semibold text-zinc-900 dark:text-white">
           {subjectTitle(subject, simple)}
         </p>
-        <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+        <div className="mt-1.5 flex min-w-0 items-center gap-1.5">
           {label ? (
-            <span className="font-mono tracking-tight text-indigo-500 dark:text-indigo-300">
+            <span className="flex-none rounded-md bg-indigo-500/10 px-1.5 py-0.5 font-mono text-[10px] leading-none font-semibold tracking-tight text-indigo-600 dark:bg-indigo-400/15 dark:text-indigo-300">
               {label}
             </span>
           ) : null}
-          {label ? " · " : null}
-          {name}
-        </p>
+          <span className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{name}</span>
+        </div>
       </div>
 
       <button
@@ -112,12 +113,12 @@ export function LibraryResumeCard({
         }}
         disabled={busy}
         title="Lancer l'épisode dans VLC"
-        className="mr-1 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 transition-transform hover:scale-110 active:scale-95 disabled:opacity-40 dark:bg-emerald-500/15 dark:text-emerald-400"
+        className="mr-1 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm shadow-emerald-500/30 transition-colors hover:bg-emerald-400 disabled:opacity-40"
       >
         {busy ? (
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          <Play className="h-4 w-4 fill-current" />
+          <Play className="ml-0.5 h-4 w-4 fill-current" />
         )}
       </button>
     </div>
