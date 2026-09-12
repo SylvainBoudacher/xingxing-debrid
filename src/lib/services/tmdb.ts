@@ -61,8 +61,57 @@ export interface TmdbTvDetail {
   seasons?: Array<{ season_number: number; episode_count: number }>;
 }
 
+export interface TmdbCastMember {
+  name: string;
+  character?: string;
+}
+
+export interface TmdbCrewMember {
+  id: number;
+  name: string;
+  job: string;
+}
+
+export interface TmdbCredits {
+  cast?: TmdbCastMember[];
+  crew?: TmdbCrewMember[];
+}
+
 export interface TmdbDetail {
   genres?: Array<{ id: number; name: string }>;
+  backdrop_path?: string | null;
+  // Films uniquement.
+  runtime?: number | null;
+  // append_to_response=credits : realisateur et tete d'affiche sans appel en plus.
+  credits?: TmdbCredits;
+  // Series : TMDB ne met pas le createur dans crew.
+  created_by?: Array<{ id: number; name: string }>;
+}
+
+// Une entree de la filmographie d'une personne : un titre plus le poste occupe
+// dessus. media_type distingue film et serie, combined_credits melangeant les deux.
+export interface TmdbPersonCrewCredit extends TmdbRawResult {
+  media_type: "movie" | "tv";
+  job: string;
+  popularity?: number;
+}
+
+export interface TmdbPersonCredits {
+  crew?: TmdbPersonCrewCredit[];
+}
+
+export interface TmdbEpisode {
+  episode_number: number;
+  name: string;
+  overview: string;
+  still_path: string | null;
+  runtime: number | null;
+  air_date: string | null;
+}
+
+export interface TmdbSeasonDetail {
+  season_number: number;
+  episodes?: TmdbEpisode[];
 }
 
 // queryKeys sans la cle API : rotation sans invalidation, secret hors du cache.
@@ -78,8 +127,10 @@ export const tmdbKeys = {
   worst: (page: number) => ["tmdb", "roulette", "worst", page] as const,
   find: (imdbId: string) => ["tmdb", "find", imdbId.toLowerCase()] as const,
   tvDetail: (id: number) => ["tmdb", "tv", id] as const,
+  tvSeason: (id: number, season: number) => ["tmdb", "tv", id, "season", season] as const,
   detail: (mt: TmdbMediaType, id: number) => ["tmdb", "detail", mt, id] as const,
   recommendations: (mt: TmdbMediaType, id: number) => ["tmdb", "recommendations", mt, id] as const,
+  personCredits: (personId: number) => ["tmdb", "person", personId, "credits"] as const,
 };
 
 async function get<T>(url: string): Promise<T> {
@@ -183,11 +234,20 @@ export function findByImdb(imdbId: string, apiKey: string) {
 // Fiche complete d'un film / d'une serie : sert a recuperer les genres des
 // entrees de bibliotheque enregistrees avant que genreIds ne soit stocke.
 export function detail(mt: TmdbMediaType, id: number, apiKey: string) {
-  return get<TmdbDetail>(`${BASE}/${mt}/${id}?api_key=${apiKey}&language=fr-FR`);
+  return get<TmdbDetail>(
+    `${BASE}/${mt}/${id}?api_key=${apiKey}&language=fr-FR&append_to_response=credits`,
+  );
 }
 
 export function tvDetail(id: number, apiKey: string) {
   return get<TmdbTvDetail>(`${BASE}/tv/${id}?api_key=${apiKey}&language=fr-FR`);
+}
+
+// Episodes d'une saison (titres, vignettes, resumes) pour la fiche bibliotheque.
+export function tvSeason(id: number, season: number, apiKey: string) {
+  return get<TmdbSeasonDetail>(
+    `${BASE}/tv/${id}/season/${season}?api_key=${apiKey}&language=fr-FR`,
+  );
 }
 
 // Titres recommandes par TMDB pour un film / une serie donne (signal
@@ -195,5 +255,13 @@ export function tvDetail(id: number, apiKey: string) {
 export function recommendations(mt: TmdbMediaType, id: number, apiKey: string) {
   return get<TmdbListResponse>(
     `${BASE}/${mt}/${id}/recommendations?api_key=${apiKey}&language=fr-FR&page=1`,
+  );
+}
+
+// Filmographie complete d'une personne (films et series melanges). Sert a la
+// rangee « Du meme realisateur » : on n'en garde que les postes de realisation.
+export function personCredits(personId: number, apiKey: string) {
+  return get<TmdbPersonCredits>(
+    `${BASE}/person/${personId}/combined_credits?api_key=${apiKey}&language=fr-FR`,
   );
 }

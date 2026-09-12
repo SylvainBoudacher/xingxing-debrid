@@ -70,6 +70,7 @@ export const LibraryPosterCard = memo(function LibraryPosterCard({
     <motion.button
       layout
       layoutId={layoutId}
+      data-title-key={entry.infoHash}
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
       onClick={onToggle}

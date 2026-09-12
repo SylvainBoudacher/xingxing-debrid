@@ -16,7 +16,18 @@ import { openInVlc, toastVlcOrNetworkError } from "@/lib/player";
 // Actions AllDebrid sur un lien debride (copie presse-papier, VLC, telechargement).
 // Partage entre MainPage et DiscoverPage. `getKey` fournit la cle AllDebrid au
 // moment de l'appel (les pages la gardent dans un ref rempli au montage).
+// Au-dela de ce nombre de fichiers, une action groupee demande confirmation.
+export const BULK_CONFIRM_THRESHOLD = 6;
+
+export interface PendingBulk {
+  // Libelle de l'action, affiche dans la modale de confirmation.
+  action: "download" | "vlc" | "copy";
+  count: number;
+  run: () => void;
+}
+
 export function useDebridActions(getKey: () => string) {
+  const [pendingBulk, setPendingBulk] = useState<PendingBulk | null>(null);
   const [downloadingLink, setDownloadingLink] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [vlcLink, setVlcLink] = useState<string | null>(null);
@@ -92,7 +103,10 @@ export function useDebridActions(getKey: () => string) {
   // `download_batch_size`). Chaque worker débride puis télécharge un lien à la
   // fois ; jusqu'à N workers tournent de front. La progression agrégée alimente
   // la modal globale via le store des téléchargements.
-  const downloadMany = useCallback(async function downloadMany(links: string[], groupKey: string) {
+  const runDownloadMany = useCallback(async function runDownloadMany(
+    links: string[],
+    groupKey: string,
+  ) {
     if (links.length === 0) return;
     setBulkDownloading(groupKey);
     const batchSize = await getDownloadBatchSize();
@@ -121,15 +135,15 @@ export function useDebridActions(getKey: () => string) {
       await Promise.all(Array.from({ length: Math.min(batchSize, links.length) }, worker));
       if (firstError !== null) throw firstError;
     } catch (err) {
-      toastNetworkError(err, () => downloadMany(links, groupKey));
+      toastNetworkError(err, () => runDownloadMany(links, groupKey));
     } finally {
       endBulkDownload();
       setBulkDownloading(null);
     }
   }, []);
 
-  const copyMany = useCallback(
-    async function copyMany(links: string[], groupKey: string) {
+  const runCopyMany = useCallback(
+    async function runCopyMany(links: string[], groupKey: string) {
       if (links.length === 0) return;
       setBulkCopying(groupKey);
       try {
@@ -137,7 +151,7 @@ export function useDebridActions(getKey: () => string) {
         await navigator.clipboard.writeText(urls.join("\n"));
         toast.success(`${urls.length} liens copiés`);
       } catch (err) {
-        toastNetworkError(err, () => copyMany(links, groupKey));
+        toastNetworkError(err, () => runCopyMany(links, groupKey));
       } finally {
         setTimeout(() => setBulkCopying(null), 2000);
       }
@@ -145,8 +159,8 @@ export function useDebridActions(getKey: () => string) {
     [unlockAll],
   );
 
-  const openVlcMany = useCallback(
-    async function openVlcMany(links: string[], groupKey: string) {
+  const runOpenVlcMany = useCallback(
+    async function runOpenVlcMany(links: string[], groupKey: string) {
       if (links.length === 0) return;
       setBulkVlc(groupKey);
       try {
@@ -154,13 +168,33 @@ export function useDebridActions(getKey: () => string) {
         await openInVlc(urls);
         toast.success("Playlist ouverte dans VLC");
       } catch (err) {
-        toastVlcOrNetworkError(err, () => openVlcMany(links, groupKey));
+        toastVlcOrNetworkError(err, () => runOpenVlcMany(links, groupKey));
       } finally {
         setBulkVlc(null);
       }
     },
     [unlockAll],
   );
+
+  // Garde commune : une action sur beaucoup de fichiers passe par la modale.
+  const guard = useCallback(
+    (action: PendingBulk["action"], fn: (links: string[], groupKey: string) => void) =>
+      (links: string[], groupKey: string) => {
+        if (links.length <= BULK_CONFIRM_THRESHOLD) return fn(links, groupKey);
+        setPendingBulk({ action, count: links.length, run: () => fn(links, groupKey) });
+      },
+    [],
+  );
+
+  const downloadMany = useMemo(() => guard("download", runDownloadMany), [guard, runDownloadMany]);
+  const copyMany = useMemo(() => guard("copy", runCopyMany), [guard, runCopyMany]);
+  const openVlcMany = useMemo(() => guard("vlc", runOpenVlcMany), [guard, runOpenVlcMany]);
+
+  const confirmBulk = useCallback(() => {
+    pendingBulk?.run();
+    setPendingBulk(null);
+  }, [pendingBulk]);
+  const cancelBulk = useCallback(() => setPendingBulk(null), []);
 
   return useMemo(
     () => ({
@@ -176,6 +210,9 @@ export function useDebridActions(getKey: () => string) {
       downloadMany,
       copyMany,
       openVlcMany,
+      pendingBulk,
+      confirmBulk,
+      cancelBulk,
     }),
     [
       downloadingLink,
@@ -190,6 +227,9 @@ export function useDebridActions(getKey: () => string) {
       downloadMany,
       copyMany,
       openVlcMany,
+      pendingBulk,
+      confirmBulk,
+      cancelBulk,
     ],
   );
 }

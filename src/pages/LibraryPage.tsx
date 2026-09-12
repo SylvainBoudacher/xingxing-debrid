@@ -1,8 +1,9 @@
 import { AppMenu, type Page } from "@/components/AppMenu";
+import { BulkConfirmDialog } from "@/components/BulkConfirmDialog";
 import { DebridFilesModal } from "@/components/DebridFilesModal";
 import { DiscoverReleasesModal } from "@/components/DiscoverReleasesModal";
-import { LibraryDetailModal } from "@/components/LibraryDetailModal";
 import { LibraryBlocks } from "@/components/LibraryBlocks";
+import { LibraryTitlePage } from "@/components/libraryTitle/LibraryTitlePage";
 import { LibraryDisplayMenu } from "@/components/LibraryDisplayMenu";
 import { LibraryEntryCard, type DebridControls } from "@/components/LibraryEntryCard";
 import { LibraryCategoryMenu } from "@/components/LibraryCategoryMenu";
@@ -10,11 +11,11 @@ import { LibraryCustomBar } from "@/components/LibraryCustomBar";
 import { LibraryListNameModal } from "@/components/LibraryListNameModal";
 import { LibraryMangaSection } from "@/components/LibraryMangaSection";
 import { LibraryPosterCard } from "@/components/LibraryPosterCard";
+import { LibraryResumeBanner } from "@/components/LibraryResumeBanner";
 import { LibraryTabs, type LibraryTab } from "@/components/LibraryTabs";
 import { DEFAULT_MANGA_PREFS, getCachedMangaPrefs, type MangaLayout } from "@/lib/mangaPrefs";
 import { LibrarySelectionBar } from "@/components/LibrarySelectionBar";
 import { SeriesGroupCard } from "@/components/SeriesGroupCard";
-import { SeriesGroupDetailModal } from "@/components/SeriesGroupDetailModal";
 import { SeriesGroupPosterCard } from "@/components/SeriesGroupPosterCard";
 import { TmdbMatchModal } from "@/components/TmdbMatchModal";
 import { flattenFiles, isVideoFile, type DebridFile } from "@/lib/debrid";
@@ -67,6 +68,7 @@ import {
   type LibraryLayout,
   type LibrarySort,
 } from "@/lib/libraryPrefs";
+import { cardKey } from "@/lib/libraryTitle";
 import { toastNetworkError } from "@/lib/networkError";
 import { queryClient } from "@/lib/queryClient";
 import {
@@ -76,11 +78,13 @@ import {
   type MagnetEntry,
 } from "@/lib/services/allDebrid";
 import { useDebridActions } from "@/lib/useDebridActions";
+import { ownedTmdbKeys } from "@/lib/recommendations";
 import { useLikes } from "@/lib/useLikes";
 import { useSendToDebrid } from "@/lib/useSendToDebrid";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { useDragScroll } from "@/lib/useDragScroll";
 import { useStickyBar } from "@/lib/useStickyBar";
+import { useTitleTransition } from "@/lib/useTitleTransition";
 import { useLibraryGenres } from "@/lib/useLibraryGenres";
 import { useLibraryMagnetStatus } from "@/lib/useLibraryMagnetStatus";
 import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
@@ -127,6 +131,10 @@ const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 function tmdbItemOf(meta: TmdbMeta): TmdbItem {
   return { ...meta, originalTitle: "" };
 }
+
+// Recul de la bibliothèque sous la fiche, façon modale iOS.
+const RECEDE_SCALE = 0.985;
+const RECEDE_TRANSITION = { duration: 0.3, ease: [0.22, 1, 0.36, 1] } as const;
 
 type Filter = LibraryFilter;
 type Layout = LibraryLayout;
@@ -180,6 +188,10 @@ export function LibraryPage({
   const [layout, setLayout] = useState<Layout>(prefs.layout);
   const [grouping, setGrouping] = useState<GroupMode>(prefs.grouping);
   const [genreFilter, setGenreFilter] = useState<Set<string>>(() => new Set(prefs.genres));
+  const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(
+    () => new Set(prefs.collapsed),
+  );
+  const [resumeCollapsed, setResumeCollapsed] = useState(prefs.resumeCollapsed);
   const [categories, setCategories] = useState<CategoryConfig>(
     () => getCachedCategories() ?? EMPTY_CATEGORIES,
   );
@@ -207,16 +219,30 @@ export function LibraryPage({
   // Fiche manga pre-ouverte : consommee une seule fois, sinon un aller-retour
   // entre les onglets (qui demonte la section) la rouvrirait tout seul.
   const [pendingMangaId, setPendingMangaId] = useState<string | null>(initialMangaId ?? null);
-  const [expandedHash, setExpandedHash] = useState<string | null>(null);
-  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
   const [matchingHash, setMatchingHash] = useState<string | null>(null);
   const [matchingGroupId, setMatchingGroupId] = useState<number | null>(null);
   const [autoWatchOnPlay, setAutoWatchOnPlay] = useState(true);
   // Fiche C411 ouverte par-dessus une série : recherche d'épisodes manquants.
   const [findMore, setFindMore] = useState<TmdbItem | null>(null);
+  // Fiche plein écran ouverte (série ou titre seul).
+  const {
+    subject: titleSubject,
+    expandedHash,
+    expandedGroupId,
+    setExpandedGroupId,
+    ready: titleReady,
+    open: openTitle,
+    close: closeTitle,
+    hoverProps,
+  } = useTitleTransition(entries, initialTmdbKey ?? undefined);
+  const openEntry = useCallback((hash: string) => openTitle(hash, null), [openTitle]);
+  const openGroup = useCallback((groupId: number) => openTitle(null, groupId), [openTitle]);
+  const receded = titleSubject !== null;
   const debrid = useDebridActions(() => initialAllDebridKey ?? "");
 
   const { likedKeys, toggleLike } = useLikes();
+  // Badge « Dans la bibliothèque » des suggestions de la fiche.
+  const ownedKeys = useMemo(() => ownedTmdbKeys(entries), [entries]);
   const { sendingHash, libraryHash, debridModal, setDebridModal, sendToDebrid } = useSendToDebrid({
     getC411Key: () => initialC411Key ?? "",
     getAllDebridKey: () => initialAllDebridKey ?? "",
@@ -296,6 +322,7 @@ export function LibraryPage({
         setLayout(p.layout);
         setGrouping(p.grouping);
         setGenreFilter(new Set(p.genres));
+        setResumeCollapsed(p.resumeCollapsed);
       });
     }
     // Purge des références mortes au chargement seulement : pendant la session,
@@ -314,8 +341,7 @@ export function LibraryPage({
   useEffect(() => {
     if (!initialExpandedHash && initialExpandedGroupId == null) return;
     const timer = setTimeout(() => {
-      setExpandedHash(initialExpandedHash ?? null);
-      setExpandedGroupId(initialExpandedGroupId ?? null);
+      openTitle(initialExpandedHash ?? null, initialExpandedGroupId ?? null);
     }, 420);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -342,6 +368,22 @@ export function LibraryPage({
     if (selectMode) return exitSelect();
     if (layout === "list") changeLayout("grid");
     setSelectMode(true);
+  }
+
+  function toggleResumeCollapsed() {
+    setResumeCollapsed((prev) => {
+      saveLibraryPref("resumeCollapsed", !prev);
+      return !prev;
+    });
+  }
+
+  function toggleCollapsedBlock(key: string) {
+    setCollapsedBlocks((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(key)) next.add(key);
+      saveLibraryPref("collapsed", [...next]);
+      return next;
+    });
   }
 
   function changeGrouping(next: GroupMode) {
@@ -390,15 +432,14 @@ export function LibraryPage({
         setFindMore(null);
         return;
       }
-      if (expandedHash || expandedGroupId || matchingHash || matchingGroupId !== null) return;
+      if (titleSubject || matchingHash || matchingGroupId !== null) return;
       if (mangaBusy) return;
       onBack();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [
-    expandedHash,
-    expandedGroupId,
+    titleSubject,
     matchingHash,
     matchingGroupId,
     mangaBusy,
@@ -637,15 +678,6 @@ export function LibraryPage({
 
   useLibraryGenres(entries, initialTmdbKey, true, applyGenres);
 
-  // Entrée affichée dans le panneau latéral (vue grille). Null si l'entrée
-  // sélectionnée n'est plus visible après un changement de filtre/recherche.
-  const expandedEntry = visible.find((e) => e.infoHash === expandedHash) ?? null;
-  const expandedGroup =
-    expandedGroupId !== null
-      ? (displayItems.find(
-          (item) => item.type === "group" && item.group.tmdbId === expandedGroupId,
-        ) ?? null)
-      : null;
   const matchingEntry = entries.find((e) => e.infoHash === matchingHash) ?? null;
   // Entrées d'un groupe série en cours de ré-association TMDB : le nouveau
   // choix s'applique à toutes les entrées du groupe.
@@ -674,7 +706,7 @@ export function LibraryPage({
   }, [selectMode, displayItems, selected]);
 
   const itemKey = (item: DisplayItem) =>
-    item.type === "group" ? `g${item.group.tmdbId}` : item.entry.infoHash;
+    item.type === "group" ? cardKey(null, item.group.tmdbId) : cardKey(item.entry.infoHash, null);
 
   // Menu d'un bloc catégorie (les non classés n'en ont pas : rien à renommer).
   const categoryBlockMenu = (block: LibraryBlock) => {
@@ -769,6 +801,7 @@ export function LibraryPage({
           entry={item.entry}
           onChange={handleChange}
           onRemove={handleRemove}
+          onOpen={openEntry}
           debrid={debrid}
           simple={viewMode === "simple"}
           autoWatchOnPlay={autoWatchOnPlay}
@@ -782,8 +815,8 @@ export function LibraryPage({
           group={item.group}
           onChange={handleChange}
           onRemove={handleRemove}
+          onOpen={openGroup}
           debrid={debrid}
-          simple={viewMode === "simple"}
           autoWatchOnPlay={autoWatchOnPlay}
         />
       ),
@@ -802,9 +835,7 @@ export function LibraryPage({
           selectMode={selectMode}
           selected={selected.has(item.entry.infoHash)}
           onToggle={() =>
-            selectMode
-              ? toggleSelected([item.entry.infoHash])
-              : setExpandedHash(item.entry.infoHash)
+            selectMode ? toggleSelected([item.entry.infoHash]) : openEntry(item.entry.infoHash)
           }
           onEnrichTmdb={enrichHandler(item.entry)}
           onRemove={() => handleRemove(item.entry.infoHash)}
@@ -824,7 +855,7 @@ export function LibraryPage({
           onToggle={() =>
             selectMode
               ? toggleSelected(item.group.entries.map((e) => e.infoHash))
-              : setExpandedGroupId(item.group.tmdbId)
+              : openGroup(item.group.tmdbId)
           }
           onRemove={() => removeHashes(item.group.entries.map((e) => e.infoHash))}
         />
@@ -833,296 +864,347 @@ export function LibraryPage({
 
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
-      {/* Header */}
+      {/* Recul façon modale iOS sous la fiche, centré sur la partie visible de
+      la page. Le survol d'une carte précharge sa fiche. */}
       <motion.div
-        ref={headerRef}
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="sticky top-0 z-30 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl"
+        {...hoverProps}
+        initial={false}
+        animate={{ scale: receded ? RECEDE_SCALE : 1 }}
+        transition={RECEDE_TRANSITION}
+        style={{ transformOrigin: `50% ${window.scrollY + window.innerHeight / 2}px` }}
+        className="flex flex-1 flex-col"
       >
-        <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
-          <motion.button
-            whileTap={{ scale: 0.93 }}
-            onClick={onBack}
-            className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="text-sm font-medium">Retour</span>
-          </motion.button>
+        {/* Header */}
+        {/* inert : la grille reste montée sous la fiche plein écran, hors d'atteinte
+      du clavier. */}
+        <motion.div
+          ref={headerRef}
+          inert={titleSubject !== null}
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="sticky top-0 z-30 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl"
+        >
+          <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
+            <motion.button
+              whileTap={{ scale: 0.93 }}
+              onClick={onBack}
+              className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="text-sm font-medium">Retour</span>
+            </motion.button>
 
-          <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-semibold tracking-tight text-zinc-900 dark:text-white">
-            Ma bibliothèque
-          </h1>
+            <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-semibold tracking-tight text-zinc-900 dark:text-white">
+              Ma bibliothèque
+            </h1>
 
-          <AppMenu
-            currentPage="library"
-            onNavigate={onNavigate}
-            onBack={onBack}
-            hasPendingUpdate={hasPendingUpdate}
-            onShowPendingUpdate={onShowPendingUpdate}
-          />
-        </div>
-      </motion.div>
+            <AppMenu
+              currentPage="library"
+              onNavigate={onNavigate}
+              onBack={onBack}
+              hasPendingUpdate={hasPendingUpdate}
+              onShowPendingUpdate={onShowPendingUpdate}
+            />
+          </div>
+        </motion.div>
 
-      <div
-        className={`mx-auto w-full flex-1 px-6 pt-6 pb-10 sm:px-8 ${
-          (tab === "manga" ? mangaLayout : layout) === "grid" ? "max-w-5xl" : "max-w-3xl"
-        }`}
-      >
-        <LibraryTabs tab={tab} onSwitch={setTab} />
+        <div
+          inert={titleSubject !== null}
+          className={`mx-auto w-full flex-1 px-6 pt-6 pb-10 sm:px-8 ${
+            (tab === "manga" ? mangaLayout : layout) === "grid" ? "max-w-5xl" : "max-w-3xl"
+          }`}
+        >
+          <LibraryTabs tab={tab} onSwitch={setTab} />
 
-        {tab === "manga" && (
-          <LibraryMangaSection
-            getC411Key={() => initialC411Key ?? ""}
-            getAllDebridKey={() => initialAllDebridKey ?? ""}
-            initialMangaId={pendingMangaId}
-            onInitialConsumed={() => setPendingMangaId(null)}
-            onDiscover={() => onNavigate("manga")}
-            onBusyChange={setMangaBusy}
-            onLayoutChange={setMangaLayout}
-          />
-        )}
+          {tab === "manga" && (
+            <LibraryMangaSection
+              getC411Key={() => initialC411Key ?? ""}
+              getAllDebridKey={() => initialAllDebridKey ?? ""}
+              initialMangaId={pendingMangaId}
+              onInitialConsumed={() => setPendingMangaId(null)}
+              onDiscover={() => onNavigate("manga")}
+              onBusyChange={setMangaBusy}
+              onLayoutChange={setMangaLayout}
+            />
+          )}
 
-        {tab === "media" && (
-          <>
-            {/* Recherche + filtres : collés sous le header, pour rester à portée
+          {tab === "media" && (
+            <>
+              {/* Recherche + filtres : collés sous le header, pour rester à portée
             sans remonter en haut d'une grosse bibliothèque. Une fois accrochés,
             ils prennent l'aspect d'une carte flottante (verre + ombre) ; posés,
             ils se fondent dans la page. Le padding et la bordure existent dans
             les deux états (-mx compensé) pour que rien ne bouge à la bascule.
             Le z-index dépasse celui des pastilles des jaquettes (z-10), qui
             sinon défileraient par-dessus. */}
-            <div
-              ref={barRef}
-              style={{ top: barTop }}
-              className={`sticky z-20 -mx-3 mb-4 rounded-2xl border p-3 transition-[background-color,border-color,box-shadow] duration-200 ${
-                barStuck
-                  ? "border-black/10 bg-white/70 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/70"
-                  : "border-transparent"
-              }`}
-            >
-              <div className="relative mb-3">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Rechercher un titre..."
-                  className="w-full rounded-lg border border-black/10 bg-white/70 py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-zinc-900/60 dark:text-white"
-                />
-              </div>
+              <div
+                ref={barRef}
+                style={{ top: barTop }}
+                className={`sticky z-20 -mx-3 mb-4 rounded-2xl border p-3 transition-[background-color,border-color,box-shadow] duration-200 ${
+                  barStuck
+                    ? "border-black/10 bg-white/70 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/70"
+                    : "border-transparent"
+                }`}
+              >
+                <div className="relative mb-3">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Rechercher un titre..."
+                    className="w-full rounded-lg border border-black/10 bg-white/70 py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-zinc-900/60 dark:text-white"
+                  />
+                </div>
 
-              {/* La barre défile horizontalement plutôt que d'écraser ses
+                {/* La barre défile horizontalement plutôt que d'écraser ses
               libellés quand elle déborde (min-w-max), le glisser reproduit le
               défilement là où la molette horizontale manque. */}
-              <div
-                ref={toolbarRef}
-                {...toolbarDrag}
-                className="cursor-grab overflow-x-auto select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                <div className="flex w-full min-w-max items-center justify-between gap-2">
-                  <div className="flex flex-none items-center gap-1.5">
-                    {FILTERS.map((f) => (
-                      <button
-                        key={f.id}
-                        onClick={() => changeFilter(f.id)}
-                        className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                          filter === f.id
-                            ? "bg-indigo-600 text-white"
-                            : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                        }`}
-                      >
-                        {f.label} ({counts[f.id]})
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex flex-none items-center gap-2">
-                    {layout === "grid" && (
-                      <button
-                        onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
-                        title="Sélection multiple"
-                        className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
-                          selectMode
-                            ? "bg-indigo-600 text-white"
-                            : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                        }`}
-                      >
-                        <CheckSquare className="h-3.5 w-3.5" />
-                        Sélection
-                      </button>
-                    )}
-
-                    <LibraryDisplayMenu
-                      sort={sort}
-                      onSortChange={changeSort}
-                      allowManualSort={layout === "list"}
-                      grouping={grouping}
-                      onGroupingChange={changeGrouping}
-                      genreOptions={genreOpts}
-                      genreFilter={genreFilter}
-                      onToggleGenre={toggleGenre}
-                      onClearGenres={() => changeGenreFilter(new Set())}
-                    />
-
-                    <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
-                      {(
-                        [
-                          ["list", List],
-                          ["grid", LayoutGrid],
-                        ] as const
-                      ).map(([id, Icon]) => (
+                <div
+                  ref={toolbarRef}
+                  {...toolbarDrag}
+                  className="cursor-grab overflow-x-auto select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  <div className="flex w-full min-w-max items-center justify-between gap-2">
+                    <div className="flex flex-none items-center gap-1.5">
+                      {FILTERS.map((f) => (
                         <button
-                          key={id}
-                          onClick={() => changeLayout(id)}
-                          title={id === "list" ? "Vue liste" : "Vue grille"}
-                          className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                            layout === id
-                              ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-700 dark:text-indigo-300"
-                              : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
+                          key={f.id}
+                          onClick={() => changeFilter(f.id)}
+                          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                            filter === f.id
+                              ? "bg-indigo-600 text-white"
+                              : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
                           }`}
                         >
-                          <Icon className="h-4 w-4" />
+                          {f.label} ({counts[f.id]})
                         </button>
                       ))}
+                    </div>
+
+                    <div className="flex flex-none items-center gap-2">
+                      {layout === "grid" && (
+                        <button
+                          onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
+                          title="Sélection multiple"
+                          className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
+                            selectMode
+                              ? "bg-indigo-600 text-white"
+                              : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                          }`}
+                        >
+                          <CheckSquare className="h-3.5 w-3.5" />
+                          Sélection
+                        </button>
+                      )}
+
+                      <LibraryDisplayMenu
+                        sort={sort}
+                        onSortChange={changeSort}
+                        allowManualSort={layout === "list"}
+                        grouping={grouping}
+                        onGroupingChange={changeGrouping}
+                        genreOptions={genreOpts}
+                        genreFilter={genreFilter}
+                        onToggleGenre={toggleGenre}
+                        onClearGenres={() => changeGenreFilter(new Set())}
+                      />
+
+                      <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
+                        {(
+                          [
+                            ["list", List],
+                            ["grid", LayoutGrid],
+                          ] as const
+                        ).map(([id, Icon]) => (
+                          <button
+                            key={id}
+                            onClick={() => changeLayout(id)}
+                            title={id === "list" ? "Vue liste" : "Vue grille"}
+                            className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                              layout === id
+                                ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-700 dark:text-indigo-300"
+                                : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
+                            }`}
+                          >
+                            <Icon className="h-4 w-4" />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <AnimatePresence>
-              {grouping === "category" && (
-                <LibraryCustomBar
-                  categoryCount={categories.categories.length}
-                  selectMode={selectMode}
-                  onCreate={() => setNaming({ mode: "create", hashes: [] })}
-                  onToggleSelect={startClassifying}
-                />
-              )}
-            </AnimatePresence>
-
-            {visible.length === 0 ? (
-              <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
-                <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
-                <p className="text-sm">
-                  {entries.length === 0
-                    ? "Aucun téléchargement pour l'instant."
-                    : "Rien ne correspond à cette recherche."}
-                </p>
-                {entries.length === 0 && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      onClick={() => onNavigate("main")}
-                      className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500"
-                    >
-                      <Search className="h-3.5 w-3.5" />
-                      Rechercher
-                    </button>
-                    <button
-                      onClick={() => onNavigate("discover")}
-                      className="flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                    >
-                      <Compass className="h-3.5 w-3.5" />
-                      Découvrir
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : displayItems.length === 0 && genreFilter.size > 0 ? (
-              <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
-                <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
-                <p className="text-sm">Aucun titre dans ces genres.</p>
-                <button
-                  onClick={() => changeGenreFilter(new Set())}
-                  className="mt-1 flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                >
-                  Effacer les genres
-                </button>
-              </div>
-            ) : layout === "grid" ? (
-              <LibraryBlocks
-                blocks={blocks}
-                blockMenu={categoryBlockMenu}
-                activeDropId={hoveredDrop}
-              >
-                {(items) => (
-                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-                    {items.map(renderPoster)}
-                  </div>
-                )}
-              </LibraryBlocks>
-            ) : canReorder ? (
-              <Reorder.Group axis="y" values={visible} onReorder={persist} className="space-y-2">
-                {visible.map((e) => (
-                  <ReorderableCard
-                    key={e.infoHash}
-                    entry={e}
+              {/* Reprise du prochain épisode : masquée dès qu'une recherche,
+              un filtre ou un genre est actif, on cherche alors autre chose. */}
+              <AnimatePresence>
+                {!query && filter === "all" && genreFilter.size === 0 && (
+                  <LibraryResumeBanner
+                    entries={entries}
+                    onOpen={openTitle}
                     onChange={handleChange}
-                    onRemove={handleRemove}
                     debrid={debrid}
-                    simple={viewMode === "simple"}
                     autoWatchOnPlay={autoWatchOnPlay}
-                    magnet={magnetFor(e)}
-                    onCancelDebrid={cancelDebrid}
-                    cancellingDebrid={cancellingHash === e.infoHash}
+                    simple={viewMode === "simple"}
+                    tmdbKey={initialTmdbKey ?? undefined}
+                    collapsed={resumeCollapsed}
+                    onToggleCollapsed={toggleResumeCollapsed}
                   />
-                ))}
-              </Reorder.Group>
-            ) : (
-              <LibraryBlocks
-                blocks={blocks}
-                blockMenu={categoryBlockMenu}
-                activeDropId={hoveredDrop}
-              >
-                {(items) => <div className="space-y-2">{items.map(renderCard)}</div>}
-              </LibraryBlocks>
-            )}
-          </>
-        )}
-      </div>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {grouping === "category" && (
+                  <LibraryCustomBar
+                    categoryCount={categories.categories.length}
+                    selectMode={selectMode}
+                    onCreate={() => setNaming({ mode: "create", hashes: [] })}
+                    onToggleSelect={startClassifying}
+                  />
+                )}
+              </AnimatePresence>
+
+              {visible.length === 0 ? (
+                <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
+                  <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
+                  <p className="text-sm">
+                    {entries.length === 0
+                      ? "Aucun téléchargement pour l'instant."
+                      : "Rien ne correspond à cette recherche."}
+                  </p>
+                  {entries.length === 0 && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        onClick={() => onNavigate("main")}
+                        className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500"
+                      >
+                        <Search className="h-3.5 w-3.5" />
+                        Rechercher
+                      </button>
+                      <button
+                        onClick={() => onNavigate("discover")}
+                        className="flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                      >
+                        <Compass className="h-3.5 w-3.5" />
+                        Découvrir
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : displayItems.length === 0 && genreFilter.size > 0 ? (
+                <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
+                  <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
+                  <p className="text-sm">Aucun titre dans ces genres.</p>
+                  <button
+                    onClick={() => changeGenreFilter(new Set())}
+                    className="mt-1 flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
+                  >
+                    Effacer les genres
+                  </button>
+                </div>
+              ) : layout === "grid" ? (
+                <LibraryBlocks
+                  blocks={blocks}
+                  blockMenu={categoryBlockMenu}
+                  activeDropId={hoveredDrop}
+                  collapsedKeys={collapsedBlocks}
+                  onToggleCollapsed={toggleCollapsedBlock}
+                >
+                  {(items) => (
+                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+                      {items.map(renderPoster)}
+                    </div>
+                  )}
+                </LibraryBlocks>
+              ) : canReorder ? (
+                <Reorder.Group axis="y" values={visible} onReorder={persist} className="space-y-2">
+                  {visible.map((e) => (
+                    <ReorderableCard
+                      key={e.infoHash}
+                      entry={e}
+                      onChange={handleChange}
+                      onRemove={handleRemove}
+                      onOpen={openEntry}
+                      debrid={debrid}
+                      simple={viewMode === "simple"}
+                      autoWatchOnPlay={autoWatchOnPlay}
+                      magnet={magnetFor(e)}
+                      onCancelDebrid={cancelDebrid}
+                      cancellingDebrid={cancellingHash === e.infoHash}
+                    />
+                  ))}
+                </Reorder.Group>
+              ) : (
+                <LibraryBlocks
+                  blocks={blocks}
+                  blockMenu={categoryBlockMenu}
+                  activeDropId={hoveredDrop}
+                  collapsedKeys={collapsedBlocks}
+                  onToggleCollapsed={toggleCollapsedBlock}
+                >
+                  {(items) => <div className="space-y-2">{items.map(renderCard)}</div>}
+                </LibraryBlocks>
+              )}
+            </>
+          )}
+        </div>
+      </motion.div>
+
+      <motion.div
+        aria-hidden
+        initial={false}
+        animate={{ opacity: receded ? 1 : 0 }}
+        transition={RECEDE_TRANSITION}
+        className="pointer-events-none fixed inset-0 z-[35] bg-black/35"
+      />
 
       <AnimatePresence>
-        {expandedEntry && (
-          <LibraryDetailModal
-            entry={expandedEntry}
-            onChange={handleChange}
-            onRemove={handleRemove}
-            onClose={() => setExpandedHash(null)}
-            debrid={debrid}
-            simple={viewMode === "simple"}
-            autoWatchOnPlay={autoWatchOnPlay}
-            onEnrichTmdb={
-              initialTmdbKey ? () => setMatchingHash(expandedEntry.infoHash) : undefined
+        {titleSubject && (
+          <LibraryTitlePage
+            key={
+              titleSubject.kind === "group"
+                ? `g${titleSubject.group.tmdbId}`
+                : titleSubject.entry.infoHash
             }
-            tmdbKey={initialTmdbKey ?? undefined}
-            enrichOpen={matchingHash !== null}
-            magnet={magnetFor(expandedEntry)}
-            onCancelDebrid={cancelDebrid}
-            cancellingDebrid={cancellingHash === expandedEntry.infoHash}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {expandedGroup?.type === "group" && (
-          <SeriesGroupDetailModal
-            group={expandedGroup.group}
+            subject={titleSubject}
+            ready={titleReady}
             onChange={handleChange}
             onRemove={handleRemove}
-            onClose={() => setExpandedGroupId(null)}
+            onClose={closeTitle}
             debrid={debrid}
             simple={viewMode === "simple"}
             autoWatchOnPlay={autoWatchOnPlay}
+            tmdbKey={initialTmdbKey ?? undefined}
             onEnrichTmdb={
-              initialTmdbKey ? () => setMatchingGroupId(expandedGroup.group.tmdbId) : undefined
+              initialTmdbKey
+                ? () =>
+                    titleSubject.kind === "group"
+                      ? setMatchingGroupId(titleSubject.group.tmdbId)
+                      : setMatchingHash(titleSubject.entry.infoHash)
+                : undefined
             }
             onFindMore={
-              initialTmdbKey ? () => setFindMore(tmdbItemOf(expandedGroup.group.tmdb)) : undefined
+              initialTmdbKey && titleSubject.kind === "group"
+                ? () => setFindMore(tmdbItemOf(titleSubject.group.tmdb))
+                : undefined
             }
-            tmdbKey={initialTmdbKey ?? undefined}
-            enrichOpen={matchingGroupId !== null || findMore !== null}
+            overlayOpen={
+              matchingHash !== null ||
+              matchingGroupId !== null ||
+              findMore !== null ||
+              debridModal !== null
+            }
+            ownedKeys={ownedKeys}
+            likedKeys={likedKeys}
+            onToggleLike={toggleLike}
+            onOpenSuggestion={initialTmdbKey ? setFindMore : undefined}
+            magnet={titleSubject.kind === "entry" ? magnetFor(titleSubject.entry) : undefined}
+            onCancelDebrid={cancelDebrid}
+            cancellingDebrid={
+              titleSubject.kind === "entry" && cancellingHash === titleSubject.entry.infoHash
+            }
           />
         )}
       </AnimatePresence>
@@ -1224,6 +1306,12 @@ export function LibraryPage({
           />
         )}
       </AnimatePresence>
+
+      <BulkConfirmDialog
+        pending={debrid.pendingBulk}
+        onConfirm={debrid.confirmBulk}
+        onCancel={debrid.cancelBulk}
+      />
     </main>
   );
 }
@@ -1232,6 +1320,7 @@ interface ReorderableCardProps {
   entry: LibraryEntry;
   onChange: (entry: LibraryEntry) => void;
   onRemove: (infoHash: string) => void;
+  onOpen: (infoHash: string) => void;
   debrid: DebridControls;
   simple: boolean;
   autoWatchOnPlay?: boolean;

@@ -13,6 +13,7 @@ import { isBrowserPreview } from "@/lib/devTauriShim";
 import { prefetchLibrary } from "@/lib/library";
 import { loadCategories } from "@/lib/libraryCategories";
 import { loadLibraryPrefs } from "@/lib/libraryPrefs";
+import { loadResume } from "@/lib/resumeWatch";
 import { LATEST_VERSION } from "@/lib/patchnotes";
 import type { SearchMode } from "@/lib/searchModes";
 import { loadSeriesFolders } from "@/lib/seriesFolders";
@@ -161,6 +162,9 @@ function App() {
     // rangée et filtrée, sans recalcul visible au premier rendu.
     loadLibraryPrefs().catch(() => {});
     loadCategories().catch(() => {});
+    // Dernière série lancée : le bandeau « Reprendre » est déjà là au premier
+    // rendu de la bibliothèque.
+    loadResume().catch(() => {});
 
     Promise.all([
       store.get<boolean>("setup_complete"),

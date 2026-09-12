@@ -1,6 +1,4 @@
-import { useState } from "react";
 import { motion } from "motion/react";
-import { Collapse } from "@/components/Collapse";
 import { Check, ChevronDown, Copy, Download, Loader2, Play } from "lucide-react";
 import {
   DropdownMenu,
@@ -9,19 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import vlcLogo from "@/assets/vlc.png";
-import { formatSize } from "@/lib/debrid";
-import { parseRelease } from "@/lib/parseRelease";
-import {
-  episodeLabel,
-  groupBySeason,
-  hasMultipleSeasons,
-  isSeries,
-  setFilesWatched,
-  toggleFile,
-  videoFiles,
-  type LibraryEntry,
-  type SeasonGroup,
-} from "@/lib/library";
+import { episodeLabel } from "@/lib/library";
 import type { DebridFile } from "@/lib/debrid";
 
 export interface DebridControls {
@@ -38,11 +24,17 @@ export function DebridActions({
   groupKey,
   debrid,
   onVlcClick,
+  vlc = true,
+  label,
 }: {
   links: string[];
   groupKey: string;
   debrid: DebridControls;
   onVlcClick?: () => void;
+  // Masque le bouton VLC quand la lecture passe par un autre contrôle.
+  vlc?: boolean;
+  // Bouton de téléchargement libellé (bandeau de la fiche) plutôt qu'une icône.
+  label?: string;
 }) {
   if (links.length === 0) return null;
   const downloading = debrid.bulkDownloading === groupKey;
@@ -54,39 +46,63 @@ export function DebridActions({
 
   return (
     <div className="flex flex-none items-center gap-1">
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        title="Lire avec VLC"
-        onClick={() => {
-          debrid.openVlcMany(links, groupKey);
-          onVlcClick?.();
-        }}
-        disabled={vlcing}
-        className={`${btn} hover:bg-black/5 dark:hover:bg-white/10`}
-      >
-        {vlcing ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" />
-        ) : (
-          <img src={vlcLogo} className="h-4 w-4" alt="VLC" />
-        )}
-      </motion.button>
+      {vlc && (
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          title="Lire avec VLC"
+          onClick={() => {
+            debrid.openVlcMany(links, groupKey);
+            onVlcClick?.();
+          }}
+          disabled={vlcing}
+          className={`${btn} hover:bg-black/5 dark:hover:bg-white/10`}
+        >
+          {vlcing ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-zinc-500" />
+          ) : (
+            <img src={vlcLogo} className="h-4 w-4" alt="VLC" />
+          )}
+        </motion.button>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <motion.button
-            whileTap={{ scale: 0.9 }}
+            whileTap={{ scale: 0.95 }}
             title="Télécharger ou copier"
             disabled={downloading}
-            className="flex h-7 flex-none items-center gap-0.5 rounded-lg bg-indigo-600 pl-2 pr-1.5 transition-colors hover:bg-indigo-500 disabled:opacity-40"
+            className={
+              label
+                ? "flex h-9 flex-none items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 text-sm font-medium text-white transition-colors hover:bg-indigo-500 disabled:opacity-40"
+                : "flex h-7 flex-none items-center gap-0.5 rounded-lg bg-indigo-600 pl-2 pr-1.5 transition-colors hover:bg-indigo-500 disabled:opacity-40"
+            }
           >
             {downloading ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />
             ) : (
               <Download className="h-3.5 w-3.5 text-white" />
             )}
+            {label}
             <ChevronDown className="h-3 w-3 text-white/70" />
           </motion.button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {/* Le bouton VLC dédié est masqué ici : l'action reste accessible. */}
+          {!vlc && (
+            <DropdownMenuItem
+              onClick={() => {
+                debrid.openVlcMany(links, groupKey);
+                onVlcClick?.();
+              }}
+              disabled={vlcing}
+            >
+              {vlcing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <img src={vlcLogo} className="h-4 w-4" alt="" />
+              )}
+              {multi ? "Tout lire avec VLC" : "Lire avec VLC"}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem
             onClick={() => debrid.downloadMany(links, groupKey)}
             disabled={downloading}
@@ -100,7 +116,7 @@ export function DebridActions({
             ) : (
               <Copy className="h-4 w-4" />
             )}
-            {multi ? "Copier les liens" : "Copier le lien"}
+            {multi ? "Partager les liens" : "Partager le lien"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -108,16 +124,7 @@ export function DebridActions({
   );
 }
 
-// Sélection multiple pour téléchargement, pilotée par la modale de détail.
-// Quand fournie, les lignes affichent une case de sélection (indigo) au lieu de
-// la case « vu » et masquent les actions par épisode.
-export interface EpisodeSelection {
-  has: (link: string) => boolean;
-  toggle: (link: string) => void;
-  setMany: (links: string[], selected: boolean) => void;
-}
-
-function SelectionBox({ checked }: { checked: boolean }) {
+export function SelectionBox({ checked }: { checked: boolean }) {
   return (
     <span
       className={`flex h-5 w-5 flex-none items-center justify-center rounded-md ring-1 transition-colors ${
@@ -213,231 +220,5 @@ export function ResumeButton({
       {started ? "Reprendre" : "Lancer"}
       {label ? <EpisodeLabel label={label} hideSeason={hideSeason} /> : null}
     </motion.button>
-  );
-}
-
-export function FileRow({
-  file,
-  entry,
-  onChange,
-  debrid,
-  simple,
-  autoWatchOnPlay,
-  selection,
-}: {
-  file: DebridFile;
-  entry: LibraryEntry;
-  onChange: (entry: LibraryEntry) => void;
-  debrid: DebridControls;
-  simple: boolean;
-  autoWatchOnPlay: boolean;
-  selection?: EpisodeSelection;
-}) {
-  const fileWatched = entry.watched[file.name] ?? false;
-  const baseName = file.name.split("/").pop() ?? file.name;
-  // La saison est déjà affichée par la section parente : on ne garde que l'épisode.
-  const ep = episodeLabel(file.name)?.replace(/^S\d+(?=E)/i, "") ?? null;
-  const simpleName = parseRelease(baseName).title.replace(/ - S\d+ E(\d+)$/i, " - E$1");
-  const name = simple
-    ? ep && !/E\d+$/i.test(simpleName)
-      ? `${simpleName} - ${ep}`
-      : simpleName
-    : baseName;
-
-  if (selection) {
-    const sel = selection.has(file.link);
-    return (
-      <li
-        onClick={() => selection.toggle(file.link)}
-        className={`flex cursor-pointer items-center gap-3 px-4 py-2 pl-6 transition-colors ${
-          sel ? "bg-indigo-500/10" : "hover:bg-black/[0.025] dark:hover:bg-white/[0.04]"
-        }`}
-      >
-        <SelectionBox checked={sel} />
-        <span className="min-w-0 flex-1 truncate text-xs text-zinc-700 dark:text-zinc-300">
-          {name}
-        </span>
-        {file.size > 0 && (
-          <span className="flex-none text-[11px] text-zinc-400">{formatSize(file.size)}</span>
-        )}
-      </li>
-    );
-  }
-
-  return (
-    <li className="flex items-center gap-3 px-4 py-2 pl-6 transition-colors hover:bg-black/[0.025] dark:hover:bg-white/[0.04]">
-      <Checkbox checked={fileWatched} onClick={() => onChange(toggleFile(entry, file.name))} />
-      <span
-        className={`min-w-0 flex-1 truncate text-xs ${fileWatched ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-700 dark:text-zinc-300"}`}
-      >
-        {name}
-      </span>
-      {file.size > 0 && (
-        <span className="flex-none text-[11px] text-zinc-400">{formatSize(file.size)}</span>
-      )}
-      <DebridActions
-        links={[file.link]}
-        groupKey={file.link}
-        debrid={debrid}
-        onVlcClick={
-          autoWatchOnPlay && !fileWatched ? () => onChange(toggleFile(entry, file.name)) : undefined
-        }
-      />
-    </li>
-  );
-}
-
-function SeasonSection({
-  group,
-  entry,
-  onChange,
-  debrid,
-  simple,
-  autoWatchOnPlay,
-  selection,
-}: {
-  group: SeasonGroup;
-  entry: LibraryEntry;
-  onChange: (entry: LibraryEntry) => void;
-  debrid: DebridControls;
-  simple: boolean;
-  autoWatchOnPlay: boolean;
-  selection?: EpisodeSelection;
-}) {
-  const [open, setOpen] = useState(false);
-  const names = group.files.map((f) => f.name);
-  const links = group.files.map((f) => f.link);
-  const seenCount = names.filter((n) => entry.watched[n]).length;
-  const allSeen = seenCount === names.length;
-  const allSelected = !!selection && links.every((l) => selection.has(l));
-  const label = group.season === null ? "Autres" : `Saison ${group.season}`;
-  const groupKey = `${entry.infoHash}-s${group.season ?? "x"}`;
-  const next = group.files.find((f) => !entry.watched[f.name]) ?? null;
-  const resumeKey = `resume-${groupKey}`;
-
-  return (
-    <div>
-      <div className="bg-black/[0.02] dark:bg-white/[0.03] transition-colors hover:bg-black/[0.05] dark:hover:bg-white/[0.06]">
-        <div
-          onClick={() => setOpen((v) => !v)}
-          title={open ? "Masquer les épisodes" : "Voir les épisodes"}
-          className="flex cursor-pointer items-center gap-3 px-4 py-2.5"
-        >
-          <div onClick={(e) => e.stopPropagation()} className="flex flex-none items-center">
-            {selection ? (
-              <button onClick={() => selection.setMany(links, !allSelected)}>
-                <SelectionBox checked={allSelected} />
-              </button>
-            ) : (
-              <Checkbox
-                checked={allSeen}
-                onClick={() => onChange(setFilesWatched(entry, names, !allSeen))}
-              />
-            )}
-          </div>
-          <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
-            <span
-              className={`truncate text-xs font-semibold ${allSeen ? "text-zinc-400 line-through dark:text-zinc-500" : "text-zinc-800 dark:text-zinc-200"}`}
-            >
-              {label}
-            </span>
-            <span
-              className={`flex h-5 flex-none items-center gap-1 rounded-md px-1.5 text-[11px] font-medium transition-colors ${
-                open
-                  ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300"
-                  : seenCount > 0 && !allSeen
-                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-                    : "bg-black/5 text-zinc-500 dark:bg-white/10 dark:text-zinc-400"
-              }`}
-            >
-              {seenCount}/{names.length}
-              <ChevronDown className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`} />
-            </span>
-          </div>
-          <div onClick={(e) => e.stopPropagation()} className="flex flex-none items-center gap-3">
-            {!selection && next && (
-              <ResumeButton
-                next={next}
-                groupKey={resumeKey}
-                debrid={debrid}
-                started={seenCount > 0}
-                hideSeason
-                onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
-              />
-            )}
-            {!selection && <DebridActions links={links} groupKey={groupKey} debrid={debrid} />}
-          </div>
-        </div>
-      </div>
-      <Collapse open={open}>
-        <ul className="divide-y divide-black/5 dark:divide-white/5">
-          {group.files.map((f) => (
-            <FileRow
-              key={f.name}
-              file={f}
-              entry={entry}
-              onChange={onChange}
-              debrid={debrid}
-              simple={simple}
-              autoWatchOnPlay={autoWatchOnPlay}
-              selection={selection}
-            />
-          ))}
-        </ul>
-      </Collapse>
-    </div>
-  );
-}
-
-// Corps épisodes/saisons d'une entrée série, partagé entre la carte liste et la
-// modale de détail. Suppose que l'entrée est une série (isSeries === true).
-export function EntryEpisodes({
-  entry,
-  onChange,
-  debrid,
-  simple,
-  autoWatchOnPlay,
-  selection,
-}: {
-  entry: LibraryEntry;
-  onChange: (entry: LibraryEntry) => void;
-  debrid: DebridControls;
-  simple: boolean;
-  autoWatchOnPlay: boolean;
-  selection?: EpisodeSelection;
-}) {
-  const vids = videoFiles(entry);
-  const multiSeason = isSeries(entry) && hasMultipleSeasons(entry);
-
-  return multiSeason ? (
-    <div className="divide-y divide-black/5 dark:divide-white/10">
-      {groupBySeason(vids).map((g) => (
-        <SeasonSection
-          key={g.season ?? "other"}
-          group={g}
-          entry={entry}
-          onChange={onChange}
-          debrid={debrid}
-          simple={simple}
-          autoWatchOnPlay={autoWatchOnPlay}
-          selection={selection}
-        />
-      ))}
-    </div>
-  ) : (
-    <ul className="divide-y divide-black/5 dark:divide-white/5">
-      {vids.map((f) => (
-        <FileRow
-          key={f.name}
-          file={f}
-          entry={entry}
-          onChange={onChange}
-          debrid={debrid}
-          simple={simple}
-          autoWatchOnPlay={autoWatchOnPlay}
-          selection={selection}
-        />
-      ))}
-    </ul>
   );
 }

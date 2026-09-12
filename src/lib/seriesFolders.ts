@@ -28,7 +28,7 @@ export interface SeriesFolderConfig {
   assignments: Record<string, string>;
 }
 
-type ConfigMap = Record<string, SeriesFolderConfig>;
+export type ConfigMap = Record<string, SeriesFolderConfig>;
 
 const STORE_KEY = "seriesFolders";
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });

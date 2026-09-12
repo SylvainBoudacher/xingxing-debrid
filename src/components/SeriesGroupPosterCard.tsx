@@ -52,6 +52,7 @@ export const SeriesGroupPosterCard = memo(function SeriesGroupPosterCard({
     <motion.button
       layout
       layoutId={layoutId}
+      data-title-key={`g${group.tmdbId}`}
       whileHover={{ y: -4 }}
       whileTap={{ scale: 0.98 }}
       onClick={onToggle}

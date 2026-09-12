@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { ChevronDown, Trash2 } from "lucide-react";
+import { motion } from "motion/react";
+import { ChevronRight, Trash2 } from "lucide-react";
 import { formatSize } from "@/lib/debrid";
 import { parseRelease } from "@/lib/parseRelease";
 import {
@@ -20,11 +20,11 @@ import {
 import {
   Checkbox,
   DebridActions,
-  EntryEpisodes,
   ResumeButton,
   type DebridControls,
 } from "@/components/libraryParts";
 import { MagnetProgress } from "@/components/MagnetProgress";
+import { setResume } from "@/lib/resumeWatch";
 import type { MagnetEntry } from "@/lib/services/allDebrid";
 
 export type { DebridControls };
@@ -33,10 +33,11 @@ interface LibraryEntryCardProps {
   entry: LibraryEntry;
   onChange: (entry: LibraryEntry) => void;
   onRemove: (infoHash: string) => void;
+  // Ouvre la fiche plein écran du titre.
+  onOpen: (infoHash: string) => void;
   debrid: DebridControls;
   simple: boolean;
   autoWatchOnPlay?: boolean;
-  defaultExpanded?: boolean;
   // Statut AllDebrid si le magnet est encore en cours de débridage.
   magnet?: MagnetEntry;
   onCancelDebrid?: (entry: LibraryEntry) => void;
@@ -47,15 +48,14 @@ export const LibraryEntryCard = memo(function LibraryEntryCard({
   entry,
   onChange,
   onRemove,
+  onOpen,
   debrid,
   simple,
   autoWatchOnPlay = false,
-  defaultExpanded = false,
   magnet,
   onCancelDebrid,
   cancellingDebrid,
 }: LibraryEntryCardProps) {
-  const [expanded, setExpanded] = useState(defaultExpanded);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const series = isSeries(entry);
   const whole = isWholeWatched(entry);
@@ -76,13 +76,16 @@ export const LibraryEntryCard = memo(function LibraryEntryCard({
   }, [confirmDelete]);
 
   return (
-    <div className="rounded-xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm overflow-hidden">
+    <div
+      data-title-key={entry.infoHash}
+      className="rounded-xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/5 dark:ring-white/10 backdrop-blur-sm overflow-hidden"
+    >
       <div className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-black/[0.025] dark:hover:bg-white/[0.04]">
         <Checkbox checked={whole} onClick={() => onChange(setWholeWatched(entry, !whole))} />
 
         <button
-          onClick={() => series && setExpanded((v) => !v)}
-          className={`flex min-w-0 flex-1 items-center gap-2 text-left ${series ? "cursor-pointer" : "cursor-default"}`}
+          onClick={() => onOpen(entry.infoHash)}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left cursor-pointer"
         >
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline gap-2">
@@ -132,11 +135,7 @@ export const LibraryEntryCard = memo(function LibraryEntryCard({
               />
             )}
           </div>
-          {series && (
-            <ChevronDown
-              className={`h-4 w-4 flex-none text-zinc-400 transition-transform ${expanded ? "rotate-180" : ""}`}
-            />
-          )}
+          <ChevronRight className="h-4 w-4 flex-none text-zinc-400" />
         </button>
 
         {next && (
@@ -145,7 +144,10 @@ export const LibraryEntryCard = memo(function LibraryEntryCard({
             groupKey={resumeKey}
             debrid={debrid}
             started={watchedCount(entry) > 0}
-            onResume={() => autoWatchOnPlay && onChange(toggleFile(entry, next.name))}
+            onResume={() => {
+              setResume({ kind: "entry", entry });
+              if (autoWatchOnPlay) onChange(toggleFile(entry, next.name));
+            }}
           />
         )}
 
@@ -173,26 +175,6 @@ export const LibraryEntryCard = memo(function LibraryEntryCard({
           {confirmDelete && "Sûr ?"}
         </motion.button>
       </div>
-
-      <AnimatePresence initial={false}>
-        {series && expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden border-t border-black/5 dark:border-white/10"
-          >
-            <EntryEpisodes
-              entry={entry}
-              onChange={onChange}
-              debrid={debrid}
-              simple={simple}
-              autoWatchOnPlay={autoWatchOnPlay}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 });

@@ -412,13 +412,17 @@ export interface GroupSeason {
   items: SeasonItem[];
 }
 
-// Ventile tous les fichiers vidéo du groupe par saison, toutes entrées
-// confondues : des épisodes téléchargés séparément rejoignent la même section
-// de saison. Saison du nom de fichier, sinon saison dominante de l'entrée,
-// sinon null (section "?"). Épisodes triés par numéro dans chaque saison.
 export function groupSeasons(group: SeriesGroup): GroupSeason[] {
+  return seasonsOf(group.entries);
+}
+
+// Ventile tous les fichiers vidéo par saison, toutes entrées confondues : des
+// épisodes téléchargés séparément rejoignent la même section de saison.
+// Saison du nom de fichier, sinon saison dominante de l'entrée, sinon null
+// (section "?"). Épisodes triés par numéro dans chaque saison.
+export function seasonsOf(entries: LibraryEntry[]): GroupSeason[] {
   const map = new Map<number | null, SeasonItem[]>();
-  for (const entry of group.entries) {
+  for (const entry of entries) {
     const fallback = dominantSeason(entry);
     for (const file of videoFiles(entry)) {
       const s = seasonOf(file.name) ?? fallback;
