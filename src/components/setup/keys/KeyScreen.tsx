@@ -35,6 +35,7 @@ export function KeyScreen({
   onChange,
   onVerify,
   notice,
+  skipLabel = "Continuer quand même",
 }: {
   service: KeyService;
   value: string;
@@ -43,6 +44,8 @@ export function KeyScreen({
   onVerify: () => void;
   /** Rappel affiche juste avant le bouton (cles douteuses, dernier ecran). */
   notice?: React.ReactNode;
+  /** Libelle du bouton apres une verification en echec. */
+  skipLabel?: string;
 }) {
   const [revealed, setRevealed] = useState(false);
   const badge = BADGES[service.badge];
@@ -58,7 +61,7 @@ export function KeyScreen({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-base font-semibold text-zinc-900 dark:text-white">
-              Cle {service.name}
+              Clé {service.name}
             </p>
             <span
               className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${badge.className}`}
@@ -135,25 +138,25 @@ export function KeyScreen({
           {status === "valid" && (
             <>
               <Check className="h-4 w-4" />
-              Cle valide
+              Clé valide
             </>
           )}
           {status === "idle" && (
             <>
-              Verifier
+              Vérifier
               <ArrowRight className="h-4 w-4" />
             </>
           )}
           {skipping && (
             <>
-              Continuer quand meme
+              {skipLabel}
               <ArrowRight className="h-4 w-4" />
             </>
           )}
         </motion.button>
         {empty && (
           <p className="mt-2 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
-            Collez votre cle pour continuer.
+            Collez votre clé pour continuer.
           </p>
         )}
       </div>

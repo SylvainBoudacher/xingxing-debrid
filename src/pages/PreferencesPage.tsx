@@ -1,5 +1,5 @@
 import { AppMenu, type Page } from "@/components/AppMenu";
-import type { ApiKeys } from "@/components/ApiKeysForm";
+import type { ApiKeys } from "@/lib/apiKeys";
 import { SettingsRail } from "@/components/settings/SettingsRail";
 import { ALL_NAV_ITEMS, type PanelId } from "@/components/settings/settingsNav";
 import { AppearancePanel } from "@/components/settings/panels/AppearancePanel";
