@@ -14,7 +14,7 @@ import { MagnetsPanel } from "@/components/settings/panels/MagnetsPanel";
 import { NyaaPanel } from "@/components/settings/panels/NyaaPanel";
 import { ShortcutsPanel } from "@/components/settings/panels/ShortcutsPanel";
 import { SummerPanel } from "@/components/settings/panels/SummerPanel";
-import { ArrowLeft } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 
@@ -108,21 +108,10 @@ export function PreferencesPage({
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.06)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.13)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.13)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:linear-gradient(to_right,black,transparent_38%,transparent_62%,black),radial-gradient(ellipse_85%_80%_at_50%_0%,black_25%,transparent_90%)] [mask-composite:intersect]" />
 
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl">
-        <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
-          <motion.button
-            whileTap={{ scale: 0.93 }}
-            onClick={onBack}
-            className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="text-sm font-medium">Retour</span>
-          </motion.button>
-
-          <h1 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight absolute left-1/2 -translate-x-1/2">
-            Paramètres
-          </h1>
-
+      <PageHeader
+        title="Paramètres"
+        onBack={onBack}
+        menu={
           <AppMenu
             currentPage="preferences"
             onNavigate={onNavigate}
@@ -130,8 +119,8 @@ export function PreferencesPage({
             hasPendingUpdate={hasPendingUpdate}
             onShowPendingUpdate={onShowPendingUpdate}
           />
-        </div>
-      </div>
+        }
+      />
 
       {/* Content */}
       <div className="relative mx-auto flex w-full max-w-4xl gap-10 px-6 pt-10 pb-10 sm:px-8">

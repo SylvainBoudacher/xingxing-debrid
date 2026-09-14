@@ -90,8 +90,8 @@ import { useLibraryMagnetStatus } from "@/lib/useLibraryMagnetStatus";
 import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
+import { PageHeader } from "@/components/PageHeader";
 import {
-  ArrowLeft,
   CheckSquare,
   Compass,
   GripVertical,
@@ -881,28 +881,14 @@ export function LibraryPage({
         {/* Header */}
         {/* inert : la grille reste montée sous la fiche plein écran, hors d'atteinte
       du clavier. */}
-        <motion.div
+        <PageHeader
           ref={headerRef}
           inert={titleSubject !== null}
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="sticky top-0 z-30 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl"
-        >
-          <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
-            <motion.button
-              whileTap={{ scale: 0.93 }}
-              onClick={onBack}
-              className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="text-sm font-medium">Retour</span>
-            </motion.button>
-
-            <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-semibold tracking-tight text-zinc-900 dark:text-white">
-              Ma bibliothèque
-            </h1>
-
+          title="Ma bibliothèque"
+          onBack={onBack}
+          entrance
+          zIndex="z-30"
+          menu={
             <AppMenu
               currentPage="library"
               onNavigate={onNavigate}
@@ -910,8 +896,8 @@ export function LibraryPage({
               hasPendingUpdate={hasPendingUpdate}
               onShowPendingUpdate={onShowPendingUpdate}
             />
-          </div>
-        </motion.div>
+          }
+        />
 
         <div
           inert={titleSubject !== null}

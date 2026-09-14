@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
-import { ArrowLeft } from "lucide-react";
 import { useEffect } from "react";
 import { AppMenu, type Page } from "@/components/AppMenu";
+import { PageHeader } from "@/components/PageHeader";
 import { PATCH_NOTES } from "@/lib/patchnotes";
 
 interface PatchnotesPageProps {
@@ -29,21 +29,10 @@ export function PatchnotesPage({
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl">
-        <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
-          <motion.button
-            whileTap={{ scale: 0.93 }}
-            onClick={onBack}
-            className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="text-sm font-medium">Retour</span>
-          </motion.button>
-
-          <h1 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight absolute left-1/2 -translate-x-1/2">
-            Patch notes
-          </h1>
-
+      <PageHeader
+        title="Patch notes"
+        onBack={onBack}
+        menu={
           <AppMenu
             currentPage="patchnotes"
             onNavigate={onNavigate}
@@ -51,8 +40,8 @@ export function PatchnotesPage({
             hasPendingUpdate={hasPendingUpdate}
             onShowPendingUpdate={onShowPendingUpdate}
           />
-        </div>
-      </div>
+        }
+      />
 
       {/* Content */}
       <motion.div

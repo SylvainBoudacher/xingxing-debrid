@@ -1,5 +1,4 @@
-import { ArrowLeft } from "lucide-react";
-import { motion } from "motion/react";
+import { BackButton } from "@/components/BackButton";
 import type { ReactNode } from "react";
 
 interface TitleTopBarProps {
@@ -20,19 +19,8 @@ export function TitleTopBar({ title, solid, onBack, menu }: TitleTopBarProps) {
           : "border-transparent"
       }`}
     >
-      <div className="mx-auto flex h-14 max-w-4xl items-center gap-4 px-6">
-        <motion.button
-          whileTap={{ scale: 0.93 }}
-          onClick={onBack}
-          className={`flex flex-none items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium transition-colors ${
-            solid
-              ? "text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300"
-              : "bg-black/35 text-white backdrop-blur-md hover:bg-black/50"
-          }`}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Retour
-        </motion.button>
+      <div className="flex h-14 items-center gap-4 px-6">
+        <BackButton onClick={onBack} tone={solid ? "default" : "overlay"} />
         <p
           className={`min-w-0 flex-1 truncate text-center text-sm font-semibold text-zinc-900 transition-opacity duration-200 dark:text-white ${
             solid ? "opacity-100" : "opacity-0"

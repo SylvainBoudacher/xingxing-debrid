@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "motion/react";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import {
-  ArrowLeft,
   RefreshCw,
   Trash2,
   Loader2,
@@ -26,6 +25,7 @@ import { flattenFiles, formatSize, formatSpeed, isVideoFile } from "@/lib/debrid
 import { type ViewMode, resolvePageViewMode } from "@/lib/viewMode";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
+import { PageHeader } from "@/components/PageHeader";
 import {
   fetchWithTimeout,
   NetworkError,
@@ -881,37 +881,20 @@ export function MagnetsPage({
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
       {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="sticky top-0 z-10 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl"
-      >
-        <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
-          <motion.button
-            whileTap={{ scale: 0.93 }}
-            onClick={onBack}
-            className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="text-sm font-medium">Retour</span>
-          </motion.button>
-
-          <h1 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight absolute left-1/2 -translate-x-1/2">
-            Magnets
-          </h1>
-
-          <div className="flex items-center gap-2">
-            <AppMenu
-              currentPage="magnets"
-              onNavigate={onNavigate}
-              onBack={onBack}
-              hasPendingUpdate={hasPendingUpdate}
-              onShowPendingUpdate={onShowPendingUpdate}
-            />
-          </div>
-        </div>
-      </motion.div>
+      <PageHeader
+        title="Magnets"
+        onBack={onBack}
+        entrance
+        menu={
+          <AppMenu
+            currentPage="magnets"
+            onNavigate={onNavigate}
+            onBack={onBack}
+            hasPendingUpdate={hasPendingUpdate}
+            onShowPendingUpdate={onShowPendingUpdate}
+          />
+        }
+      />
 
       {/* Toolbar */}
       <motion.div
