@@ -1,4 +1,4 @@
-- Bibliothèque : refonte totale des œuvres, les films et séries ont maintenant leur propre page
-- Nouveau bandeau de recommandations lié à l'œuvre consultée
-- Nouveau bandeau pour reprendre le dernier épisode des 3 dernières séries regardées
-- Détection des doublons dans les séries, labels complétés et page de bienvenue clarifiée
+- Nouveau paramètre pour agrandir l'interface et le texte
+- Paramètres réorganisés, réglage des clés API refait comme la page de bienvenue
+- Barre d'étapes de la page de bienvenue agrandie et nouvelles infobulles
+- Corrections : notifications des recommandations, défilement bloqué, première ligne de la bibliothèque

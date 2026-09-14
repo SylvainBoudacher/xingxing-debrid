@@ -49,6 +49,42 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.7.1",
+    date: "14 septembre 2026",
+    intro:
+      "La 1.7.1 apporte un nouveau réglage de taille d'interface, une page Paramètres réorganisée et plusieurs corrections de bugs.",
+    sections: [
+      {
+        title: "Taille de l'interface",
+        items: [
+          "Nouveau paramètre permettant d'agrandir l'interface et le texte de l'application.",
+        ],
+      },
+      {
+        title: "Page Paramètres",
+        items: [
+          "Le réglage « Clés API » a été refait avec la même interface que la nouvelle page de bienvenue.",
+          "Les groupes de paramètres ont été réorganisés pour être plus logiques.",
+        ],
+      },
+      {
+        title: "Ergonomie",
+        items: [
+          "La barre de suivi des étapes de la page de bienvenue est plus grande et plus lisible.",
+          "Plusieurs infobulles ont été ajoutées pour expliquer les actions.",
+        ],
+      },
+      {
+        title: "Corrections de bugs",
+        items: [
+          "Correction des notifications lors de l'ajout d'une recommandation depuis la page d'une œuvre de la bibliothèque.",
+          "Certaines redirections créaient des fenêtres fantômes qui bloquaient ensuite le défilement de l'application.",
+          "La première ligne de la bibliothèque présentait un bug graphique.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.7.0",
     date: "12 septembre 2026",
     intro:
@@ -1327,4 +1363,4 @@ export const PATCH_NOTES: PatchNote[] = [
   },
 ];
 
-export const LATEST_VERSION = "1.6.6";
+export const LATEST_VERSION = PATCH_NOTES[0].version;
