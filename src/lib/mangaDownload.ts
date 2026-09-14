@@ -1,6 +1,7 @@
 import { startDownload } from "@/lib/downloads";
 import { updateVolume, type MangaVolume } from "@/lib/mangaLibrary";
 import { resolveMangaTarget } from "@/lib/mangaPaths";
+import { requestMangaRead } from "@/lib/mangaReadRequest";
 import { invoke } from "@tauri-apps/api/core";
 
 /**
@@ -19,7 +20,10 @@ export async function downloadVolume(
     alldebridKey: allDebridKey,
   });
   const { dir, subdir } = await resolveMangaTarget(seriesTitle);
-  const path = await startDownload(url, subdir, dir);
+  // La notification de fin ouvre le tome dans le lecteur de l'application.
+  const path = await startDownload(url, subdir, dir, () =>
+    requestMangaRead({ mangaId, fileName: volume.fileName, infoHash: volume.infoHash }),
+  );
   if (path) {
     await updateVolume(mangaId, volume.fileName, volume.infoHash, { localPath: path });
   }

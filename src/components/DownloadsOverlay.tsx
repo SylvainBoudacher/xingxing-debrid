@@ -51,7 +51,9 @@ function DownloadRow({ item }: { item: DownloadItem }) {
           : item.status === "error"
             ? "Échec"
             : isDone
-              ? "Cliquer pour ouvrir"
+              ? item.onOpen
+                ? "Cliquer pour lire"
+                : "Cliquer pour ouvrir"
               : `${item.total ? `${formatBytes(item.downloaded)} / ${formatBytes(item.total)}` : formatBytes(item.downloaded)}${
                   item.speed ? ` · ${formatBytes(item.speed)}/s` : ""
                 }`}
@@ -72,7 +74,7 @@ function DownloadRow({ item }: { item: DownloadItem }) {
         {isDone ? (
           <button
             onClick={() => openDownload(item.id)}
-            title="Ouvrir le fichier"
+            title={item.onOpen ? "Lire dans l'application" : "Ouvrir le fichier"}
             className="group flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-lg text-left"
           >
             {icon}

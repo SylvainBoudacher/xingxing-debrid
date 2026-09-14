@@ -14,6 +14,7 @@ import { LibraryPosterCard } from "@/components/LibraryPosterCard";
 import { LibraryResumeBanner } from "@/components/LibraryResumeBanner";
 import { LibraryTabs, type LibraryTab } from "@/components/LibraryTabs";
 import { DEFAULT_MANGA_PREFS, getCachedMangaPrefs, type MangaLayout } from "@/lib/mangaPrefs";
+import { hasMangaReadRequest, subscribeMangaRead } from "@/lib/mangaReadRequest";
 import { LibrarySelectionBar } from "@/components/LibrarySelectionBar";
 import { SeriesGroupCard } from "@/components/SeriesGroupCard";
 import { SeriesGroupPosterCard } from "@/components/SeriesGroupPosterCard";
@@ -174,7 +175,12 @@ export function LibraryPage({
   const initialPrefs = useRef(getCachedLibraryPrefs());
   const prefs = initialPrefs.current ?? DEFAULT_LIBRARY_PREFS;
 
-  const [tab, setTab] = useState<LibraryTab>(initialTab ?? "media");
+  const [tab, setTab] = useState<LibraryTab>(() =>
+    hasMangaReadRequest() ? "manga" : (initialTab ?? "media"),
+  );
+  // Tome à lire demandé par une notification : l'onglet Mangas monte sa section,
+  // qui ouvre le lecteur.
+  useEffect(() => subscribeMangaRead(() => setTab("manga")), []);
   // Lecteur ou fiche manga ouverts : Escape leur revient, pas au retour accueil.
   const [mangaBusy, setMangaBusy] = useState(false);
   const [mangaLayout, setMangaLayout] = useState<MangaLayout>(

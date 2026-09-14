@@ -1,6 +1,7 @@
 import type { Page } from "@/components/AppMenu";
 import type { PanelId } from "@/components/settings/settingsNav";
 import { DownloadsOverlay } from "@/components/DownloadsOverlay";
+import { subscribeMangaRead } from "@/lib/mangaReadRequest";
 import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
 import { SplashScreen } from "@/components/SplashScreen";
@@ -132,6 +133,10 @@ function App() {
       }),
     [],
   );
+
+  // Notification de fin de téléchargement d'un tome : la bibliothèque manga
+  // s'ouvre sur l'oeuvre et sa section lance le lecteur.
+  useEffect(() => subscribeMangaRead(({ mangaId }) => openMangaEntry(mangaId)), []);
 
   useEffect(() => {
     checkForUpdate()

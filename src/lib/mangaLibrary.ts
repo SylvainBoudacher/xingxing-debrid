@@ -284,6 +284,28 @@ export async function updateVolume(
   await saveMangaLibrary(updated);
 }
 
+/** Marque plusieurs tomes lus ou non lus, cles `${infoHash}:${fileName}`. */
+export async function setVolumesRead(
+  mangaId: string,
+  keys: Set<string>,
+  read: boolean,
+): Promise<void> {
+  const entries = cache ?? (await loadMangaLibrary());
+  await saveMangaLibrary(
+    entries.map((entry) =>
+      entry.mangaId !== mangaId
+        ? entry
+        : {
+            ...entry,
+            updatedAt: Date.now(),
+            volumes: entry.volumes.map((v) =>
+              keys.has(`${v.infoHash}:${v.fileName}`) ? { ...v, read } : v,
+            ),
+          },
+    ),
+  );
+}
+
 /** Retire un tome de l'oeuvre, sans toucher au fichier sur le disque. */
 export async function removeVolume(
   mangaId: string,

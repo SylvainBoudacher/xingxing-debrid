@@ -12,6 +12,8 @@ export interface MangaPrefs {
   grouping: MangaGrouping;
   sort: MangaSort;
   filter: MangaFilter;
+  // Tomes sur la fiche d'une oeuvre.
+  volumeLayout: MangaLayout;
 }
 
 export const DEFAULT_MANGA_PREFS: MangaPrefs = {
@@ -19,6 +21,7 @@ export const DEFAULT_MANGA_PREFS: MangaPrefs = {
   grouping: "none",
   sort: "recent",
   filter: "all",
+  volumeLayout: "grid",
 };
 
 const KEYS = {
@@ -26,6 +29,7 @@ const KEYS = {
   grouping: "manga_grouping",
   sort: "manga_sort",
   filter: "manga_filter",
+  volumeLayout: "manga_volume_layout",
 } as const;
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
@@ -38,11 +42,12 @@ export function getCachedMangaPrefs(): MangaPrefs | null {
 }
 
 export async function loadMangaPrefs(): Promise<MangaPrefs> {
-  const [layout, grouping, sort, filter] = await Promise.all([
+  const [layout, grouping, sort, filter, volumeLayout] = await Promise.all([
     store.get<MangaLayout>(KEYS.layout),
     store.get<MangaGrouping>(KEYS.grouping),
     store.get<MangaSort>(KEYS.sort),
     store.get<MangaFilter>(KEYS.filter),
+    store.get<MangaLayout>(KEYS.volumeLayout),
   ]);
 
   cache = {
@@ -50,6 +55,7 @@ export async function loadMangaPrefs(): Promise<MangaPrefs> {
     grouping: grouping ?? DEFAULT_MANGA_PREFS.grouping,
     sort: sort ?? DEFAULT_MANGA_PREFS.sort,
     filter: filter ?? DEFAULT_MANGA_PREFS.filter,
+    volumeLayout: volumeLayout ?? DEFAULT_MANGA_PREFS.volumeLayout,
   };
   return cache;
 }
