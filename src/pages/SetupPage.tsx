@@ -204,7 +204,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
 
       <div className="relative z-10 flex flex-1 flex-col">
         {step !== "intro" && (
-          <div className="mx-auto flex w-full max-w-2xl items-start gap-3 px-6 pt-6 sm:px-8">
+          <div className="mx-auto flex w-full max-w-4xl items-start gap-4 px-6 pt-6 sm:px-8">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={goBack}

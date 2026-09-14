@@ -382,6 +382,7 @@ export function PixelPool({
   onBoatWarp?: () => void; // the boat drove into the drain: open the minigame
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const hintRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef(active);
   const fpsRef = useRef(fps);
   const warpRef = useRef(onBoatWarp);
@@ -487,7 +488,39 @@ export function PixelPool({
       return !!t?.closest("button, a, input, textarea, select, [role='button'], [role='menuitem']");
     }
 
+    function setHint(label: string, e?: PointerEvent) {
+      const el = hintRef.current;
+      if (!el) return;
+      el.hidden = !label;
+      if (!label || !e) return;
+      el.textContent = label;
+      const { width, height } = el.getBoundingClientRect();
+      const left =
+        e.clientX + 14 + width > window.innerWidth ? e.clientX - 14 - width : e.clientX + 14;
+      const top =
+        e.clientY + 18 + height > window.innerHeight ? e.clientY - 10 - height : e.clientY + 18;
+      el.style.left = `${Math.max(4, left)}px`;
+      el.style.top = `${Math.max(4, top)}px`;
+    }
+
+    function hoverHint(e: PointerEvent): string {
+      if (!activeRef.current || overUI(e)) return "";
+      const x = e.clientX;
+      const y = e.clientY;
+      if (overCannon(x, y)) return cannon.loaded ? "Sortir du canon" : "Monter dans le canon";
+      if (overVacuum(x, y, w, h))
+        return vacuum.loaded ? "Éteindre l'aspirateur" : "Allumer l'aspirateur";
+      if (cannon.loaded || vacuum.loaded) return "";
+      if (overParade(x, y, h)) return "Lancer la parade";
+      if (overDex(x, y, h)) return "Ouvrir le Canardex";
+      if (overSlot(x, y, h)) return "Machine à sous";
+      if (duckAt(x, y)) return "";
+      if (overShop(x, y)) return "Collection de canards";
+      return "";
+    }
+
     function updateHoverCursor(e: PointerEvent) {
+      setHint(hoverHint(e), e);
       if (!activeRef.current || overUI(e)) return setCursor("");
       if (cannon.loaded)
         return setCursor(overCannon(e.clientX, e.clientY) ? "pointer" : "crosshair");
@@ -630,6 +663,7 @@ export function PixelPool({
       lastPT = performance.now();
       throwVX = throwVY = 0;
       setCursor("grabbing");
+      setHint("");
       e.preventDefault();
     }
 
@@ -2131,6 +2165,7 @@ export function PixelPool({
       pointerX = -1;
       pointerY = -1;
       sucking = false;
+      setHint("");
       boat.keys.clear(); // keyup is lost when the window blurs mid-press
     };
     window.addEventListener("blur", clearPointer);
@@ -2163,10 +2198,17 @@ export function PixelPool({
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      aria-hidden
-      className="pointer-events-none absolute inset-0 z-0 h-full w-full"
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+      />
+      <div
+        ref={hintRef}
+        hidden
+        className="pointer-events-none fixed z-50 rounded-md bg-foreground px-2 py-1 text-xs whitespace-nowrap text-background shadow-md"
+      />
+    </>
   );
 }
