@@ -9,8 +9,8 @@ const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
 export type TextScale = number | "system";
 
-export const MIN_SCALE = 1;
-export const MAX_SCALE = 1.75;
+export const MIN_SCALE = 0.9;
+export const MAX_SCALE = 1.5;
 export const SCALE_STEP = 0.05;
 
 // Arrondit au cran de 5 % : evite les 1.1500000000000001 des additions flottantes.

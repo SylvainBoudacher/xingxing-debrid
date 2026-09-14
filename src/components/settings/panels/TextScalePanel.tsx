@@ -13,6 +13,7 @@ import {
 } from "@/lib/textScale";
 import { SettingsPanel } from "../SettingsPanel";
 import { FieldTitle, SettingRow, Toggle } from "../controls";
+import { KeyChip } from "../KeyChip";
 import { TickSlider } from "../TickSlider";
 
 const MOD = navigator.userAgent.includes("Mac") ? "Cmd" : "Ctrl";
@@ -53,11 +54,20 @@ export function TextScalePanel() {
     <SettingsPanel
       icon={ZoomIn}
       title="Taille de l'interface"
-      subtitle="Agrandir toute l'application pour une meilleure lisibilité."
+      subtitle="Ajuster la taille de toute l'application."
     >
       <FieldTitle
         title="Zoom"
-        hint={`Agrandit toute l'application : textes, icônes et espacements. Raccourcis : ${MOD} + et ${MOD} - pour changer de 5 %, ${MOD} 0 pour revenir à la taille par défaut.`}
+        hint={
+          <>
+            Ajuste la taille de toute l'application : textes, icônes et espacements.
+            <span className="mt-2 block text-zinc-400">
+              Astuce : vous pouvez aussi utiliser <KeyChip>{`${MOD} +`}</KeyChip> et{" "}
+              <KeyChip>{`${MOD} -`}</KeyChip> depuis n'importe quelle page, ou{" "}
+              <KeyChip>{`${MOD} 0`}</KeyChip> pour revenir à la taille par défaut.
+            </span>
+          </>
+        }
       />
 
       {hasSystemTextScale && (
@@ -81,22 +91,18 @@ export function TextScalePanel() {
           </span>
         </div>
 
-        <div className="flex items-start gap-3">
-          <span className="flex h-5 items-center text-xs font-semibold text-zinc-500">A</span>
-          <TickSlider
-            min={MIN_SCALE}
-            max={MAX_SCALE}
-            step={SCALE_STEP}
-            majorEvery={5}
-            value={shown}
-            disabled={followSystem}
-            ariaLabel="Taille de l'interface"
-            formatLabel={percent}
-            onChange={setDraft}
-            onCommit={commitDraft}
-          />
-          <span className="flex h-5 items-center text-lg font-semibold text-zinc-500">A</span>
-        </div>
+        <TickSlider
+          min={MIN_SCALE}
+          max={MAX_SCALE}
+          step={SCALE_STEP}
+          majorEvery={2}
+          value={shown}
+          disabled={followSystem}
+          ariaLabel="Taille de l'interface"
+          formatLabel={percent}
+          onChange={setDraft}
+          onCommit={commitDraft}
+        />
 
         {/* La page est déjà zoomée de `applied` : on compense pour montrer la taille finale. */}
         <p

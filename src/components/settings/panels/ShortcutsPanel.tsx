@@ -2,6 +2,7 @@ import { Keyboard } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SettingsPanel } from "../SettingsPanel";
 import { FieldTitle, PanelDivider, SettingRow } from "../controls";
+import { KeyChip } from "../KeyChip";
 import {
   ACTION_SHORTCUT_LABELS,
   DEFAULT_ACTION_SHORTCUTS,
@@ -33,14 +34,6 @@ const POOL_ACTIONS: { action: ActionShortcutAction; description: string }[] = [
     description: "Allumer ou éteindre l'aspirateur de bassin.",
   },
 ];
-
-function KeyChip({ children }: { children: string }) {
-  return (
-    <kbd className="rounded-md bg-black/6 dark:bg-white/10 px-2 py-1 text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 ring-1 ring-black/10 dark:ring-white/10">
-      {children}
-    </kbd>
-  );
-}
 
 export function ShortcutsPanel() {
   const [shortcuts, setShortcuts] = useState<NavShortcuts>(DEFAULT_NAV_SHORTCUTS);

@@ -116,7 +116,7 @@ export function SettingRow({
 }
 
 /** Petit titre de sous-section à l'intérieur d'un panneau. */
-export function FieldTitle({ title, hint }: { title: string; hint?: string }) {
+export function FieldTitle({ title, hint }: { title: string; hint?: ReactNode }) {
   return (
     <>
       <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">{title}</h3>

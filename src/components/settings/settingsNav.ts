@@ -58,7 +58,7 @@ const ALL_SETTINGS_GROUPS: SettingsNavGroup[] = [
       {
         id: "text-scale",
         label: "Taille de l'interface",
-        subtitle: "Agrandir toute l'application pour une meilleure lisibilité.",
+        subtitle: "Ajuster la taille de toute l'application.",
         icon: ZoomIn,
       },
       {
