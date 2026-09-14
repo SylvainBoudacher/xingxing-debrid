@@ -16,6 +16,8 @@ export interface DownloadItem {
   speed?: number;
   /** Chemin local du fichier, disponible une fois le téléchargement terminé. */
   path?: string;
+  /** Ouverture dans l'application au lieu du programme par défaut de l'OS. */
+  onOpen?: () => void;
 }
 
 interface ProgressEvent {
@@ -165,12 +167,20 @@ export async function startDownload(
   url: string,
   subdir?: string,
   dir?: string,
+  onOpen?: () => void,
 ): Promise<string | null> {
   ensureProgressListener();
   const id = crypto.randomUUID();
   const baseDir = dir ?? (await store.get<string>("download_dir")) ?? "";
 
-  items.set(id, { id, filename: basename(url), downloaded: 0, total: 0, status: "active" });
+  items.set(id, {
+    id,
+    filename: basename(url),
+    downloaded: 0,
+    total: 0,
+    status: "active",
+    onOpen,
+  });
   emit();
 
   try {
@@ -231,6 +241,7 @@ export async function cancelAllActiveDownloads(): Promise<void> {
 export async function openDownload(id: string): Promise<void> {
   const item = items.get(id);
   if (!item?.path) return;
+  if (item.onOpen) return item.onOpen();
   try {
     await invoke("open_file", { path: item.path });
   } catch (err) {

@@ -2,7 +2,6 @@ import { LibraryCategoryMenu } from "@/components/LibraryCategoryMenu";
 import { LibraryCustomBar } from "@/components/LibraryCustomBar";
 import { LibraryListNameModal } from "@/components/LibraryListNameModal";
 import { MangaBlocks } from "@/components/MangaBlocks";
-import { MangaEntryDetailModal } from "@/components/MangaEntryDetailModal";
 import { MangaImportModal } from "@/components/MangaImportModal";
 import { MangaRetagModal } from "@/components/MangaRetagModal";
 import { MangaListRow } from "@/components/MangaListRow";
@@ -10,7 +9,8 @@ import { MangaPosterCard } from "@/components/MangaPosterCard";
 import { MangaReleasesModal } from "@/components/MangaReleasesModal";
 import { MangaSelectionBar } from "@/components/MangaSelectionBar";
 import { MangaToolbar } from "@/components/MangaToolbar";
-import { volumeKey } from "@/components/MangaVolumeList";
+import { MangaTitlePage } from "@/components/mangaTitle/MangaTitlePage";
+import { volumeKey } from "@/components/mangaTitle/volumeActions";
 import { Button } from "@/components/ui/button";
 import { UNCLASSIFIED } from "@/lib/mangaCategories";
 import {
@@ -41,16 +41,17 @@ import {
   itemFromEntry,
   loadMangaLibrary,
   mangaProgress,
-  nextVolume,
   removeMangaEntry,
   removeVolume,
   resolvePendingTorrent,
   setReadingDirection,
+  setVolumesRead,
   updateVolume,
   volumesFromFiles,
   type MangaEntry,
   type MangaVolume,
 } from "@/lib/mangaLibrary";
+import { subscribeMangaRead, takeMangaReadRequest } from "@/lib/mangaReadRequest";
 import { toastNetworkError } from "@/lib/networkError";
 import { fetchMagnetFiles, useAddMangaRelease } from "@/lib/useAddMangaRelease";
 import { ReaderPage } from "@/pages/ReaderPage";
@@ -113,6 +114,25 @@ export function LibraryMangaSection({
   const [importing, setImporting] = useState<PlannedImport[] | null>(null);
   const [retagging, setRetagging] = useState<string | null>(null);
   const [session, setSession] = useState<ReadingSession | null>(null);
+
+  // Tome demandé par une notification de téléchargement : fiche de l'oeuvre
+  // ouverte derrière le lecteur, qu'on retrouve en le fermant.
+  useEffect(() => {
+    const openRequested = async () => {
+      const request = takeMangaReadRequest();
+      if (!request) return;
+      const list = await loadMangaLibrary();
+      setEntries(list);
+      const volume = list
+        .find((e) => e.mangaId === request.mangaId)
+        ?.volumes.find((v) => v.fileName === request.fileName && v.infoHash === request.infoHash);
+      if (!volume?.localPath) return;
+      setSelectedId(request.mangaId);
+      setSession({ mangaId: request.mangaId, volume });
+    };
+    void openRequested();
+    return subscribeMangaRead(() => void openRequested());
+  }, []);
 
   const prefs = getCachedMangaPrefs() ?? DEFAULT_MANGA_PREFS;
   const [query, setQuery] = useState("");
@@ -295,16 +315,16 @@ export function LibraryMangaSection({
     [getAllDebridKey, refresh, entries, markDownloading],
   );
 
-  // Telecharge tous les tomes manquants par lots de N en parallele (reglage
-  // `download_batch_size`), comme le telechargement groupe des episodes.
-  const downloadAll = useCallback(
-    async (entry: MangaEntry) => {
+  // Telecharge les tomes manquants parmi `volumes` par lots de N en parallele
+  // (reglage `download_batch_size`), comme le telechargement groupe des episodes.
+  const downloadMany = useCallback(
+    async (entry: MangaEntry, volumes: MangaVolume[]) => {
       const key = getAllDebridKey();
       if (!key) {
         toast.error("Clé AllDebrid manquante. Configurez-la dans les paramètres.");
         return;
       }
-      const queue = entry.volumes.filter(
+      const queue = volumes.filter(
         (v) => !v.localPath && v.source !== "local" && !downloading.has(volumeKey(v)),
       );
       if (queue.length === 0) return;
@@ -335,7 +355,7 @@ export function LibraryMangaSection({
         await Promise.all(Array.from({ length: Math.min(batchSize, queue.length) }, worker));
         if (firstError !== null) throw firstError;
       } catch (err) {
-        toastNetworkError(err, () => void downloadAll(entry));
+        toastNetworkError(err, () => void downloadMany(entry, volumes));
       } finally {
         endBulkDownload();
         setBulkDownloading(false);
@@ -407,6 +427,14 @@ export function LibraryMangaSection({
     await refresh();
   }, [session, refresh]);
 
+  const markRead = useCallback(
+    async (mangaId: string, volumes: MangaVolume[], read: boolean) => {
+      await setVolumesRead(mangaId, new Set(volumes.map(volumeKey)), read);
+      await refresh();
+    },
+    [refresh],
+  );
+
   const toggleRead = useCallback(
     async (mangaId: string, volume: MangaVolume) => {
       await updateVolume(mangaId, volume.fileName, volume.infoHash, { read: !volume.read });
@@ -437,6 +465,7 @@ export function LibraryMangaSection({
       ) ?? session.volume;
     return (
       <ReaderPage
+        key={volume.localPath}
         path={volume.localPath ?? ""}
         title={entry?.meta.title ?? ""}
         subtitle={volume.number !== null ? `Tome ${volume.number}` : volume.fileName}
@@ -608,23 +637,24 @@ export function LibraryMangaSection({
 
       <AnimatePresence>
         {selected && (
-          <MangaEntryDetailModal
+          <MangaTitlePage
+            key={selected.mangaId}
             entry={selected}
-            downloading={downloading}
-            refreshingPending={refreshingPending}
+            actions={{
+              downloading,
+              onRead: (volume) => void read(selected.mangaId, volume),
+              onDownload: (volume) => void download(selected.mangaId, volume),
+              onToggleRead: (volume) => void toggleRead(selected.mangaId, volume),
+              onRemoveVolume: (volume) => void dropVolume(selected.mangaId, volume),
+            }}
             bulkDownloading={bulkDownloading}
-            onRead={(volume) => void read(selected.mangaId, volume)}
-            onDownload={(volume) => void download(selected.mangaId, volume)}
-            onRemoveVolume={(volume) => void dropVolume(selected.mangaId, volume)}
-            onDownloadAll={() => void downloadAll(selected)}
-            onToggleRead={(volume) => void toggleRead(selected.mangaId, volume)}
+            refreshingPending={refreshingPending}
+            overlayOpen={findMoreFor !== null || retagging !== null}
+            onDownloadMany={(volumes) => void downloadMany(selected, volumes)}
+            onSetRead={(volumes, isRead) => void markRead(selected.mangaId, volumes, isRead)}
             onRefreshPending={() => void refreshPending(selected)}
             onFindMore={() => setFindMoreFor(itemFromEntry(selected))}
             onRetag={() => setRetagging(selected.mangaId)}
-            onContinue={() => {
-              const volume = nextVolume(selected);
-              if (volume) void read(selected.mangaId, volume);
-            }}
             onRemove={() => {
               void removeMangaEntry(selected.mangaId).then(() => {
                 setSelectedId(null);

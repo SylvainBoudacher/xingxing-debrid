@@ -55,11 +55,24 @@ export interface MangaTagRaw {
   attributes: { name: Record<string, string>; group: string };
 }
 
+export interface MangaCoverRaw {
+  id: string;
+  attributes: { volume: string | null; fileName: string; locale: string | null };
+}
+
+export interface MangaCoverListResponse {
+  data: MangaCoverRaw[];
+  limit: number;
+  offset: number;
+  total: number;
+}
+
 export const mangadexKeys = {
   feed: (f: MangaFeed, page: number) => ["mangadex", "feed", f, page] as const,
   search: (query: string, page: number) => ["mangadex", "search", query, page] as const,
   detail: (id: string) => ["mangadex", "detail", id] as const,
   tags: () => ["mangadex", "tags"] as const,
+  covers: (id: string) => ["mangadex", "covers", id] as const,
 };
 
 // MangaDex (derriere Cloudflare) repond 400 a toute requete sans User-Agent.
@@ -103,6 +116,21 @@ export function search(query: string, page: number, tagIds: string[] = []) {
 
 export function detail(id: string) {
   return get<{ data: MangaRaw }>(`${BASE}/manga/${id}?includes[]=cover_art`);
+}
+
+const COVER_PAGE_SIZE = 100;
+
+// Toutes les covers d'une oeuvre (une par tome et par edition), pages
+// enchainees : One Piece en compte plus d'une centaine.
+export async function covers(mangaId: string): Promise<MangaCoverRaw[]> {
+  const all: MangaCoverRaw[] = [];
+  for (let offset = 0; ; offset += COVER_PAGE_SIZE) {
+    const page = await get<MangaCoverListResponse>(
+      `${BASE}/cover?manga[]=${mangaId}&limit=${COVER_PAGE_SIZE}&offset=${offset}&order[volume]=asc`,
+    );
+    all.push(...page.data);
+    if (offset + COVER_PAGE_SIZE >= page.total) return all;
+  }
 }
 
 export function tags() {
