@@ -49,6 +49,33 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.7.2",
+    date: "14 septembre 2026",
+    intro:
+      "La 1.7.2 refond la page des œuvres côté manga, harmonise la navigation et met à jour les dépendances de l'application.",
+    sections: [
+      {
+        title: "Bibliothèque",
+        items: [
+          "Retouche du nouveau bandeau « Reprendre » de la bibliothèque.",
+          "Refonte de l'interface des œuvres côté manga, sur le modèle de celle des séries introduite en 1.7.0.",
+        ],
+      },
+      {
+        title: "Navigation",
+        items: [
+          "Les boutons de menu et de retour sont désormais toujours au même endroit, quelle que soit la page.",
+        ],
+      },
+      {
+        title: "Performances",
+        items: [
+          "Mise à jour des bibliothèques utilisées par l'application : elle est maintenant légèrement plus légère et plus performante.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.7.1",
     date: "14 septembre 2026",
     intro:

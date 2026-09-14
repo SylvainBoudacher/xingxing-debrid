@@ -437,7 +437,7 @@ dependencies = [
 
 [[package]]
 name = "c411-debrid-app"
-version = "1.7.1"
+version = "1.7.2"
 dependencies = [
  "argon2",
  "base64 0.22.1",

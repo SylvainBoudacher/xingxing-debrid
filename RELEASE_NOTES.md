@@ -1,4 +1,4 @@
-- Nouveau paramètre pour agrandir l'interface et le texte
-- Paramètres réorganisés, réglage des clés API refait comme la page de bienvenue
-- Barre d'étapes de la page de bienvenue agrandie et nouvelles infobulles
-- Corrections : notifications des recommandations, défilement bloqué, première ligne de la bibliothèque
+- Refonte de la page des œuvres côté manga, comme pour les séries
+- Boutons de menu et de retour toujours au même endroit
+- Retouche du bandeau « Reprendre » de la bibliothèque
+- Mise à jour des dépendances : application plus légère et plus performante
