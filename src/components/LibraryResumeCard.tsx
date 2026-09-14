@@ -56,8 +56,13 @@ export function LibraryResumeCard({
   const vlcKey = `resume-${next.entry.infoHash}-${next.file.name}`;
   const busy = debrid.bulkVlc === vlcKey;
   const [hover, setHover] = useState<{ zone: "play" | "open"; x: number; y: number } | null>(null);
+  // Enfoncement tant que le clic est maintenu (hors pastille « i » et titre),
+  // puis une onde part du bouton play au lancement.
+  const [pressed, setPressed] = useState(false);
+  const [pulse, setPulse] = useState(0);
 
   function play() {
+    setPulse((n) => n + 1);
     debrid.openVlcMany([next.file.link], vlcKey);
     setResume(subject);
     // Laisse VLC s'ouvrir avant que la carte ne passe à l'épisode suivant.
@@ -85,7 +90,14 @@ export function LibraryResumeCard({
             y: e.clientY,
           })
         }
-        onPointerLeave={() => setHover(null)}
+        onPointerLeave={() => {
+          setHover(null);
+          setPressed(false);
+        }}
+        onPointerDown={(e) =>
+          setPressed(e.button === 0 && !(e.target as HTMLElement).closest("[data-detail]"))
+        }
+        onPointerUp={() => setPressed(false)}
         role="button"
         tabIndex={0}
         aria-label={`Lancer ${subjectTitle(subject, simple)} ${label ?? ""} avec VLC`}
@@ -98,7 +110,11 @@ export function LibraryResumeCard({
         }}
         // Le bandeau réserve une marge autour de la grille pour que l'élévation et
         // l'ombre du survol ne soient pas rognées par son overflow-hidden.
-        className="group relative aspect-video cursor-pointer overflow-hidden rounded-2xl border border-black/5 bg-zinc-200 shadow-sm transition-all duration-300 ease-out outline-none hover:-translate-y-1 hover:border-black/20 hover:shadow-xl hover:shadow-black/25 focus-visible:border-indigo-400 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-white/35 dark:hover:shadow-black/60"
+        className={`group relative aspect-video cursor-pointer overflow-hidden rounded-2xl border border-black/5 bg-zinc-200 shadow-sm transition-all ease-out outline-none hover:border-black/20 focus-visible:border-indigo-400 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-white/35 ${
+          pressed
+            ? "translate-y-0 scale-[0.97] shadow-md shadow-black/30 duration-100"
+            : "duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/25 dark:hover:shadow-black/60"
+        }`}
       >
         {/* Fondu enchaîné entre l'ancienne et la nouvelle image au changement d'épisode. */}
         <AnimatePresence initial={false}>
@@ -133,11 +149,24 @@ export function LibraryResumeCard({
         <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.35),inset_0_0_24px_0_rgba(255,255,255,0.08)] transition-opacity duration-300 group-hover:opacity-100" />
 
         <div className="pointer-events-none absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
+          <AnimatePresence>
+            {pulse > 0 && (
+              <motion.span
+                key={pulse}
+                initial={{ scale: 1, opacity: 0.7 }}
+                animate={{ scale: 2.6, opacity: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="absolute h-12 w-12 rounded-full border-2 border-white"
+              />
+            )}
+          </AnimatePresence>
           <span
-            className={`flex h-12 w-12 items-center justify-center rounded-full ring-1 backdrop-blur-md transition-all duration-200 ${
+            className={`flex h-12 w-12 items-center justify-center rounded-full ring-1 backdrop-blur-md transition-all ${
               busy
-                ? "bg-black/50 text-white ring-white/30"
-                : "bg-black/40 text-white ring-white/30 group-hover:scale-110 group-hover:bg-white group-hover:text-zinc-900 group-hover:ring-white"
+                ? "bg-black/50 text-white ring-white/30 duration-200"
+                : pressed
+                  ? "scale-90 bg-white text-zinc-900 ring-white duration-100"
+                  : "bg-black/40 text-white ring-white/30 duration-200 group-hover:scale-110 group-hover:bg-white group-hover:text-zinc-900 group-hover:ring-white"
             }`}
           >
             {busy ? (
@@ -153,7 +182,7 @@ export function LibraryResumeCard({
           onClick={openDetail}
           data-detail
           aria-label="Voir la fiche"
-          className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/45 text-white opacity-0 ring-1 ring-white/25 backdrop-blur-md transition-all duration-200 group-hover:opacity-100 hover:scale-110 hover:bg-white hover:text-zinc-900 focus-visible:opacity-100"
+          className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/45 text-white opacity-0 ring-1 ring-white/25 backdrop-blur-md transition-all duration-200 group-hover:opacity-100 hover:scale-110 hover:bg-white hover:text-zinc-900 focus-visible:opacity-100 active:scale-90"
         >
           <Info className="h-3.5 w-3.5" />
         </button>
@@ -163,7 +192,7 @@ export function LibraryResumeCard({
             type="button"
             onClick={openDetail}
             data-detail
-            className="block max-w-full truncate text-left text-sm leading-tight font-semibold text-white underline-offset-4 drop-shadow hover:underline"
+            className="block max-w-full truncate text-left text-sm leading-tight font-semibold text-white underline-offset-4 drop-shadow transition-opacity hover:underline active:opacity-70"
           >
             {subjectTitle(subject, simple)}
           </button>
