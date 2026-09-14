@@ -25,7 +25,8 @@ import type { TmdbItem } from "@/lib/tmdbItem";
 import { FEED_LABELS, useDiscoverFeed, type DiscoverTab } from "@/lib/useDiscoverFeed";
 import { useRecommendations } from "@/lib/useRecommendations";
 import { useSendToDebrid } from "@/lib/useSendToDebrid";
-import { ArrowLeft, KeyRound, Loader2 } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
+import { KeyRound, Loader2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -251,21 +252,10 @@ export function DiscoverPage({
       </div>
 
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl">
-        <div className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4 sm:px-8">
-          <motion.button
-            whileTap={{ scale: 0.93 }}
-            onClick={onBack}
-            className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span className="text-sm font-medium">Retour</span>
-          </motion.button>
-
-          <h1 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-tight absolute left-1/2 -translate-x-1/2">
-            Découverte
-          </h1>
-
+      <PageHeader
+        title="Découverte"
+        onBack={onBack}
+        menu={
           <AppMenu
             currentPage="discover"
             onNavigate={onNavigate}
@@ -273,8 +263,8 @@ export function DiscoverPage({
             hasPendingUpdate={hasPendingUpdate}
             onShowPendingUpdate={onShowPendingUpdate}
           />
-        </div>
-      </div>
+        }
+      />
 
       {/* Missing or invalid TMDB key */}
       {(tmdbKey === null || tmdbKeyInvalid) && mediaType !== "manga" && (

@@ -830,7 +830,8 @@ export function MainPage({
         )}
       </AnimatePresence>
 
-      <div className="absolute top-4 right-4 z-10">
+      {/* Même position que le menu des autres pages (barre h-14, px-10). */}
+      <div className="absolute top-3 right-10 z-10">
         <AppMenu
           currentPage="main"
           onNavigate={onNavigate}

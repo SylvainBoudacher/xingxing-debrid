@@ -1,7 +1,7 @@
 import type { ReadingDirection } from "@/lib/mangaLibrary";
 import type { FitMode, PageMode } from "@/lib/readerPrefs";
+import { BackButton } from "@/components/BackButton";
 import {
-  ArrowLeft,
   ArrowLeftRight,
   BookOpen,
   Columns2,
@@ -56,15 +56,8 @@ export function ReaderToolbar({
 }: ReaderToolbarProps) {
   const FitIcon = FIT_ICON[fit];
   return (
-    <div className="flex items-center gap-3 border-b border-white/5 bg-black/40 px-4 py-2 backdrop-blur-xl">
-      <motion.button
-        whileTap={{ scale: 0.93 }}
-        onClick={onClose}
-        className="flex items-center gap-1.5 text-indigo-300 transition-colors hover:text-indigo-200"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        <span className="text-sm font-medium">Retour</span>
-      </motion.button>
+    <div className="flex h-14 flex-none items-center gap-3 border-b border-white/5 bg-black/40 px-10 backdrop-blur-xl">
+      <BackButton onClick={onClose} tone="dark" />
 
       <div className="min-w-0 flex-1 text-center">
         <p className="truncate text-sm font-semibold text-white">{title}</p>
