@@ -205,14 +205,14 @@ export function SetupPage({ onComplete }: SetupPageProps) {
       <div className="relative z-10 flex flex-1 flex-col">
         {step !== "intro" && (
           <div className="relative flex h-14 items-center">
-            <div className="absolute left-6">
+            <div className="absolute left-10">
               <BackButton
                 onClick={goBack}
                 tone={step === "theme" && summerEnabled ? "dark" : "default"}
               />
             </div>
             {/* Centrée quand la fenêtre le permet, sinon poussée à droite du Retour. */}
-            <div className="mr-6 ml-[max(7rem,calc((100%_-_56rem)/2))] flex min-w-0 max-w-4xl flex-1">
+            <div className="mr-10 ml-[max(8rem,calc((100%_-_56rem)/2))] flex min-w-0 max-w-4xl flex-1">
               <SetupStepper
                 currentId={step}
                 progress={step === "keys" ? keyIndex / KEY_SERVICES.length : 0}

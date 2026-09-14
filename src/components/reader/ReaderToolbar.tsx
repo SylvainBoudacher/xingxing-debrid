@@ -56,7 +56,7 @@ export function ReaderToolbar({
 }: ReaderToolbarProps) {
   const FitIcon = FIT_ICON[fit];
   return (
-    <div className="flex h-14 flex-none items-center gap-3 border-b border-white/5 bg-black/40 px-6 backdrop-blur-xl">
+    <div className="flex h-14 flex-none items-center gap-3 border-b border-white/5 bg-black/40 px-10 backdrop-blur-xl">
       <BackButton onClick={onClose} tone="dark" />
 
       <div className="min-w-0 flex-1 text-center">

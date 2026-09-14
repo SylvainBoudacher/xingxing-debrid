@@ -19,7 +19,7 @@ export function TitleTopBar({ title, solid, onBack, menu }: TitleTopBarProps) {
           : "border-transparent"
       }`}
     >
-      <div className="flex h-14 items-center gap-4 px-6">
+      <div className="flex h-14 items-center gap-4 px-10">
         <BackButton onClick={onBack} tone={solid ? "default" : "overlay"} />
         <p
           className={`min-w-0 flex-1 truncate text-center text-sm font-semibold text-zinc-900 transition-opacity duration-200 dark:text-white ${

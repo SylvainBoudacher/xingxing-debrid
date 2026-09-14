@@ -13,7 +13,7 @@ interface PageHeaderProps {
   zIndex?: "z-10" | "z-30";
 }
 
-// Barre ancrée aux bords de la fenêtre (h-14, px-6) : Retour et menu restent
+// Barre ancrée aux bords de la fenêtre (h-14, px-10) : Retour et menu restent
 // au même endroit sur toutes les pages, quelle que soit la largeur.
 export function PageHeader({
   title,
@@ -33,7 +33,7 @@ export function PageHeader({
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className={`sticky top-0 ${zIndex} border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl`}
     >
-      <div className="relative flex h-14 items-center justify-between px-6">
+      <div className="relative flex h-14 items-center justify-between px-10">
         <BackButton onClick={onBack} />
         <h1 className="absolute left-1/2 -translate-x-1/2 text-sm font-semibold tracking-tight text-zinc-900 dark:text-white">
           {title}

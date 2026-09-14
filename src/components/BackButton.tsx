@@ -17,7 +17,7 @@ interface BackButtonProps {
 }
 
 // La marge négative compense le padding de la pastille : l'icône tombe au même
-// pixel quel que soit le ton, posée dans une barre en px-6.
+// pixel quel que soit le ton, posée dans une barre en px-10.
 export function BackButton({ onClick, tone = "default" }: BackButtonProps) {
   return (
     <motion.button
