@@ -1,12 +1,14 @@
+import vlcLogo from "@/assets/vlc.png";
 import { FadeImage } from "@/components/FadeImage";
 import type { DebridControls } from "@/components/libraryParts";
 import { episodeLabel, toggleFile, type LibraryEntry } from "@/lib/library";
 import { fileDisplayName, isItemWatched, subjectTitle, subjectTmdb } from "@/lib/libraryTitle";
 import { setResume, type ResumeTarget } from "@/lib/resumeWatch";
 import { useTmdbDetail, useTmdbSeasons } from "@/lib/useTitleTmdb";
-import { ChevronRight, Loader2, Play } from "lucide-react";
+import { ChevronRight, Loader2, Play, Info } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 const VLC_LAUNCH_DELAY_MS = 1500;
 
@@ -53,6 +55,7 @@ export function LibraryResumeCard({
   // chacune leur indicateur de chargement.
   const vlcKey = `resume-${next.entry.infoHash}-${next.file.name}`;
   const busy = debrid.bulkVlc === vlcKey;
+  const [hover, setHover] = useState<{ zone: "play" | "open"; x: number; y: number } | null>(null);
 
   function play() {
     debrid.openVlcMany([next.file.link], vlcKey);
@@ -65,104 +68,135 @@ export function LibraryResumeCard({
   return (
     // Bordure « in-box » plutôt qu'un ring : le bandeau anime sa hauteur dans un
     // conteneur overflow-hidden, qui rognerait un contour dessiné hors de la box.
-    <div
-      onClick={() =>
-        onOpen(
-          subject.kind === "entry" ? subject.entry.infoHash : null,
-          subject.kind === "group" ? subject.group.tmdbId : null,
-        )
-      }
-      className="group relative flex cursor-pointer items-center gap-3 rounded-2xl border border-black/5 bg-gradient-to-br from-white/80 to-white/50 p-2 transition-colors hover:border-black/10 hover:from-white hover:to-white dark:border-white/10 dark:from-zinc-900/80 dark:to-zinc-900/40 dark:hover:border-white/20 dark:hover:from-zinc-800/80 dark:hover:to-zinc-800/50"
-    >
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          play();
-        }}
-        disabled={busy}
-        title="Lancer l'épisode dans VLC"
-        // rounded-lg = rayon concentrique avec le rounded-2xl de la carte moins son p-2.
-        className={`group/play relative h-16 flex-none overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800 ${
-          poster ? "aspect-[2/3]" : "aspect-video"
-        }`}
+    <>
+      <div
+        onPointerMove={(e) =>
+          setHover({
+            zone: (e.target as HTMLElement).closest("[data-play]") ? "play" : "open",
+            x: e.clientX,
+            y: e.clientY,
+          })
+        }
+        onPointerLeave={() => setHover(null)}
+        onClick={() =>
+          onOpen(
+            subject.kind === "entry" ? subject.entry.infoHash : null,
+            subject.kind === "group" ? subject.group.tmdbId : null,
+          )
+        }
+        className="group relative flex cursor-pointer items-center gap-3 rounded-2xl border border-black/5 bg-gradient-to-br from-white/80 to-white/50 p-2 transition-colors hover:border-black/10 hover:from-white hover:to-white dark:border-white/10 dark:from-zinc-900/80 dark:to-zinc-900/40 dark:hover:border-white/20 dark:hover:from-zinc-800/80 dark:hover:to-zinc-800/50"
       >
-        {/* Fondu enchaîné entre l'ancienne et la nouvelle vignette au changement d'épisode. */}
-        <AnimatePresence initial={false}>
-          <motion.div
-            key={still ?? poster ?? next.file.name}
-            initial={{ opacity: 0, scale: 1.12, filter: "blur(6px)" }}
-            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute inset-0"
-          >
-            {still && (
-              <FadeImage
-                src={`https://image.tmdb.org/t/p/w300${still}`}
-                alt=""
-                decoding="async"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-            )}
-            {poster && (
-              <FadeImage
-                src={`https://image.tmdb.org/t/p/w154${poster}`}
-                alt=""
-                decoding="async"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
-        {/* Deux affordances distinctes : la pastille permanente dit que la
-        vignette lance l'épisode, le voile ne s'allume qu'au survol de la
-        vignette elle-même (survoler la carte ouvre la fiche, pas VLC). */}
-        <span
-          className={`absolute inset-0 flex items-center justify-center transition-colors duration-200 ${
-            busy ? "bg-black/50" : "bg-black/0 group-hover/play:bg-black/50"
+        <button
+          data-play
+          onClick={(e) => {
+            e.stopPropagation();
+            play();
+          }}
+          disabled={busy}
+          // rounded-lg = rayon concentrique avec le rounded-2xl de la carte moins son p-2.
+          className={`group/play relative h-16 flex-none overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800 ${
+            poster ? "aspect-[2/3]" : "aspect-video"
           }`}
         >
+          {/* Fondu enchaîné entre l'ancienne et la nouvelle vignette au changement d'épisode. */}
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={still ?? poster ?? next.file.name}
+              initial={{ opacity: 0, scale: 1.12, filter: "blur(6px)" }}
+              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-0"
+            >
+              {still && (
+                <FadeImage
+                  src={`https://image.tmdb.org/t/p/w300${still}`}
+                  alt=""
+                  decoding="async"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              )}
+              {poster && (
+                <FadeImage
+                  src={`https://image.tmdb.org/t/p/w154${poster}`}
+                  alt=""
+                  decoding="async"
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+          {/* Deux affordances distinctes : la pastille permanente dit que la
+        vignette lance l'épisode, le voile ne s'allume qu'au survol de la
+        vignette elle-même (survoler la carte ouvre la fiche, pas VLC). */}
           <span
-            className={`flex items-center justify-center rounded-full text-white backdrop-blur-sm transition-all duration-200 ${
-              busy
-                ? "h-8 w-8 bg-white/0"
-                : "h-6 w-6 bg-black/45 ring-1 ring-white/25 group-hover/play:h-8 group-hover/play:w-8 group-hover/play:bg-white/0 group-hover/play:ring-0"
+            className={`absolute inset-0 flex items-center justify-center transition-colors duration-200 ${
+              busy ? "bg-black/50" : "bg-black/0 group-hover/play:bg-black/50"
             }`}
           >
-            {busy ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Play className="ml-0.5 h-3 w-3 fill-current transition-all duration-200 group-hover/play:h-5 group-hover/play:w-5" />
-            )}
+            <span
+              className={`flex items-center justify-center rounded-full text-white backdrop-blur-sm transition-all duration-200 ${
+                busy
+                  ? "h-8 w-8 bg-white/0"
+                  : "h-6 w-6 bg-black/45 ring-1 ring-white/25 group-hover/play:h-8 group-hover/play:w-8 group-hover/play:bg-white/0 group-hover/play:ring-0"
+              }`}
+            >
+              {busy ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Play className="ml-0.5 h-3 w-3 fill-current transition-all duration-200 group-hover/play:h-5 group-hover/play:w-5" />
+              )}
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
 
-      <div className="min-w-0 flex-1 pr-1">
-        <p className="truncate text-[13px] leading-tight font-semibold text-zinc-900 dark:text-white">
-          {subjectTitle(subject, simple)}
-        </p>
-        <AnimatePresence initial={false} mode="wait">
-          <motion.div
-            key={next.file.name}
-            initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            exit={{ opacity: 0, y: -8, filter: "blur(4px)" }}
-            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-1.5 flex min-w-0 items-center gap-1.5"
-          >
-            {label ? (
-              <span className="flex-none rounded-md bg-indigo-500/10 px-1.5 py-0.5 font-mono text-[10px] leading-none font-semibold tracking-tight text-indigo-600 dark:bg-indigo-400/15 dark:text-indigo-300">
-                {label}
-              </span>
-            ) : null}
-            <span className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{name}</span>
-          </motion.div>
-        </AnimatePresence>
+        <div className="min-w-0 flex-1 pr-1">
+          <p className="truncate text-[13px] leading-tight font-semibold text-zinc-900 dark:text-white">
+            {subjectTitle(subject, simple)}
+          </p>
+          <AnimatePresence initial={false} mode="wait">
+            <motion.div
+              key={next.file.name}
+              initial={{ opacity: 0, y: 8, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -8, filter: "blur(4px)" }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-1.5 flex min-w-0 items-center gap-1.5"
+            >
+              {label ? (
+                <span className="flex-none rounded-md bg-indigo-500/10 px-1.5 py-0.5 font-mono text-[10px] leading-none font-semibold tracking-tight text-indigo-600 dark:bg-indigo-400/15 dark:text-indigo-300">
+                  {label}
+                </span>
+              ) : null}
+              <span className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{name}</span>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Signal « ceci ouvre la fiche », réservé au survol de la carte. */}
+        <ChevronRight className="mr-1 h-4 w-4 flex-none text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-zinc-600" />
       </div>
-
-      {/* Signal « ceci ouvre la fiche », réservé au survol de la carte. */}
-      <ChevronRight className="mr-1 h-4 w-4 flex-none text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-zinc-600" />
-    </div>
+      {/* Portail : le bandeau est overflow-hidden et rognerait l'étiquette. */}
+      {hover &&
+        createPortal(
+          <div
+            style={{ left: hover.x + 14, top: hover.y + 18 }}
+            className="pointer-events-none fixed z-50 flex items-center gap-1.5 rounded-md border bg-popover px-2 py-1 text-xs whitespace-nowrap text-popover-foreground shadow-md"
+          >
+            {hover.zone === "play" ? (
+              <>
+                <img src={vlcLogo} alt="" className="h-3.5 w-3.5 object-contain" />
+                Lancer avec VLC
+              </>
+            ) : (
+              <>
+                <Info className="h-3.5 w-3.5" />
+                Voir la fiche
+              </>
+            )}
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
