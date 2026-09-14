@@ -5,7 +5,7 @@ import { episodeLabel, toggleFile, type LibraryEntry } from "@/lib/library";
 import { fileDisplayName, isItemWatched, subjectTitle, subjectTmdb } from "@/lib/libraryTitle";
 import { setResume, type ResumeTarget } from "@/lib/resumeWatch";
 import { useTmdbDetail, useTmdbSeasons } from "@/lib/useTitleTmdb";
-import { ChevronRight, Loader2, Play, Info } from "lucide-react";
+import { Info, Loader2, Play } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -23,8 +23,8 @@ interface LibraryResumeCardProps {
   tmdbKey?: string;
 }
 
-// Une série du bandeau « Reprendre » : vignette de l'épisode, titre, épisode,
-// et le bouton qui l'envoie dans VLC.
+// Une série du bandeau « Reprendre » : grande vignette de l'épisode avec titre
+// et épisode incrustés ; un clic l'envoie dans VLC.
 export function LibraryResumeCard({
   target: { subject, next },
   onOpen,
@@ -46,7 +46,7 @@ export function LibraryResumeCard({
       ? tmdbSeasons.get(season)?.get(next.episode)
       : undefined;
   // Vignette de l'épisode si TMDB en a une, sinon l'image large de la série,
-  // sinon l'affiche (au format vertical, d'où le ratio distinct).
+  // sinon l'affiche (recadrée en 16:9).
   const still = episode?.still_path ?? detail?.backdrop_path ?? null;
   const poster = still ? null : tmdb?.posterPath;
   const label = episodeLabel(next.file.name);
@@ -65,95 +65,108 @@ export function LibraryResumeCard({
       setTimeout(() => onChange(toggleFile(next.entry, next.file.name)), VLC_LAUNCH_DELAY_MS);
   }
 
+  function openDetail(e: React.MouseEvent) {
+    e.stopPropagation();
+    onOpen(
+      subject.kind === "entry" ? subject.entry.infoHash : null,
+      subject.kind === "group" ? subject.group.tmdbId : null,
+    );
+  }
+
   return (
-    // Bordure « in-box » plutôt qu'un ring : le bandeau anime sa hauteur dans un
-    // conteneur overflow-hidden, qui rognerait un contour dessiné hors de la box.
+    // Toute la carte lance l'épisode : c'est l'action attendue d'un bandeau
+    // « Reprendre ». La fiche passe par la pastille « i » ou par le titre.
     <>
       <div
         onPointerMove={(e) =>
           setHover({
-            zone: (e.target as HTMLElement).closest("[data-play]") ? "play" : "open",
+            zone: (e.target as HTMLElement).closest("[data-detail]") ? "open" : "play",
             x: e.clientX,
             y: e.clientY,
           })
         }
         onPointerLeave={() => setHover(null)}
-        onClick={() =>
-          onOpen(
-            subject.kind === "entry" ? subject.entry.infoHash : null,
-            subject.kind === "group" ? subject.group.tmdbId : null,
-          )
-        }
-        className="group relative flex cursor-pointer items-center gap-3 rounded-2xl border border-black/5 bg-gradient-to-br from-white/80 to-white/50 p-2 transition-colors hover:border-black/10 hover:from-white hover:to-white dark:border-white/10 dark:from-zinc-900/80 dark:to-zinc-900/40 dark:hover:border-white/20 dark:hover:from-zinc-800/80 dark:hover:to-zinc-800/50"
+        role="button"
+        tabIndex={0}
+        aria-label={`Lancer ${subjectTitle(subject, simple)} ${label ?? ""} avec VLC`}
+        aria-busy={busy}
+        onClick={() => !busy && play()}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+          e.preventDefault();
+          if (!busy) play();
+        }}
+        // Le bandeau réserve une marge autour de la grille pour que l'élévation et
+        // l'ombre du survol ne soient pas rognées par son overflow-hidden.
+        className="group relative aspect-video cursor-pointer overflow-hidden rounded-2xl border border-black/5 bg-zinc-200 shadow-sm transition-all duration-300 ease-out outline-none hover:-translate-y-1 hover:border-black/20 hover:shadow-xl hover:shadow-black/25 focus-visible:border-indigo-400 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-white/35 dark:hover:shadow-black/60"
       >
-        <button
-          data-play
-          onClick={(e) => {
-            e.stopPropagation();
-            play();
-          }}
-          disabled={busy}
-          // rounded-lg = rayon concentrique avec le rounded-2xl de la carte moins son p-2.
-          className={`group/play relative h-16 flex-none overflow-hidden rounded-lg bg-zinc-200 dark:bg-zinc-800 ${
-            poster ? "aspect-[2/3]" : "aspect-video"
-          }`}
-        >
-          {/* Fondu enchaîné entre l'ancienne et la nouvelle vignette au changement d'épisode. */}
-          <AnimatePresence initial={false}>
-            <motion.div
-              key={still ?? poster ?? next.file.name}
-              initial={{ opacity: 0, scale: 1.12, filter: "blur(6px)" }}
-              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-0"
-            >
-              {still && (
-                <FadeImage
-                  src={`https://image.tmdb.org/t/p/w300${still}`}
-                  alt=""
-                  decoding="async"
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-              )}
-              {poster && (
-                <FadeImage
-                  src={`https://image.tmdb.org/t/p/w154${poster}`}
-                  alt=""
-                  decoding="async"
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
-          {/* Deux affordances distinctes : la pastille permanente dit que la
-        vignette lance l'épisode, le voile ne s'allume qu'au survol de la
-        vignette elle-même (survoler la carte ouvre la fiche, pas VLC). */}
+        {/* Fondu enchaîné entre l'ancienne et la nouvelle image au changement d'épisode. */}
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={still ?? poster ?? next.file.name}
+            initial={{ opacity: 0, scale: 1.12, filter: "blur(6px)" }}
+            animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="absolute inset-0"
+          >
+            {(still || poster) && (
+              <FadeImage
+                src={
+                  still
+                    ? `https://image.tmdb.org/t/p/w780${still}`
+                    : `https://image.tmdb.org/t/p/w500${poster}`
+                }
+                alt=""
+                decoding="async"
+                className={`h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 ${
+                  poster ? "object-[center_20%]" : ""
+                }`}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Dégradé bas pour la lisibilité du texte incrusté. */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+        {/* Liseré lumineux intérieur, allumé au survol. */}
+        <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.35),inset_0_0_24px_0_rgba(255,255,255,0.08)] transition-opacity duration-300 group-hover:opacity-100" />
+
+        <div className="pointer-events-none absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
           <span
-            className={`absolute inset-0 flex items-center justify-center transition-colors duration-200 ${
-              busy ? "bg-black/50" : "bg-black/0 group-hover/play:bg-black/50"
+            className={`flex h-12 w-12 items-center justify-center rounded-full ring-1 backdrop-blur-md transition-all duration-200 ${
+              busy
+                ? "bg-black/50 text-white ring-white/30"
+                : "bg-black/40 text-white ring-white/30 group-hover:scale-110 group-hover:bg-white group-hover:text-zinc-900 group-hover:ring-white"
             }`}
           >
-            <span
-              className={`flex items-center justify-center rounded-full text-white backdrop-blur-sm transition-all duration-200 ${
-                busy
-                  ? "h-8 w-8 bg-white/0"
-                  : "h-6 w-6 bg-black/45 ring-1 ring-white/25 group-hover/play:h-8 group-hover/play:w-8 group-hover/play:bg-white/0 group-hover/play:ring-0"
-              }`}
-            >
-              {busy ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <Play className="ml-0.5 h-3 w-3 fill-current transition-all duration-200 group-hover/play:h-5 group-hover/play:w-5" />
-              )}
-            </span>
+            {busy ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Play className="ml-0.5 h-5 w-5 fill-current" />
+            )}
           </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={openDetail}
+          data-detail
+          aria-label="Voir la fiche"
+          className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/45 text-white opacity-0 ring-1 ring-white/25 backdrop-blur-md transition-all duration-200 group-hover:opacity-100 hover:scale-110 hover:bg-white hover:text-zinc-900 focus-visible:opacity-100"
+        >
+          <Info className="h-3.5 w-3.5" />
         </button>
 
-        <div className="min-w-0 flex-1 pr-1">
-          <p className="truncate text-[13px] leading-tight font-semibold text-zinc-900 dark:text-white">
+        <div className="absolute inset-x-0 bottom-0 p-3">
+          <button
+            type="button"
+            onClick={openDetail}
+            data-detail
+            className="block max-w-full truncate text-left text-sm leading-tight font-semibold text-white underline-offset-4 drop-shadow hover:underline"
+          >
             {subjectTitle(subject, simple)}
-          </p>
+          </button>
           <AnimatePresence initial={false} mode="wait">
             <motion.div
               key={next.file.name}
@@ -161,20 +174,17 @@ export function LibraryResumeCard({
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               exit={{ opacity: 0, y: -8, filter: "blur(4px)" }}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-1.5 flex min-w-0 items-center gap-1.5"
+              className="pointer-events-none mt-1.5 flex min-w-0 items-center gap-1.5"
             >
               {label ? (
-                <span className="flex-none rounded-md bg-indigo-500/10 px-1.5 py-0.5 font-mono text-[10px] leading-none font-semibold tracking-tight text-indigo-600 dark:bg-indigo-400/15 dark:text-indigo-300">
+                <span className="flex-none rounded-md bg-white/20 px-1.5 py-0.5 font-mono text-[10px] leading-none font-semibold tracking-tight text-white backdrop-blur-sm">
                   {label}
                 </span>
               ) : null}
-              <span className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{name}</span>
+              <span className="truncate text-[11px] text-white/75">{name}</span>
             </motion.div>
           </AnimatePresence>
         </div>
-
-        {/* Signal « ceci ouvre la fiche », réservé au survol de la carte. */}
-        <ChevronRight className="mr-1 h-4 w-4 flex-none text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-zinc-600" />
       </div>
       {/* Portail : le bandeau est overflow-hidden et rognerait l'étiquette. */}
       {hover &&
@@ -186,7 +196,7 @@ export function LibraryResumeCard({
             {hover.zone === "play" ? (
               <>
                 <img src={vlcLogo} alt="" className="h-3.5 w-3.5 object-contain" />
-                Lancer avec VLC
+                {busy ? "Ouverture de VLC..." : "Lancer avec VLC"}
               </>
             ) : (
               <>

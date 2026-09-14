@@ -53,7 +53,7 @@ export function LibraryResumeBanner({
         onClick={onToggleCollapsed}
         aria-expanded={!collapsed}
         title={collapsed ? "Déplier la reprise" : "Replier la reprise"}
-        className="group mb-2 flex items-center gap-2"
+        className="group flex items-center gap-2"
       >
         <motion.span animate={{ rotate: collapsed ? -90 : 0 }} transition={{ duration: 0.2 }}>
           <ChevronDown className="h-4 w-4 text-zinc-400 transition-colors group-hover:text-zinc-600 dark:text-zinc-500 dark:group-hover:text-zinc-300" />
@@ -74,12 +74,12 @@ export function LibraryResumeBanner({
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
-            className="overflow-hidden"
+            className="-mx-2 overflow-hidden"
           >
             {/* Toujours trois colonnes : une reprise seule occupe un tiers de
             la largeur, et la rangée garde la même allure quel que soit leur
             nombre. La fenêtre fait au moins 900px de large (tauri.conf.json). */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-3 p-2">
               {targets.map((target) => (
                 <LibraryResumeCard
                   key={
