@@ -10,6 +10,7 @@ use tauri_plugin_store::StoreExt;
 mod cbz;
 mod player;
 mod profile;
+mod text_scale;
 
 pub(crate) const KEYRING_SERVICE: &str = "com.sulyk.c411-debrid-app";
 
@@ -599,6 +600,7 @@ pub fn run() {
             cbz::cbz_list_pages,
             cbz::cbz_page,
             cbz::import_cbz,
+            text_scale::get_system_text_scale,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

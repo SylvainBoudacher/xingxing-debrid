@@ -3,6 +3,7 @@ import type { ApiKeys } from "@/lib/apiKeys";
 import { SettingsRail } from "@/components/settings/SettingsRail";
 import { ALL_NAV_ITEMS, type PanelId } from "@/components/settings/settingsNav";
 import { AppearancePanel } from "@/components/settings/panels/AppearancePanel";
+import { TextScalePanel } from "@/components/settings/panels/TextScalePanel";
 import { ApiKeysPanel } from "@/components/settings/panels/ApiKeysPanel";
 import { BackupTransferPanel } from "@/components/settings/panels/BackupTransferPanel";
 import { DisplayPanel } from "@/components/settings/panels/DisplayPanel";
@@ -65,6 +66,8 @@ export function PreferencesPage({
     switch (activePanel) {
       case "appearance":
         return <AppearancePanel />;
+      case "text-scale":
+        return <TextScalePanel />;
       case "api-keys":
         return <ApiKeysPanel onSaved={onKeysSaved} />;
       case "shortcuts":

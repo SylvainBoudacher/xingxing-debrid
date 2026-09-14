@@ -131,6 +131,13 @@ function installShim() {
     if (cmd === "cbz_list_pages") return devCbzPages();
     if (cmd === "cbz_page") return devCbzPageBytes(args.index as number);
 
+    // Taille de l'interface : le zoom CSS imite le zoom natif de la webview.
+    if (cmd === "plugin:webview|set_webview_zoom") {
+      document.documentElement.style.zoom = String(args.value);
+      return null;
+    }
+    if (cmd === "get_system_text_scale") return 1;
+
     // listen/unlisten : accepté sans effet (aucun événement backend en navigateur)
     if (cmd === "plugin:event|listen") return nextCallbackId++;
     if (cmd === "plugin:event|unlisten") return null;

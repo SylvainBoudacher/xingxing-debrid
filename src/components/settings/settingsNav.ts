@@ -10,11 +10,13 @@ import {
   MonitorPlay,
   Sparkles,
   Sun,
+  ZoomIn,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type PanelId =
   | "appearance"
+  | "text-scale"
   | "api-keys"
   | "shortcuts"
   | "display"
@@ -52,6 +54,12 @@ const ALL_SETTINGS_GROUPS: SettingsNavGroup[] = [
         label: "Apparence et fenêtre",
         subtitle: "Taille de la fenêtre et page d'ouverture au lancement.",
         icon: Monitor,
+      },
+      {
+        id: "text-scale",
+        label: "Taille de l'interface",
+        subtitle: "Agrandir toute l'application pour une meilleure lisibilité.",
+        icon: ZoomIn,
       },
       {
         id: "display",
