@@ -110,10 +110,10 @@ export function LibraryResumeCard({
         }}
         // Le bandeau réserve une marge autour de la grille pour que l'élévation et
         // l'ombre du survol ne soient pas rognées par son overflow-hidden.
-        className={`group relative aspect-video cursor-pointer overflow-hidden rounded-2xl border border-black/5 bg-zinc-200 shadow-sm transition-all ease-out outline-none hover:border-black/20 focus-visible:border-indigo-400 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-white/35 ${
+        className={`group relative aspect-video cursor-pointer overflow-hidden rounded-2xl border border-black/5 bg-zinc-200 shadow-[0_1px_2px_rgba(0,0,0,0.06)] transition-[translate,scale,box-shadow,border-color] ease-out outline-none hover:border-black/10 focus-visible:border-indigo-400 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-white/20 ${
           pressed
-            ? "translate-y-0 scale-[0.97] shadow-md shadow-black/30 duration-100"
-            : "duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/25 dark:hover:shadow-black/60"
+            ? "translate-y-0 scale-[0.98] duration-100"
+            : "duration-300 hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_12px_28px_-14px_rgba(0,0,0,0.35)] dark:hover:shadow-[0_12px_28px_-14px_rgba(0,0,0,0.8)]"
         }`}
       >
         {/* Fondu enchaîné entre l'ancienne et la nouvelle image au changement d'épisode. */}

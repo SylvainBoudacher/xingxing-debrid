@@ -81,20 +81,28 @@ export function LibraryResumeBanner({
             nombre. La fenêtre fait au moins 900px de large (tauri.conf.json). */}
             <div className="grid grid-cols-3 gap-3 p-2">
               {targets.map((target) => (
-                <LibraryResumeCard
+                // Le layout anime le glissement des cartes quand une reprise
+                // lancée remonte en tête du bandeau.
+                <motion.div
                   key={
                     target.subject.kind === "group"
                       ? `g${target.subject.group.tmdbId}`
                       : target.subject.entry.infoHash
                   }
-                  target={target}
-                  onOpen={onOpen}
-                  onChange={onChange}
-                  debrid={debrid}
-                  autoWatchOnPlay={autoWatchOnPlay}
-                  simple={simple}
-                  tmdbKey={tmdbKey}
-                />
+                  layout="position"
+                  transition={{ type: "spring", stiffness: 380, damping: 34, mass: 0.9 }}
+                  className="relative"
+                >
+                  <LibraryResumeCard
+                    target={target}
+                    onOpen={onOpen}
+                    onChange={onChange}
+                    debrid={debrid}
+                    autoWatchOnPlay={autoWatchOnPlay}
+                    simple={simple}
+                    tmdbKey={tmdbKey}
+                  />
+                </motion.div>
               ))}
             </div>
           </motion.div>
