@@ -110,10 +110,8 @@ export function LibraryResumeCard({
         }}
         // Le bandeau réserve une marge autour de la grille pour que l'élévation et
         // l'ombre du survol ne soient pas rognées par son overflow-hidden.
-        className={`group relative aspect-video cursor-pointer overflow-hidden rounded-2xl border border-black/5 bg-zinc-200 shadow-[0_1px_2px_rgba(0,0,0,0.06)] transition-[translate,scale,box-shadow,border-color] ease-out outline-none hover:border-black/10 focus-visible:border-indigo-400 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-white/20 ${
-          pressed
-            ? "translate-y-0 scale-[0.98] duration-100"
-            : "duration-300 hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_12px_28px_-14px_rgba(0,0,0,0.35)] dark:hover:shadow-[0_12px_28px_-14px_rgba(0,0,0,0.8)]"
+        className={`group relative aspect-video cursor-pointer overflow-hidden rounded-2xl border border-black/5 bg-zinc-200 transition-[translate,scale,border-color] ease-out outline-none hover:border-white/40 focus-visible:border-indigo-400 dark:border-white/10 dark:bg-zinc-900 dark:hover:border-white/30 ${
+          pressed ? "scale-[0.98] duration-100" : "duration-300 hover:-translate-y-0.5"
         }`}
       >
         {/* Fondu enchaîné entre l'ancienne et la nouvelle image au changement d'épisode. */}
@@ -145,10 +143,32 @@ export function LibraryResumeCard({
 
         {/* Dégradé bas pour la lisibilité du texte incrusté. */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-        {/* Liseré lumineux intérieur, allumé au survol. */}
-        <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.35),inset_0_0_24px_0_rgba(255,255,255,0.08)] transition-opacity duration-300 group-hover:opacity-100" />
+        {/* Verre au survol : la carte « prend forme » avec un reflet diagonal
+        et un liseré intérieur. Pas de backdrop-filter ici : WebKit le rend
+        d'un coup à la fin du fondu d'opacité. */}
+        <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 via-white/[0.04] to-transparent" />
+          <div className="absolute inset-0 rounded-2xl shadow-[inset_0_1px_0_0_rgba(255,255,255,0.5),inset_0_0_0_1px_rgba(255,255,255,0.12),inset_0_0_32px_0_rgba(255,255,255,0.12)]" />
+        </div>
+        {/* Balayage lumineux à l'entrée du survol : l'opacité monte puis
+        retombe à zéro avant la sortie, pour une fin sans coupure. */}
+        <AnimatePresence>
+          {hover && (
+            <motion.div
+              initial={{ left: "-40%", opacity: 0 }}
+              animate={{ left: "110%", opacity: [0, 1, 1, 0] }}
+              exit={{ opacity: 0, transition: { duration: 0.15 } }}
+              transition={{
+                duration: 0.55,
+                ease: [0.4, 0, 0.2, 1],
+                opacity: { duration: 0.55, times: [0, 0.2, 0.6, 1] },
+              }}
+              className="pointer-events-none absolute inset-y-0 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+            />
+          )}
+        </AnimatePresence>
 
-        <div className="pointer-events-none absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2">
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2">
           <AnimatePresence>
             {pulse > 0 && (
               <motion.span
@@ -161,18 +181,20 @@ export function LibraryResumeCard({
             )}
           </AnimatePresence>
           <span
-            className={`flex h-12 w-12 items-center justify-center rounded-full ring-1 backdrop-blur-md transition-all ${
+            // Dessiné à sa taille de survol puis réduit au repos : WebKit
+            // rastérise le calque à l'échelle 1, un scale > 1 le pixélise.
+            className={`flex h-[3.3rem] w-[3.3rem] items-center justify-center rounded-full ring-1 backdrop-blur-md transition-all ${
               busy
-                ? "bg-black/50 text-white ring-white/30 duration-200"
+                ? "scale-[0.91] bg-black/50 text-white ring-white/30 duration-200"
                 : pressed
-                  ? "scale-90 bg-white text-zinc-900 ring-white duration-100"
-                  : "bg-black/40 text-white ring-white/30 duration-200 group-hover:scale-110 group-hover:bg-white group-hover:text-zinc-900 group-hover:ring-white"
+                  ? "scale-[0.82] bg-white text-zinc-900 ring-white backdrop-blur-none duration-100"
+                  : "scale-[0.91] bg-black/40 text-white ring-white/30 duration-200 group-hover:scale-100 group-hover:bg-white group-hover:text-zinc-900 group-hover:ring-white group-hover:backdrop-blur-none"
             }`}
           >
             {busy ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-[1.375rem] w-[1.375rem] animate-spin" />
             ) : (
-              <Play className="ml-0.5 h-5 w-5 fill-current" />
+              <Play className="ml-0.5 h-[1.375rem] w-[1.375rem] fill-current" />
             )}
           </span>
         </div>
