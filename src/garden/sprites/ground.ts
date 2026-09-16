@@ -80,27 +80,45 @@ function paintTile(kind: GroundKind, tx: number, ty: number): HTMLCanvasElement 
 }
 
 export const HOLE_SIZE = 36;
-const HOLE_IN = 9.5;
-const HOLE_OUT = 15.5;
 
-// Trou vu de dessus : fond sombre, paroi éclairée côté opposé à la lumière, bourrelet de terre.
+// rayon irrégulier selon l'angle
+const wobble = (a: number, seed: number, amt: number) =>
+  1 +
+  amt *
+    (Math.sin(a * 3 + seed) * 0.5 +
+      Math.sin(a * 5 + seed * 2) * 0.3 +
+      Math.sin(a * 7 + seed * 3) * 0.2);
+
+const grainy = (t: number, x: number, y: number) =>
+  rampAt(PAL.soil, t + (hash(x >> 1, y >> 1, 9) - 0.5) * 0.3);
+
+// Trou de plantation vu de dessus : petit creux au bord irrégulier et tas de terre sortie à côté.
 export function holeBuf(): Buf {
   const b = buf(HOLE_SIZE, HOLE_SIZE);
   const mid = HOLE_SIZE / 2;
+  const mx = mid + 8;
+  const my = mid - 7;
   for (let y = 0; y < HOLE_SIZE; y++)
     for (let x = 0; x < HOLE_SIZE; x++) {
-      const dx = x + 0.5 - mid;
-      const dy = y + 0.5 - mid;
+      const dx = x + 0.5 - mx;
+      const dy = y + 0.5 - my;
+      const r = Math.hypot(dx / 1.3, dy);
+      const R = 5.5 * wobble(Math.atan2(dy, dx), 2, 0.2);
+      if (r < R) put(b, x, y, grainy(0.75 - (dx + dy) / 20 + (1 - r / R) * 0.15, x, y));
+    }
+  const hx = mid - 2;
+  const hy = mid + 1;
+  for (let y = 0; y < HOLE_SIZE; y++)
+    for (let x = 0; x < HOLE_SIZE; x++) {
+      const dx = x + 0.5 - hx;
+      const dy = y + 0.5 - hy;
+      const a = Math.atan2(dy, dx);
       const r = Math.hypot(dx, dy);
-      if (r > HOLE_OUT) continue;
+      const inner = 5.5 * wobble(a, 1, 0.18);
+      if (r > 9 * wobble(a, 4, 0.15)) continue;
       const lit = -(dx * 0.6 + dy * 0.8) / (r || 1);
-      if (r > HOLE_IN) {
-        const bump = 1 - Math.abs(r - (HOLE_IN + HOLE_OUT) / 2) / ((HOLE_OUT - HOLE_IN) / 2);
-        put(b, x, y, rampAt(PAL.soil, 0.45 + 0.35 * lit * bump + 0.15 * bump));
-      } else {
-        const depth = r / HOLE_IN;
-        put(b, x, y, depth < 0.6 ? "#140c08" : rampAt(PAL.wet, 0.3 - 0.35 * lit * depth));
-      }
+      if (r > inner) put(b, x, y, grainy(0.55 + 0.2 * lit, x, y));
+      else put(b, x, y, rampAt(PAL.wet, 0.55 - 0.4 * lit * (r / inner) - (1 - r / inner) * 0.4));
     }
   outline(b);
   return b;
