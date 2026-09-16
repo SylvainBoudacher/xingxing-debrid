@@ -16,6 +16,7 @@ import {
   ScrollText,
   SlidersHorizontal,
   Sparkles,
+  Sprout,
   Trash2,
 } from "lucide-react";
 import {
@@ -31,7 +32,9 @@ import { ThemeMenuItem } from "@/components/ThemeMenuItem";
 import { LibraryQuickButton } from "@/components/LibraryQuickButton";
 import { toast } from "sonner";
 import { LazyStore } from "@tauri-apps/plugin-store";
+import { openGardenWindow } from "@/garden/ui/gardenWindow";
 import { getApiKey } from "@/lib/apiKeys";
+import { getBackdrop } from "@/lib/backdropPref";
 import { DevConfirmDialog, type DevAction } from "@/components/DevConfirmDialog";
 
 export type Page =
@@ -92,6 +95,14 @@ export function AppMenu({
     location.reload();
   };
 
+  const [gardenEnabled, setGardenEnabled] = useState(false);
+
+  useEffect(() => {
+    getBackdrop()
+      .then((b) => setGardenEnabled(b === "potager"))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     getApiKey("tmdb_api_key")
       .then((v) => setTmdbKeyMissing(!v))
@@ -145,6 +156,12 @@ export function AppMenu({
             <DropdownMenuItem onClick={() => onNavigate("library")}>
               <Library className="mr-2 h-4 w-4" />
               Ma bibliothèque
+            </DropdownMenuItem>
+          )}
+          {gardenEnabled && (
+            <DropdownMenuItem onClick={() => void openGardenWindow()}>
+              <Sprout className="mr-2 h-4 w-4" />
+              Potager
             </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />

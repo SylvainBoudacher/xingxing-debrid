@@ -9,7 +9,7 @@ import {
   Monitor,
   MonitorPlay,
   Sparkles,
-  Sun,
+  Sprout,
   ZoomIn,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -141,9 +141,9 @@ const ALL_SETTINGS_GROUPS: SettingsNavGroup[] = [
     items: [
       {
         id: "summer",
-        label: "Summer et canards",
-        subtitle: "Petits plaisirs estivaux dans l'application.",
-        icon: Sun,
+        label: "Fonds animés",
+        subtitle: "Le décor vivant derrière l'application.",
+        icon: Sprout,
         accent: "amber",
       },
     ],

@@ -13,7 +13,8 @@ import { PlaybackPanel } from "@/components/settings/panels/PlaybackPanel";
 import { MagnetsPanel } from "@/components/settings/panels/MagnetsPanel";
 import { NyaaPanel } from "@/components/settings/panels/NyaaPanel";
 import { ShortcutsPanel } from "@/components/settings/panels/ShortcutsPanel";
-import { SummerPanel } from "@/components/settings/panels/SummerPanel";
+import type { Backdrop } from "@/lib/backdropPref";
+import { BackdropPanel } from "@/components/settings/panels/BackdropPanel";
 import { PageHeader } from "@/components/PageHeader";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
@@ -23,8 +24,8 @@ interface PreferencesPageProps {
   onNavigate: (page: Page) => void;
   hasPendingUpdate: boolean;
   onShowPendingUpdate: () => void;
-  summerEnabled: boolean;
-  onToggleSummer: (v: boolean) => void;
+  backdrop: Backdrop;
+  onSetBackdrop: (v: Backdrop) => void;
   summerFps: 30 | 60;
   onSetSummerFps: (v: 30 | 60) => void;
   summerMaxDucks: number;
@@ -40,8 +41,8 @@ export function PreferencesPage({
   onNavigate,
   hasPendingUpdate,
   onShowPendingUpdate,
-  summerEnabled,
-  onToggleSummer,
+  backdrop,
+  onSetBackdrop,
   summerFps,
   onSetSummerFps,
   summerMaxDucks,
@@ -88,9 +89,9 @@ export function PreferencesPage({
         return <BackupTransferPanel />;
       case "summer":
         return (
-          <SummerPanel
-            summerEnabled={summerEnabled}
-            onToggleSummer={onToggleSummer}
+          <BackdropPanel
+            backdrop={backdrop}
+            onSetBackdrop={onSetBackdrop}
             summerFps={summerFps}
             onSetSummerFps={onSetSummerFps}
             summerMaxDucks={summerMaxDucks}

@@ -35,7 +35,7 @@ interface DiscoverPageProps {
   onNavigate: (page: Page) => void;
   hasPendingUpdate: boolean;
   onShowPendingUpdate: () => void;
-  summerEnabled: boolean;
+  animatedBackdrop: boolean;
   /** Requête pré-remplie depuis la barre de MainPage (mode "Films & Séries") */
   initialQuery?: string;
   /** Onglet ouvert à l'arrivée (ex. "manga" depuis la bibliothèque manga) */
@@ -66,7 +66,7 @@ export function DiscoverPage({
   onNavigate,
   hasPendingUpdate,
   onShowPendingUpdate,
-  summerEnabled,
+  animatedBackdrop,
   initialQuery,
   initialTab,
   initialItem,
@@ -236,7 +236,7 @@ export function DiscoverPage({
   return (
     <main
       className={`relative isolate flex min-h-screen flex-col ${
-        summerEnabled ? "" : "bg-[#f4f6fc] dark:bg-[#04050c]"
+        animatedBackdrop ? "" : "bg-[#f4f6fc] dark:bg-[#04050c]"
       }`}
     >
       {/* Background */}

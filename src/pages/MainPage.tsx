@@ -211,7 +211,7 @@ interface MainPageProps {
   onShowMangaWelcome: () => void;
   hasPendingUpdate: boolean;
   onShowPendingUpdate: () => void;
-  summerEnabled: boolean;
+  animatedBackdrop: boolean;
   /** Clés API pré-lues par useAppInit — zéro latence au montage */
   initialC411Key?: string | null;
   initialAllDebridKey?: string | null;
@@ -241,7 +241,7 @@ export function MainPage({
   onShowMangaWelcome,
   hasPendingUpdate,
   onShowPendingUpdate,
-  summerEnabled,
+  animatedBackdrop,
   initialC411Key,
   initialAllDebridKey,
   initialTmdbKey,
@@ -785,7 +785,7 @@ export function MainPage({
     <main
       onMouseMove={resetIdleTimer}
       className={`relative flex min-h-screen flex-col transition-opacity duration-1000 ${uiVisible ? "opacity-100" : "opacity-0"} ${
-        summerEnabled
+        animatedBackdrop
           ? ""
           : "bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_52%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]"
       }`}

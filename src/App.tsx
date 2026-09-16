@@ -8,8 +8,10 @@ import { SplashScreen } from "@/components/SplashScreen";
 import { SplashTransition } from "@/components/SplashTransition";
 import { MangaWelcomeModal } from "@/components/MangaWelcomeModal";
 import { Toaster } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { UpdateDialog } from "@/components/UpdateDialog";
 import { getApiKey } from "@/lib/apiKeys";
+import { loadBackdrop, saveBackdrop, type Backdrop } from "@/lib/backdropPref";
 import { isBrowserPreview } from "@/lib/devTauriShim";
 import { prefetchLibrary } from "@/lib/library";
 import { loadCategories } from "@/lib/libraryCategories";
@@ -32,7 +34,7 @@ import { DiscoverPage } from "@/pages/DiscoverPage";
 import { LibraryPage } from "@/pages/LibraryPage";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { AnimatePresence, motion } from "motion/react";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -59,6 +61,10 @@ const PatchnotesPage = lazy(() =>
 );
 const BoatGamePage = lazy(() =>
   import("@/pages/BoatGamePage").then((m) => ({ default: m.BoatGamePage })),
+);
+
+const GardenBackdrop = lazy(() =>
+  import("@/garden/ui/GardenBackdrop").then((m) => ({ default: m.GardenBackdrop })),
 );
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
@@ -101,7 +107,9 @@ function App() {
   const [patchnotesSeenVersion, setPatchnotesSeenVersion] = useState<string | null>(null);
   const [devMode, setDevMode] = useState(false);
   const [showMangaWelcome, setShowMangaWelcome] = useState(false);
-  const [summerEnabled, setSummerEnabled] = useState(true);
+  const [backdrop, setBackdrop] = useState<Backdrop>("potager");
+  const summerEnabled = backdrop === "mare";
+  const animatedBackdrop = backdrop !== "aucun";
   const [summerFps, setSummerFps] = useState<30 | 60>(60);
   const [summerMaxDucks, setSummerMaxDucks] = useState(15);
   const [idleAutoHide, setIdleAutoHide] = useState(true);
@@ -188,18 +196,8 @@ function App() {
         setPage("setup");
       });
 
-    // SUMMER is enabled by default and force-enabled once for this update.
     (async () => {
-      const applied = await store.get<boolean>("summer_default_v1");
-      if (!applied) {
-        await store.set("summer_pool_enabled", true);
-        await store.set("summer_default_v1", true);
-        await store.save();
-        setSummerEnabled(true);
-      } else {
-        const v = await store.get<boolean>("summer_pool_enabled");
-        setSummerEnabled(v ?? true);
-      }
+      setBackdrop(await loadBackdrop());
       const savedFps = await store.get<number>("summer_pool_fps");
       if (savedFps === 30) setSummerFps(30);
       const savedMaxDucks = await store.get<number>("summer_pool_max_ducks");
@@ -221,11 +219,17 @@ function App() {
     await store.save();
   }
 
-  async function handleToggleSummer(v: boolean) {
-    setSummerEnabled(v);
-    await store.set("summer_pool_enabled", v);
-    await store.save();
+  async function handleSetBackdrop(v: Backdrop) {
+    setBackdrop(v);
+    await saveBackdrop(v);
   }
+
+  // stable : GardenBackdrop l'utilise comme dépendance d'effet
+  const handleWebglError = useCallback(() => {
+    toast.error("Le Potager a besoin de WebGL : le fond animé a été désactivé.");
+    setBackdrop("aucun");
+    void saveBackdrop("aucun");
+  }, []);
 
   async function handleSetSummerMaxDucks(v: number) {
     setSummerMaxDucks(v);
@@ -378,8 +382,10 @@ function App() {
     setPage("main");
   }
 
-  const showPool =
-    summerEnabled && (page === "main" || page === "discover" || effectivePhase === "transition");
+  // Le fond n'est visible que sur les pages transparentes ; ailleurs il est en pause.
+  const backdropVisible =
+    animatedBackdrop && (page === "main" || page === "discover" || effectivePhase === "transition");
+  const showPool = summerEnabled && backdropVisible;
 
   return (
     <>
@@ -396,22 +402,26 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* Pool canvas — montée dès la phase "transition" pour qu'elle soit déjà
-          visible quand le voile du splash se lève */}
-      {summerEnabled && (
+      {/* Fond animé (mare ou potager) : monté dès la phase "transition" pour être
+          déjà visible quand le voile du splash se lève */}
+      {animatedBackdrop && (
         <div
           aria-hidden
           className={`pointer-events-none fixed inset-0 -z-10 transition-opacity duration-500 ${
-            showPool ? "opacity-100" : "opacity-0"
+            backdropVisible ? "opacity-100" : "opacity-0"
           }`}
         >
           <Suspense fallback={null}>
-            <PixelPool
-              active={showPool}
-              fps={summerFps}
-              maxDucks={summerMaxDucks}
-              onBoatWarp={() => setPage("boatgame")}
-            />
+            {backdrop === "mare" ? (
+              <PixelPool
+                active={showPool}
+                fps={summerFps}
+                maxDucks={summerMaxDucks}
+                onBoatWarp={() => setPage("boatgame")}
+              />
+            ) : (
+              <GardenBackdrop active={backdropVisible} onWebglError={handleWebglError} />
+            )}
           </Suspense>
         </div>
       )}
@@ -498,13 +508,13 @@ function App() {
                 }
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
-                summerEnabled={summerEnabled}
+                animatedBackdrop={animatedBackdrop}
                 initialC411Key={initC411Key}
                 initialAllDebridKey={initAllDebridKey}
                 initialTmdbKey={initTmdbKey}
                 initialPatchnotesSeen={patchnotesSeenVersion ?? initPrefs.patchnotesSeen}
                 initialSearchViewMode={initPrefs.searchViewMode}
-                initialIdleAutoHide={idleAutoHide && summerEnabled && !isBrowserPreview}
+                initialIdleAutoHide={idleAutoHide && animatedBackdrop && !isBrowserPreview}
                 searchMode={searchMode}
                 onSearchModeChange={setSearchMode}
                 initialSearch={mainSearch}
@@ -570,8 +580,8 @@ function App() {
                 onNavigate={handleNavigate}
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
-                summerEnabled={summerEnabled}
-                onToggleSummer={handleToggleSummer}
+                backdrop={backdrop}
+                onSetBackdrop={handleSetBackdrop}
                 summerFps={summerFps}
                 onSetSummerFps={handleSetSummerFps}
                 summerMaxDucks={summerMaxDucks}
@@ -596,7 +606,7 @@ function App() {
                 onNavigate={handleNavigate}
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
-                summerEnabled={summerEnabled}
+                animatedBackdrop={animatedBackdrop}
                 initialQuery={discoverQuery}
                 initialTab={discoverTab}
                 initialItem={discoverItem}
