@@ -6,7 +6,15 @@ import { RARITY_COLOR } from "./toolMeta";
 const section = "rounded-xl border border-amber-300/30 bg-[#1a1216]/85 px-2.5 py-2 backdrop-blur";
 const heading = "mb-1.5 font-serif text-[17px] text-[#f3dca0]";
 
-export function SidePanel({ save, raining }: { save: GardenSave; raining: boolean }) {
+export function SidePanel({
+  save,
+  raining,
+  onPress,
+}: {
+  save: GardenSave;
+  raining: boolean;
+  onPress: (index: number) => void;
+}) {
   const { seeds, basket } = save.inventory;
   const counters = save.progress.counters;
   return (
@@ -34,6 +42,12 @@ export function SidePanel({ save, raining }: { save: GardenSave; raining: boolea
                   {RARITY_FR[f.rarity]}
                 </small>
               </span>
+              <button
+                onClick={() => onPress(i)}
+                className="rounded-md border border-amber-300/40 px-1.5 py-0.5 text-[10px] text-[#f3dca0] hover:bg-amber-300/15"
+              >
+                Presser
+              </button>
             </div>
           ))}
         </div>

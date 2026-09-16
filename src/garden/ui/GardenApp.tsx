@@ -52,6 +52,18 @@ export default function GardenApp() {
     toast(<DiscoveryToast found={found} />, { duration: 6000 });
   }, [state.discoveries]);
 
+  const toastedPress = useRef(0);
+  useEffect(() => {
+    const { seq, seed } = state.pressed;
+    if (seq === toastedPress.current) return;
+    toastedPress.current = seq;
+    toast(
+      seed
+        ? "Fleur pressée dans l'Herbier. Une graine est tombée !"
+        : "Fleur pressée dans l'Herbier",
+    );
+  }, [state.pressed]);
+
   useEffect(() => {
     if (isBrowserPreview) {
       const onHide = () => void saver.flush();

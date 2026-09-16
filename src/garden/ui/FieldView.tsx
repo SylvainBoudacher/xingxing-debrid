@@ -184,7 +184,11 @@ export function FieldView({
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerLeave}
       />
-      <SidePanel save={save} raining={isRaining(at)} />
+      <SidePanel
+        save={save}
+        raining={isRaining(at)}
+        onPress={(index) => dispatch({ type: "press", index, now: Date.now(), rng: Math.random })}
+      />
       {shown && hover && <TileTooltip x={hover.x} y={hover.y} view={shown} />}
       {flash && (
         <div

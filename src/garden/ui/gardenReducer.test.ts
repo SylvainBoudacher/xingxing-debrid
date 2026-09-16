@@ -59,3 +59,25 @@ describe("gardenReducer", () => {
     expect(next.discoveries).toBe(state.discoveries);
   });
 });
+
+describe("press", () => {
+  const flower = { species: "cosmos", color: "pink", rarity: "commune" } as const;
+  const withFlower = () => {
+    const s = createStarterSave();
+    return gardenReducer(INITIAL_GARDEN, {
+      type: "load",
+      save: { ...s, inventory: { ...s.inventory, basket: [flower] } },
+    });
+  };
+
+  it("presse la fleur et signale la graine", () => {
+    const next = gardenReducer(withFlower(), { type: "press", index: 0, now: 5, rng: () => 0 });
+    expect(next.save!.inventory.basket).toHaveLength(0);
+    expect(next.pressed).toEqual({ seq: 1, seed: true });
+  });
+
+  it("index invalide : état inchangé", () => {
+    const state = withFlower();
+    expect(gardenReducer(state, { type: "press", index: 4, now: 5, rng: () => 0 })).toBe(state);
+  });
+});
