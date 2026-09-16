@@ -1,0 +1,63 @@
+import { describe, expect, it } from "vitest";
+import { withDemoPlants } from "./demo";
+import { growthOf } from "./growth";
+import { isSoil, soilTiles } from "./plots";
+import { parseSave } from "./save";
+import { createStarterSave } from "./starter";
+
+describe("plots", () => {
+  it("la parcelle p1 couvre 24 cases", () => {
+    expect(soilTiles(["p1"])).toHaveLength(24);
+    expect(isSoil(["p1"], "1,1")).toBe(true);
+    expect(isSoil(["p1"], "6,4")).toBe(true);
+    expect(isSoil(["p1"], "0,1")).toBe(false);
+    expect(isSoil(["p1"], "7,4")).toBe(false);
+  });
+});
+
+describe("createStarterSave", () => {
+  it("contient une parcelle, 3 graines, 1 sachet et du décor", () => {
+    const s = createStarterSave();
+    expect(s.version).toBe(1);
+    expect(s.plots).toEqual(["p1"]);
+    expect(s.inventory.seeds).toHaveLength(3);
+    expect(s.sachets.pending).toBe(1);
+    expect(s.tiles["0,1"]).toEqual({ kind: "decor", id: "lanterne" });
+  });
+
+  it("le décor n'est jamais posé sur la terre", () => {
+    const s = createStarterSave();
+    for (const key of Object.keys(s.tiles) as (keyof typeof s.tiles)[]) {
+      expect(isSoil(s.plots, key)).toBe(false);
+    }
+  });
+});
+
+describe("parseSave", () => {
+  it("accepte une sauvegarde valide", () => {
+    const s = createStarterSave();
+    expect(parseSave(JSON.parse(JSON.stringify(s)))).toEqual(s);
+  });
+
+  it("refuse une version inconnue ou une forme cassée", () => {
+    expect(parseSave(null)).toBeNull();
+    expect(parseSave("texte")).toBeNull();
+    expect(parseSave({ ...createStarterSave(), version: 2 })).toBeNull();
+    expect(parseSave({ ...createStarterSave(), tiles: [] })).toBeNull();
+    expect(parseSave({ ...createStarterSave(), inventory: undefined })).toBeNull();
+  });
+});
+
+describe("withDemoPlants", () => {
+  it("sème des plantes à toutes les étapes dans la parcelle", () => {
+    const now = Date.now();
+    const s = withDemoPlants(createStarterSave(), now);
+    const stages = new Set<number>();
+    for (const [key, t] of Object.entries(s.tiles)) {
+      if (t?.kind !== "plant") continue;
+      expect(isSoil(s.plots, key as `${number},${number}`)).toBe(true);
+      stages.add(growthOf(t, now, () => []).stage);
+    }
+    expect(stages).toEqual(new Set([0, 1, 2, 3, 4]));
+  });
+});
