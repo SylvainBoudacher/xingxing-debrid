@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { HOUR } from "../core/time";
 import { createStarterSave } from "../core/starter";
 import type { GardenSave, Interval, TileKey } from "../core/types";
-import { buildSceneModel, diffItems, type SceneItem } from "./sceneModel";
+import { buildSceneModel, diffItems, itemKey, type SceneItem } from "./sceneModel";
 
 const noRain = (): Interval[] => [];
 const NOW = new Date(2026, 9, 1, 12).getTime();
@@ -37,8 +37,42 @@ describe("buildSceneModel", () => {
       },
     });
     const m = buildSceneModel(save, NOW, noRain);
-    expect(m.items.get("1,1")!.legendary).toBe(true);
+    expect(m.items.get("1,1")!.rarity).toBe("legendaire");
     expect(m.wet.has("1,1")).toBe(true);
+  });
+
+  it("transmet la variante au sprite et à la clé", () => {
+    const seed = {
+      species: "cosmos" as const,
+      color: "pink" as const,
+      rarity: "rare" as const,
+      variant: "doree" as const,
+    };
+    const save = withTiles({
+      "1,1": { kind: "plant", seed, sownAt: NOW - 20 * HOUR, watered: [] },
+      "2,1": {
+        kind: "plant",
+        seed: { ...seed, variant: undefined },
+        sownAt: NOW - 20 * HOUR,
+        watered: [],
+      },
+    });
+    const m = buildSceneModel(save, NOW, noRain);
+    const gold = m.items.get("1,1")!;
+    expect(gold.ref).toEqual({ name: "cosmos", color: "pink", variant: "doree" });
+    expect(gold.variant).toBe("doree");
+    expect(itemKey(gold)).not.toBe(itemKey(m.items.get("2,1")!));
+    expect(m.items.get("2,1")!.ref).toEqual({ name: "cosmos", color: "pink" });
+  });
+
+  it("une espèce inconnue s'affiche en graine", () => {
+    const seed = { species: "pissenlit", color: "yellow", rarity: "commune" } as never;
+    const save = withTiles({
+      "1,1": { kind: "plant", seed, sownAt: NOW - 20 * HOUR, watered: [] },
+    });
+    const item = buildSceneModel(save, NOW, noRain).items.get("1,1")!;
+    expect(item.ref.name).toBe("graine");
+    expect(item.rarity).toBeNull();
   });
 
   it("affiche décor, trous et tas de feuilles, et la terre des parcelles", () => {
@@ -102,7 +136,8 @@ describe("buildSceneModel", () => {
 describe("diffItems", () => {
   const item = (name: "pousse" | "jeune", thirsty = false): SceneItem => ({
     ref: { name },
-    legendary: false,
+    rarity: null,
+    variant: null,
     sway: true,
     thirsty,
   });

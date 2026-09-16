@@ -130,7 +130,7 @@ export function createBillboards(scene: THREE.Scene): Billboards {
       const lean = item.thirsty ? THIRSTY_LEAN : 0;
       mesh.rotation.z = lean;
       if (item.ref.name === "lanterne") addLantern(mesh);
-      if (item.legendary) {
+      if (item.rarity === "legendaire") {
         const light = new THREE.PointLight(0xffe7a0, 1.4, 2.4, 2);
         light.position.set(0, 1.05, 0.35);
         mesh.add(light);

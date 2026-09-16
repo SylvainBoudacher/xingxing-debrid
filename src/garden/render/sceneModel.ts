@@ -1,12 +1,14 @@
+import { isSpeciesId } from "../core/catalog/species";
 import { growthOf } from "../core/growth";
 import { soilTiles } from "../core/plots";
-import type { GardenSave, TileContent, TileKey } from "../core/types";
+import type { GardenSave, Rarity, TileContent, TileKey, VariantId } from "../core/types";
 import { isRaining, rainIntervals, type RainSource } from "../core/weather";
 import { spriteKey, type SpriteRef } from "../sprites/sprite";
 
 export interface SceneItem {
   ref: SpriteRef;
-  legendary: boolean;
+  rarity: Rarity | null;
+  variant: VariantId | null;
   sway: boolean;
   thirsty: boolean;
 }
@@ -27,7 +29,7 @@ const STAGE_REFS: SpriteRef[] = [
 ];
 
 export const itemKey = (item: SceneItem): string =>
-  `${spriteKey(item.ref)}:${item.legendary ? 1 : 0}:${item.thirsty ? 1 : 0}`;
+  `${spriteKey(item.ref)}:${item.rarity ?? ""}:${item.thirsty ? 1 : 0}`;
 
 function itemOf(
   tile: TileContent,
@@ -36,7 +38,7 @@ function itemOf(
   marks: { wet: Set<TileKey>; dry: Set<TileKey> },
   key: TileKey,
 ): SceneItem {
-  const still = { legendary: false, sway: false, thirsty: false };
+  const still = { rarity: null, variant: null, sway: false, thirsty: false };
   switch (tile.kind) {
     case "plant": {
       const g = growthOf(tile, now, rain);
@@ -44,12 +46,14 @@ function itemOf(
       if (g.stage < 4) {
         const thirsty = !g.wet;
         if (thirsty) marks.dry.add(key);
-        return { ref: STAGE_REFS[g.stage], legendary: false, sway: g.stage > 0, thirsty };
+        return { ...still, ref: STAGE_REFS[g.stage], sway: g.stage > 0, thirsty };
       }
-      const { species, color, rarity } = tile.seed;
+      const { species, color, rarity, variant } = tile.seed;
+      if (!isSpeciesId(species)) return { ...still, ref: STAGE_REFS[0] };
       return {
-        ref: { name: species, color },
-        legendary: rarity === "legendaire",
+        ref: { name: species, color, ...(variant && { variant }) },
+        rarity,
+        variant: variant ?? null,
         sway: true,
         thirsty: false,
       };
