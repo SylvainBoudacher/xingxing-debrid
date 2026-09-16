@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { parseTileKey, type TileKey } from "../core/types";
 import { holeTile } from "../sprites/ground";
 import { spriteCanvas } from "../sprites/sprite";
+import { createFxBudget, createPlantFx, SCENE_PARTICLES, type PlantFx } from "./rarityFx";
 import type { SceneItem } from "./sceneModel";
 import { pixelTexture } from "./texture";
 import { wx, wz } from "./world";
@@ -24,6 +25,7 @@ export interface Billboards {
     phase: number,
   ): void;
   sway(t: number, raining: boolean): void;
+  updateFx(t: number, dt: number, night: boolean): void;
   lanterns(): Lanterns;
   get(key: TileKey): THREE.Mesh | undefined;
   entries(): [TileKey, THREE.Mesh][];
@@ -90,6 +92,8 @@ export function createBillboards(scene: THREE.Scene): Billboards {
   const swayers: { mesh: THREE.Mesh; phase: number; lean: number }[] = [];
   const statics: THREE.Mesh[] = [];
   const lanterns: Lanterns = { glows: [], lights: [] };
+  const budget = createFxBudget(SCENE_PARTICLES);
+  const fx = new Map<TileKey, PlantFx>();
 
   function addLantern(mesh: THREE.Mesh) {
     const gx = 21 / 32 - 0.5;
@@ -130,11 +134,8 @@ export function createBillboards(scene: THREE.Scene): Billboards {
       const lean = item.thirsty ? THIRSTY_LEAN : 0;
       mesh.rotation.z = lean;
       if (item.ref.name === "lanterne") addLantern(mesh);
-      if (item.rarity === "legendaire") {
-        const light = new THREE.PointLight(0xffe7a0, 1.4, 2.4, 2);
-        light.position.set(0, 1.05, 0.35);
-        mesh.add(light);
-      }
+      const plantFx = createPlantFx(mesh, item, budget);
+      if (plantFx) fx.set(key, plantFx);
       if (item.sway) swayers.push({ mesh, phase: tx * 1.7 + ty, lean });
       scene.add(mesh);
       placed.set(key, mesh);
@@ -142,6 +143,8 @@ export function createBillboards(scene: THREE.Scene): Billboards {
     remove(key) {
       const mesh = placed.get(key);
       if (!mesh) return;
+      fx.get(key)?.dispose();
+      fx.delete(key);
       forget(mesh);
       scene.remove(mesh);
       disposeMesh(mesh);
@@ -163,10 +166,15 @@ export function createBillboards(scene: THREE.Scene): Billboards {
           (raining ? Math.sin(t * 3 + s.phase) * 0.02 : 0);
       }
     },
+    updateFx(t, dt, night) {
+      for (const f of fx.values()) f.update(t, dt, night);
+    },
     lanterns: () => lanterns,
     get: (key) => placed.get(key),
     entries: () => [...placed.entries()],
     dispose() {
+      for (const f of fx.values()) f.dispose();
+      fx.clear();
       for (const mesh of [...placed.values(), ...statics]) {
         scene.remove(mesh);
         disposeMesh(mesh);

@@ -113,9 +113,13 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
     raining = model.raining;
   }
 
+  let lastT = 0;
   function draw(ms: number) {
     const t = ms / 1000;
-    const L = lighting.apply(forcedTod ?? todOf(new Date()), raining, {
+    const dt = lastT ? Math.min(0.1, Math.max(0, t - lastT)) : 0;
+    lastT = t;
+    const tod = forcedTod ?? todOf(new Date());
+    const L = lighting.apply(tod, raining, {
       renderer,
       bloom: post.bloom,
       ambience,
@@ -127,6 +131,7 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
     camera.position.set(cx + view.look[0], view.y - my * 0.8 * (view.parallax ? 1 : 0), view.z);
     camera.lookAt(look);
     billboards.sway(t, raining);
+    billboards.updateFx(t, dt, tod === "nuit");
     interaction?.update(t);
     ambience.update(t, L.mist, camera);
     post.composer.render();
