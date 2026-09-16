@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import type { SpeciesId } from "../core/types";
 import { PAL } from "./palette";
 import { buf, crop, curveAt, ell, outline, put, rampAt, type Ramp } from "./raster";
+import { amarante } from "./species/amarante";
+import { anemone } from "./species/anemone";
+import { heliopsis } from "./species/heliopsis";
+import { lanternelune } from "./species/lanternelune";
+import { sedum } from "./species/sedum";
+import { vergedor } from "./species/vergedor";
 import { drawBuf, renderSpriteBuf, spriteKey } from "./sprite";
 
 const RAMP: Ramp = ["#000000", "#444444", "#888888", "#cccccc"];
@@ -130,5 +136,20 @@ describe("drawBuf", () => {
     const b = drawBuf((buf, k) => ell(buf, k, 16, 24, 4, 4, 0, () => "#ff0000"), PAL.red);
     expect([b.w, b.h]).toEqual([48, 72]);
     expect(b.c.some((c) => c && c !== "#ff0000")).toBe(true);
+  });
+});
+
+describe("nouvelles espèces", () => {
+  it.each([
+    ["anemone", anemone],
+    ["sedum", sedum],
+    ["amarante", amarante],
+    ["vergedor", vergedor],
+    ["heliopsis", heliopsis],
+    ["lanternelune", lanternelune],
+  ] as const)("%s produit un sprite non vide qui dépend de la couleur", (_name, draw) => {
+    const a = drawBuf(draw, PAL.pink);
+    expect(opaque(a)).toBeGreaterThan(200);
+    expect(a.c.join()).not.toBe(drawBuf(draw, PAL.blue).c.join());
   });
 });
