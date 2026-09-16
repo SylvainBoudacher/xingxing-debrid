@@ -264,3 +264,110 @@
     cursor: pointer;
   }
 }
+
+/* Bouton Potager : panneau de bois pixel (palette du Potager) */
+.garden-sign {
+  --px: 3px;
+  filter: drop-shadow(0 0 18px rgba(246, 195, 67, 0.25));
+  transition:
+    filter 0.2s,
+    transform 0.12s;
+}
+.garden-sign:hover {
+  filter: drop-shadow(0 0 26px rgba(246, 195, 67, 0.55));
+  transform: translateY(-2px);
+}
+.garden-sign:active {
+  transform: translateY(var(--px));
+}
+.garden-sign:focus-visible {
+  outline: none;
+}
+.garden-sign:focus-visible .garden-sign-plank {
+  box-shadow:
+    inset 0 var(--px) 0 #c69a64,
+    inset 0 calc(var(--px) * -1) 0 #3a2418,
+    0 0 0 var(--px) #f6c343;
+}
+.garden-sign-plank {
+  background:
+    repeating-linear-gradient(
+      180deg,
+      transparent 0 calc(var(--px) * 5),
+      rgba(58, 36, 24, 0.35) calc(var(--px) * 5) calc(var(--px) * 6)
+    ),
+    #6a4428;
+  box-shadow:
+    inset 0 var(--px) 0 #c69a64,
+    inset 0 calc(var(--px) * -1) 0 #3a2418,
+    inset var(--px) 0 0 #9a6a40,
+    inset calc(var(--px) * -1) 0 0 #3a2418,
+    0 calc(var(--px) * 2) 0 #2e180c;
+  /* coins en escalier façon sprite */
+  clip-path: polygon(
+    0 var(--px),
+    var(--px) var(--px),
+    var(--px) 0,
+    calc(100% - var(--px)) 0,
+    calc(100% - var(--px)) var(--px),
+    100% var(--px),
+    100% calc(100% - var(--px)),
+    calc(100% - var(--px)) calc(100% - var(--px)),
+    calc(100% - var(--px)) 100%,
+    var(--px) 100%,
+    var(--px) calc(100% - var(--px)),
+    0 calc(100% - var(--px))
+  );
+  padding-bottom: calc(0.625rem + var(--px) * 2);
+}
+.garden-sign:active .garden-sign-plank {
+  box-shadow:
+    inset 0 var(--px) 0 #9a6a40,
+    inset 0 calc(var(--px) * -1) 0 #3a2418,
+    inset var(--px) 0 0 #9a6a40,
+    inset calc(var(--px) * -1) 0 0 #3a2418;
+}
+.garden-sign-nail {
+  position: absolute;
+  width: var(--px);
+  height: var(--px);
+  background: #8a879a;
+  box-shadow: var(--px) var(--px) 0 #23222c;
+}
+.garden-sign-label {
+  color: #ecebd4;
+  text-shadow:
+    2px 2px 0 #2e180c,
+    0 0 12px rgba(246, 195, 67, 0.35);
+}
+.garden-sign-sprout {
+  z-index: 1;
+  left: 50%;
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+}
+.garden-sign:hover .garden-sign-sprout {
+  animation: garden-sway 0.9s steps(4) infinite alternate;
+}
+.garden-sign-arrow {
+  animation: garden-bob 1.2s steps(2) infinite;
+}
+@keyframes garden-sway {
+  from {
+    transform: translateX(-50%) rotate(-8deg);
+  }
+  to {
+    transform: translateX(-50%) rotate(8deg);
+  }
+}
+@keyframes garden-bob {
+  50% {
+    transform: translateX(var(--px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .garden-sign-arrow,
+  .garden-sign:hover .garden-sign-sprout {
+    animation: none;
+  }
+}

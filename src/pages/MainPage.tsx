@@ -1,5 +1,7 @@
 import vlcLogo from "@/assets/vlc.png";
 import { AppMenu, type Page } from "@/components/AppMenu";
+import { GardenButton } from "@/components/GardenButton";
+import { onGardenOpenChange } from "@/garden/ui/gardenWindow";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
 import { NyaaSearchFilters } from "@/components/NyaaSearchFilters";
 import { MangaSearchSuggestions } from "@/components/MangaSearchSuggestions";
@@ -212,6 +214,7 @@ interface MainPageProps {
   hasPendingUpdate: boolean;
   onShowPendingUpdate: () => void;
   animatedBackdrop: boolean;
+  showGardenButton: boolean;
   /** Clés API pré-lues par useAppInit — zéro latence au montage */
   initialC411Key?: string | null;
   initialAllDebridKey?: string | null;
@@ -242,6 +245,7 @@ export function MainPage({
   hasPendingUpdate,
   onShowPendingUpdate,
   animatedBackdrop,
+  showGardenButton,
   initialC411Key,
   initialAllDebridKey,
   initialTmdbKey,
@@ -258,6 +262,8 @@ export function MainPage({
   const setSource = onSearchModeChange;
   const [activeSource, setActiveSource] = useState<"c411" | "nyaa">("c411");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [gardenOpen, setGardenOpen] = useState(false);
+  useEffect(() => onGardenOpenChange(setGardenOpen), []);
   const [nyaaTeam, setNyaaTeam] = useState("");
   const [nyaaQuality, setNyaaQuality] = useState("");
   const [nyaaCodec, setNyaaCodec] = useState("");
@@ -843,6 +849,24 @@ export function MainPage({
           onShowMangaWelcome={onShowMangaWelcome}
         />
       </div>
+
+      <AnimatePresence>
+        {showGardenButton && !gardenOpen && phase === "idle" && (
+          <motion.div
+            key="garden-button"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{
+              opacity: 1,
+              y: 0,
+              transition: { duration: 0.5, delay: 0.6, ease: [0.22, 1, 0.36, 1] },
+            }}
+            exit={{ opacity: 0, y: 16, transition: { duration: 0.18, ease: "easeIn" } }}
+            className="absolute bottom-10 left-1/2 z-10 -translate-x-1/2"
+          >
+            <GardenButton />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div ref={scrollRef} className="flex-1 flex flex-col items-center overflow-y-auto">
         <motion.div

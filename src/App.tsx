@@ -509,6 +509,7 @@ function App() {
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 animatedBackdrop={animatedBackdrop}
+                showGardenButton={backdrop === "potager"}
                 initialC411Key={initC411Key}
                 initialAllDebridKey={initAllDebridKey}
                 initialTmdbKey={initTmdbKey}
