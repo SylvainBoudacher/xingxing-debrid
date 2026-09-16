@@ -27,6 +27,8 @@ export interface Billboards {
   dispose(): void;
 }
 
+export const THIRSTY_LEAN = 0.14;
+
 // Un sprite debout sur le sol, pivot au pied, ombre découpée selon sa silhouette.
 function makeBillboard(canvas: HTMLCanvasElement, w: number, h: number): THREE.Mesh {
   const map = pixelTexture(canvas);
@@ -65,7 +67,7 @@ function disposeMesh(mesh: THREE.Mesh) {
 
 export function createBillboards(scene: THREE.Scene): Billboards {
   const placed = new Map<TileKey, THREE.Mesh>();
-  const swayers: { mesh: THREE.Mesh; phase: number }[] = [];
+  const swayers: { mesh: THREE.Mesh; phase: number; lean: number }[] = [];
   const statics: THREE.Mesh[] = [];
   const lanterns: Lanterns = { glows: [], lights: [] };
 
@@ -98,13 +100,15 @@ export function createBillboards(scene: THREE.Scene): Billboards {
       const [tx, ty] = parseTileKey(key);
       const mesh = makeBillboard(spriteCanvas(item.ref), 1, 1.5);
       mesh.position.set(wx(tx), 0, wz(ty) + 0.35);
+      const lean = item.thirsty ? THIRSTY_LEAN : 0;
+      mesh.rotation.z = lean;
       if (item.ref.name === "lanterne") addLantern(mesh);
       if (item.legendary) {
         const light = new THREE.PointLight(0xffe7a0, 1.4, 2.4, 2);
         light.position.set(0, 1.05, 0.35);
         mesh.add(light);
       }
-      if (item.sway) swayers.push({ mesh, phase: tx * 1.7 + ty });
+      if (item.sway) swayers.push({ mesh, phase: tx * 1.7 + ty, lean });
       scene.add(mesh);
       placed.set(key, mesh);
     },
@@ -119,14 +123,18 @@ export function createBillboards(scene: THREE.Scene): Billboards {
     addStatic(canvas, x, z, w, h, sway, phase) {
       const mesh = makeBillboard(canvas, w, h);
       mesh.position.set(x, 0, z);
-      if (sway) swayers.push({ mesh, phase });
+      if (sway) swayers.push({ mesh, phase, lean: 0 });
       scene.add(mesh);
       statics.push(mesh);
     },
     sway(t, raining) {
-      for (const s of swayers)
+      for (const s of swayers) {
+        const limp = s.lean !== 0;
         s.mesh.rotation.z =
-          Math.sin(t * 0.9 + s.phase) * 0.035 + (raining ? Math.sin(t * 3 + s.phase) * 0.02 : 0);
+          s.lean +
+          Math.sin(t * (limp ? 0.5 : 0.9) + s.phase) * (limp ? 0.015 : 0.035) +
+          (raining ? Math.sin(t * 3 + s.phase) * 0.02 : 0);
+      }
     },
     lanterns: () => lanterns,
     dispose() {

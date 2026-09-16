@@ -8,6 +8,7 @@ import { WORLD } from "./world";
 export interface Ground {
   setSoil(keys: TileKey[]): void;
   setWet(keys: Set<TileKey>): void;
+  setDry(keys: Set<TileKey>): void;
   setRaining(on: boolean): void;
   dispose(): void;
 }
@@ -28,15 +29,15 @@ export function createGround(scene: THREE.Scene): Ground {
   });
   let soil = new Set<TileKey>();
   let wet = new Set<TileKey>();
+  let parched = new Set<TileKey>();
 
   function paint(tx: number, ty: number) {
     const key = `${tx},${ty}` as TileKey;
     const px = (tx - WORLD.MIN_X) * T;
     const py = (ty - WORLD.MIN_Y) * T;
     const isSoil = soil.has(key);
-    dry
-      .getContext("2d")!
-      .drawImage(groundTile(isSoil ? (wet.has(key) ? "wet" : "soil") : "grass", tx, ty), px, py);
+    const kind = !isSoil ? "grass" : wet.has(key) ? "wet" : parched.has(key) ? "dry" : "soil";
+    dry.getContext("2d")!.drawImage(groundTile(kind, tx, ty), px, py);
     rainy.getContext("2d")!.drawImage(groundTile(isSoil ? "wet" : "grass", tx, ty), px, py);
   }
   for (let ty = WORLD.MIN_Y; ty < WORLD.MAX_Y; ty++)
@@ -80,6 +81,11 @@ export function createGround(scene: THREE.Scene): Ground {
     setWet(keys) {
       const changed = symmetricDiff(wet, keys);
       wet = new Set(keys);
+      repaint(changed);
+    },
+    setDry(keys) {
+      const changed = symmetricDiff(parched, keys);
+      parched = new Set(keys);
       repaint(changed);
     },
     setRaining(on) {

@@ -23,6 +23,7 @@ export const PAL = {
   grass: ["#2f5226", "#447230", "#578c38", "#7fb44a"],
   soil: ["#2e1c14", "#4e3222", "#654230", "#7e5a42"],
   wet: ["#1e120e", "#342218", "#452e22", "#583c2e"],
+  dry: ["#4a3426", "#7a5a40", "#96765a", "#b4967a"],
   fall: ["#b8401c", "#e08a2a", "#f2c14a", "#8f2a1a"],
 } satisfies Record<string, Ramp>;
 

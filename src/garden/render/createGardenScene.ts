@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { spawnLeaves } from "../core/leaves";
 import type { GardenSave, TileKey } from "../core/types";
 import { spriteCanvas } from "../sprites/sprite";
 import { createAmbience } from "./ambience";
@@ -93,13 +94,15 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
   let raining = false;
 
   function sync(save: GardenSave, now: number) {
-    const model = buildSceneModel(save, now);
+    // idempotent : le fond passif affiche les mêmes tas que le Potager sans écrire
+    const model = buildSceneModel(spawnLeaves(save, now), now);
     const { remove, add } = diffItems(shown, model.items);
     remove.forEach((k) => billboards.remove(k));
     add.forEach((k) => billboards.add(k, model.items.get(k)!));
     shown = model.items;
     ground.setSoil(model.soil);
     ground.setWet(model.wet);
+    ground.setDry(model.dry);
     raining = model.raining;
   }
 

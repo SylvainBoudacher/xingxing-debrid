@@ -54,6 +54,44 @@ describe("buildSceneModel", () => {
     expect(m.soil).toHaveLength(24);
   });
 
+  it("marque les plantes assoiffées et leur terre sèche", () => {
+    const seed = {
+      species: "aster" as const,
+      color: "violet" as const,
+      rarity: "commune" as const,
+    };
+    const save = withTiles({
+      "1,1": { kind: "plant", seed, sownAt: NOW - HOUR, watered: [] },
+      "2,1": {
+        kind: "plant",
+        seed,
+        sownAt: NOW - HOUR,
+        watered: [{ start: NOW - HOUR, end: NOW + HOUR }],
+      },
+      "3,1": { kind: "plant", seed, sownAt: NOW - 9 * HOUR, watered: [] },
+      "4,1": { kind: "hole", dugAt: NOW },
+    });
+    const m = buildSceneModel(save, NOW, noRain);
+    expect(m.items.get("1,1")!.thirsty).toBe(true);
+    expect(m.items.get("2,1")!.thirsty).toBe(false);
+    expect(m.items.get("3,1")!.thirsty).toBe(false);
+    expect(m.items.get("4,1")!.thirsty).toBe(false);
+    expect([...m.dry]).toEqual(["1,1"]);
+  });
+
+  it("la pluie désaltère tout le champ", () => {
+    const seed = {
+      species: "aster" as const,
+      color: "violet" as const,
+      rarity: "commune" as const,
+    };
+    const save = withTiles({ "1,1": { kind: "plant", seed, sownAt: NOW - HOUR, watered: [] } });
+    const rain = (): Interval[] => [{ start: NOW - HOUR, end: NOW + HOUR }];
+    const m = buildSceneModel(save, NOW, rain);
+    expect(m.items.get("1,1")!.thirsty).toBe(false);
+    expect(m.dry.size).toBe(0);
+  });
+
   it("indique s'il pleut", () => {
     const rain = (): Interval[] => [{ start: NOW - HOUR, end: NOW + HOUR }];
     expect(buildSceneModel(createStarterSave(), NOW, rain).raining).toBe(true);
@@ -62,12 +100,20 @@ describe("buildSceneModel", () => {
 });
 
 describe("diffItems", () => {
+  const item = (name: "pousse" | "jeune", thirsty = false): SceneItem => ({
+    ref: { name },
+    legendary: false,
+    sway: true,
+    thirsty,
+  });
+
+  it("remplace une plante qui devient assoiffée", () => {
+    const prev = new Map<TileKey, SceneItem>([["1,1", item("pousse")]]);
+    const next = new Map<TileKey, SceneItem>([["1,1", item("pousse", true)]]);
+    expect(diffItems(prev, next)).toEqual({ remove: ["1,1"], add: ["1,1"] });
+  });
+
   it("retire, ajoute et remplace seulement ce qui change", () => {
-    const item = (name: "pousse" | "jeune"): SceneItem => ({
-      ref: { name },
-      legendary: false,
-      sway: true,
-    });
     const prev = new Map<TileKey, SceneItem>([
       ["1,1", item("pousse")],
       ["2,1", item("pousse")],

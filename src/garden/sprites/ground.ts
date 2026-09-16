@@ -3,7 +3,7 @@ import { mix } from "./color";
 import { PAL } from "./palette";
 import { buf, put, rampAt, toCanvas } from "./raster";
 
-export type GroundKind = "grass" | "soil" | "wet";
+export type GroundKind = "grass" | "soil" | "wet" | "dry";
 
 const S = 48;
 const K = S / 32;
@@ -62,6 +62,18 @@ function paintTile(kind: GroundKind, tx: number, ty: number): HTMLCanvasElement 
       const y = Math.floor(hash(ty, tx, i + 60) * S);
       put(b, x, y, pal[3]);
       put(b, x, y + 1, pal[0]);
+    }
+    if (kind === "dry") {
+      // craquelures : petites marches aléatoires sombres
+      for (let i = 0; i < 4; i++) {
+        let x = Math.floor(hash(tx, ty, i + 70) * S);
+        let y = Math.floor(hash(ty, tx, i + 80) * S);
+        for (let j = 0; j < 9 * K; j++) {
+          put(b, x, y, pal[0]);
+          x += hash(tx + j, ty, i + 90) > 0.35 ? 1 : 0;
+          y += hash(tx, ty + j, i + 95) > 0.5 ? 1 : -1;
+        }
+      }
     }
   }
   return toCanvas(b);
