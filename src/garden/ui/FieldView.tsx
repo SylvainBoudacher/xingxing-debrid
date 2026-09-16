@@ -79,7 +79,7 @@ export function FieldView({
     const interaction = sceneRef.current?.interaction;
     if (!interaction || dragging) return;
     interaction.setHighlight(
-      shown ? (hover?.pick?.ground?.key ?? null) : null,
+      shown ? (hover?.pick?.target ?? null) : null,
       shown ? toneOf(shown) : undefined,
     );
   }, [shown, hover, dragging]);
@@ -124,7 +124,7 @@ export function FieldView({
       const result = planMove(save, drag.current.from, pick.ground.key);
       drag.current.to = pick.ground.key;
       drag.current.reason = result.ok ? null : result.reason;
-      interaction.setHighlight(pick.ground.key, result.ok ? "ok" : "no");
+      interaction.setHighlight({ kind: "tile", key: pick.ground.key }, result.ok ? "ok" : "no");
       return;
     }
     setHover({ ...pos, pick: interaction.pickAt(e.clientX, e.clientY) });

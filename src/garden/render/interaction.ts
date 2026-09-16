@@ -1,16 +1,16 @@
 import type * as THREE from "three";
-import type { Particle } from "../core/actions";
+import type { Particle, Target } from "../core/actions";
 import { parseTileKey, type TileKey } from "../core/types";
 import type { Billboards } from "./billboards";
 import { createCrows } from "./crows";
-import { createHighlight, type HighlightTone } from "./highlight";
+import { createHighlight, TONES, type HighlightTone } from "./highlight";
 import { createParticles } from "./particles";
 import { createPicker, type Pickable, type PickResult } from "./picking";
 import { wx, wz } from "./world";
 
 export interface GardenInteraction {
   pickAt(clientX: number, clientY: number, ignore?: TileKey): PickResult | null;
-  setHighlight(key: TileKey | null, tone?: HighlightTone): void;
+  setHighlight(target: Target | null, tone?: HighlightTone): void;
   burst(key: TileKey, particle: Particle): void;
   lift(key: TileKey): void;
   moveLifted(x: number, z: number): void;
@@ -59,7 +59,11 @@ export function createInteraction(
       ];
       return pick(clientX, clientY, pickables);
     },
-    setHighlight: highlight.set,
+    // une seule cible surlignée : cadre au sol pour une case, contour pour un corbeau
+    setHighlight(target, tone = "info") {
+      highlight.set(target?.kind === "tile" ? target.key : null, tone);
+      crows.outline(target?.kind === "crow" ? target.id : null, TONES[tone]);
+    },
     burst: particles.burst,
     lift(key) {
       resetLifted();

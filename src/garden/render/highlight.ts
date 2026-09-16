@@ -3,9 +3,16 @@ import { parseTileKey, type TileKey } from "../core/types";
 import { pixelTexture } from "./texture";
 import { wx, wz } from "./world";
 
+export const HIGHLIGHT_BOOST = 1.5;
+export const pulse = (t: number): number => 0.65 + 0.35 * Math.sin(t * 5);
+
 export type HighlightTone = "ok" | "no" | "info";
 
-const TONES: Record<HighlightTone, string> = { ok: "#9fd46e", no: "#e0a060", info: "#f3dca0" };
+export const TONES: Record<HighlightTone, string> = {
+  ok: "#9fd46e",
+  no: "#e0a060",
+  info: "#f3dca0",
+};
 
 export interface Highlight {
   set(key: TileKey | null, tone?: HighlightTone): void;
@@ -51,10 +58,10 @@ export function createHighlight(scene: THREE.Scene): Highlight {
       if (!key) return;
       const [tx, ty] = parseTileKey(key);
       mesh.position.set(wx(tx), 0.015, wz(ty));
-      material.color.set(TONES[tone]).multiplyScalar(1.5);
+      material.color.set(TONES[tone]).multiplyScalar(HIGHLIGHT_BOOST);
     },
     update(t) {
-      material.opacity = 0.65 + 0.35 * Math.sin(t * 5);
+      material.opacity = pulse(t);
     },
     dispose() {
       scene.remove(mesh);
