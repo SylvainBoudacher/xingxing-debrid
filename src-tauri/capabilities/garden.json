@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "garden",
+  "description": "Capability de la fenêtre Potager",
+  "windows": ["garden"],
+  "permissions": ["core:default", "core:window:allow-destroy", "store:default"]
+}

@@ -2421,7 +2421,7 @@ Créer `src-tauri/capabilities/garden.json` :
   "identifier": "garden",
   "description": "Capability de la fenêtre Potager",
   "windows": ["garden"],
-  "permissions": ["core:default", "store:default"]
+  "permissions": ["core:default", "core:window:allow-destroy", "store:default"]
 }
 ```
 
