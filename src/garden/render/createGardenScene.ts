@@ -9,7 +9,7 @@ import { createInteraction, type GardenInteraction } from "./interaction";
 import { createLighting } from "./lighting";
 import { createPost } from "./post";
 import { buildSceneModel, diffItems, type SceneItem } from "./sceneModel";
-import { todOf } from "./tod";
+import { todOf, type Tod } from "./tod";
 import { wx, wz } from "./world";
 
 export type SceneProfile = "backdrop" | "garden";
@@ -23,6 +23,8 @@ export interface GardenScene {
   renderOnce(): void;
   dispose(): void;
   readonly interaction?: GardenInteraction;
+  // force une ambiance (outil de développement) ; null = heure réelle
+  setTod(tod: Tod | null): void;
 }
 
 const FRAME_MS = 1000 / 30;
@@ -96,6 +98,7 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
 
   let shown = new Map<TileKey, SceneItem>();
   let raining = false;
+  let forcedTod: Tod | null = null;
 
   function sync(save: GardenSave, now: number) {
     // idempotent : le fond passif affiche les mêmes tas que le Potager sans écrire
@@ -112,7 +115,7 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
 
   function draw(ms: number) {
     const t = ms / 1000;
-    const L = lighting.apply(todOf(new Date()), raining, {
+    const L = lighting.apply(forcedTod ?? todOf(new Date()), raining, {
       renderer,
       bloom: post.bloom,
       ambience,
@@ -171,6 +174,9 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
     },
     sync,
     interaction,
+    setTod(tod) {
+      forcedTod = tod;
+    },
     renderOnce() {
       draw(performance.now());
     },

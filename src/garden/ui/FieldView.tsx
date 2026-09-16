@@ -10,6 +10,7 @@ import type { GardenSave, TileKey } from "../core/types";
 import { isRaining } from "../core/weather";
 import { createGardenScene, type GardenScene } from "../render/createGardenScene";
 import type { PickResult } from "../render/picking";
+import type { Tod } from "../render/tod";
 import type { GardenAction } from "./gardenReducer";
 import { GardenDevBar } from "./GardenDevBar";
 import { describeTarget, toneOf } from "./hover";
@@ -43,6 +44,7 @@ export function FieldView({
   const drag = useRef<{ from: TileKey; to: TileKey | null; reason: string | null } | null>(null);
   const [tool, setTool] = useState<Tool>("main");
   const [dragging, setDragging] = useState(false);
+  const [devTod, setDevTod] = useState<Tod | null>(null);
   // un geste est postérieur au dernier tick : la vue doit le voir tout de suite
   const [actedAt, setActedAt] = useState(0);
   const at = Math.max(now, actedAt);
@@ -195,6 +197,11 @@ export function FieldView({
       <ToolBar tool={tool} onSelect={setTool} />
       {import.meta.env.DEV && (
         <GardenDevBar
+          tod={devTod}
+          onTod={(tod) => {
+            setDevTod(tod);
+            sceneRef.current?.setTod(tod);
+          }}
           onSeed={() => {
             const t = Date.now();
             setActedAt(t);
