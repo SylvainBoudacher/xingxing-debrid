@@ -167,6 +167,28 @@ export function outline(b: Buf): void {
   b.c = out;
 }
 
+// Recadre sur la boîte des pixels dessinés, avec `pad` pixels vides autour.
+export function crop(b: Buf, pad = 0): Buf {
+  let x0 = b.w;
+  let y0 = b.h;
+  let x1 = -1;
+  let y1 = -1;
+  b.c.forEach((col, i) => {
+    if (!col) return;
+    const x = i % b.w;
+    const y = (i - x) / b.w;
+    x0 = Math.min(x0, x);
+    y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x);
+    y1 = Math.max(y1, y);
+  });
+  if (x1 < 0) return b;
+  const out = buf(x1 - x0 + 1 + 2 * pad, y1 - y0 + 1 + 2 * pad);
+  for (let y = y0; y <= y1; y++)
+    for (let x = x0; x <= x1; x++) put(out, x - x0 + pad, y - y0 + pad, b.c[y * b.w + x]);
+  return out;
+}
+
 export function toCanvas(b: Buf): HTMLCanvasElement {
   const cv = document.createElement("canvas");
   cv.width = b.w;

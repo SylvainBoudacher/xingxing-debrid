@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SpeciesId } from "../core/types";
-import { buf, ell, outline, rampAt, type Ramp } from "./raster";
+import { buf, crop, ell, outline, put, rampAt, type Ramp } from "./raster";
 import { renderSpriteBuf, spriteKey } from "./sprite";
 
 const RAMP: Ramp = ["#000000", "#444444", "#888888", "#cccccc"];
@@ -82,4 +82,25 @@ describe("icônes et corbeau", () => {
       expect(opaque(b)).toBeGreaterThan(40);
     },
   );
+});
+
+describe("crop", () => {
+  it("recadre sur les pixels dessinés avec une marge", () => {
+    const b = buf(10, 10);
+    put(b, 3, 6, "#ff0000");
+    put(b, 5, 8, "#00ff00");
+    const c = crop(b, 1);
+    expect([c.w, c.h]).toEqual([5, 5]);
+    expect(c.c[1 * 5 + 1]).toBe("#ff0000");
+    expect(c.c[3 * 5 + 3]).toBe("#00ff00");
+    expect(c.c.filter(Boolean)).toHaveLength(2);
+  });
+
+  it("une icône d'outil est bien plus petite que le sprite entier", () => {
+    const c = crop(renderSpriteBuf({ name: "arrosoir" }), 1);
+    expect(c.h).toBeLessThan(40);
+    expect(c.c.filter(Boolean).length).toBe(
+      renderSpriteBuf({ name: "arrosoir" }).c.filter(Boolean).length,
+    );
+  });
 });

@@ -15,21 +15,21 @@ export function ToolBar({ tool, onSelect }: { tool: Tool; onSelect: (tool: Tool)
   }, [onSelect]);
 
   return (
-    <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-2xl border border-amber-300/35 bg-[#1a1216]/85 p-1.5 backdrop-blur">
+    <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2 rounded-2xl border border-amber-300/35 bg-[#1a1216]/85 p-2 backdrop-blur">
       {TOOLS.map((id, i) => (
         <button
           key={id}
           type="button"
           onClick={() => onSelect(id)}
           aria-pressed={tool === id}
-          className={`relative flex h-[58px] w-[62px] flex-col items-center justify-center gap-0.5 rounded-lg border text-[10.5px] ${
+          className={`relative flex h-20 w-[84px] flex-col items-center justify-center gap-1.5 rounded-xl border text-[13px] ${
             tool === id
               ? "border-[#d9b46a] bg-amber-300/20 shadow-[0_0_12px_rgba(243,220,160,0.3)]"
               : "border-amber-300/20 bg-black/25 hover:bg-black/40"
           }`}
         >
-          <span className="absolute left-1.5 top-0.5 text-[9px] text-[#a99a8a]">{i + 1}</span>
-          <SpriteIcon sprite={TOOL_META[id].icon} className="-mt-3 w-[26px]" />
+          <span className="absolute left-2 top-1 text-[11px] text-[#a99a8a]">{i + 1}</span>
+          <SpriteIcon sprite={TOOL_META[id].icon} cropped className="h-10 w-auto" />
           {TOOL_META[id].label}
         </button>
       ))}

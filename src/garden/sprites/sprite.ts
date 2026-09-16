@@ -1,7 +1,7 @@
 import type { ColorId } from "../core/types";
 import { DECOR_DRAW, drawTree } from "./decor";
 import { PAL } from "./palette";
-import { buf, outline, toCanvas, type Buf, type Ramp } from "./raster";
+import { buf, crop, outline, toCanvas, type Buf, type Ramp } from "./raster";
 import { SPECIES_COLOR, SPECIES_DRAW } from "./species";
 import { STAGE_DRAW } from "./stages";
 import { TOOL_DRAW } from "./tools";
@@ -67,6 +67,19 @@ export function spriteDataUrl(ref: SpriteRef): string {
   if (!url) {
     url = spriteCanvas(ref).toDataURL();
     urls.set(key, url);
+  }
+  return url;
+}
+
+const icons = new Map<string, string>();
+
+// Icône : le sprite recadré sur sa zone dessinée.
+export function iconDataUrl(ref: SpriteRef): string {
+  const key = spriteKey(ref);
+  let url = icons.get(key);
+  if (!url) {
+    url = toCanvas(crop(renderSpriteBuf(ref), 1)).toDataURL();
+    icons.set(key, url);
   }
   return url;
 }
