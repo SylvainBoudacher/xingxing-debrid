@@ -5,6 +5,7 @@ import { spriteCanvas } from "../sprites/sprite";
 import { createAmbience } from "./ambience";
 import { createBillboards } from "./billboards";
 import { createGround } from "./ground";
+import { createInteraction, type GardenInteraction } from "./interaction";
 import { createLighting } from "./lighting";
 import { createPost } from "./post";
 import { buildSceneModel, diffItems, type SceneItem } from "./sceneModel";
@@ -21,6 +22,7 @@ export interface GardenScene {
   sync(save: GardenSave, now: number): void;
   renderOnce(): void;
   dispose(): void;
+  readonly interaction?: GardenInteraction;
 }
 
 const FRAME_MS = 1000 / 30;
@@ -61,6 +63,8 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
   const ambience = createAmbience(scene);
   const lighting = createLighting(scene);
   const post = createPost(renderer, scene, camera);
+  const interaction =
+    profile === "garden" ? createInteraction(scene, camera, canvas, billboards) : undefined;
 
   const fence = spriteCanvas({ name: "cloture" });
   for (let tx = -2; tx < 10; tx++)
@@ -120,6 +124,7 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
     camera.position.set(cx + view.look[0], view.y - my * 0.8 * (view.parallax ? 1 : 0), view.z);
     camera.lookAt(look);
     billboards.sway(t, raining);
+    interaction?.update(t);
     ambience.update(t, L.mist, camera);
     post.composer.render();
   }
@@ -165,6 +170,7 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
       return running ? fps : 0;
     },
     sync,
+    interaction,
     renderOnce() {
       draw(performance.now());
     },
@@ -172,6 +178,7 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
       stop();
       observer.disconnect();
       window.removeEventListener("pointermove", onPointer);
+      interaction?.dispose();
       billboards.dispose();
       ground.dispose();
       ambience.dispose();

@@ -24,13 +24,15 @@ export interface Billboards {
   ): void;
   sway(t: number, raining: boolean): void;
   lanterns(): Lanterns;
+  get(key: TileKey): THREE.Mesh | undefined;
+  entries(): [TileKey, THREE.Mesh][];
   dispose(): void;
 }
 
 export const THIRSTY_LEAN = 0.14;
 
 // Un sprite debout sur le sol, pivot au pied, ombre découpée selon sa silhouette.
-function makeBillboard(canvas: HTMLCanvasElement, w: number, h: number): THREE.Mesh {
+export function makeBillboard(canvas: HTMLCanvasElement, w: number, h: number): THREE.Mesh {
   const map = pixelTexture(canvas);
   const geo = new THREE.PlaneGeometry(w, h);
   geo.translate(0, h / 2, 0);
@@ -48,10 +50,11 @@ function makeBillboard(canvas: HTMLCanvasElement, w: number, h: number): THREE.M
     map,
     alphaTest: 0.5,
   });
+  mesh.userData.canvas = canvas;
   return mesh;
 }
 
-function disposeMesh(mesh: THREE.Mesh) {
+export function disposeMesh(mesh: THREE.Mesh) {
   const mat = mesh.material as THREE.MeshStandardMaterial;
   mat.map?.dispose();
   mat.dispose();
@@ -137,6 +140,8 @@ export function createBillboards(scene: THREE.Scene): Billboards {
       }
     },
     lanterns: () => lanterns,
+    get: (key) => placed.get(key),
+    entries: () => [...placed.entries()],
     dispose() {
       for (const mesh of [...placed.values(), ...statics]) {
         scene.remove(mesh);
