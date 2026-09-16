@@ -75,6 +75,7 @@ export interface GardenSave {
   sachets: { lastDailyAt: number; pending: number };
   progress: { nodes: Record<string, number>; counters: Record<string, number> };
   atelier: { brew: { recipe: string; startedAt: number } | null };
+  leaves: { checkedAt: number };
 }
 
 export const tileKey = (x: number, y: number): TileKey => `${x},${y}`;

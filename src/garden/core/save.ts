@@ -15,5 +15,9 @@ export function parseSave(raw: unknown): GardenSave | null {
   if (!isObject(herbier) || !isObject(pity) || !isObject(sachets)) return null;
   if (!isObject(progress) || !isObject(progress.nodes) || !isObject(progress.counters)) return null;
   if (!isObject(atelier)) return null;
-  return raw as unknown as GardenSave;
+  const leaves =
+    isObject(raw.leaves) && typeof raw.leaves.checkedAt === "number"
+      ? { checkedAt: raw.leaves.checkedAt }
+      : { checkedAt: 0 };
+  return { ...(raw as unknown as GardenSave), leaves };
 }

@@ -1,3 +1,4 @@
+import { LEAF_SLOT_MS } from "./leaves";
 import type { GardenSave } from "./types";
 
 export function createStarterSave(): GardenSave {
@@ -26,5 +27,6 @@ export function createStarterSave(): GardenSave {
     sachets: { lastDailyAt: 0, pending: 1 },
     progress: { nodes: {}, counters: {} },
     atelier: { brew: null },
+    leaves: { checkedAt: Math.floor(Date.now() / LEAF_SLOT_MS) * LEAF_SLOT_MS },
   };
 }
