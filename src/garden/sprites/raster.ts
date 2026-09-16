@@ -126,6 +126,23 @@ export function leaf(
   });
 }
 
+// Point d'une courbe de Bézier quadratique ; `bend` décale le point de contrôle.
+export function curveAt(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  bend: number,
+  s: number,
+): [number, number] {
+  const mx = (x0 + x1) / 2 + bend;
+  const my = (y0 + y1) / 2;
+  const a = (1 - s) * (1 - s);
+  const c = 2 * s * (1 - s);
+  const e = s * s;
+  return [a * x0 + c * mx + e * x1, a * y0 + c * my + e * y1];
+}
+
 // Tige en courbe de Bézier quadratique ; `bend` décale le point de contrôle.
 export function stem(
   b: Buf,
@@ -140,15 +157,8 @@ export function stem(
 ): void {
   const pw = Math.max(1, Math.round(w * k));
   const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * k * 1.6) + 1;
-  const mx = (x0 + x1) / 2 + bend;
-  const my = (y0 + y1) / 2;
   for (let i = 0; i <= n; i++) {
-    const s = i / n;
-    const a = (1 - s) * (1 - s);
-    const c = 2 * s * (1 - s);
-    const e = s * s;
-    const x = a * x0 + c * mx + e * x1;
-    const y = a * y0 + c * my + e * y1;
+    const [x, y] = curveAt(x0, y0, x1, y1, bend, i / n);
     const px = Math.round(x * k - pw / 2);
     const py = Math.round(y * k);
     for (let j = 0; j < pw; j++) put(b, px + j, py, j === 0 && pw > 1 ? ramp[2] : ramp[1]);

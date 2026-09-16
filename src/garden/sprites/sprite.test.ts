@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { SpeciesId } from "../core/types";
-import { buf, crop, ell, outline, put, rampAt, type Ramp } from "./raster";
-import { renderSpriteBuf, spriteKey } from "./sprite";
+import { PAL } from "./palette";
+import { buf, crop, curveAt, ell, outline, put, rampAt, type Ramp } from "./raster";
+import { drawBuf, renderSpriteBuf, spriteKey } from "./sprite";
 
 const RAMP: Ramp = ["#000000", "#444444", "#888888", "#cccccc"];
 const opaque = (b: { c: (string | null)[] }) => b.c.filter(Boolean).length;
@@ -102,5 +103,32 @@ describe("crop", () => {
     expect(c.c.filter(Boolean).length).toBe(
       renderSpriteBuf({ name: "arrosoir" }).c.filter(Boolean).length,
     );
+  });
+});
+
+describe("curveAt", () => {
+  it("part du premier point et arrive au second", () => {
+    expect(curveAt(0, 0, 10, 20, 3, 0)).toEqual([0, 0]);
+    expect(curveAt(0, 0, 10, 20, 3, 1)).toEqual([10, 20]);
+  });
+
+  it("le point de contrôle décale le milieu", () => {
+    const [x] = curveAt(0, 0, 10, 0, 4, 0.5);
+    expect(x).toBeCloseTo(7);
+  });
+});
+
+describe("palette", () => {
+  it("les nouvelles gammes ont 4 tons", () => {
+    for (const key of ["blue", "burgundy", "apricot", "black", "lime"] as const)
+      expect(PAL[key]).toHaveLength(4);
+  });
+});
+
+describe("drawBuf", () => {
+  it("dessine une fonction dans un tampon 48x72 avec contour", () => {
+    const b = drawBuf((buf, k) => ell(buf, k, 16, 24, 4, 4, 0, () => "#ff0000"), PAL.red);
+    expect([b.w, b.h]).toEqual([48, 72]);
+    expect(b.c.some((c) => c && c !== "#ff0000")).toBe(true);
   });
 });

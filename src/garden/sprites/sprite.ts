@@ -1,8 +1,9 @@
 import type { ColorId } from "../core/types";
 import { DECOR_DRAW, drawTree } from "./decor";
 import { PAL } from "./palette";
-import { buf, crop, outline, toCanvas, type Buf, type Ramp } from "./raster";
-import { SPECIES_COLOR, SPECIES_DRAW } from "./species";
+import { COLOR_RAMP } from "./colorRamps";
+import { buf, crop, outline, toCanvas, type Buf, type DrawFn, type Ramp } from "./raster";
+import { SPECIES_DRAW } from "./species/index";
 import { STAGE_DRAW } from "./stages";
 import { TOOL_DRAW } from "./tools";
 
@@ -26,7 +27,14 @@ export const spriteKey = (ref: SpriteRef): string => `${ref.name}:${ref.color ??
 function rampOf(color: SpriteRef["color"]): Ramp {
   if (!color) return PAL.green;
   if (color === "cream") return PAL.cream;
-  return PAL[SPECIES_COLOR[color]];
+  return PAL[COLOR_RAMP[color]];
+}
+
+export function drawBuf(draw: DrawFn, ramp: Ramp): Buf {
+  const b = buf(SPRITE_TILE, SPRITE_TILE * 1.5);
+  draw(b, K, ramp);
+  outline(b);
+  return b;
 }
 
 export function renderSpriteBuf(ref: SpriteRef): Buf {
@@ -36,15 +44,12 @@ export function renderSpriteBuf(ref: SpriteRef): Buf {
     outline(b);
     return b;
   }
-  const b = buf(SPRITE_TILE, SPRITE_TILE * 1.5);
   const draw =
     SPECIES_DRAW[ref.name as keyof typeof SPECIES_DRAW] ??
     STAGE_DRAW[ref.name as keyof typeof STAGE_DRAW] ??
     DECOR_DRAW[ref.name as keyof typeof DECOR_DRAW] ??
     TOOL_DRAW[ref.name as keyof typeof TOOL_DRAW];
-  draw(b, K, rampOf(ref.color));
-  outline(b);
-  return b;
+  return drawBuf(draw, rampOf(ref.color));
 }
 
 const cache = new Map<string, HTMLCanvasElement>();
