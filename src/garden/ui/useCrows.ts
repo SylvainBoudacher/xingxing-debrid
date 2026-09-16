@@ -1,4 +1,4 @@
-import { useCallback, useEffect, type RefObject } from "react";
+import { useCallback, useEffect, useRef, type RefObject } from "react";
 import { fieldTiles } from "../core/plots";
 import type { GardenSave } from "../core/types";
 import type { GardenScene } from "../render/createGardenScene";
@@ -12,7 +12,12 @@ const MAX_CROWS = 2;
 export function useCrows(
   sceneRef: RefObject<GardenScene | null>,
   saveRef: RefObject<GardenSave | null>,
+  active: boolean,
 ) {
+  const activeRef = useRef(active);
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
   const spawn = useCallback(() => {
     const interaction = sceneRef.current?.interaction;
     const save = saveRef.current;
@@ -33,7 +38,7 @@ export function useCrows(
     const plan = () => {
       timer = setTimeout(
         () => {
-          if (document.visibilityState === "visible" && alive < MAX_CROWS) {
+          if (document.visibilityState === "visible" && activeRef.current && alive < MAX_CROWS) {
             spawn();
             alive++;
             setTimeout(() => alive--, STAY_MS);

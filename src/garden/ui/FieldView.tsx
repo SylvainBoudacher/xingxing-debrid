@@ -32,10 +32,12 @@ export function FieldView({
   save,
   now,
   dispatch,
+  active,
 }: {
   save: GardenSave;
   now: number;
   dispatch: Dispatch<GardenAction>;
+  active: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<GardenScene | null>(null);
@@ -50,17 +52,23 @@ export function FieldView({
   const at = Math.max(now, actedAt);
   const [hover, setHover] = useState<Pointer | null>(null);
   const [flash, setFlash] = useState<{ x: number; y: number; text: string } | null>(null);
-  const { spawn } = useCrows(sceneRef, saveRef);
+  const { spawn } = useCrows(sceneRef, saveRef, active);
 
   useEffect(() => {
     const scene = createGardenScene(canvasRef.current!, "garden");
     sceneRef.current = scene;
-    scene.start();
     return () => {
       scene.dispose();
       sceneRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    if (active) scene.start();
+    else scene.stop();
+  }, [active]);
 
   useEffect(() => {
     saveRef.current = save;

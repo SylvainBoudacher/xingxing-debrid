@@ -7,6 +7,8 @@ import { createSaveScheduler, loadGarden } from "../storage/gardenStore";
 import { DiscoveryToast } from "./DiscoveryToast";
 import { FieldView } from "./FieldView";
 import { gardenReducer, INITIAL_GARDEN } from "./gardenReducer";
+import { GardenTabs, type GardenTab } from "./GardenTabs";
+import { HerbierPage } from "./herbier/HerbierPage";
 import { announceGardenClosed, announceGardenOpened } from "./gardenWindow";
 
 const TICK_MS = 60_000;
@@ -16,6 +18,7 @@ export default function GardenApp() {
   const [webglOk] = useState(hasWebgl);
   const [state, dispatch] = useReducer(gardenReducer, INITIAL_GARDEN);
   const [now, setNow] = useState(Date.now);
+  const [tab, setTab] = useState<GardenTab>("champ");
   const toastedSeq = useRef(0);
 
   useEffect(() => {
@@ -82,18 +85,19 @@ export default function GardenApp() {
   return (
     <div className="flex h-screen flex-col bg-[#1a1216] text-[#f1e6d2]">
       <Toaster theme="dark" position="top-center" />
-      <nav className="flex gap-1 border-b border-amber-300/25 px-4 pt-2">
-        <span className="rounded-t-lg bg-amber-300/10 px-4 py-2 font-serif text-lg font-semibold text-[#f3dca0] shadow-[inset_0_-2px_0_#d9b46a]">
-          Champ
-        </span>
-      </nav>
-      {!webglOk ? (
-        <div className="flex flex-1 items-center justify-center p-6 text-center text-sm">
-          Le Potager a besoin de WebGL, qui n'est pas disponible sur cet appareil.
-        </div>
-      ) : (
-        state.save && <FieldView save={state.save} now={now} dispatch={dispatch} />
-      )}
+      <GardenTabs tab={tab} onTab={setTab} />
+      {!webglOk
+        ? tab === "champ" && (
+            <div className="flex flex-1 items-center justify-center p-6 text-center text-sm">
+              Le Potager a besoin de WebGL, qui n'est pas disponible sur cet appareil.
+            </div>
+          )
+        : state.save && (
+            <div className={tab === "champ" ? "flex flex-1" : "hidden"}>
+              <FieldView save={state.save} now={now} dispatch={dispatch} active={tab === "champ"} />
+            </div>
+          )}
+      {tab === "herbier" && state.save && <HerbierPage save={state.save} />}
     </div>
   );
 }
