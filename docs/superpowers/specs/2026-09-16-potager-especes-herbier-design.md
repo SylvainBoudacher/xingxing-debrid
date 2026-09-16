@@ -46,7 +46,7 @@ C = commune, R = rare, E = épique, L = légendaire.
 | Héliopsis        | `heliopsis`    | m     | sécateur   | jaune C, orange C, bronze R, rouge E                     |
 | Lanterne-de-lune | `lanternelune` | f     | main       | bleu L, blanc L, violet L                                |
 
-Total : 65 entrées (27 C, 17 R, 11 E, 10 L).
+Total : 65 entrées (26 C, 18 R, 11 E, 10 L).
 
 Nouvelles couleurs (`ColorId`, nom masculin / féminin) : `blue` bleu / bleue, `burgundy` bordeaux, `apricot` abricot, `black` noir / noire, `lime` vert / verte. Les couleurs existantes gardent leurs identifiants (`heather` = pourpre).
 
@@ -140,7 +140,7 @@ Mise en page "carnet ouvert" (papier crème, reliure bois, fond de fenêtre somb
 
 Vitest :
 
-- `catalog` : au moins une couleur par espèce, pas de doublon de couleur, chaque couleur a nom et gamme, chaque espèce a un dessin, Lanterne-de-lune entièrement légendaire, 65 entrées et répartition 27/17/11/10.
+- `catalog` : au moins une couleur par espèce, pas de doublon de couleur, chaque couleur a nom et gamme, chaque espèce a un dessin, Lanterne-de-lune entièrement légendaire, 65 entrées et répartition 26/18/11/10.
 - `herbier` : pressage (panier, `pressed`, compteur, entrée créée si absente, index invalide), avancement par espèce et global, entrées hors catalogue ignorées, `latestSpecies`.
 - `rolls` : seuil 35 %, jamais la couleur pressée, pondération avec hasard injecté, rareté de la graine cohérente avec le catalogue.
 - `labels` : accords ("Anémone du Japon blanche", "Verge d'or orange", "Lanterne-de-lune bleue", "Sedum vert"), `pressedLabel`.

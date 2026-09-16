@@ -1,30 +1,6 @@
-import type { ColorId, DecorId, Rarity, SpeciesId, Stage } from "./types";
-
-export const SPECIES_FR: Record<SpeciesId, string> = {
-  tournesol: "Tournesol",
-  rosetremiere: "Rose trémière",
-  dahlia: "Dahlia",
-  cosmos: "Cosmos",
-  aster: "Aster",
-  chrysantheme: "Chrysanthème",
-  bruyere: "Bruyère",
-  colchique: "Colchique",
-};
-
-const FEMININE: ReadonlySet<SpeciesId> = new Set(["rosetremiere", "bruyere"]);
-
-// [masculin, féminin]
-const COLOR_FR: Record<ColorId, [string, string]> = {
-  yellow: ["jaune", "jaune"],
-  pink: ["rose", "rose"],
-  white: ["blanc", "blanche"],
-  violet: ["violet", "violette"],
-  red: ["rouge", "rouge"],
-  orange: ["orange", "orange"],
-  bronze: ["bronze", "bronze"],
-  heather: ["pourpre", "pourpre"],
-  lilac: ["lilas", "lilas"],
-};
+import { colorName } from "./catalog/colors";
+import { isSpeciesId, speciesOf, type HarvestTool } from "./catalog/species";
+import type { ColorId, DecorId, Rarity, SpeciesId, Stage, VariantId } from "./types";
 
 export const RARITY_FR: Record<Rarity, string> = {
   commune: "Commune",
@@ -48,12 +24,26 @@ export const DECOR_FR: Record<DecorId, string> = {
 };
 
 export function flowerName(f: { species: SpeciesId; color: ColorId }): string {
-  const [m, fem] = COLOR_FR[f.color];
-  return `${SPECIES_FR[f.species]} ${FEMININE.has(f.species) ? fem : m}`;
+  if (!isSpeciesId(f.species)) return "Fleur inconnue";
+  const s = speciesOf(f.species);
+  return `${s.name} ${colorName(f.color, s.feminine)}`;
 }
 
 export const pickedWord = (species: SpeciesId): string =>
-  FEMININE.has(species) ? "cueillie" : "cueilli";
+  isSpeciesId(species) && speciesOf(species).feminine ? "cueillie" : "cueilli";
+
+export const VARIANT_FR: Record<VariantId, string> = {
+  givree: "Givrée",
+  doree: "Dorée",
+  lumineuse: "Lumineuse",
+};
+
+export const HARVEST_FR: Record<HarvestTool, string> = {
+  main: "À la main",
+  secateur: "Au sécateur",
+};
+
+export const pressedLabel = (n: number): string => `${n} ${n > 1 ? "pressées" : "pressée"}`;
 
 export function formatDuration(ms: number): string {
   const min = Math.max(1, Math.ceil(ms / 60_000));

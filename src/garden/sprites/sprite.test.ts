@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SpeciesId } from "../core/types";
+import { CATALOG_ENTRIES } from "../core/catalog/species";
 import { PAL } from "./palette";
 import { buf, crop, curveAt, ell, outline, put, rampAt, type Ramp } from "./raster";
 import { amarante } from "./species/amarante";
@@ -31,21 +31,12 @@ describe("raster", () => {
 });
 
 describe("renderSpriteBuf", () => {
-  const species: SpeciesId[] = [
-    "tournesol",
-    "rosetremiere",
-    "dahlia",
-    "cosmos",
-    "aster",
-    "chrysantheme",
-    "bruyere",
-    "colchique",
-  ];
-
-  it.each(species)("%s produit un sprite 48x72 non vide", (name) => {
-    const b = renderSpriteBuf({ name, color: "violet" });
-    expect([b.w, b.h]).toEqual([48, 72]);
-    expect(opaque(b)).toBeGreaterThan(200);
+  it("les 65 entrées du catalogue produisent un sprite 48x72 non vide", () => {
+    for (const { species, color } of CATALOG_ENTRIES) {
+      const b = renderSpriteBuf({ name: species, color });
+      expect([b.w, b.h]).toEqual([48, 72]);
+      expect(opaque(b)).toBeGreaterThan(200);
+    }
   });
 
   it("les étapes et le décor produisent des sprites non vides", () => {

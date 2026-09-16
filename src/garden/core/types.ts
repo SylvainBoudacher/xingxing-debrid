@@ -1,17 +1,9 @@
+import type { ColorId } from "./catalog/colors";
+import type { SpeciesId } from "./catalog/species";
+
+export type { ColorId, SpeciesId };
+
 export type Rarity = "commune" | "rare" | "epique" | "legendaire";
-
-export type SpeciesId =
-  | "tournesol"
-  | "rosetremiere"
-  | "dahlia"
-  | "cosmos"
-  | "aster"
-  | "chrysantheme"
-  | "bruyere"
-  | "colchique";
-
-export type ColorId =
-  "yellow" | "pink" | "white" | "violet" | "red" | "orange" | "bronze" | "heather" | "lilac";
 
 export type VariantId = "givree" | "doree" | "lumineuse";
 export type DecorId = "lanterne" | "citrouille" | "paille";

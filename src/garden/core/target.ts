@@ -1,7 +1,7 @@
 import { GROWTH_MS, growthOf, WET_BONUS, wetIntervals } from "./growth";
 import { DECOR_FR, flowerName, formatDuration, RARITY_FR, STAGE_FR } from "./labels";
 import { isSoil } from "./plots";
-import { harvestTool } from "./species";
+import { harvestTool } from "./catalog/species";
 import type { GardenSave, PlantTile, TileKey } from "./types";
 import { rainIntervals, type RainSource } from "./weather";
 

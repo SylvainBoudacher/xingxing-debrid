@@ -3,7 +3,7 @@ import { growthOf, WATER_MS } from "./growth";
 import { flowerName, pickedWord } from "./labels";
 import { isInField, isSoil } from "./plots";
 import { rollPickSeed, type Rng } from "./rolls";
-import { harvestTool } from "./species";
+import { harvestTool } from "./catalog/species";
 import { setTile } from "./tiles";
 import { mergeIntervals } from "./time";
 import type { Flower, GardenSave, PlantTile, TileKey } from "./types";

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { harvestTool, SPECIES } from "./catalog/species";
 import { bump } from "./counters";
 import { LEAF_SLOT_MS } from "./leaves";
 import { FIELD, fieldTiles, isInField } from "./plots";
 import { parseSave } from "./save";
-import { CUT_SPECIES, harvestTool } from "./species";
 import { createStarterSave } from "./starter";
 import { isMovable, setTile } from "./tiles";
 
@@ -31,15 +31,17 @@ describe("FIELD", () => {
 });
 
 describe("harvestTool", () => {
-  it("sécateur pour les tiges épaisses, main pour les autres", () => {
-    expect([...CUT_SPECIES].sort()).toEqual([
+  it("sécateur pour les tiges épaisses, main sinon", () => {
+    const cut = SPECIES.filter((s) => harvestTool(s.id) === "secateur").map((s) => s.id);
+    expect(cut.sort()).toEqual([
+      "amarante",
       "chrysantheme",
       "dahlia",
+      "heliopsis",
       "rosetremiere",
+      "sedum",
       "tournesol",
     ]);
-    expect(harvestTool("dahlia")).toBe("secateur");
-    expect(harvestTool("cosmos")).toBe("main");
   });
 });
 

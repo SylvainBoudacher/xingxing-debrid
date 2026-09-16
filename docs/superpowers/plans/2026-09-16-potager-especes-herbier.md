@@ -17,7 +17,7 @@
 - Pas d'em dash, pas de guillemets typographiques, pas de symboles Unicode décoratifs dans le code.
 - Un composant par fichier ; helpers, types, constantes et tables dans des modules séparés.
 - `src/garden/core/` n'importe jamais React, three.js ni `src/garden/sprites/`.
-- Catalogue : **65 entrées** (27 communes, 17 rares, 11 épiques, 10 légendaires), 14 espèces.
+- Catalogue : **65 entrées** (26 communes, 18 rares, 11 épiques, 10 légendaires), 14 espèces.
 - Pressage : graine **35 %**, poids **commune 60, rare 25, épique 12, légendaire 3**, jamais la couleur pressée, pas de variante.
 - Cueillette inchangée : **30 %**, **45 %** si belle plante.
 - Effets : intensité "marquée" ; **12 particules par plante**, **150 par scène**.
@@ -580,11 +580,11 @@ import { COLORS } from "./colors";
 import { CATALOG_ENTRIES, harvestTool, isSpeciesId, rarityOf, SPECIES, speciesOf } from "./species";
 
 describe("catalogue", () => {
-  it("65 entrées, 27 / 17 / 11 / 10", () => {
+  it("65 entrées, 26 / 18 / 11 / 10", () => {
     expect(CATALOG_ENTRIES).toHaveLength(65);
     const count = (r: string) => CATALOG_ENTRIES.filter((e) => e.rarity === r).length;
     expect([count("commune"), count("rare"), count("epique"), count("legendaire")]).toEqual([
-      27, 17, 11, 10,
+      26, 18, 11, 10,
     ]);
   });
 

@@ -11,4 +11,9 @@ export const COLOR_RAMP: Record<ColorId, PaletteKey> = {
   bronze: "bronze",
   heather: "heather",
   lilac: "lilac",
+  blue: "blue",
+  burgundy: "burgundy",
+  apricot: "apricot",
+  black: "black",
+  lime: "lime",
 };
