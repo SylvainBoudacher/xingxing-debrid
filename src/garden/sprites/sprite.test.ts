@@ -144,3 +144,12 @@ describe("nouvelles espèces", () => {
     expect(a.c.join()).not.toBe(drawBuf(draw, PAL.blue).c.join());
   });
 });
+
+describe("variantes", () => {
+  it("la variante change la clé et le rendu", () => {
+    const plain = { name: "cosmos", color: "pink" } as const;
+    const frost = { ...plain, variant: "givree" } as const;
+    expect(spriteKey(frost)).not.toBe(spriteKey(plain));
+    expect(renderSpriteBuf(frost).c.join()).not.toBe(renderSpriteBuf(plain).c.join());
+  });
+});

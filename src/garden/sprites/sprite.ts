@@ -1,4 +1,4 @@
-import type { ColorId } from "../core/types";
+import type { ColorId, VariantId } from "../core/types";
 import { DECOR_DRAW, drawTree } from "./decor";
 import { PAL } from "./palette";
 import { COLOR_RAMP } from "./colorRamps";
@@ -6,6 +6,7 @@ import { buf, crop, outline, toCanvas, type Buf, type DrawFn, type Ramp } from "
 import { SPECIES_DRAW } from "./species/index";
 import { STAGE_DRAW } from "./stages";
 import { TOOL_DRAW } from "./tools";
+import { VARIANT_FX } from "./variants";
 
 export const SPRITE_TILE = 48;
 const K = SPRITE_TILE / 32;
@@ -20,9 +21,11 @@ export type SpriteName =
 export interface SpriteRef {
   name: SpriteName;
   color?: ColorId | "cream";
+  variant?: VariantId;
 }
 
-export const spriteKey = (ref: SpriteRef): string => `${ref.name}:${ref.color ?? ""}`;
+export const spriteKey = (ref: SpriteRef): string =>
+  `${ref.name}:${ref.color ?? ""}:${ref.variant ?? ""}`;
 
 function rampOf(color: SpriteRef["color"]): Ramp {
   if (!color) return PAL.green;
@@ -30,9 +33,10 @@ function rampOf(color: SpriteRef["color"]): Ramp {
   return PAL[COLOR_RAMP[color]];
 }
 
-export function drawBuf(draw: DrawFn, ramp: Ramp): Buf {
+export function drawBuf(draw: DrawFn, ramp: Ramp, variant?: VariantId): Buf {
   const b = buf(SPRITE_TILE, SPRITE_TILE * 1.5);
   draw(b, K, ramp);
+  if (variant) VARIANT_FX[variant](b);
   outline(b);
   return b;
 }
@@ -49,7 +53,7 @@ export function renderSpriteBuf(ref: SpriteRef): Buf {
     STAGE_DRAW[ref.name as keyof typeof STAGE_DRAW] ??
     DECOR_DRAW[ref.name as keyof typeof DECOR_DRAW] ??
     TOOL_DRAW[ref.name as keyof typeof TOOL_DRAW];
-  return drawBuf(draw, rampOf(ref.color));
+  return drawBuf(draw, rampOf(ref.color), ref.variant);
 }
 
 const cache = new Map<string, HTMLCanvasElement>();
