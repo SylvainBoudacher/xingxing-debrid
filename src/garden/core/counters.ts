@@ -1,6 +1,6 @@
 import type { GardenSave } from "./types";
 
-export type CounterId = "dug" | "sown" | "watered" | "picked" | "raked" | "crowsChased";
+export type CounterId = "dug" | "sown" | "watered" | "picked" | "raked" | "crowsChased" | "pressed";
 
 export function bump(save: GardenSave, id: CounterId): GardenSave {
   const counters = save.progress.counters;
