@@ -110,8 +110,13 @@ function installShim() {
           return Object.entries(data);
         case "length":
           return Object.keys(data).length;
+        // relit le disque : l'onglet Potager (preview) a pu écrire entre-temps
+        case "reload": {
+          const raw = localStorage.getItem(`devstore:${store.path}`);
+          store.data = raw ? JSON.parse(raw) : {};
+          return null;
+        }
         case "save":
-        case "reload":
         case "close":
           return null;
       }
