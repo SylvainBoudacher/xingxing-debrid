@@ -60,8 +60,6 @@ export const TOOL_DRAW = {
       ],
       (u, _v, e) => shadeEdge(PAL.green, 0.8 - (u - 10) / 16, e),
     );
-    // pouce écarté
-    bar(b, k, 10, 37, 5.5, 29.5, 3.6, PAL.skin);
     // doigts : capsules à bout rond, séparées par un liseré sombre
     const fingers: [number, number, number][] = [
       [10.6, 19.5, 3.6],
@@ -85,6 +83,34 @@ export const TOOL_DRAW = {
         e ? PAL.skin[1] : rampAt(PAL.skin, 0.9 - nx * 0.2 - ny * 0.1),
       );
     }
+    // pouce : court et large, sa base passe sous la paume, ongle au bout
+    const bx = 11.5;
+    const by = 40;
+    const ax = -0.72;
+    const ay = -0.69;
+    const thumb = (d: number, t: number): Pt => [bx + ax * d - ay * t, by + ay * d + ax * t];
+    poly(
+      b,
+      k,
+      [
+        thumb(0, -3.6),
+        thumb(8, -2.7),
+        thumb(11, -1.4),
+        thumb(11.6, 0.4),
+        thumb(10.4, 2.2),
+        thumb(3, 3.4),
+        thumb(0, 3.4),
+      ],
+      (u, v, e) => {
+        if (e) return PAL.skin[1];
+        const t = -ay * (u - bx) + ax * (v - by);
+        return rampAt(PAL.skin, t < 0 ? 0.9 : 0.7);
+      },
+    );
+    const [nx0, ny0] = thumb(9.8, -0.5);
+    ell(b, k, nx0, ny0, 1.4, 1.1, Math.atan2(ay, ax), (_x, _y, _d, e) =>
+      e ? PAL.skin[2] : PAL.skin[3],
+    );
     // paume
     poly(
       b,
