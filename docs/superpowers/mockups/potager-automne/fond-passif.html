@@ -1,0 +1,493 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Potager - maquette</title>
+<link rel="stylesheet" href="./frame.css" />
+<script>
+  window.toggleSelect = (el) => {
+    el.parentElement.querySelectorAll(".card").forEach((c) => c.classList.remove("selected"));
+    el.classList.add("selected");
+  };
+</script>
+<h2>Le champ en fond de la fenêtre principale</h2>
+<p class="subtitle">
+  Rendu HD-2D complet, bridé à 30 images/s, en pause dès que personne ne le regarde. Les boutons de
+  simulation reproduisent les situations réelles. Pas de parallaxe à la souris ici : elle est
+  réservée à la fenêtre Potager. Les vrais événements de ce navigateur (changer d'onglet, cliquer
+  hors de la fenêtre) déclenchent aussi la pause.
+</p>
+
+<div class="section ctrl">
+  <span class="label">Heure</span>
+  <button class="mock-button tod" data-tod="auto">Auto</button>
+  <button class="mock-button tod" data-tod="matin">Matin</button>
+  <button class="mock-button tod" data-tod="midi">Midi</button>
+  <button class="mock-button tod" data-tod="soir">Soir</button>
+  <button class="mock-button tod" data-tod="nuit">Nuit</button>
+  <button class="mock-button" id="rainBtn">Pluie : non</button>
+</div>
+<div class="section ctrl">
+  <span class="label">Simuler</span>
+  <button class="mock-button sim" data-sim="blur">Focus perdu</button>
+  <button class="mock-button sim" data-sim="covered">Page qui masque le fond</button>
+  <button class="mock-button sim" data-sim="garden">Potager ouvert</button>
+</div>
+
+<div class="win">
+  <div class="titlebar"><i></i><i></i><i></i><span>XingXing Debrid</span></div>
+  <div class="stage">
+    <canvas id="field"></canvas>
+    <div id="still" class="still" hidden></div>
+    <div class="scrim"></div>
+
+    <div id="homeUi" class="ui">
+      <button class="menu">Menu</button>
+      <div class="hero">
+        <div class="pills">
+          <button class="pill disc">Découvrir</button>
+          <button class="pill manga">Manga</button>
+          <button class="pill lib">Ma bibliothèque</button>
+        </div>
+        <h1>Que voulez-vous télécharger ?</h1>
+        <div class="search">
+          <span class="mode">Films &amp; séries</span>
+          <input placeholder="Rechercher un titre..." />
+        </div>
+        <button class="garden-btn" id="openGarden">Ouvrir le Potager</button>
+      </div>
+    </div>
+
+    <div id="coverUi" class="cover" hidden>
+      <div class="side">
+        <b>Paramètres</b>
+        <span>Apparence</span><span>Clés API</span><span class="on">Automne et Potager</span
+        ><span>Raccourcis</span>
+      </div>
+      <div class="panel">
+        <h3>Automne et Potager</h3>
+        <div class="row"><span>Afficher le champ en fond</span><em>Activé</em></div>
+        <div class="row"><span>Fréquence d'animation</span><em>30 images/s</em></div>
+        <div class="row"><span>Pause quand l'app n'a pas le focus</span><em>Activé</em></div>
+        <p class="note">
+          Cette page est opaque : le champ n'est pas visible, son rendu est suspendu.
+        </p>
+      </div>
+    </div>
+
+    <div id="gardenBadge" class="badge" hidden>
+      <b>Ton champ est ouvert dans la fenêtre Potager</b>
+      <span>Le fond est figé tant qu'elle est ouverte. Il reprendra vie à sa fermeture.</span>
+      <button class="mock-button" id="closeGarden">Fermer le Potager</button>
+    </div>
+
+    <div class="hud">
+      <div><span class="dot" id="dot"></span><b id="state">Actif</b></div>
+      <div>Images/s : <b id="fps">0</b> / 30</div>
+      <div>GPU : <b id="gpu">rendu en cours</b></div>
+    </div>
+  </div>
+</div>
+
+<div class="cards" style="margin-top: 1rem">
+  <div class="card" data-choice="ok" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>Ça me va</h3>
+      <p>Ce comportement de fond est validé.</p>
+    </div>
+  </div>
+  <div class="card" data-choice="ajuster" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>À ajuster</h3>
+      <p>Je précise dans le terminal (voile trop sombre, champ trop présent, autre cadrage...).</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  [hidden] {
+    display: none !important;
+  }
+  .ctrl {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .tod.active,
+  #rainBtn.active,
+  .sim.active {
+    outline: 2px solid currentColor;
+  }
+  .win {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    max-width: 1100px;
+  }
+  .titlebar {
+    height: 28px;
+    background: #26232b;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 10px;
+    color: #aaa;
+    font-size: 12px;
+  }
+  .titlebar i {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #ff5f57;
+    display: block;
+  }
+  .titlebar i:nth-child(2) {
+    background: #febc2e;
+  }
+  .titlebar i:nth-child(3) {
+    background: #28c840;
+  }
+  .titlebar span {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .stage {
+    position: relative;
+    aspect-ratio: 16/10;
+    background: #111;
+    font-family: system-ui, sans-serif;
+    overflow: hidden;
+  }
+  #field,
+  .still {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .still {
+    background-size: cover;
+    background-position: center;
+    filter: blur(10px) saturate(0.7) brightness(0.55);
+    transform: scale(1.06);
+  }
+  .scrim {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 55% 45% at 50% 48%, rgba(10, 8, 14, 0.55), rgba(10, 8, 14, 0.1) 70%),
+      linear-gradient(
+        to bottom,
+        rgba(10, 8, 14, 0.35),
+        transparent 25%,
+        transparent 80%,
+        rgba(10, 8, 14, 0.35)
+      );
+  }
+  .ui {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .menu {
+    position: absolute;
+    top: 14px;
+    right: 28px;
+    height: 34px;
+    padding: 0 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(24, 24, 27, 0.8);
+    color: #ddd;
+    backdrop-filter: blur(12px);
+    cursor: pointer;
+  }
+  .hero {
+    width: min(600px, 80%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+  .pills {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .pill {
+    border-radius: 999px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: pointer;
+  }
+  .pill.disc {
+    background: linear-gradient(90deg, #4f46e5, #7c3aed);
+    box-shadow: 0 0 24px rgba(99, 102, 241, 0.45);
+  }
+  .pill.manga {
+    background: rgba(24, 24, 27, 0.9);
+    border-color: rgba(232, 121, 249, 0.35);
+  }
+  .pill.lib {
+    background: rgba(39, 39, 42, 0.85);
+    color: #e4e4e7;
+  }
+  .hero h1 {
+    margin: 0;
+    color: #fff;
+    font-weight: 300;
+    font-size: clamp(20px, 3.2vw, 36px);
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, 0.6);
+  }
+  .search {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(39, 39, 42, 0.82);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 12px 14px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  }
+  .search .mode {
+    font-size: 12px;
+    color: #c7d2fe;
+    background: rgba(99, 102, 241, 0.2);
+    padding: 4px 8px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+  .search input {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    color: #fff;
+    font-size: 15px;
+    min-width: 0;
+  }
+  .garden-btn {
+    margin-top: 4px;
+    border-radius: 999px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fde9c8;
+    background: rgba(120, 53, 15, 0.75);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+  }
+  .cover {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    background: #f4f4f5;
+    color: #18181b;
+    font-size: 13px;
+  }
+  .cover .side {
+    width: 190px;
+    background: #e4e4e7;
+    padding: 18px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .cover .side span {
+    padding: 6px 10px;
+    border-radius: 8px;
+    color: #52525b;
+  }
+  .cover .side .on {
+    background: #fff;
+    color: #b45309;
+    font-weight: 600;
+  }
+  .cover .panel {
+    flex: 1;
+    padding: 22px 28px;
+  }
+  .cover h3 {
+    margin: 0 0 12px;
+  }
+  .cover .row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #e4e4e7;
+  }
+  .cover em {
+    font-style: normal;
+    color: #b45309;
+    font-weight: 600;
+  }
+  .cover .note {
+    color: #71717a;
+    margin-top: 14px;
+  }
+  .badge {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    text-align: center;
+    padding: 22px 26px;
+    border-radius: 18px;
+    background: rgba(24, 20, 28, 0.72);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    color: #f4e6d0;
+    max-width: 80%;
+  }
+  .badge span {
+    font-size: 13px;
+    color: #cbbba6;
+  }
+  .hud {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    font:
+      11px/1.5 ui-monospace,
+      monospace;
+    color: #e7e5e4;
+    background: rgba(0, 0, 0, 0.55);
+    padding: 8px 10px;
+    border-radius: 8px;
+  }
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    background: #22c55e;
+  }
+</style>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+</script>
+
+<script type="module">
+  import { createField } from "./hd2dfield.js";
+
+  const field = createField(document.getElementById("field"), { parallax: false });
+  const $ = (id) => document.getElementById(id);
+  const sim = { blur: false, covered: false, garden: false };
+  let realBlur = !document.hasFocus(),
+    realHidden = document.hidden;
+
+  function reason() {
+    if (sim.garden) return ["garden", "Potager ouvert (fond figé)", "#f59e0b", "aucun rendu"];
+    if (sim.covered) return ["pause", "En pause : fond masqué", "#a1a1aa", "aucun rendu"];
+    if (realHidden) return ["pause", "En pause : onglet caché", "#a1a1aa", "aucun rendu"];
+    if (sim.blur || realBlur)
+      return ["pause", "En pause : focus perdu", "#a1a1aa", "aucun rendu (dernière image gardée)"];
+    return ["run", "Actif", "#22c55e", "rendu en cours, bridé à 30 images/s"];
+  }
+
+  let lastMode = null;
+  function sync() {
+    const [mode, label, color, gpu] = reason();
+    $("state").textContent = label;
+    $("dot").style.background = color;
+    $("gpu").textContent = gpu;
+    $("homeUi").hidden = sim.covered;
+    $("coverUi").hidden = !sim.covered;
+    $("gardenBadge").hidden = !sim.garden || sim.covered;
+    $("homeUi").style.visibility = sim.garden ? "hidden" : "";
+    if (mode === lastMode) return;
+    if (mode === "garden") {
+      // one last frame, frozen as a blurred still: zero GPU while the Potager window owns the game
+      $("still").style.backgroundImage = `url(${field.snapshot()})`;
+      $("still").hidden = false;
+      $("field").style.visibility = "hidden";
+    } else {
+      $("still").hidden = true;
+      $("field").style.visibility = "";
+    }
+    if (mode === "run") field.start();
+    else {
+      field.stop();
+      if (lastMode === null) field.snapshot(); // paused from the start: still show one frame
+    }
+    lastMode = mode;
+  }
+
+  document.querySelectorAll(".sim").forEach((b) =>
+    b.addEventListener("click", () => {
+      sim[b.dataset.sim] = !sim[b.dataset.sim];
+      b.classList.toggle("active", sim[b.dataset.sim]);
+      sync();
+    }),
+  );
+  $("openGarden").addEventListener("click", () =>
+    document.querySelector('[data-sim="garden"]').click(),
+  );
+  $("closeGarden").addEventListener("click", () =>
+    document.querySelector('[data-sim="garden"]').click(),
+  );
+
+  window.addEventListener("blur", () => {
+    realBlur = true;
+    sync();
+  });
+  window.addEventListener("focus", () => {
+    realBlur = false;
+    sync();
+  });
+  document.addEventListener("visibilitychange", () => {
+    realHidden = document.hidden;
+    sync();
+  });
+
+  let tod = "auto",
+    rain = false;
+  const todBtns = document.querySelectorAll(".tod");
+  const markTod = () => todBtns.forEach((b) => b.classList.toggle("active", b.dataset.tod === tod));
+  todBtns.forEach((b) =>
+    b.addEventListener("click", () => {
+      tod = b.dataset.tod;
+      field.setTod(tod);
+      markTod();
+      if (!field.running && lastMode !== "garden") field.snapshot();
+    }),
+  );
+  markTod();
+  $("rainBtn").addEventListener("click", () => {
+    rain = !rain;
+    field.setRain(rain);
+    $("rainBtn").textContent = "Pluie : " + (rain ? "oui" : "non");
+    $("rainBtn").classList.toggle("active", rain);
+  });
+
+  setInterval(() => {
+    $("fps").textContent = field.fps;
+  }, 500);
+  // the preview pane usually never has focus: ignore the initial real blur so the demo starts running
+  realBlur = false;
+  sync();
+</script>

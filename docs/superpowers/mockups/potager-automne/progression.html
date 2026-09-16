@@ -1,0 +1,861 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Potager - maquette</title>
+<link rel="stylesheet" href="./frame.css" />
+<script>
+  window.toggleSelect = (el) => {
+    el.parentElement.querySelectorAll(".card").forEach((c) => c.classList.remove("selected"));
+    el.classList.add("selected");
+  };
+</script>
+<h2>Page Progression (fenêtre Potager)</h2>
+<p class="subtitle">
+  Arbre de chemins sans choix : chaque palier a sa tâche, la réussir ouvre les suivants. Les paliers
+  terminés sont éclos, ceux en cours sont en bouton, les verrouillés restent en graine. Clique sur
+  un palier pour voir son détail. Les tâches et récompenses sont des exemples.
+</p>
+
+<div class="gwin">
+  <div class="gbar">
+    <i></i><i></i><i></i>
+    <span class="gtitle">Potager</span>
+  </div>
+  <nav class="tabs">
+    <span>Champ</span><span>Herbier</span><span class="on">Progression</span
+    ><span>Sachets <b>2</b></span>
+  </nav>
+
+  <div class="gbody">
+    <header class="summary">
+      <div class="big">
+        <div class="k">Paliers</div>
+        <div class="v"><b id="doneCount">0</b> / <span id="totalCount">0</span></div>
+        <div class="bar"><div id="doneBar"></div></div>
+      </div>
+      <div class="stat">
+        <div class="k">Herbier</div>
+        <div class="v"><b>14</b> / 120</div>
+      </div>
+      <div class="stat">
+        <div class="k">Parcelles</div>
+        <div class="v"><b>1</b> / 4</div>
+      </div>
+      <div class="stat">
+        <div class="k">Sachets du jour</div>
+        <div class="v"><b>2</b> à ouvrir</div>
+      </div>
+      <div class="goals">
+        <div class="k">En cours</div>
+        <div id="goals"></div>
+      </div>
+    </header>
+
+    <div class="main">
+      <div class="treebox">
+        <svg id="vines" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet"></svg>
+        <div id="nodes"></div>
+        <div class="legend">
+          <span><i class="lg done"></i>Terminé</span>
+          <span><i class="lg avail"></i>En cours</span>
+          <span><i class="lg locked"></i>Verrouillé</span>
+        </div>
+      </div>
+      <aside class="detail" id="detail"></aside>
+    </div>
+  </div>
+</div>
+
+<div class="cards" style="margin-top: 1rem">
+  <div class="card" data-choice="ok" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>La direction me plaît</h3>
+      <p>Arbre en forme de plante, résumé en haut, détail à droite.</p>
+    </div>
+  </div>
+  <div class="card" data-choice="ajuster" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>À ajuster</h3>
+      <p>Je précise dans le terminal.</p>
+    </div>
+  </div>
+</div>
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+  .gwin {
+    --gold: #d9b46a;
+    --gold2: #f3dca0;
+    --ink: #f1e6d2;
+    --mut: #b9a88e;
+    --panel: rgba(28, 20, 24, 0.78);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    max-width: 1180px;
+    color: var(--ink);
+    background: radial-gradient(ellipse at 30% 0%, #3b2a26 0%, #1d1519 55%, #120c10 100%);
+    font-family: system-ui, sans-serif;
+  }
+  .gbar {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 10px;
+    background: #1a1216;
+    font-size: 12px;
+    color: #a99;
+  }
+  .gbar i {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #ff5f57;
+    display: block;
+  }
+  .gbar i:nth-child(2) {
+    background: #febc2e;
+  }
+  .gbar i:nth-child(3) {
+    background: #28c840;
+  }
+  .gtitle {
+    margin: 0 auto;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 10px 18px 0;
+    border-bottom: 1px solid rgba(217, 180, 106, 0.25);
+  }
+  .tabs span {
+    padding: 8px 16px;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--mut);
+    border-radius: 10px 10px 0 0;
+  }
+  .tabs span b {
+    font-family: system-ui;
+    font-size: 11px;
+    background: #b45309;
+    color: #fff;
+    border-radius: 999px;
+    padding: 1px 6px;
+    margin-left: 4px;
+    vertical-align: middle;
+  }
+  .tabs .on {
+    color: var(--gold2);
+    background: rgba(217, 180, 106, 0.1);
+    box-shadow: inset 0 -2px 0 var(--gold);
+  }
+  .gbody {
+    padding: 16px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .k {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--mut);
+  }
+  .summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .summary > div {
+    background: var(--panel);
+    border: 1px solid rgba(217, 180, 106, 0.28);
+    border-radius: 12px;
+    padding: 10px 14px;
+  }
+  .summary .v {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 22px;
+  }
+  .summary .v b {
+    color: var(--gold2);
+    font-size: 26px;
+  }
+  .big {
+    min-width: 200px;
+  }
+  .bar {
+    height: 6px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .bar > div {
+    height: 100%;
+    background: linear-gradient(90deg, #6aa83e, #d9b46a);
+  }
+  .goals {
+    flex: 1;
+    min-width: 260px;
+  }
+  .goal {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    margin-top: 6px;
+    cursor: pointer;
+  }
+  .goal span {
+    flex: 1;
+  }
+  .goal .bar {
+    width: 90px;
+    margin: 0;
+  }
+  .goal em {
+    font-style: normal;
+    color: var(--mut);
+    width: 42px;
+    text-align: right;
+  }
+  .main {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .treebox {
+    position: relative;
+    flex: 1 1 640px;
+    min-width: 0;
+    aspect-ratio: 1000/640;
+    background: var(--panel);
+    border: 1px solid rgba(217, 180, 106, 0.28);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .treebox svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  #nodes {
+    position: absolute;
+    inset: 0;
+  }
+  .node {
+    position: absolute;
+    width: 7.2%;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition: transform 0.15s;
+    background: #241a1e;
+  }
+  .node:hover {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  .node canvas {
+    width: 68%;
+    image-rendering: pixelated;
+  }
+  .node.done {
+    box-shadow:
+      0 0 0 3px var(--gold),
+      0 0 18px rgba(243, 220, 160, 0.45);
+    background: radial-gradient(circle at 50% 35%, #5a4630, #2a1f1c);
+  }
+  .node.avail {
+    box-shadow: 0 0 0 3px #7fbf4e;
+    background: radial-gradient(circle at 50% 35%, #37472c, #1f221b);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  .node.locked {
+    box-shadow: 0 0 0 2px rgba(185, 168, 142, 0.35);
+  }
+  .node.locked canvas {
+    filter: grayscale(1) brightness(0.55);
+  }
+  .node.sel {
+    outline: 2px dashed var(--gold2);
+    outline-offset: 5px;
+  }
+  .ring {
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+  }
+  @keyframes pulse {
+    50% {
+      box-shadow:
+        0 0 0 3px #7fbf4e,
+        0 0 16px rgba(127, 191, 78, 0.55);
+    }
+  }
+  .blabel {
+    position: absolute;
+    transform: translate(-50%, 0);
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.04em;
+    pointer-events: none;
+    text-shadow: 0 1px 6px #000;
+  }
+  .legend {
+    position: absolute;
+    left: 12px;
+    bottom: 10px;
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    color: var(--mut);
+  }
+  .lg {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: -1px;
+  }
+  .lg.done {
+    background: var(--gold);
+  }
+  .lg.avail {
+    background: #7fbf4e;
+  }
+  .lg.locked {
+    background: #5a4f48;
+  }
+  .detail {
+    flex: 0 1 290px;
+    min-width: 240px;
+    background: var(--panel);
+    border: 1px solid rgba(217, 180, 106, 0.28);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .detail h3 {
+    margin: 0;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 26px;
+    color: var(--gold2);
+    line-height: 1.1;
+  }
+  .detail .branch {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .detail .state {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 999px;
+  }
+  .detail .task {
+    font-size: 14px;
+  }
+  .detail .rew {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .detail .rew canvas {
+    width: 48px;
+    image-rendering: pixelated;
+  }
+  .detail .rew b {
+    color: var(--gold2);
+    display: block;
+  }
+  .detail .rew small {
+    color: var(--mut);
+  }
+  .detail .next {
+    font-size: 12px;
+    color: var(--mut);
+  }
+</style>
+
+<script type="module">
+  import { sprite as rawSprite } from "./pixelgen.js";
+
+  // crop a sprite to its opaque pixels so every icon fills its circle
+  function sprite(name, color) {
+    const cv = rawSprite(name, color);
+    const g = cv.getContext("2d");
+    const { data } = g.getImageData(0, 0, cv.width, cv.height);
+    let x0 = cv.width,
+      y0 = cv.height,
+      x1 = 0,
+      y1 = 0;
+    for (let y = 0; y < cv.height; y++)
+      for (let x = 0; x < cv.width; x++)
+        if (data[(y * cv.width + x) * 4 + 3]) {
+          x0 = Math.min(x0, x);
+          x1 = Math.max(x1, x);
+          y0 = Math.min(y0, y);
+          y1 = Math.max(y1, y);
+        }
+    const side = Math.max(x1 - x0, y1 - y0) + 3;
+    const out = document.createElement("canvas");
+    out.width = out.height = side;
+    out
+      .getContext("2d")
+      .drawImage(
+        cv,
+        x0,
+        y0,
+        x1 - x0 + 1,
+        y1 - y0 + 1,
+        Math.floor((side - (x1 - x0 + 1)) / 2),
+        Math.floor((side - (y1 - y0 + 1)) / 2),
+        x1 - x0 + 1,
+        y1 - y0 + 1,
+      );
+    return out;
+  }
+
+  const BR = {
+    jardin: { name: "Jardinage", color: "#8fcf5a" },
+    herbier: { name: "Collection", color: "#b58ae6" },
+    decor: { name: "Décor", color: "#f0a050" },
+    champ: { name: "Champ", color: "#d9b46a" },
+  };
+
+  // x,y in the 1000x640 tree space (root at the bottom)
+  const NODES = [
+    {
+      id: "root",
+      br: "champ",
+      x: 500,
+      y: 575,
+      t: "Le potager s'éveille",
+      task: "Planter ta première graine",
+      p: [1, 1],
+      rw: "Sachet du jour",
+      rwd: "Un sachet gratuit chaque jour",
+      ic: ["graine", "green"],
+    },
+
+    {
+      id: "j1",
+      br: "jardin",
+      parent: "root",
+      x: 330,
+      y: 470,
+      t: "Main verte",
+      task: "Faire fleurir 5 fleurs",
+      p: [5, 5],
+      rw: "Deuxième sachet du jour",
+      rwd: "2 sachets gratuits par jour",
+      ic: ["pousse"],
+    },
+    {
+      id: "j2",
+      br: "jardin",
+      parent: "j1",
+      x: 190,
+      y: 380,
+      t: "Arrosoir de cuivre",
+      task: "Arroser 20 fois",
+      p: [13, 20],
+      rw: "Arrosoir de cuivre",
+      rwd: "Arrose un carré de 3×3 cases",
+      ic: ["jeune"],
+    },
+    {
+      id: "j3",
+      br: "jardin",
+      parent: "j2",
+      x: 110,
+      y: 260,
+      t: "Tas de compost",
+      task: "Ratisser 30 tas de feuilles",
+      p: [0, 30],
+      rw: "Compost",
+      rwd: "Les cases voisines poussent plus vite",
+      ic: ["paille"],
+    },
+    {
+      id: "j4",
+      br: "jardin",
+      parent: "j2",
+      x: 250,
+      y: 240,
+      t: "Après l'averse",
+      task: "Voir 10 fleurs arrosées par la pluie",
+      p: [0, 10],
+      rw: "Récupérateur d'eau",
+      rwd: "Arrose sa rangée chaque matin",
+      ic: ["bouton", "white"],
+    },
+
+    {
+      id: "h1",
+      br: "herbier",
+      parent: "root",
+      x: 420,
+      y: 400,
+      t: "Herbier ouvert",
+      task: "Découvrir 5 fleurs",
+      p: [5, 5],
+      rw: "Presse-fleurs",
+      rwd: "Permet de presser les fleurs cueillies",
+      ic: ["aster", "violet"],
+    },
+    {
+      id: "h2",
+      br: "herbier",
+      parent: "h1",
+      x: 380,
+      y: 280,
+      t: "Œil du collectionneur",
+      task: "Obtenir une fleur rare",
+      p: [1, 1],
+      rw: "Sachet de famille",
+      rwd: "Un sachet de l'espèce de ton choix",
+      ic: ["dahlia", "violet"],
+    },
+    {
+      id: "h3",
+      br: "herbier",
+      parent: "h2",
+      x: 330,
+      y: 150,
+      t: "Première famille",
+      task: "Compléter une famille de couleurs",
+      p: [4, 6],
+      rw: "Sachet doré",
+      rwd: "Rareté rare garantie",
+      ic: ["tournesol", "yellow"],
+    },
+    {
+      id: "h4",
+      br: "herbier",
+      parent: "h2",
+      x: 450,
+      y: 170,
+      t: "Hybrideur",
+      task: "Obtenir un hybride",
+      p: [0, 1],
+      rw: "Carnet des croisements",
+      rwd: "Affiche les paires compatibles",
+      ic: ["cosmos", "pink"],
+    },
+    {
+      id: "h5",
+      br: "herbier",
+      parent: "h3",
+      x: 390,
+      y: 60,
+      t: "Fleur givrée",
+      task: "Obtenir une variante spéciale",
+      p: [0, 1],
+      rw: "Cadre d'Herbier doré",
+      rwd: "Décore les pages de l'Herbier",
+      ic: ["colchique", "white"],
+    },
+
+    {
+      id: "d1",
+      br: "decor",
+      parent: "root",
+      x: 580,
+      y: 400,
+      t: "Clôture",
+      task: "Cueillir 10 fleurs",
+      p: [10, 10],
+      rw: "Clôture en bois",
+      rwd: "12 segments à placer",
+      ic: ["cloture"],
+    },
+    {
+      id: "d2",
+      br: "decor",
+      parent: "d1",
+      x: 620,
+      y: 280,
+      t: "Lueurs du soir",
+      task: "Faire fleurir 3 fleurs après 18 h",
+      p: [2, 3],
+      rw: "Lanternes",
+      rwd: "4 lanternes qui éclairent la nuit",
+      ic: ["lanterne"],
+    },
+    {
+      id: "d3",
+      br: "decor",
+      parent: "d1",
+      x: 520,
+      y: 250,
+      t: "Récolte d'automne",
+      task: "Cueillir 25 fleurs",
+      p: [14, 25],
+      rw: "Citrouilles",
+      rwd: "6 citrouilles décoratives",
+      ic: ["citrouille"],
+    },
+    {
+      id: "d4",
+      br: "decor",
+      parent: "d2",
+      x: 640,
+      y: 150,
+      t: "Gardien du champ",
+      task: "Chasser 15 corbeaux",
+      p: [0, 15],
+      rw: "Épouvantail",
+      rwd: "Les corbeaux viennent moins souvent",
+      ic: ["paille"],
+    },
+
+    {
+      id: "c1",
+      br: "champ",
+      parent: "root",
+      x: 690,
+      y: 470,
+      t: "Deuxième parcelle",
+      task: "Découvrir 12 fleurs",
+      p: [12, 12],
+      rw: "Parcelle 2",
+      rwd: "+ 16 cases de terre",
+      ic: ["jeune"],
+    },
+    {
+      id: "c2",
+      br: "champ",
+      parent: "c1",
+      x: 800,
+      y: 370,
+      t: "Allée de pierre",
+      task: "Déplacer 20 fleurs",
+      p: [6, 20],
+      rw: "Allée de pierre",
+      rwd: "Dalles à poser entre les parcelles",
+      ic: ["pousse"],
+    },
+    {
+      id: "c3",
+      br: "champ",
+      parent: "c1",
+      x: 900,
+      y: 290,
+      t: "Troisième parcelle",
+      task: "Découvrir 30 fleurs",
+      p: [14, 30],
+      rw: "Parcelle 3",
+      rwd: "+ 25 cases de terre",
+      ic: ["rosetremiere", "pink"],
+    },
+    {
+      id: "c4",
+      br: "champ",
+      parent: "c3",
+      x: 860,
+      y: 150,
+      t: "Grand champ",
+      task: "Découvrir 60 fleurs",
+      p: [14, 60],
+      rw: "Parcelle 4",
+      rwd: "+ 36 cases et un arbre",
+      ic: ["chrysantheme", "bronze"],
+    },
+  ];
+  const byId = Object.fromEntries(NODES.map((n) => [n.id, n]));
+  const isDone = (n) => n.p[0] >= n.p[1];
+  const stateOf = (n) =>
+    isDone(n) ? "done" : !n.parent || isDone(byId[n.parent]) ? "avail" : "locked";
+
+  // vines
+  const svg = document.getElementById("vines");
+  const NS = "http://www.w3.org/2000/svg";
+  const add = (tag, attrs) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    svg.appendChild(e);
+    return e;
+  };
+  add("path", {
+    d: "M500 640 C 500 620, 500 600, 500 575",
+    stroke: "#6aa83e",
+    "stroke-width": 10,
+    fill: "none",
+    "stroke-linecap": "round",
+  });
+  for (const n of NODES) {
+    if (!n.parent) continue;
+    const p = byId[n.parent];
+    const st = stateOf(n);
+    const my = (p.y + n.y) / 2;
+    const d = `M${p.x} ${p.y} C ${p.x} ${my}, ${n.x} ${my + 30}, ${n.x} ${n.y}`;
+    add("path", {
+      d,
+      stroke: "rgba(0,0,0,.35)",
+      "stroke-width": st === "locked" ? 5 : 9,
+      fill: "none",
+      "stroke-linecap": "round",
+      transform: "translate(0 3)",
+    });
+    add("path", {
+      d,
+      fill: "none",
+      "stroke-linecap": "round",
+      stroke: st === "locked" ? "#5a4f48" : st === "avail" ? "#557a3a" : "#6aa83e",
+      "stroke-width": st === "locked" ? 4 : 7,
+      "stroke-dasharray": st === "locked" ? "2 10" : "none",
+    });
+    if (st !== "locked") {
+      // small leaves along done/available vines
+      for (const s of [0.35, 0.65]) {
+        const x =
+          (1 - s) ** 3 * p.x +
+          3 * (1 - s) ** 2 * s * p.x +
+          3 * (1 - s) * s * s * n.x +
+          s ** 3 * n.x;
+        const y =
+          (1 - s) ** 3 * p.y +
+          3 * (1 - s) ** 2 * s * my +
+          3 * (1 - s) * s * s * (my + 30) +
+          s ** 3 * n.y;
+        add("ellipse", {
+          cx: x + (s < 0.5 ? 9 : -9),
+          cy: y,
+          rx: 9,
+          ry: 4.5,
+          fill: "#7fbf4e",
+          transform: `rotate(${s < 0.5 ? -30 : 30} ${x} ${y})`,
+          opacity: st === "done" ? 1 : 0.6,
+        });
+      }
+    }
+  }
+
+  // branch labels
+  const box = document.getElementById("nodes");
+  [
+    ["jardin", 150, 150],
+    ["herbier", 520, 40],
+    ["decor", 600, 70],
+    ["champ", 880, 70],
+  ].forEach(([b, x, y]) => {
+    const l = document.createElement("div");
+    l.className = "blabel";
+    l.style.left = x / 10 + "%";
+    l.style.top = (y / 640) * 100 + "%";
+    l.style.color = BR[b].color;
+    l.textContent = BR[b].name;
+    box.appendChild(l);
+  });
+
+  // nodes
+  const iconFor = (n) => {
+    const st = stateOf(n);
+    if (st === "locked") return sprite("graine", "cream");
+    if (st === "avail")
+      return sprite(n.ic[0] === "graine" ? "graine" : "bouton", n.ic[1] || "orange");
+    return sprite(n.ic[0], n.ic[1]);
+  };
+  let sel = null;
+  const els = {};
+  for (const n of NODES) {
+    const el = document.createElement("div");
+    el.className = "node " + stateOf(n);
+    el.style.left = n.x / 10 + "%";
+    el.style.top = (n.y / 640) * 100 + "%";
+    el.appendChild(iconFor(n));
+    el.title = n.t;
+    if (stateOf(n) === "avail") {
+      const ring = document.createElementNS(NS, "svg");
+      ring.setAttribute("viewBox", "0 0 100 100");
+      ring.setAttribute("class", "ring");
+      const c = document.createElementNS(NS, "circle");
+      const frac = n.p[0] / n.p[1];
+      Object.entries({
+        cx: 50,
+        cy: 50,
+        r: 46,
+        fill: "none",
+        stroke: "#f3dca0",
+        "stroke-width": 6,
+        "stroke-dasharray": `${frac * 289} 289`,
+        transform: "rotate(-90 50 50)",
+        "stroke-linecap": "round",
+      }).forEach(([k, v]) => c.setAttribute(k, v));
+      ring.appendChild(c);
+      el.appendChild(ring);
+    }
+    el.addEventListener("click", () => select(n.id));
+    box.appendChild(el);
+    els[n.id] = el;
+  }
+
+  function select(id) {
+    if (sel) els[sel].classList.remove("sel");
+    sel = id;
+    els[id].classList.add("sel");
+    const n = byId[id],
+      st = stateOf(n);
+    const stateTxt = {
+      done: ["Terminé", "#d9b46a", "#2a2010"],
+      avail: ["En cours", "#7fbf4e", "#16200f"],
+      locked: ["Verrouillé", "#8a7f78", "#1a1618"],
+    }[st];
+    const kids = NODES.filter((k) => k.parent === id).map((k) => k.t);
+    const d = document.getElementById("detail");
+    d.innerHTML = `
+    <div class="branch" style="color:${BR[n.br].color}">${BR[n.br].name}</div>
+    <h3>${n.t}</h3>
+    <div><span class="state" style="background:${stateTxt[1]};color:${stateTxt[2]}">${stateTxt[0]}</span></div>
+    <div class="k">Tâche</div>
+    <div class="task">${st === "locked" ? `Termine d'abord "${byId[n.parent].t}"` : n.task}</div>
+    ${st === "locked" ? "" : `<div><div class="bar"><div style="width:${(n.p[0] / n.p[1]) * 100}%"></div></div><div class="k" style="margin-top:4px">${n.p[0]} / ${n.p[1]}</div></div>`}
+    <div class="k">Récompense</div>
+    <div class="rew" id="rewSlot"><div><b>${n.rw}</b><small>${n.rwd}</small></div></div>
+    ${kids.length ? `<div class="next">Ouvre ensuite : ${kids.join(", ")}</div>` : ""}
+  `;
+    const rc = sprite(n.ic[0], n.ic[1]);
+    if (st === "locked") rc.style.filter = "grayscale(1) brightness(.6)";
+    document.getElementById("rewSlot").prepend(rc);
+  }
+
+  // summary
+  const done = NODES.filter(isDone).length;
+  document.getElementById("doneCount").textContent = done;
+  document.getElementById("totalCount").textContent = NODES.length;
+  document.getElementById("doneBar").style.width = (done / NODES.length) * 100 + "%";
+  const goals = document.getElementById("goals");
+  NODES.filter((n) => stateOf(n) === "avail")
+    .sort((a, b) => b.p[0] / b.p[1] - a.p[0] / a.p[1])
+    .slice(0, 4)
+    .forEach((n) => {
+      const g = document.createElement("div");
+      g.className = "goal";
+      g.innerHTML = `<span>${n.t} <em style="color:${BR[n.br].color};width:auto">${BR[n.br].name}</em></span><div class="bar"><div style="width:${(n.p[0] / n.p[1]) * 100}%"></div></div><em>${n.p[0]}/${n.p[1]}</em>`;
+      g.addEventListener("click", () => select(n.id));
+      goals.appendChild(g);
+    });
+  select("d2");
+</script>

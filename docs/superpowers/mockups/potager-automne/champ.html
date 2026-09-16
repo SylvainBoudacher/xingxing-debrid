@@ -1,0 +1,1040 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Potager - maquette</title>
+<link rel="stylesheet" href="./frame.css" />
+<script>
+  window.toggleSelect = (el) => {
+    el.parentElement.querySelectorAll(".card").forEach((c) => c.classList.remove("selected"));
+    el.classList.add("selected");
+  };
+</script>
+<h2>Onglet Champ : comment on joue</h2>
+<p class="subtitle">
+  Maquette jouable. La pousse est accélérée (une étape toutes les 8 s, deux fois plus vite sur terre
+  arrosée). Outils séparés (touches 1 à 7) : creuser un trou, semer, arroser. Les fleurs délicates
+  (cosmos, aster, bruyère, colchique) se cueillent à la main, les tiges épaisses (tournesol, dahlia,
+  rose trémière, chrysanthème) au sécateur. Les corbeaux se chassent d'un clic avec n'importe quel
+  outil. La Main sert aussi à déplacer (maintenir et glisser).
+</p>
+
+<div class="section ctrl">
+  <span class="label">Heure</span>
+  <button class="mock-button tod" data-tod="auto">Auto</button>
+  <button class="mock-button tod" data-tod="matin">Matin</button>
+  <button class="mock-button tod" data-tod="midi">Midi</button>
+  <button class="mock-button tod" data-tod="soir">Soir</button>
+  <button class="mock-button tod" data-tod="nuit">Nuit</button>
+  <button class="mock-button" id="rainBtn">Pluie : non</button>
+</div>
+
+<div class="gwin">
+  <div class="gbar"><i></i><i></i><i></i><span class="gtitle">Potager</span></div>
+  <nav class="tabs">
+    <span class="on">Champ</span><span>Herbier</span><span>Progression</span
+    ><span>Sachets <b>2</b></span>
+  </nav>
+  <div class="stage" id="stage">
+    <canvas id="field"></canvas>
+
+    <div class="hudtop">
+      <div class="chip"><span class="k">Herbier</span> <b id="dexCount">14</b> / 70</div>
+      <div class="chip"><span class="k">Corbeaux chassés</span> <b id="crowCount">0</b></div>
+      <div class="chip"><span class="k">Feuilles ratissées</span> <b id="leafCount">0</b></div>
+    </div>
+
+    <aside class="side">
+      <section>
+        <h4>Graines</h4>
+        <div class="seed"><span class="sq"></span>Graine mystère <b id="seedCount">x6</b></div>
+        <div class="seed hy" id="hySeed" hidden>
+          <span class="sq"></span>Graine hybride <b id="hyCount">x0</b>
+        </div>
+      </section>
+      <section>
+        <h4>Panier</h4>
+        <div id="basket" class="basket"><em class="empty">Rien de cueilli pour l'instant.</em></div>
+      </section>
+      <section>
+        <h4>Préparations</h4>
+        <div id="potions"></div>
+      </section>
+    </aside>
+
+    <div class="tip" id="tip" hidden></div>
+    <div class="menu" id="ctx" hidden></div>
+    <div class="toasts" id="toasts"></div>
+
+    <div class="hotbar" id="hotbar"></div>
+  </div>
+</div>
+
+<div class="cards" style="margin-top: 1rem">
+  <div class="card" data-choice="ok" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>C'est ça</h3>
+      <p>Les gestes en séquence et la répartition main / sécateur me conviennent.</p>
+    </div>
+  </div>
+  <div class="card" data-choice="ajuster" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>À ajuster</h3>
+      <p>Je précise dans le terminal.</p>
+    </div>
+  </div>
+</div>
+
+<link
+  href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&display=swap"
+  rel="stylesheet"
+/>
+<style>
+  [hidden] {
+    display: none !important;
+  }
+  .ctrl {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 0.6rem;
+  }
+  .tod.active,
+  #rainBtn.active {
+    outline: 2px solid currentColor;
+  }
+  .gwin {
+    --gold: #d9b46a;
+    --gold2: #f3dca0;
+    --ink: #f1e6d2;
+    --mut: #b9a88e;
+    --panel: rgba(24, 17, 22, 0.8);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    max-width: 1240px;
+    color: var(--ink);
+    background: #1a1216;
+    font-family: system-ui, sans-serif;
+  }
+  .gbar {
+    height: 28px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 10px;
+    font-size: 12px;
+    color: #a99;
+  }
+  .gbar i {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #ff5f57;
+    display: block;
+  }
+  .gbar i:nth-child(2) {
+    background: #febc2e;
+  }
+  .gbar i:nth-child(3) {
+    background: #28c840;
+  }
+  .gtitle {
+    margin: 0 auto;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 6px 18px 0;
+    border-bottom: 1px solid rgba(217, 180, 106, 0.25);
+    background: #1a1216;
+  }
+  .tabs span {
+    padding: 8px 16px;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--mut);
+    border-radius: 10px 10px 0 0;
+  }
+  .tabs span b {
+    font-family: system-ui;
+    font-size: 11px;
+    background: #b45309;
+    color: #fff;
+    border-radius: 999px;
+    padding: 1px 6px;
+    margin-left: 4px;
+  }
+  .tabs .on {
+    color: var(--gold2);
+    background: rgba(217, 180, 106, 0.1);
+    box-shadow: inset 0 -2px 0 var(--gold);
+  }
+  .stage {
+    position: relative;
+    aspect-ratio: 16/9;
+    user-select: none;
+  }
+  #field {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid rgba(217, 180, 106, 0.3);
+    border-radius: 12px;
+    backdrop-filter: blur(6px);
+  }
+  .hudtop {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    display: flex;
+    gap: 8px;
+  }
+  .chip {
+    background: var(--panel);
+    border: 1px solid rgba(217, 180, 106, 0.3);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+  }
+  .chip b {
+    color: var(--gold2);
+  }
+  .k {
+    color: var(--mut);
+  }
+  .side {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 210px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .side section {
+    background: var(--panel);
+    border: 1px solid rgba(217, 180, 106, 0.3);
+    border-radius: 12px;
+    padding: 8px 10px;
+  }
+  .side h4 {
+    margin: 0 0 6px;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 17px;
+    color: var(--gold2);
+  }
+  .seed {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .seed b {
+    margin-left: auto;
+    color: var(--gold2);
+  }
+  .sq {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: #c8c6a8;
+    display: inline-block;
+  }
+  .seed.hy .sq {
+    background: linear-gradient(135deg, #b58ae6, #5aa9e6);
+  }
+  .basket {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 150px;
+    overflow: auto;
+  }
+  .basket .empty {
+    font-size: 11px;
+    color: var(--mut);
+  }
+  .bitem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+  }
+  .bitem canvas {
+    width: 22px;
+    image-rendering: pixelated;
+  }
+  .bitem span {
+    flex: 1;
+    line-height: 1.1;
+  }
+  .bitem small {
+    display: block;
+    font-size: 10px;
+  }
+  .bitem button,
+  .potion {
+    font-size: 11px;
+    border-radius: 7px;
+    border: 1px solid rgba(217, 180, 106, 0.4);
+    background: rgba(217, 180, 106, 0.12);
+    color: var(--gold2);
+    padding: 2px 7px;
+    cursor: pointer;
+  }
+  .potion {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 4px;
+    padding: 4px 8px;
+  }
+  .potion.sel {
+    background: rgba(127, 191, 78, 0.3);
+    border-color: #7fbf4e;
+  }
+  .potion[disabled] {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .hotbar {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    padding: 6px;
+    background: var(--panel);
+    border: 1px solid rgba(217, 180, 106, 0.35);
+    border-radius: 14px;
+  }
+  .tool {
+    width: 62px;
+    height: 58px;
+    border-radius: 10px;
+    border: 1px solid rgba(217, 180, 106, 0.2);
+    background: rgba(0, 0, 0, 0.25);
+    color: var(--ink);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 10.5px;
+    position: relative;
+  }
+  .tool canvas {
+    width: 26px;
+    image-rendering: pixelated;
+  }
+  .tool .n {
+    position: absolute;
+    top: 2px;
+    left: 5px;
+    font-size: 9px;
+    color: var(--mut);
+  }
+  .tool.on {
+    border-color: var(--gold);
+    background: rgba(217, 180, 106, 0.18);
+    box-shadow: 0 0 12px rgba(243, 220, 160, 0.3);
+  }
+  .tip {
+    position: absolute;
+    pointer-events: none;
+    background: var(--panel);
+    border: 1px solid rgba(217, 180, 106, 0.35);
+    border-radius: 10px;
+    padding: 7px 10px;
+    font-size: 12px;
+    max-width: 230px;
+    transform: translate(14px, 14px);
+  }
+  .tip b {
+    color: var(--gold2);
+    display: block;
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 16px;
+  }
+  .tip .bar {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    margin-top: 5px;
+    overflow: hidden;
+  }
+  .tip .bar div {
+    height: 100%;
+    background: linear-gradient(90deg, #6aa83e, #d9b46a);
+  }
+  .tip .act {
+    color: #9fd46e;
+    margin-top: 4px;
+  }
+  .toasts {
+    position: absolute;
+    top: 52px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--panel);
+    border: 1px solid rgba(217, 180, 106, 0.4);
+    border-radius: 12px;
+    padding: 8px 16px;
+    font-size: 13px;
+    text-align: center;
+    animation: tin 0.35s ease-out;
+  }
+  .toast.big {
+    padding: 12px 22px;
+  }
+  .toast.big b {
+    font-family: "Cormorant Garamond", Georgia, serif;
+    font-size: 22px;
+    display: block;
+  }
+  @keyframes tin {
+    from {
+      opacity: 0;
+      transform: translateY(-8px) scale(0.96);
+    }
+  }
+</style>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+</script>
+
+<script type="module">
+  import { createField } from "./hd2dfield.js";
+  import { sprite } from "./pixelgen.js";
+
+  const $ = (id) => document.getElementById(id);
+  const STEP_S = 8;
+  const STAGES = ["graine", "pousse", "jeune", "bouton"];
+  const STAGE_FR = ["Graine", "Pousse", "Jeune plant", "Bouton", "En fleur"];
+  const RAR = {
+    commune: { fr: "Commune", col: "#d6cdbf" },
+    rare: { fr: "Rare", col: "#6db6f0" },
+    epique: { fr: "Épique", col: "#be8cf0" },
+    legendaire: { fr: "Légendaire", col: "#f3c34a" },
+  };
+  const SPECIES_FR = {
+    tournesol: "Tournesol",
+    cosmos: "Cosmos",
+    aster: "Aster",
+    dahlia: "Dahlia",
+    chrysantheme: "Chrysanthème",
+    bruyere: "Bruyère",
+    colchique: "Colchique",
+    rosetremiere: "Rose trémière",
+  };
+  const COLOR_FR = {
+    yellow: "jaune",
+    pink: "rose",
+    white: "blanc",
+    violet: "violet",
+    red: "rouge",
+    orange: "orange",
+    bronze: "bronze",
+    heather: "pourpre",
+    lilac: "lilas",
+  };
+  const POOL = [
+    ["tournesol", "yellow", "commune", 10],
+    ["cosmos", "pink", "commune", 10],
+    ["aster", "violet", "commune", 10],
+    ["dahlia", "orange", "commune", 9],
+    ["chrysantheme", "bronze", "commune", 9],
+    ["bruyere", "heather", "commune", 8],
+    ["cosmos", "white", "rare", 5],
+    ["aster", "white", "rare", 5],
+    ["dahlia", "red", "rare", 5],
+    ["colchique", "lilac", "epique", 3],
+    ["rosetremiere", "pink", "epique", 3],
+    ["dahlia", "violet", "legendaire", 1.2],
+  ];
+  const roll = () => {
+    let r = Math.random() * POOL.reduce((a, p) => a + p[3], 0);
+    for (const p of POOL) if ((r -= p[3]) <= 0) return { sp: p[0], c: p[1], rar: p[2] };
+    return { sp: "aster", c: "violet", rar: "commune" };
+  };
+  const nameOf = (p) => `${SPECIES_FR[p.sp]} ${COLOR_FR[p.c]}`;
+
+  const soil = [];
+  for (let x = 1; x <= 6; x++) for (let y = 1; y <= 4; y++) soil.push([x, y]);
+  const decor = [
+    [0, 1, { sp: "lanterne" }],
+    [7, 1, { sp: "lanterne" }],
+    [8, 2, { sp: "citrouille" }],
+    [8, 3, { sp: "paille" }],
+    [0, 4, { sp: "citrouille" }],
+    [7, 4, { sp: "citrouille" }],
+  ];
+  const field = createField($("field"), {
+    items: decor,
+    soil,
+    wet: [],
+    view: { y: 7.4, z: 11.8, look: [0.9, 0.2, 0.6], sway: 0.6 },
+  });
+
+  // plant state, keyed by the placed record so drag and drop keeps it
+  const plants = new Map();
+  function plant(tx, ty, stage = 0, genome = roll(), progress = 0) {
+    const p = { ...genome, stage, progress, wetUntil: 0, tx, ty };
+    const rec = field.placeItem(
+      tx,
+      ty,
+      stage < 4 ? STAGES[stage] : p.sp,
+      stage < 4 ? (stage === 0 ? "cream" : null) : p.c,
+      { legendary: stage === 4 && p.rar === "legendaire" },
+    );
+    plants.set(rec, p);
+    return p;
+  }
+  [
+    [1, 1, 4],
+    [2, 1, 3],
+    [3, 1, 4],
+    [4, 1, 2],
+    [6, 1, 4],
+    [1, 2, 1],
+    [3, 2, 4],
+    [5, 2, 3],
+    [2, 3, 0],
+    [4, 3, 4],
+    [6, 3, 2],
+    [1, 4, 3],
+    [5, 4, 4],
+  ].forEach(([x, y, s]) =>
+    plant(
+      x,
+      y,
+      s,
+      s === 4 && x === 5 && y === 4 ? { sp: "dahlia", c: "violet", rar: "legendaire" } : roll(),
+      Math.random() * 6,
+    ),
+  );
+
+  let seeds = 6,
+    hybrids = 0,
+    crowCount = 0,
+    leafCount = 0,
+    dex = 14;
+  const seen = new Set();
+  const basket = [];
+  const potions = [
+    {
+      id: "croissance",
+      fr: "Élixir de croissance",
+      n: 2,
+      hint: "Fait avancer une plante d'une étape",
+    },
+    { id: "rosee", fr: "Rosée du matin", n: 1, hint: "Arrose une zone de 3×3" },
+    {
+      id: "pollen",
+      fr: "Pollen d'affinité",
+      n: 1,
+      hint: "Sur une fleur éclose voisine d'une autre : graine hybride",
+    },
+  ];
+
+  // ---------- toasts ----------
+  function toast(html, big = false, ms = 2600) {
+    const t = document.createElement("div");
+    t.className = "toast" + (big ? " big" : "");
+    t.innerHTML = html;
+    $("toasts").appendChild(t);
+    setTimeout(() => t.remove(), ms);
+  }
+
+  // ---------- growth ----------
+  let last = performance.now();
+  setInterval(() => {
+    const now = performance.now(),
+      dt = (now - last) / 1000;
+    last = now;
+    for (const [rec, p] of [...plants]) {
+      if (p.stage >= 4 || rec.lifted) continue;
+      const wet = p.wetUntil > now || rain;
+      p.progress += dt * (wet ? 2 : 1);
+      if (p.progress >= STEP_S) advance(rec, p);
+      if (p.wetUntil && p.wetUntil < now) {
+        p.wetUntil = 0;
+        field.setWet(p.tx, p.ty, false);
+      }
+    }
+  }, 200);
+
+  function advance(rec, p) {
+    plants.delete(rec);
+    const np = plant(p.tx, p.ty, p.stage + 1, p, 0);
+    np.wetUntil = p.wetUntil;
+    if (np.stage === 4) reveal(np);
+  }
+  function reveal(p) {
+    field.burst(p.tx, p.ty, "sparkle");
+    const key = p.sp + p.c;
+    const r = RAR[p.rar];
+    if (!seen.has(key)) {
+      seen.add(key);
+      dex++;
+      $("dexCount").textContent = dex;
+      toast(
+        `<span class="k">Nouvelle découverte</span><b style="color:${r.col}">${nameOf(p)}</b><span style="color:${r.col}">${r.fr}</span> - ajouté à l'Herbier`,
+        true,
+        3600,
+      );
+    } else toast(`${nameOf(p)} a fleuri <span style="color:${r.col}">(${r.fr})</span>`);
+  }
+
+  // ---------- tools ----------
+  const TOOLS = [
+    { id: "main", fr: "Main", ic: ["main"] },
+    { id: "beche", fr: "Creuser", ic: ["transplantoir"] },
+    { id: "semer", fr: "Semer", ic: ["graine", "cream"] },
+    { id: "arroser", fr: "Arroser", ic: ["arrosoir"] },
+    { id: "secateur", fr: "Sécateur", ic: ["secateur"] },
+    { id: "rateau", fr: "Râteau", ic: ["tas"] },
+    { id: "potion", fr: "Préparer", ic: ["lanterne"] },
+  ];
+  const CUT = new Set(["tournesol", "rosetremiere", "dahlia", "chrysantheme"]);
+  let tool = "main",
+    potionSel = null;
+  function renderHotbar() {
+    $("hotbar").innerHTML = "";
+    TOOLS.forEach((t, i) => {
+      const b = document.createElement("button");
+      b.className = "tool" + (tool === t.id ? " on" : "");
+      b.innerHTML = `<span class="n">${i + 1}</span>`;
+      b.appendChild(sprite(...t.ic));
+      b.append(t.fr);
+      b.onclick = () => setTool(t.id);
+      $("hotbar").appendChild(b);
+    });
+  }
+  function setTool(id) {
+    tool = id;
+    if (id !== "potion") potionSel = null;
+    if (id === "potion" && !potionSel) potionSel = potions.find((p) => p.n > 0)?.id ?? null;
+    renderHotbar();
+    renderPotions();
+  }
+  addEventListener("keydown", (e) => {
+    const i = Number(e.key) - 1;
+    if (TOOLS[i]) setTool(TOOLS[i].id);
+    if (e.key === "Escape") setTool("main");
+  });
+
+  function renderPotions() {
+    $("potions").innerHTML = "";
+    for (const p of potions) {
+      const b = document.createElement("button");
+      b.className = "potion" + (potionSel === p.id && tool === "potion" ? " sel" : "");
+      b.disabled = !p.n;
+      b.title = p.hint;
+      b.innerHTML = `<span>${p.fr}</span><b>x${p.n}</b>`;
+      b.onclick = () => {
+        potionSel = p.id;
+        setTool("potion");
+      };
+      $("potions").appendChild(b);
+    }
+  }
+  function renderInv() {
+    $("seedCount").textContent = "x" + seeds;
+    $("hyCount").textContent = "x" + hybrids;
+    $("hySeed").hidden = !hybrids;
+    $("crowCount").textContent = crowCount;
+    $("leafCount").textContent = leafCount;
+    const bk = $("basket");
+    bk.innerHTML = basket.length ? "" : '<em class="empty">Rien de cueilli pour l\'instant.</em>';
+    basket.forEach((f, i) => {
+      const row = document.createElement("div");
+      row.className = "bitem";
+      row.appendChild(sprite(f.sp, f.c));
+      row.insertAdjacentHTML(
+        "beforeend",
+        `<span>${nameOf(f)}<small style="color:${RAR[f.rar].col}">${RAR[f.rar].fr}</small></span>`,
+      );
+      const btn = document.createElement("button");
+      btn.textContent = "Presser";
+      btn.onclick = () => press(i);
+      row.appendChild(btn);
+      bk.appendChild(row);
+    });
+  }
+  function press(i) {
+    const [f] = basket.splice(i, 1);
+    let msg = `${nameOf(f)} pressé : spécimen ajouté à l'Herbier`;
+    if (Math.random() < 0.35) {
+      seeds++;
+      msg += "<br><span class='k'>+1 graine d'une autre couleur</span>";
+    }
+    toast(msg);
+    renderInv();
+  }
+
+  // what the Main does on a target, and whether a tool applies
+  function describe(t) {
+    if (!t) return null;
+    const rec = t.rec;
+    if (rec?.type === "crow")
+      return { title: "Corbeau", lines: ["Il picore tranquillement."], act: "Chasser", can: true };
+    const p = rec && plants.get(rec);
+    if (p) {
+      const title = p.stage === 4 ? nameOf(p) : STAGE_FR[p.stage];
+      const wet = p.wetUntil > performance.now() || rain;
+      const lines = [];
+      if (p.stage < 4) {
+        const left = Math.ceil((STEP_S - p.progress) / (wet ? 2 : 1));
+        lines.push(`Prochaine étape dans ~${left} s${wet ? " (arrosée : x2)" : ""}`);
+        if (p.stage === 0) lines.push("Espèce et couleur inconnues");
+      } else
+        lines.push(
+          `<span style="color:${RAR[p.rar].col}">${RAR[p.rar].fr}</span> - ${CUT.has(p.sp) ? "tige épaisse : sécateur" : "tige fine : à la main"}`,
+        );
+      return { title, lines, bar: p.stage < 4 ? p.progress / STEP_S : null, plant: p, rec };
+    }
+    if (rec?.sp === "tas")
+      return { title: "Tas de feuilles", lines: ["Un coup de râteau et c'est propre."], rec };
+    if (rec?.sp === "trou")
+      return {
+        title: "Trou",
+        lines: [seeds ? "Prêt à recevoir une graine" : "Plus de graines"],
+        rec,
+        hole: true,
+      };
+    if (rec)
+      return {
+        title:
+          { citrouille: "Citrouille", paille: "Botte de paille", lanterne: "Lanterne" }[rec.sp] ||
+          rec.sp,
+        lines: ["Décor : glisse pour déplacer"],
+        rec,
+      };
+    if (t.soil)
+      return { title: "Terre", lines: ["Libre : creuse un trou pour semer"], empty: true };
+    return { title: "Herbe", lines: [], grass: true };
+  }
+  function actionFor(t, d, toolId = tool) {
+    if (!d) return null;
+    const p = d.plant,
+      rec = t.rec;
+    if (rec?.type === "crow")
+      return {
+        label: "Chasser",
+        ok: true,
+        run: () => {
+          field.chaseCrow(rec);
+          crowCount++;
+          renderInv();
+        },
+      };
+    const no = (label, why) => ({ label, ok: false, why });
+    switch (toolId) {
+      case "main":
+        if (p?.stage === 4)
+          return CUT.has(p.sp)
+            ? no("Cueillir", "tige trop épaisse, prends le sécateur")
+            : { label: "Cueillir à la main", ok: true, run: () => pick(rec, p) };
+        if (rec?.sp === "tas") return no("Ramasser", "prends le râteau");
+        if (rec && rec.sp !== "trou")
+          return { label: "Glisser pour déplacer", ok: false, why: "", info: true };
+        return null;
+      case "beche":
+        return d.empty
+          ? {
+              label: "Creuser un trou",
+              ok: true,
+              run: () => {
+                field.placeItem(t.tx, t.ty, "trou");
+                field.burst(t.tx, t.ty, "dirt");
+              },
+            }
+          : no("Creuser", t.soil ? "la case est occupée" : "seulement dans la terre");
+      case "semer":
+        if (!d.hole) return no("Semer", d.empty ? "creuse d'abord un trou" : "il faut un trou");
+        return seeds
+          ? {
+              label: "Semer une graine",
+              ok: true,
+              run: () => {
+                seeds--;
+                plant(t.tx, t.ty, 0);
+                field.burst(t.tx, t.ty, "dirt");
+                renderInv();
+              },
+            }
+          : no("Semer", "plus de graines");
+      case "arroser":
+        return t.soil && rec?.sp !== "tas"
+          ? { label: "Arroser", ok: true, run: () => water(t.tx, t.ty) }
+          : no("Arroser", "seulement la terre");
+      case "secateur":
+        if (p?.stage !== 4) return no("Couper", "rien à couper ici");
+        return CUT.has(p.sp)
+          ? { label: "Couper au sécateur", ok: true, run: () => pick(rec, p) }
+          : no("Couper", "tige fragile, cueille-la à la main");
+      case "rateau":
+        return rec?.sp === "tas"
+          ? {
+              label: "Ratisser",
+              ok: true,
+              run: () => {
+                field.removeItem(t.tx, t.ty);
+                field.burst(t.tx, t.ty, "leaves");
+                leafCount++;
+                renderInv();
+              },
+            }
+          : no("Ratisser", "pas de feuilles ici");
+      case "potion":
+        return potionAction(t, d);
+    }
+    return null;
+  }
+  function water(tx, ty) {
+    field.setWet(tx, ty, true);
+    field.burst(tx, ty, "water");
+    const rec = field.getItem(tx, ty),
+      p = rec && plants.get(rec);
+    if (p) p.wetUntil = performance.now() + 20000;
+    else setTimeout(() => field.setWet(tx, ty, false), 20000);
+  }
+  function pick(rec, p) {
+    plants.delete(rec);
+    field.removeItem(p.tx, p.ty);
+    field.burst(p.tx, p.ty, "petals");
+    basket.push({ sp: p.sp, c: p.c, rar: p.rar });
+    if (Math.random() < 0.3) {
+      seeds++;
+      toast(`${nameOf(p)} cueilli : +1 graine`);
+    }
+    renderInv();
+  }
+  function potionAction(t, d) {
+    const pot = potions.find((x) => x.id === potionSel);
+    if (!pot || !pot.n) return { label: "Aucune préparation", ok: false };
+    const p = d.plant;
+    const use = (fn) => () => {
+      pot.n--;
+      fn();
+      renderPotions();
+      if (!pot.n) setTool("main");
+    };
+    if (pot.id === "croissance")
+      return {
+        label: pot.fr,
+        ok: !!p && p.stage < 4,
+        run: use(() => {
+          field.burst(t.tx, t.ty, "sparkle");
+          advance(t.rec, p);
+        }),
+      };
+    if (pot.id === "rosee")
+      return {
+        label: pot.fr,
+        ok: t.soil,
+        run: use(() => {
+          for (let dx = -1; dx <= 1; dx++)
+            for (let dy = -1; dy <= 1; dy++)
+              if (field.isSoil(t.tx + dx, t.ty + dy)) water(t.tx + dx, t.ty + dy);
+        }),
+      };
+    const mate =
+      p?.stage === 4 &&
+      [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]
+        .map(([dx, dy]) => field.getItem(t.tx + dx, t.ty + dy))
+        .map((r) => r && plants.get(r))
+        .find((q) => q?.stage === 4);
+    return {
+      label: pot.fr,
+      ok: !!mate,
+      run: use(() => {
+        hybrids++;
+        field.burst(t.tx, t.ty, "sparkle");
+        field.burst(mate.tx, mate.ty, "sparkle");
+        toast(
+          `<span class="k">Croisement réussi</span><b>${SPECIES_FR[p.sp]} × ${SPECIES_FR[mate.sp]}</b>+1 graine hybride`,
+          true,
+          3400,
+        );
+        renderInv();
+      }),
+    };
+  }
+
+  // ---------- pointer ----------
+  const stage = $("stage");
+  const cv = $("field");
+  let hover = null,
+    drag = null,
+    down = null;
+  function showTip(e, t, d, a) {
+    const tip = $("tip");
+    if (!d || (d.grass && !a)) {
+      tip.hidden = true;
+      return;
+    }
+    tip.hidden = false;
+    const r = stage.getBoundingClientRect();
+    tip.style.left = e.clientX - r.left + "px";
+    tip.style.top = e.clientY - r.top + "px";
+    tip.innerHTML = `<b>${d.title}</b>${d.lines.join("<br>")}${d.bar != null ? `<div class="bar"><div style="width:${d.bar * 100}%"></div></div>` : ""}${a && !a.info ? `<div class="act" style="color:${a.ok ? "#9fd46e" : "#d98a7a"}">${a.ok ? "Clic : " + a.label : a.label + " : " + a.why}</div>` : ""}${d.rec && !["crow", "tas", "trou"].includes(d.rec.type === "crow" ? "crow" : d.rec.sp) && tool === "main" ? '<div class="k">Maintenir et glisser pour déplacer</div>' : ""}`;
+  }
+  cv.addEventListener("pointermove", (e) => {
+    if (
+      down &&
+      !drag &&
+      Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6 &&
+      down.t?.rec &&
+      down.t.rec.type !== "crow" &&
+      down.t.rec.sp !== "tas" &&
+      down.t.rec.sp !== "trou" &&
+      tool === "main"
+    ) {
+      drag = { rec: down.t.rec, from: [down.t.tx, down.t.ty] };
+      field.lift(drag.rec);
+      $("tip").hidden = true;
+    }
+    if (drag) {
+      const t = field.pick(e.clientX, e.clientY, { ignore: drag.rec });
+      if (!t) return;
+      field.moveLifted(drag.rec, t.x ?? 0, t.z ?? 0);
+      const isPlant = plants.has(drag.rec);
+      const free = !field.getItem(t.tx, t.ty) || field.getItem(t.tx, t.ty) === drag.rec;
+      drag.ok =
+        free &&
+        (!isPlant || field.isSoil(t.tx, t.ty)) &&
+        t.tx >= -1 &&
+        t.tx <= 9 &&
+        t.ty >= 0 &&
+        t.ty <= 5;
+      drag.to = [t.tx, t.ty];
+      field.setHighlight(t, drag.ok ? "#9fd46e" : "#e07060");
+      return;
+    }
+    const t = field.pick(e.clientX, e.clientY);
+    hover = t;
+    const d = describe(t);
+    const a = actionFor(t, d);
+    field.setHighlight(
+      t && (a || d?.rec) ? t : null,
+      a && !a.info ? (a.ok ? "#ffffff" : "#e07060") : "#f3dca0",
+    );
+    showTip(e, t, d, a);
+    cv.style.cursor = a?.ok ? "pointer" : d?.rec ? "grab" : "default";
+  });
+  cv.addEventListener("pointerdown", (e) => {
+    down = { x: e.clientX, y: e.clientY, t: field.pick(e.clientX, e.clientY) };
+    cv.setPointerCapture(e.pointerId);
+  });
+  cv.addEventListener("pointerup", (e) => {
+    if (drag) {
+      const { rec } = drag;
+      const ok = drag.ok && field.drop(rec, ...drag.to);
+      if (!ok) field.drop(rec, ...drag.from);
+      const p = plants.get(rec);
+      if (p) {
+        if (p.wetUntil) field.setWet(p.tx, p.ty, false);
+        p.tx = rec.tx;
+        p.ty = rec.ty;
+        p.wetUntil = 0;
+      }
+      drag = null;
+      down = null;
+      field.setHighlight(null);
+      return;
+    }
+    if (down) {
+      const t = down.t,
+        d = describe(t),
+        a = actionFor(t, d);
+      if (a?.ok) a.run();
+      down = null;
+      setTimeout(
+        () =>
+          cv.dispatchEvent(
+            new PointerEvent("pointermove", { clientX: e.clientX, clientY: e.clientY }),
+          ),
+        30,
+      );
+    }
+  });
+  cv.addEventListener("pointerleave", () => {
+    if (!drag) {
+      field.setHighlight(null);
+      $("tip").hidden = true;
+    }
+  });
+
+  // ---------- ambient life ----------
+  setInterval(() => {
+    if (field.crows().filter((c) => !c.flying).length >= 2) return;
+    const targets = [...plants.values()].filter((p) => p.stage >= 1);
+    const p = targets[Math.floor(Math.random() * targets.length)];
+    if (p) field.spawnCrow(p.tx, p.ty);
+  }, 9000);
+  setInterval(() => {
+    const spots = [];
+    for (let x = -1; x <= 9; x++)
+      for (let y = 0; y <= 5; y++)
+        if (!field.getItem(x, y) && !field.isSoil(x, y)) spots.push([x, y]);
+    if (field.items().filter((r) => r.sp === "tas").length >= 4 || !spots.length) return;
+    const [x, y] = spots[Math.floor(Math.random() * spots.length)];
+    field.placeItem(x, y, "tas");
+  }, 7000);
+  field.placeItem(0, 2, "tas");
+  field.placeItem(7, 3, "tas");
+  setTimeout(() => field.spawnCrow(3, 2), 1500);
+
+  // ---------- time / weather ----------
+  let tod = "auto",
+    rain = false;
+  const todBtns = document.querySelectorAll(".tod");
+  const markTod = () => todBtns.forEach((b) => b.classList.toggle("active", b.dataset.tod === tod));
+  todBtns.forEach((b) =>
+    b.addEventListener("click", () => {
+      tod = b.dataset.tod;
+      field.setTod(tod);
+      markTod();
+    }),
+  );
+  markTod();
+  $("rainBtn").addEventListener("click", () => {
+    rain = !rain;
+    field.setRain(rain);
+    $("rainBtn").textContent = "Pluie : " + (rain ? "oui (tout est arrosé)" : "non");
+    $("rainBtn").classList.toggle("active", rain);
+  });
+
+  renderHotbar();
+  renderPotions();
+  renderInv();
+  field.start();
+</script>

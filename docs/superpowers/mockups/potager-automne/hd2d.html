@@ -1,0 +1,584 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Potager - maquette</title>
+<link rel="stylesheet" href="./frame.css" />
+<script>
+  window.toggleSelect = (el) => {
+    el.parentElement.querySelectorAll(".card").forEach((c) => c.classList.remove("selected"));
+    el.classList.add("selected");
+  };
+</script>
+<h2>Pixel art 2D ou HD-2D (façon Octopath Traveler)</h2>
+<p class="subtitle">
+  Mêmes sprites 48×48 "Chaleureux" dans les deux cas. En HD-2D, les sprites sont posés dans une
+  vraie scène 3D : caméra inclinée, ombres portées, lumières ponctuelles, flou de profondeur
+  (tilt-shift), halo lumineux (bloom), brume volumétrique, vignettage. Bouge la souris sur la scène
+  HD-2D pour voir la parallaxe.
+</p>
+
+<div class="section" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center">
+  <span class="label">Heure</span>
+  <button class="mock-button tod" data-tod="auto">Auto (heure réelle)</button>
+  <button class="mock-button tod" data-tod="matin">Matin brumeux</button>
+  <button class="mock-button tod" data-tod="midi">Midi</button>
+  <button class="mock-button tod" data-tod="soir">Soir orangé</button>
+  <button class="mock-button tod" data-tod="nuit">Nuit</button>
+  <span class="label" style="margin-left: 1rem">Météo</span>
+  <button class="mock-button" id="rainBtn">Pluie : non</button>
+</div>
+
+<div class="cards" style="grid-template-columns: 1fr">
+  <div class="card" data-choice="hd2d" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>A. HD-2D</h3>
+      <p>
+        Pixel art dans une scène 3D éclairée. Plus spectaculaire et plus vivant (ombres qui tournent
+        avec le soleil, lanternes qui éclairent vraiment). Demande WebGL (three.js) et coûte plus en
+        GPU.
+      </p>
+    </div>
+    <div class="card-image" style="aspect-ratio: auto; background: #000">
+      <canvas id="hd" style="width: 100%; display: block"></canvas>
+    </div>
+  </div>
+  <div class="card" data-choice="2d" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>B. Pixel art 2D (actuel)</h3>
+      <p>
+        Vue plate, lumière appliquée comme un filtre. Plus simple, très léger, rendu "carte
+        postale".
+      </p>
+    </div>
+    <div
+      class="card-image stack"
+      id="flat"
+      style="
+        aspect-ratio: auto;
+        justify-content: flex-start;
+        align-items: flex-start;
+        background: #1b1418;
+        padding: 12px;
+        overflow-x: auto;
+      "
+    ></div>
+  </div>
+</div>
+
+<style>
+  #flat canvas {
+    image-rendering: pixelated;
+    display: block;
+  }
+  #flat .lbl {
+    display: none;
+  }
+  .tod.active,
+  #rainBtn.active {
+    outline: 2px solid currentColor;
+  }
+</style>
+
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+</script>
+
+<script type="module">
+  import * as THREE from "three";
+  import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+  import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+  import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+  import { ShaderPass } from "three/addons/postprocessing/ShaderPass.js";
+  import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
+  import { HorizontalTiltShiftShader } from "three/addons/shaders/HorizontalTiltShiftShader.js";
+  import { VerticalTiltShiftShader } from "three/addons/shaders/VerticalTiltShiftShader.js";
+  import { VignetteShader } from "three/addons/shaders/VignetteShader.js";
+  import {
+    mount2D,
+    setEnv,
+    tick2D,
+    sprite,
+    tile,
+    scene as S2,
+    SWAY,
+    currentTod,
+    hash,
+    BASE,
+  } from "./pixelgen.js";
+
+  let tod = "auto",
+    rain = false;
+
+  // ---------- 2D reference ----------
+  mount2D(document.getElementById("flat"));
+
+  // ---------- HD-2D ----------
+  const cv = document.getElementById("hd");
+  const renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: false });
+  renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(28, 16 / 9, 0.1, 100);
+  const LOOK = new THREE.Vector3(0, 0.9, -0.6);
+
+  const texOf = (canvas) => {
+    const t = new THREE.CanvasTexture(canvas);
+    t.magFilter = THREE.NearestFilter;
+    t.minFilter = THREE.NearestFilter;
+    t.generateMipmaps = false;
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  };
+
+  // world: tile (tx,ty) -> x = tx - 4 + .5, z = ty - 2 + .5 ; extended border of grass
+  const X0 = -4,
+    Y0 = 0,
+    MIN_X = -5,
+    MAX_X = 13,
+    MIN_Y = -4,
+    MAX_Y = 7;
+  const wx = (tx) => tx + X0 + 0.5;
+  const wz = (ty) => ty - 2 + 0.5;
+  const soilSet = new Set(S2.soil.map((p) => p.join(",")));
+
+  function buildGround(wet) {
+    const c = document.createElement("canvas");
+    c.width = (MAX_X - MIN_X) * 48;
+    c.height = (MAX_Y - MIN_Y) * 48;
+    const g = c.getContext("2d");
+    for (let ty = MIN_Y; ty < MAX_Y; ty++)
+      for (let tx = MIN_X; tx < MAX_X; tx++) {
+        const key = tx + "," + ty;
+        const kind = soilSet.has(key) ? (wet || S2.wet.includes(key) ? "wet" : "soil") : "grass";
+        g.drawImage(tile(kind, tx + 40, ty + 40), (tx - MIN_X) * 48, (ty - MIN_Y) * 48);
+      }
+    return texOf(c);
+  }
+  const groundDry = buildGround(false),
+    groundWet = buildGround(true);
+  const groundMat = new THREE.MeshStandardMaterial({ map: groundDry, roughness: 1 });
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(MAX_X - MIN_X, MAX_Y - MIN_Y), groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.set((MIN_X + MAX_X) / 2 + X0, 0, (MIN_Y + MAX_Y) / 2 - 2);
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  // billboards with bottom pivot, alpha-tested shadows
+  const swayers = [];
+  function billboard(canvas, x, z, w, h, sway, phase) {
+    const map = texOf(canvas);
+    const geo = new THREE.PlaneGeometry(w, h);
+    geo.translate(0, h / 2, 0);
+    const mat = new THREE.MeshStandardMaterial({
+      map,
+      alphaTest: 0.5,
+      side: THREE.DoubleSide,
+      roughness: 1,
+    });
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, 0, z);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    m.customDepthMaterial = new THREE.MeshDepthMaterial({
+      depthPacking: THREE.RGBADepthPacking,
+      map,
+      alphaTest: 0.5,
+    });
+    scene.add(m);
+    if (sway) swayers.push({ m, phase });
+    return m;
+  }
+
+  const lanternGlows = [];
+  const lampLights = [];
+  for (const [tx, ty, f] of S2.items) {
+    const x = wx(tx),
+      z = wz(ty) + 0.35;
+    const cvs = sprite(f.sp, f.c);
+    billboard(cvs, x, z, 1, 1.5, SWAY.has(f.sp), tx * 1.7 + ty);
+    if (f.sp === "lanterne") {
+      const gx = x + (21 / 32 - 0.5),
+        gy = (48 - 30.5) / 32;
+      const glow = new THREE.Mesh(
+        new THREE.PlaneGeometry(4.2 / 32, 5.5 / 32),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 2.6, 1.1), toneMapped: false }),
+      );
+      glow.position.set(gx, gy, z + 0.01);
+      scene.add(glow);
+      lanternGlows.push(glow);
+      const pl = new THREE.PointLight(0xffa850, 0, 4.5, 1.6);
+      pl.position.set(gx, gy, z + 0.25);
+      scene.add(pl);
+      lampLights.push(pl);
+    }
+  }
+  const fence = sprite("cloture");
+  for (let tx = -2; tx < 10; tx++) billboard(fence, wx(tx), wz(-1) + 0.2, 1, 1.5, false, 0);
+  const tree = sprite("arbre", null, 3);
+  [
+    [-3.2, -3.3],
+    [-0.6, -3.9],
+    [2.4, -3.4],
+    [5.3, -3.8],
+    [7.8, -3.2],
+    [-6.5, -1.2],
+    [8.9, 0.6],
+  ].forEach(([x, z], i) => billboard(tree, x, z, 3, 4.5, true, i));
+  const bushes = [
+    ["bruyere", "heather"],
+    ["chrysantheme", "orange"],
+    ["aster", "white"],
+  ];
+  [
+    [-4.3, 2.6],
+    [-4.6, 0.4],
+    [4.4, 3.4],
+    [5.2, -1.6],
+    [-2.8, -1.7],
+  ].forEach(([x, z], i) => {
+    const [n, c] = bushes[i % 3];
+    billboard(sprite(n, c), x, z, 1, 1.5, true, i * 2);
+  });
+
+  // sky backdrop
+  const skyCanvas = document.createElement("canvas");
+  skyCanvas.width = 320;
+  skyCanvas.height = 120;
+  const skyTex = texOf(skyCanvas);
+  const sky = new THREE.Mesh(
+    new THREE.PlaneGeometry(40, 15),
+    new THREE.MeshBasicMaterial({ map: skyTex, fog: false }),
+  );
+  sky.position.set(0, 5, -14);
+  scene.add(sky);
+  function paintSky(top, bottom, hill1, hill2) {
+    const g = skyCanvas.getContext("2d");
+    const gr = g.createLinearGradient(0, 0, 0, 120);
+    gr.addColorStop(0, top);
+    gr.addColorStop(1, bottom);
+    g.fillStyle = gr;
+    g.fillRect(0, 0, 320, 120);
+    // pixel-stepped hills
+    for (const [col, base, amp, f, s] of [
+      [hill2, 70, 14, 0.03, 1],
+      [hill1, 84, 10, 0.05, 2],
+    ]) {
+      g.fillStyle = col;
+      for (let x = 0; x < 320; x++) {
+        const y = Math.round(
+          base - amp * (Math.sin(x * f + s) * 0.6 + Math.sin(x * f * 2.3 + s * 3) * 0.4),
+        );
+        g.fillRect(x, y, 1, 120 - y);
+      }
+    }
+    skyTex.needsUpdate = true;
+  }
+
+  // lights
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+  scene.add(hemi);
+  const sun = new THREE.DirectionalLight(0xffffff, 2);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  Object.assign(sun.shadow.camera, {
+    left: -10,
+    right: 10,
+    top: 10,
+    bottom: -10,
+    near: 0.5,
+    far: 40,
+  });
+  sun.shadow.bias = -0.0005;
+  sun.shadow.radius = 3;
+  scene.add(sun, sun.target);
+  scene.fog = new THREE.Fog(0xffffff, 10, 30);
+
+  // falling leaves
+  const LEAVES = 70;
+  const leafGeo = new THREE.PlaneGeometry(0.07, 0.045);
+  const leafMat = new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 1 });
+  const leaves = new THREE.InstancedMesh(leafGeo, leafMat, LEAVES);
+  leaves.castShadow = true;
+  const fall = ["#b8401c", "#e08a2a", "#f2c14a", "#8f2a1a"].map((c) => new THREE.Color(c));
+  for (let i = 0; i < LEAVES; i++) leaves.setColorAt(i, fall[i % 4]);
+  scene.add(leaves);
+  const dummy = new THREE.Object3D();
+
+  // fireflies
+  const FF = 40;
+  const ffGeo = new THREE.BufferGeometry();
+  ffGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(FF * 3), 3));
+  const ffMat = new THREE.PointsMaterial({
+    size: 0.05,
+    color: new THREE.Color(3, 3.2, 1.2),
+    toneMapped: false,
+    transparent: true,
+    depthWrite: false,
+  });
+  const fireflies = new THREE.Points(ffGeo, ffMat);
+  scene.add(fireflies);
+
+  // rain
+  const RAIN = 900;
+  const rainGeo = new THREE.BufferGeometry();
+  rainGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(RAIN * 6), 3));
+  const rainLines = new THREE.LineSegments(
+    rainGeo,
+    new THREE.LineBasicMaterial({ color: 0xb8c8e8, transparent: true, opacity: 0.45 }),
+  );
+  scene.add(rainLines);
+
+  // mist sheets
+  const mistTex = (() => {
+    const c = document.createElement("canvas");
+    c.width = 64;
+    c.height = 16;
+    const g = c.getContext("2d");
+    for (let x = 0; x < 64; x++)
+      for (let y = 0; y < 16; y++) {
+        const a =
+          Math.max(0, 1 - Math.abs(y - 8) / 8) *
+          Math.max(0, 1 - Math.abs(x - 32) / 32) *
+          (0.6 + hash(x >> 2, y >> 2) * 0.4);
+        g.fillStyle = `rgba(240,244,250,${a.toFixed(3)})`;
+        g.fillRect(x, y, 1, 1);
+      }
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const mists = Array.from({ length: 7 }, (_, i) => {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(7, 0.8),
+      new THREE.MeshBasicMaterial({
+        map: mistTex,
+        transparent: true,
+        depthWrite: false,
+        opacity: 0,
+      }),
+    );
+    m.position.set(-8 + i * 3, 0.35 + (i % 3) * 0.25, -3 + i * 0.9);
+    scene.add(m);
+    return m;
+  });
+
+  // post
+  const composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.4, 0.6, 0.85);
+  composer.addPass(bloom);
+  const hts = new ShaderPass(HorizontalTiltShiftShader);
+  const vts = new ShaderPass(VerticalTiltShiftShader);
+  hts.uniforms.r.value = vts.uniforms.r.value = 0.45;
+  composer.addPass(hts);
+  composer.addPass(vts);
+  const vig = new ShaderPass(VignetteShader);
+  vig.uniforms.offset.value = 1.0;
+  vig.uniforms.darkness.value = 1.15;
+  composer.addPass(vig);
+  composer.addPass(new OutputPass());
+
+  function resize() {
+    const w = cv.clientWidth,
+      h = Math.round((w * 9) / 16);
+    renderer.setSize(w, h, false);
+    composer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    const blur = 2.2;
+    hts.uniforms.h.value = blur / (w * renderer.getPixelRatio());
+    vts.uniforms.v.value = blur / (h * renderer.getPixelRatio());
+  }
+  new ResizeObserver(resize).observe(cv);
+  resize();
+
+  const LOOKS = {
+    matin: {
+      sunDir: [-6, 3, 4],
+      sun: "#ffd2a8",
+      sunI: 1.5,
+      sky: "#aebcd8",
+      gnd: "#5a5a48",
+      hemiI: 0.9,
+      fog: "#c9d3e2",
+      near: 10,
+      far: 32,
+      bloom: 0.35,
+      mist: 0.28,
+      skyC: ["#9fb4d6", "#e8e0d8", "#b9c2c8", "#cfd4d8"],
+      exp: 1.0,
+    },
+    midi: {
+      sunDir: [-2, 9, 5],
+      sun: "#fff3dc",
+      sunI: 2.6,
+      sky: "#dfe8ff",
+      gnd: "#5c6040",
+      hemiI: 1.0,
+      fog: "#d6e2ec",
+      near: 14,
+      far: 40,
+      bloom: 0.2,
+      mist: 0,
+      skyC: ["#6fa8e0", "#cfe4f2", "#7ea0a8", "#9fb9b8"],
+      exp: 1.0,
+    },
+    soir: {
+      sunDir: [7, 2.2, 2],
+      sun: "#ff8a40",
+      sunI: 2.6,
+      sky: "#f0a080",
+      gnd: "#402c40",
+      hemiI: 0.65,
+      fog: "#e39468",
+      near: 14,
+      far: 40,
+      bloom: 0.55,
+      mist: 0,
+      skyC: ["#5a4a8a", "#ffa060", "#6a4a60", "#a0606a"],
+      exp: 1.05,
+    },
+    nuit: {
+      sunDir: [4, 7, 3],
+      sun: "#8ea0e8",
+      sunI: 0.9,
+      sky: "#5a6aa8",
+      gnd: "#1c1c34",
+      hemiI: 0.9,
+      fog: "#161c34",
+      near: 12,
+      far: 34,
+      bloom: 1.0,
+      mist: 0.1,
+      skyC: ["#070a1c", "#1c2448", "#10142a", "#181e3a"],
+      exp: 1.1,
+    },
+  };
+  let lastLook = null;
+  function applyLook() {
+    const key = currentTod();
+    const L = LOOKS[key];
+    if (lastLook !== key + rain) {
+      lastLook = key + rain;
+      sun.position.set(...L.sunDir);
+      sun.target.position.set(0, 0, 0);
+      sun.color.set(L.sun);
+      sun.intensity = L.sunI * (rain ? 0.45 : 1);
+      hemi.color.set(L.sky);
+      hemi.groundColor.set(L.gnd);
+      hemi.intensity = L.hemiI;
+      const fogC = new THREE.Color(L.fog);
+      if (rain) fogC.lerp(new THREE.Color("#7a8494"), 0.5);
+      scene.fog.color.copy(fogC);
+      scene.fog.near = rain ? Math.min(L.near, 9) : L.near;
+      scene.fog.far = rain ? Math.min(L.far, 30) : L.far;
+      scene.background = fogC;
+      bloom.strength = L.bloom;
+      renderer.toneMappingExposure = L.exp;
+      paintSky(...(rain ? ["#5a6474", "#9aa4b0", "#58606a", "#6c747e"] : L.skyC));
+      groundMat.map = rain ? groundWet : groundDry;
+      groundMat.needsUpdate = true;
+      const night = key === "nuit";
+      lampLights.forEach((l) => (l.intensity = night ? 4 : key === "soir" ? 1.2 : 0));
+      lanternGlows.forEach((g) =>
+        g.material.color.setRGB(night ? 5 : 1.4, night ? 3.2 : 1.1, night ? 1.2 : 0.5),
+      );
+      ffMat.opacity = night ? 1 : 0;
+      rainLines.visible = rain;
+    }
+    return { L, key };
+  }
+
+  let mx = 0,
+    my = 0;
+  cv.addEventListener("pointermove", (e) => {
+    const r = cv.getBoundingClientRect();
+    mx = (e.clientX - r.left) / r.width - 0.5;
+    my = (e.clientY - r.top) / r.height - 0.5;
+  });
+
+  const ffPos = ffGeo.attributes.position.array,
+    rainPos = rainGeo.attributes.position.array;
+  function frame(ms) {
+    const t = ms / 1000;
+    setEnv(tod, rain);
+    const { L, key } = applyLook();
+
+    const cx = mx * 1.6 + Math.sin(t * 0.1) * 0.3;
+    camera.position.set(cx, 6.2 - my * 0.8, 11.5);
+    camera.lookAt(LOOK);
+
+    for (const s of swayers)
+      s.m.rotation.z =
+        Math.sin(t * 0.9 + s.phase) * 0.035 + (rain ? Math.sin(t * 3 + s.phase) * 0.02 : 0);
+
+    for (let i = 0; i < LEAVES; i++) {
+      const sp = 0.25 + hash(i, 3) * 0.2;
+      const y = 4.5 - ((hash(i, 2) * 4.5 + t * sp) % 4.5);
+      const x = -7 + ((hash(i, 1) * 14 + t * 0.25) % 14) + Math.sin(t * 1.3 + i) * 0.3;
+      const z = -4 + hash(i, 4) * 8;
+      dummy.position.set(x, y, z);
+      dummy.rotation.set(t * 2 + i, t * 1.3 + i, Math.sin(t + i));
+      dummy.updateMatrix();
+      leaves.setMatrixAt(i, dummy.matrix);
+    }
+    leaves.instanceMatrix.needsUpdate = true;
+
+    if (key === "nuit") {
+      for (let i = 0; i < FF; i++) {
+        ffPos[i * 3] = -5 + hash(i, 11) * 10 + Math.sin(t * 0.5 + i) * 0.5;
+        ffPos[i * 3 + 1] = 0.3 + hash(i, 12) * 1.2 + Math.sin(t * 0.9 + i * 2) * 0.2;
+        ffPos[i * 3 + 2] = -3 + hash(i, 13) * 6 + Math.cos(t * 0.4 + i) * 0.5;
+      }
+      ffGeo.attributes.position.needsUpdate = true;
+      ffMat.size = 0.04 + Math.abs(Math.sin(t * 2)) * 0.03;
+    }
+
+    if (rain) {
+      for (let i = 0; i < RAIN; i++) {
+        const x = -8 + hash(i, 21) * 16,
+          z = -5 + hash(i, 22) * 11;
+        const y = 6 - ((hash(i, 23) * 6 + t * 7) % 6);
+        rainPos.set([x, y, z, x - 0.03, y - 0.28, z], i * 6);
+      }
+      rainGeo.attributes.position.needsUpdate = true;
+    }
+
+    mists.forEach((m, i) => {
+      m.material.opacity = L.mist * (0.5 + 0.5 * Math.sin(t * 0.2 + i));
+      m.position.x = ((((-10 + i * 3 + t * 0.15 * (1 + (i % 3) * 0.3)) % 20) + 20) % 20) - 10;
+      m.lookAt(camera.position);
+    });
+
+    composer.render();
+    tick2D(ms);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  const todBtns = document.querySelectorAll(".tod");
+  const markTod = () => todBtns.forEach((b) => b.classList.toggle("active", b.dataset.tod === tod));
+  todBtns.forEach((b) =>
+    b.addEventListener("click", (e) => {
+      e.stopPropagation();
+      tod = b.dataset.tod;
+      markTod();
+    }),
+  );
+  markTod();
+  const rb = document.getElementById("rainBtn");
+  rb.addEventListener("click", (e) => {
+    e.stopPropagation();
+    rain = !rain;
+    rb.textContent = "Pluie : " + (rain ? "oui" : "non");
+    rb.classList.toggle("active", rain);
+  });
+</script>
