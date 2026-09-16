@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { parseTileKey, type TileKey } from "../core/types";
+import { holeTile } from "../sprites/ground";
 import { spriteCanvas } from "../sprites/sprite";
 import type { SceneItem } from "./sceneModel";
 import { pixelTexture } from "./texture";
@@ -54,6 +55,22 @@ export function makeBillboard(canvas: HTMLCanvasElement, w: number, h: number): 
   return mesh;
 }
 
+const HOLE_DECAL = 0.75;
+
+// Décalque posé à plat au centre de la case (le trou), il reçoit les ombres sans en projeter.
+function makeDecal(canvas: HTMLCanvasElement, size: number): THREE.Mesh {
+  const mat = new THREE.MeshStandardMaterial({
+    map: pixelTexture(canvas),
+    alphaTest: 0.5,
+    roughness: 1,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size, size), mat);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.receiveShadow = true;
+  mesh.userData.canvas = canvas;
+  return mesh;
+}
+
 export function disposeMesh(mesh: THREE.Mesh) {
   const mat = mesh.material as THREE.MeshStandardMaterial;
   mat.map?.dispose();
@@ -101,6 +118,13 @@ export function createBillboards(scene: THREE.Scene): Billboards {
   return {
     add(key, item) {
       const [tx, ty] = parseTileKey(key);
+      if (item.ref.name === "trou") {
+        const decal = makeDecal(holeTile(), HOLE_DECAL);
+        decal.position.set(wx(tx), 0.008, wz(ty));
+        scene.add(decal);
+        placed.set(key, decal);
+        return;
+      }
       const mesh = makeBillboard(spriteCanvas(item.ref), 1, 1.5);
       mesh.position.set(wx(tx), 0, wz(ty) + 0.35);
       const lean = item.thirsty ? THIRSTY_LEAN : 0;

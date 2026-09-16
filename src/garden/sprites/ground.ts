@@ -1,7 +1,7 @@
 import { hash } from "../core/hash";
 import { mix } from "./color";
 import { PAL } from "./palette";
-import { buf, put, rampAt, toCanvas } from "./raster";
+import { buf, outline, put, rampAt, toCanvas, type Buf } from "./raster";
 
 export type GroundKind = "grass" | "soil" | "wet" | "dry";
 
@@ -77,4 +77,38 @@ function paintTile(kind: GroundKind, tx: number, ty: number): HTMLCanvasElement 
     }
   }
   return toCanvas(b);
+}
+
+export const HOLE_SIZE = 36;
+const HOLE_IN = 9.5;
+const HOLE_OUT = 15.5;
+
+// Trou vu de dessus : fond sombre, paroi éclairée côté opposé à la lumière, bourrelet de terre.
+export function holeBuf(): Buf {
+  const b = buf(HOLE_SIZE, HOLE_SIZE);
+  const mid = HOLE_SIZE / 2;
+  for (let y = 0; y < HOLE_SIZE; y++)
+    for (let x = 0; x < HOLE_SIZE; x++) {
+      const dx = x + 0.5 - mid;
+      const dy = y + 0.5 - mid;
+      const r = Math.hypot(dx, dy);
+      if (r > HOLE_OUT) continue;
+      const lit = -(dx * 0.6 + dy * 0.8) / (r || 1);
+      if (r > HOLE_IN) {
+        const bump = 1 - Math.abs(r - (HOLE_IN + HOLE_OUT) / 2) / ((HOLE_OUT - HOLE_IN) / 2);
+        put(b, x, y, rampAt(PAL.soil, 0.45 + 0.35 * lit * bump + 0.15 * bump));
+      } else {
+        const depth = r / HOLE_IN;
+        put(b, x, y, depth < 0.6 ? "#140c08" : rampAt(PAL.wet, 0.3 - 0.35 * lit * depth));
+      }
+    }
+  outline(b);
+  return b;
+}
+
+let hole: HTMLCanvasElement | null = null;
+
+export function holeTile(): HTMLCanvasElement {
+  hole ??= toCanvas(holeBuf());
+  return hole;
 }
