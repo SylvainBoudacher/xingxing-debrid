@@ -72,3 +72,14 @@ describe("renderSpriteBuf", () => {
     expect(a).not.toBe(b);
   });
 });
+
+describe("icônes et corbeau", () => {
+  it.each(["main", "transplantoir", "arrosoir", "secateur", "rateau", "corbeau"] as const)(
+    "%s produit un sprite 48x72 non vide",
+    (name) => {
+      const b = renderSpriteBuf({ name });
+      expect([b.w, b.h]).toEqual([48, 72]);
+      expect(opaque(b)).toBeGreaterThan(40);
+    },
+  );
+});

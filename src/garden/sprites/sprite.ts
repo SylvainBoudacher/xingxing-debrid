@@ -4,12 +4,17 @@ import { PAL } from "./palette";
 import { buf, outline, toCanvas, type Buf, type Ramp } from "./raster";
 import { SPECIES_COLOR, SPECIES_DRAW } from "./species";
 import { STAGE_DRAW } from "./stages";
+import { TOOL_DRAW } from "./tools";
 
 export const SPRITE_TILE = 48;
 const K = SPRITE_TILE / 32;
 
 export type SpriteName =
-  keyof typeof SPECIES_DRAW | keyof typeof STAGE_DRAW | keyof typeof DECOR_DRAW | "arbre";
+  | keyof typeof SPECIES_DRAW
+  | keyof typeof STAGE_DRAW
+  | keyof typeof DECOR_DRAW
+  | keyof typeof TOOL_DRAW
+  | "arbre";
 
 export interface SpriteRef {
   name: SpriteName;
@@ -35,7 +40,8 @@ export function renderSpriteBuf(ref: SpriteRef): Buf {
   const draw =
     SPECIES_DRAW[ref.name as keyof typeof SPECIES_DRAW] ??
     STAGE_DRAW[ref.name as keyof typeof STAGE_DRAW] ??
-    DECOR_DRAW[ref.name as keyof typeof DECOR_DRAW];
+    DECOR_DRAW[ref.name as keyof typeof DECOR_DRAW] ??
+    TOOL_DRAW[ref.name as keyof typeof TOOL_DRAW];
   draw(b, K, rampOf(ref.color));
   outline(b);
   return b;
@@ -51,4 +57,16 @@ export function spriteCanvas(ref: SpriteRef): HTMLCanvasElement {
     cache.set(key, cv);
   }
   return cv;
+}
+
+const urls = new Map<string, string>();
+
+export function spriteDataUrl(ref: SpriteRef): string {
+  const key = spriteKey(ref);
+  let url = urls.get(key);
+  if (!url) {
+    url = spriteCanvas(ref).toDataURL();
+    urls.set(key, url);
+  }
+  return url;
 }

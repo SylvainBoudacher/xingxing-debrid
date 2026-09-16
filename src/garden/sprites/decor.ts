@@ -1,6 +1,6 @@
 import { hash } from "../core/hash";
 import { PAL } from "./palette";
-import { ell, leaf, put, rampAt, sphere, stem, type Buf, type DrawFn } from "./raster";
+import { ell, leaf, petal, put, rampAt, sphere, stem, type Buf, type DrawFn } from "./raster";
 
 const TAU = Math.PI * 2;
 const AUTUMN = [PAL.orange, PAL.yellow, PAL.bronze, PAL.red];
@@ -74,6 +74,16 @@ export const DECOR_DRAW = {
         );
       }
     ell(b, k, 21, 34.5, 2.8, 1, 0, sphere(PAL.metal));
+  },
+  corbeau(b, k) {
+    petal(b, k, 11, 41, Math.PI * 0.94, 7, 3, PAL.crow);
+    stem(b, k, 14, 44, 13, 47, 0.6, PAL.metal);
+    stem(b, k, 17, 44, 18, 47, 0.6, PAL.metal);
+    ell(b, k, 15, 40.5, 6.5, 4.2, -0.15, sphere(PAL.crow));
+    ell(b, k, 14, 40, 5, 2.4, -0.3, sphere(PAL.crow, -0.2));
+    ell(b, k, 21, 35.5, 3.4, 3.2, 0, sphere(PAL.crow, 0.1));
+    petal(b, k, 23.8, 36, 0.12, 3.6, 1.6, PAL.metal, { bias: 0.2 });
+    put(b, Math.round(22 * k), Math.round(34.6 * k), "#e8e0d0");
   },
   // se répète bord à bord : les traverses dépassent de la tuile
   cloture(b, k) {
