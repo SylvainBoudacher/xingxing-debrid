@@ -43,6 +43,9 @@ export function FieldView({
   const drag = useRef<{ from: TileKey; to: TileKey | null; reason: string | null } | null>(null);
   const [tool, setTool] = useState<Tool>("main");
   const [dragging, setDragging] = useState(false);
+  // un geste est postérieur au dernier tick : la vue doit le voir tout de suite
+  const [actedAt, setActedAt] = useState(0);
+  const at = Math.max(now, actedAt);
   const [hover, setHover] = useState<Pointer | null>(null);
   const [flash, setFlash] = useState<{ x: number; y: number; text: string } | null>(null);
   const { spawn } = useCrows(sceneRef, saveRef);
@@ -59,8 +62,8 @@ export function FieldView({
 
   useEffect(() => {
     saveRef.current = save;
-    sceneRef.current?.sync(save, now);
-  }, [save, now]);
+    sceneRef.current?.sync(save, at);
+  }, [save, at]);
 
   useEffect(() => {
     if (!flash) return;
@@ -69,7 +72,7 @@ export function FieldView({
   }, [flash]);
 
   // vue dérivée à chaque rendu : suit la sauvegarde, l'outil et l'heure
-  const view = hover?.pick && !dragging ? describeTarget(save, hover.pick.target, tool, now) : null;
+  const view = hover?.pick && !dragging ? describeTarget(save, hover.pick.target, tool, at) : null;
   const shown = view && !(view.info.kind === "grass" && !view.plan) ? view : null;
 
   useEffect(() => {
@@ -98,7 +101,7 @@ export function FieldView({
   function onPointerMove(e: PointerEvent<HTMLCanvasElement>) {
     const interaction = sceneRef.current?.interaction;
     if (!interaction) return;
-    const at = local(e);
+    const pos = local(e);
     const start = down.current;
     const startKey = start?.pick?.target.kind === "tile" ? start.pick.target.key : null;
     if (
@@ -107,7 +110,7 @@ export function FieldView({
       tool === "main" &&
       startKey &&
       isMovable(save.tiles[startKey]) &&
-      Math.hypot(at.x - start.x, at.y - start.y) > DRAG_PX
+      Math.hypot(pos.x - start.x, pos.y - start.y) > DRAG_PX
     ) {
       drag.current = { from: startKey, to: null, reason: null };
       interaction.lift(startKey);
@@ -124,7 +127,7 @@ export function FieldView({
       interaction.setHighlight(pick.ground.key, result.ok ? "ok" : "no");
       return;
     }
-    setHover({ ...at, pick: interaction.pickAt(e.clientX, e.clientY) });
+    setHover({ ...pos, pick: interaction.pickAt(e.clientX, e.clientY) });
   }
 
   function onPointerDown(e: PointerEvent<HTMLCanvasElement>) {
@@ -152,9 +155,11 @@ export function FieldView({
       return;
     }
     if (!start?.pick) return;
-    const plan = planAction(save, start.pick.target, tool, Date.now());
+    const t = Date.now();
+    const plan = planAction(save, start.pick.target, tool, t);
     if (!plan?.ok) return;
     const out = plan.apply();
+    setActedAt(t);
     dispatch({ type: "set", save: out.save });
     runEffects(out.effects);
   }
@@ -177,7 +182,7 @@ export function FieldView({
         onPointerUp={onPointerUp}
         onPointerLeave={onPointerLeave}
       />
-      <SidePanel save={save} raining={isRaining(now)} />
+      <SidePanel save={save} raining={isRaining(at)} />
       {shown && hover && <TileTooltip x={hover.x} y={hover.y} view={shown} />}
       {flash && (
         <div
@@ -190,9 +195,14 @@ export function FieldView({
       <ToolBar tool={tool} onSelect={setTool} />
       {import.meta.env.DEV && (
         <GardenDevBar
-          onSeed={() => dispatch({ type: "set", save: withDemoPlants(save, Date.now()) })}
+          onSeed={() => {
+            const t = Date.now();
+            setActedAt(t);
+            dispatch({ type: "set", save: withDemoPlants(save, t) });
+          }}
           onLeaves={() => {
             const t = Date.now();
+            setActedAt(t);
             dispatch({ type: "set", save: { ...save, leaves: { checkedAt: t - 12 * HOUR } } });
             dispatch({ type: "tick", now: t });
           }}

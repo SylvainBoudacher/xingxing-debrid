@@ -1267,7 +1267,7 @@ describe("cueillir", () => {
   it("donne parfois une graine de la même fleur", () => {
     const s = withTiles({ "1,1": flower("cosmos") });
     const out = run(plan(s, tile("1,1"), "main", () => 0.1));
-    expect(out.save.inventory.seeds.at(-1)).toEqual({
+    expect(out.save.inventory.seeds[out.save.inventory.seeds.length - 1]).toEqual({
       species: "cosmos",
       color: "pink",
       rarity: "commune",
