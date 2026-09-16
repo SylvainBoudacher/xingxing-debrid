@@ -1,0 +1,473 @@
+<h2>Raretés et variantes : quels effets ?</h2>
+<p class="subtitle">
+  Aperçu 2D animé de ce que la scène HD-2D ajouterait (dans le jeu : particules three.js, lumière
+  ponctuelle, bloom). Règle de base : la rareté se lit d'abord par la couleur, l'animation ne fait
+  que renforcer. Règle l'intensité et le fond, puis choisis A (sobre) ou B (marqué).
+</p>
+
+<style>
+  .fx {
+    background: #1a1216;
+    color: #f1e6d2;
+    border: 1px solid rgba(217, 180, 106, 0.35);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .fx .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .fx .card {
+    text-align: center;
+    font-size: 12px;
+  }
+  .fx canvas {
+    display: block;
+    border-radius: 8px;
+    image-rendering: pixelated;
+  }
+  .fx h4 {
+    font-family: Georgia, serif;
+    color: #f3dca0;
+    font-size: 16px;
+    margin: 0 0 8px;
+    font-weight: 600;
+  }
+  .fx .ctl {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    margin-bottom: 12px;
+    font-size: 13px;
+  }
+  .fx button {
+    background: #2a1e26;
+    color: #f1e6d2;
+    border: 1px solid rgba(217, 180, 106, 0.4);
+    border-radius: 8px;
+    padding: 4px 12px;
+    cursor: pointer;
+  }
+  .fx button.on {
+    background: rgba(243, 195, 74, 0.2);
+    color: #f3dca0;
+  }
+</style>
+
+<div class="fx">
+  <div class="ctl">
+    <span>Intensité :</span>
+    <button id="i-a" class="on">A - sobre</button>
+    <button id="i-b">B - marqué</button>
+    <span style="margin-left: 18px">Fond :</span>
+    <button id="t-day" class="on">Jour</button>
+    <button id="t-night">Nuit</button>
+  </div>
+  <h4>Raretés (même espèce, couleurs différentes)</h4>
+  <div class="row" id="rar"></div>
+  <h4>Variantes spéciales (orthogonales à la rareté)</h4>
+  <div class="row" id="var"></div>
+  <h4>Espèce fantastique : Lanterne-de-lune (uniquement légendaire), esquisse</h4>
+  <div class="row" id="fan"></div>
+</div>
+
+<div class="options" style="margin-top: 14px">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Sobre</h3>
+      <p>Effets discrets, le champ reste calme ; la légendaire se remarque surtout la nuit.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Marqué</h3>
+      <p>Chaque palier se voit de loin, même en fond passif.</p>
+    </div>
+  </div>
+</div>
+
+<script src="gs.js"></script>
+<script>
+  (() => {
+    const S = 3,
+      W = 48,
+      H = 72;
+    let amp = 1,
+      night = false;
+    const RC = { commune: "#d6cdbf", rare: "#6db6f0", epique: "#be8cf0", legendaire: "#f3c34a" };
+    const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const PAL = GS.PAL;
+
+    function load(ref) {
+      return new Promise((res) => {
+        const i = new Image();
+        i.onload = () => res(i);
+        i.src = GS.spriteDataUrl(ref);
+      });
+    }
+    function transform(img, fn) {
+      const c = document.createElement("canvas");
+      c.width = img.width;
+      c.height = img.height;
+      const x = c.getContext("2d");
+      x.drawImage(img, 0, 0);
+      const d = x.getImageData(0, 0, c.width, c.height),
+        p = d.data,
+        w = c.width;
+      const src = new Uint8ClampedArray(p);
+      for (let i = 0; i < p.length; i += 4) {
+        if (!src[i + 3]) continue;
+        const px = (i / 4) % w,
+          py = Math.floor(i / 4 / w);
+        const above = py > 0 ? src[i - w * 4 + 3] : 0;
+        const [r, g, b] = fn(src[i], src[i + 1], src[i + 2], !above, px, py);
+        p[i] = r;
+        p[i + 1] = g;
+        p[i + 2] = b;
+      }
+      x.putImageData(d, 0, 0);
+      return c;
+    }
+    const lum = (r, g, b) => (0.3 * r + 0.59 * g + 0.11 * b) / 255;
+    const leafy = (r, g, b) => g > r + 8 && g > b;
+    const ramp = (R, t) => hex(R[Math.max(0, Math.min(3, Math.floor(t * 4.2)))]);
+    const frost = (img) =>
+      transform(img, (r, g, b, top) => {
+        if (top) return [240, 250, 255];
+        const t = lum(r, g, b);
+        return ramp(["#2e4a6e", "#6a94c4", "#a8d0ee", "#e8f6ff"], t * 1.25);
+      });
+    const gold = (img) =>
+      transform(img, (r, g, b) =>
+        leafy(r, g, b)
+          ? [r, g, b]
+          : ramp(["#8a5a0c", "#d99a1c", "#f7cf4a", "#fff6c0"], lum(r, g, b) * 1.3 - 0.05),
+      );
+    const glowy = (img) =>
+      transform(img, (r, g, b) =>
+        leafy(r, g, b)
+          ? [r * 0.7, g * 0.9, b]
+          : [
+              Math.min(255, r * 0.6 + 90),
+              Math.min(255, g * 0.7 + 120),
+              Math.min(255, b * 0.6 + 140),
+            ],
+      );
+
+    const cards = [];
+    const drawSprite = (x, c) => {
+      x.save();
+      x.translate(12 + (W * S) / 2, 5 + H * S);
+      x.rotate(c.sway);
+      x.drawImage(c.sprite, (-W * S) / 2, -H * S, W * S, H * S);
+      x.restore();
+    };
+    const layer = (c) => {
+      c.off ??= Object.assign(document.createElement("canvas"), {
+        width: c.cv.width,
+        height: c.cv.height,
+      });
+      const o = c.off.getContext("2d");
+      o.setTransform(1, 0, 0, 1, 0, 0);
+      o.globalCompositeOperation = "source-over";
+      o.filter = "none";
+      o.clearRect(0, 0, c.off.width, c.off.height);
+      o.imageSmoothingEnabled = false;
+      drawSprite(o, c);
+      o.globalCompositeOperation = "source-atop";
+      return o;
+    };
+    function card(parent, label, color, sprite, fx) {
+      const d = document.createElement("div");
+      d.className = "card";
+      const cv = document.createElement("canvas");
+      cv.width = W * S + 24;
+      cv.height = H * S + 10;
+      d.appendChild(cv);
+      d.insertAdjacentHTML(
+        "beforeend",
+        `<div style="margin-top:4px;color:${color}">${label}</div>`,
+      );
+      parent.appendChild(d);
+      cards.push({ cv, x: cv.getContext("2d"), sprite, fx, parts: [], seed: Math.random() * 10 });
+    }
+
+    // Effets : chacun dessine derrière (back) et devant (front) le sprite.
+    const star = (x, cx, cy, r, col, a) => {
+      x.globalAlpha = a;
+      x.fillStyle = col;
+      x.fillRect(cx - S / 2, cy - r, S, r * 2);
+      x.fillRect(cx - r, cy - S / 2, r * 2, S);
+      x.globalAlpha = 1;
+    };
+    const FX = {
+      commune: {},
+      rare: {
+        front(c, x, t) {
+          for (let k = 0; k < 2 + amp; k++) {
+            const ph = (t * 0.6 + k * 0.37 + c.seed) % 1;
+            if (ph > 0.35 * amp) continue;
+            const a = Math.sin((ph / (0.35 * amp)) * Math.PI);
+            const cx = 40 + ((k * 53 + Math.floor(t * 0.6 + k * 0.37 + c.seed) * 31) % 80);
+            const cy = 20 + ((k * 29 + Math.floor(t * 0.6 + k * 0.37 + c.seed) * 17) % 60);
+            star(x, cx, cy, S * (1.5 + amp), "#dff2ff", a);
+          }
+        },
+      },
+      epique: {
+        back(c, x, t) {
+          const o = layer(c);
+          o.fillStyle = "#c9a0ff";
+          o.fillRect(0, 0, c.off.width, c.off.height);
+          x.save();
+          x.filter = `blur(${4 + 2 * amp}px)`;
+          x.globalAlpha = 0.45 + 0.25 * amp * (0.5 + 0.5 * Math.sin(t * 2.4));
+          x.drawImage(c.off, 0, 0);
+          x.drawImage(c.off, 0, 0);
+          x.restore();
+        },
+        front(c, x, t, dt) {
+          if (Math.random() < dt * 3 * amp)
+            c.parts.push({
+              x: 40 + Math.random() * 80,
+              y: 110,
+              vy: -20 - Math.random() * 20,
+              life: 2,
+            });
+          for (const p of c.parts) {
+            p.y += p.vy * dt;
+            p.life -= dt;
+            x.globalAlpha = Math.max(0, p.life / 2);
+            x.fillStyle = "#e0c8ff";
+            x.fillRect(Math.round(p.x / S) * S, Math.round(p.y / S) * S, S, S);
+          }
+          x.globalAlpha = 1;
+          c.parts = c.parts.filter((p) => p.life > 0);
+        },
+      },
+      legendaire: {
+        back(c, x, t) {
+          const pulse = 0.5 + 0.5 * Math.sin(t * 1.6);
+          const g = x.createRadialGradient(84, 70, 4, 84, 70, 60 + 20 * amp);
+          g.addColorStop(
+            0,
+            `rgba(255,220,120,${(night ? 0.55 : 0.35) * (0.7 + 0.3 * pulse) * (0.6 + 0.4 * amp)})`,
+          );
+          g.addColorStop(1, "rgba(255,200,80,0)");
+          x.fillStyle = g;
+          x.fillRect(0, 0, c.cv.width, c.cv.height);
+          if (amp > 1) {
+            x.save();
+            x.translate(84, 70);
+            x.rotate(t * 0.2);
+            x.fillStyle = "rgba(255,230,150,.12)";
+            for (let k = 0; k < 8; k++) {
+              x.rotate(Math.PI / 4);
+              x.beginPath();
+              x.moveTo(0, 0);
+              x.lineTo(-6, -80);
+              x.lineTo(6, -80);
+              x.fill();
+            }
+            x.restore();
+          }
+          const pool = x.createRadialGradient(84, 206, 2, 84, 206, 50);
+          pool.addColorStop(0, `rgba(255,210,110,${night ? 0.5 : 0.25})`);
+          pool.addColorStop(1, "rgba(255,210,110,0)");
+          x.fillStyle = pool;
+          x.fillRect(0, 170, c.cv.width, 50);
+        },
+        front(c, x, t, dt) {
+          if (Math.random() < dt * 4 * amp)
+            c.parts.push({
+              x: 84 + (Math.random() - 0.5) * 90,
+              y: 60 + Math.random() * 120,
+              ph: Math.random() * 6,
+              life: 2.5,
+            });
+          for (const p of c.parts) {
+            p.y -= 10 * dt;
+            p.x += Math.sin(t * 2 + p.ph) * 12 * dt;
+            p.life -= dt;
+            star(
+              x,
+              Math.round(p.x / S) * S,
+              Math.round(p.y / S) * S,
+              S,
+              "#fff1b0",
+              Math.max(0, Math.min(1, p.life)),
+            );
+          }
+          c.parts = c.parts.filter((p) => p.life > 0);
+        },
+      },
+      givree: {
+        front(c, x, t, dt) {
+          if (Math.random() < dt * 2.5 * amp)
+            c.parts.push({ x: 20 + Math.random() * 128, y: 0, life: 4 });
+          for (const p of c.parts) {
+            p.y += 18 * dt;
+            p.life -= dt;
+            x.globalAlpha = Math.max(0, Math.min(1, p.life));
+            x.fillStyle = "#eaf6ff";
+            x.fillRect(Math.round(p.x / S) * S, Math.round(p.y / S) * S, S, S);
+          }
+          x.globalAlpha = 1;
+          c.parts = c.parts.filter((p) => p.life > 0);
+        },
+      },
+      doree: {
+        front(c, x, t, dt) {
+          if (Math.random() < dt * 2 * amp)
+            c.parts.push({ x: 50 + Math.random() * 70, y: 20 + Math.random() * 60, life: 0.8 });
+          for (const p of c.parts) {
+            p.life -= dt;
+            star(
+              x,
+              Math.round(p.x / S) * S,
+              Math.round(p.y / S) * S,
+              S * 2,
+              "#fff4b0",
+              Math.sin((Math.max(0, p.life) / 0.8) * Math.PI),
+            );
+          }
+          c.parts = c.parts.filter((p) => p.life > 0);
+          const ph = (t * 0.5) % (amp > 1 ? 1.6 : 2.6);
+          if (ph > 1) return;
+          const o = layer(c);
+          const sx = -40 + ph * 220;
+          const g = o.createLinearGradient(sx - 20, 0, sx + 20, 40);
+          g.addColorStop(0, "rgba(255,255,255,0)");
+          g.addColorStop(0.5, `rgba(255,255,240,${0.5 + 0.3 * amp})`);
+          g.addColorStop(1, "rgba(255,255,255,0)");
+          o.fillStyle = g;
+          o.fillRect(0, 0, c.off.width, c.off.height);
+          x.drawImage(c.off, 0, 0);
+        },
+      },
+      lumineuse: {
+        back(c, x, t) {
+          x.save();
+          x.filter = `blur(${5 + 3 * amp}px)`;
+          x.globalAlpha = (night ? 0.8 : 0.45) * (0.6 + 0.4 * Math.sin(t * 1.3));
+          drawSprite(x, c);
+          x.restore();
+        },
+      },
+    };
+
+    const sky = () => (night ? ["#0e1426", "#1a1a30"] : ["#3a2c30", "#2a1e26"]);
+    let last = performance.now();
+    function frame(now) {
+      const t = now / 1000,
+        dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      for (const c of cards) {
+        const { x, cv } = c;
+        x.setTransform(1, 0, 0, 1, 0, 0);
+        x.imageSmoothingEnabled = false;
+        const [a, b] = sky();
+        const g = x.createLinearGradient(0, 0, 0, cv.height);
+        g.addColorStop(0, a);
+        g.addColorStop(1, b);
+        x.fillStyle = g;
+        x.fillRect(0, 0, cv.width, cv.height);
+        x.fillStyle = night ? "#1c140f" : "#3a2a1e";
+        x.fillRect(0, cv.height - 16, cv.width, 16);
+        c.sway = Math.sin(t * 1.2 + c.seed) * 0.02;
+        c.fx.back?.(c, x, t, dt);
+        drawSprite(x, c);
+        if (night) {
+          x.fillStyle = "rgba(20,30,70,.35)";
+          x.globalCompositeOperation = "multiply";
+          x.fillRect(0, 0, cv.width, cv.height);
+          x.globalCompositeOperation = "source-over";
+        }
+        c.fx.front?.(c, x, t, dt);
+      }
+      requestAnimationFrame(frame);
+    }
+
+    (async () => {
+      const rar = document.getElementById("rar"),
+        vr = document.getElementById("var"),
+        fan = document.getElementById("fan");
+      const dahlia = [
+        ["red", "commune", "Commune"],
+        ["pink", "rare", "Rare"],
+        ["violet", "epique", "Épique"],
+        ["white", "legendaire", "Légendaire"],
+      ];
+      for (const [col, r, l] of dahlia)
+        card(rar, `Dahlia - ${l}`, RC[r], await load({ name: "dahlia", color: col }), FX[r]);
+      const base = await load({ name: "cosmos", color: "pink" });
+      card(vr, "Cosmos rose (normal)", "#d6cdbf", base, FX.commune);
+      card(vr, "Givrée", "#a8d0ee", frost(base), FX.givree);
+      card(vr, "Dorée", "#f3c34a", gold(base), FX.doree);
+      card(vr, "Lumineuse", "#9fe0d0", glowy(base), FX.lumineuse);
+
+      // Lanterne-de-lune : esquisse dessinée avec les primitives du jeu.
+      const { R } = GS,
+        k = 1.5;
+      const b = R.buf(48, 72);
+      R.stem(b, k, 14, 47, 14, 12, 1.4, PAL.darkLeaf, 2.5);
+      R.stem(b, k, 14, 13, 24, 10, 1.1, PAL.darkLeaf, -2);
+      R.leaf(b, k, 14, 40, Math.PI * 0.92, 8, 3.5, PAL.darkLeaf);
+      R.leaf(b, k, 15, 32, -0.25, 7, 3, PAL.darkLeaf);
+      const moon = ["#3a4a8a", "#7a9ae0", "#c4d8ff", "#f4f8ff"];
+      [
+        [24, 17, 3.4],
+        [20, 24, 2.8],
+        [26, 27, 2.4],
+      ].forEach(([cx, cy, r]) => {
+        R.stem(b, k, cx, cy - r - 3, cx, cy - r, 0.5, PAL.darkLeaf);
+        R.ell(b, k, cx, cy, r, r * 1.2, 0, R.sphere(moon, 0.25));
+        R.ell(b, k, cx, cy + r * 0.9, r * 0.9, r * 0.35, 0, () => moon[1]);
+        R.put(b, Math.round(cx * k), Math.round((cy + r * 1.1) * k), "#fffbe0");
+      });
+      R.outline(b);
+      card(fan, "Lanterne-de-lune - Légendaire", RC.legendaire, R.toCanvas(b), {
+        back(c, x, t) {
+          FX.legendaire.back(c, x, t);
+          for (const [cx, cy] of [
+            [108, 76],
+            [96, 97],
+            [114, 106],
+          ]) {
+            const g = x.createRadialGradient(cx, cy, 1, cx, cy, 26);
+            g.addColorStop(
+              0,
+              `rgba(190,215,255,${(night ? 0.7 : 0.35) * (0.75 + 0.25 * Math.sin(t * 2 + cx))})`,
+            );
+            g.addColorStop(1, "rgba(190,215,255,0)");
+            x.fillStyle = g;
+            x.fillRect(cx - 30, cy - 30, 60, 60);
+          }
+        },
+        front: FX.legendaire.front,
+      });
+      requestAnimationFrame(frame);
+    })();
+
+    const pick = (on, off, fn) => {
+      on.onclick = (e) => {
+        e.stopPropagation();
+        on.classList.add("on");
+        off.classList.remove("on");
+        fn();
+      };
+    };
+    const ia = document.getElementById("i-a"),
+      ib = document.getElementById("i-b"),
+      td = document.getElementById("t-day"),
+      tn = document.getElementById("t-night");
+    pick(ia, ib, () => (amp = 1));
+    pick(ib, ia, () => (amp = 2));
+    pick(td, tn, () => (night = false));
+    pick(tn, td, () => (night = true));
+  })();
+</script>
