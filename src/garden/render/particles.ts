@@ -124,7 +124,7 @@ export function createParticles(scene: THREE.Scene): Particles {
         parts.push({
           x: wx(tx) + (Math.random() - 0.5) * 0.6,
           y: k.y[0] + Math.random() * (k.y[1] - k.y[0]),
-          z: wz(ty) + 0.35 + (Math.random() - 0.5) * 0.3,
+          z: wz(ty) + (Math.random() - 0.5) * 0.3,
           vx: (Math.random() - 0.5) * k.v[0],
           vy: particle === "water" ? k.v[1] * (0.6 + Math.random() * 0.4) : Math.random() * k.v[1],
           vz: (Math.random() - 0.5) * k.v[2],

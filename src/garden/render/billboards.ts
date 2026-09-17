@@ -130,7 +130,7 @@ export function createBillboards(scene: THREE.Scene): Billboards {
         return;
       }
       const mesh = makeBillboard(spriteCanvas(item.ref), 1, 1.5);
-      mesh.position.set(wx(tx), 0, wz(ty) + 0.35);
+      mesh.position.set(wx(tx), 0, wz(ty));
       const lean = item.thirsty ? THIRSTY_LEAN : 0;
       mesh.rotation.z = lean;
       if (item.ref.name === "lanterne") addLantern(mesh);

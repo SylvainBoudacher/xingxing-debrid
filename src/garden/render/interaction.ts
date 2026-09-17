@@ -42,7 +42,7 @@ export function createInteraction(
     const mesh = liftedMesh();
     if (mesh && lifted) {
       const [tx, ty] = parseTileKey(lifted);
-      mesh.position.set(wx(tx), 0, wz(ty) + 0.35);
+      mesh.position.set(wx(tx), 0, wz(ty));
       mesh.renderOrder = 0;
     }
     lifted = null;
@@ -73,7 +73,7 @@ export function createInteraction(
     },
     moveLifted(x, z) {
       const mesh = liftedMesh();
-      if (mesh) mesh.position.set(x, mesh.position.y, z + 0.35);
+      if (mesh) mesh.position.set(x, mesh.position.y, z);
     },
     drop: resetLifted,
     addCrow(id, key) {
