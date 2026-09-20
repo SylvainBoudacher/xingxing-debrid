@@ -2,27 +2,31 @@ import { useEffect, useState } from "react";
 import { herbierProgress } from "../../core/herbier";
 import { chanceOf, GAUGES } from "../../core/pity";
 import type { GardenSave, Seed } from "../../core/types";
+import { DEV_BUTTON } from "../devButton";
 import { PityGauge } from "./PityGauge";
 import { SachetPack } from "./SachetPack";
-import { delays, SeedReveal, STEP_MS } from "./SeedReveal";
+import { revealDuration } from "./reveal";
+import { SeedReveal } from "./SeedReveal";
 
 export function SachetsPage({
   save,
   opened,
   onOpen,
+  onDevSachet,
+  onDevNextDay,
 }: {
   save: GardenSave;
   opened: { seq: number; seeds: Seed[] };
   onOpen: () => void;
+  onDevSachet: () => void;
+  onDevNextDay: () => void;
 }) {
   const herbier = herbierProgress(save);
   const complete = herbier.found === herbier.total;
   // les jauges ne bougent qu'une fois la dernière carte retournée
   const [pity, setPity] = useState(save.pity);
   useEffect(() => {
-    const last = delays(opened.seeds);
-    const total = (last[last.length - 1] ?? 0) + STEP_MS;
-    const id = setTimeout(() => setPity(save.pity), total);
+    const id = setTimeout(() => setPity(save.pity), revealDuration(opened.seeds));
     return () => clearTimeout(id);
   }, [opened.seq, opened.seeds, save.pity]);
   return (
@@ -30,6 +34,16 @@ export function SachetsPage({
       <div className="flex flex-1 flex-col items-center justify-center gap-6 rounded-xl bg-[radial-gradient(60%_60%_at_50%_40%,rgba(243,195,74,.10),transparent)]">
         <SachetPack pending={save.sachets.pending.length} onOpen={onOpen} />
         <SeedReveal key={opened.seq} seeds={opened.seeds} />
+        {import.meta.env.DEV && (
+          <div className="flex gap-1">
+            <button onClick={onDevSachet} className={DEV_BUTTON}>
+              Dev : +1 sachet
+            </button>
+            <button onClick={onDevNextDay} className={DEV_BUTTON}>
+              Dev : jour suivant
+            </button>
+          </div>
+        )}
       </div>
       <aside className="flex w-[240px] flex-col gap-2.5">
         {complete ? (

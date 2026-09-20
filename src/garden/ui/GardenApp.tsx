@@ -9,6 +9,7 @@ import { FieldView } from "./FieldView";
 import { gardenReducer, INITIAL_GARDEN } from "./gardenReducer";
 import { GardenTabs, type GardenTab } from "./GardenTabs";
 import { HerbierPage } from "./herbier/HerbierPage";
+import { withExtraSachet, withPreviousDay } from "./sachets/devSachets";
 import { SachetsPage } from "./sachets/SachetsPage";
 import { announceGardenClosed, announceGardenOpened } from "./gardenWindow";
 
@@ -104,6 +105,11 @@ export default function GardenApp() {
           save={state.save}
           opened={state.opened}
           onOpen={() => dispatch({ type: "open-sachet", now: Date.now(), rng: Math.random })}
+          onDevSachet={() => dispatch({ type: "set", save: withExtraSachet(state.save!) })}
+          onDevNextDay={() => {
+            dispatch({ type: "set", save: withPreviousDay(state.save!) });
+            dispatch({ type: "tick", now: Date.now() });
+          }}
         />
       )}
     </div>

@@ -23,6 +23,9 @@
 ## Écarts assumés par rapport à la spec
 
 - La spec prévoit `core/catalog/entries.ts`. La liste à plat existe déjà : `CATALOG_ENTRIES` dans `core/catalog/species.ts`. On y ajoute simplement l'index par rareté, sans créer de fichier.
+- `openSachet(save, rng)` ne prend pas `now` : il n'en avait aucun usage et le lint refuse un paramètre mort.
+- `SeedReveal` ne reçoit pas `seq` : la page le remonte avec `key={opened.seq}`, ce qui remet l'état à zéro sans `setState` dans un effet (interdit par `react-hooks/set-state-in-effect`).
+- Deux petits modules en plus, pour suivre la règle "les helpers purs sortent des composants" : `ui/sachets/reveal.ts` (délais de retournement, testé) et `ui/sachets/devSachets.ts` (les deux transformations des boutons de développement).
 - La spec écrit l'infobulle du trou "Plus de graines rares" quand la rareté choisie est vide. Comme le semis retombe alors sur la plus ancienne graine restante, l'infobulle annonce la graine **réellement semée** ("Prêt à recevoir une graine commune") et ne dit "Plus de graines" que si l'inventaire est vide. Sinon elle mentirait.
 
 ---
