@@ -4,6 +4,11 @@ import { createStarterSave } from "./starter";
 import type { Flower, GardenSave } from "./types";
 
 const NOW = 1_000_000;
+
+const seq = (...values: number[]) => {
+  let i = 0;
+  return () => values[i++ % values.length];
+};
 const rose: Flower = { species: "cosmos", color: "pink", rarity: "commune" };
 const aster: Flower = { species: "aster", color: "violet", rarity: "commune" };
 
@@ -26,7 +31,8 @@ describe("pressFlower", () => {
   });
 
   it("crée l'entrée absente et ajoute la graine tombée", () => {
-    const r = pressFlower(withBasket([aster]), 0, NOW, () => 0)!;
+    // tirage, couleur, variante (aucune)
+    const r = pressFlower(withBasket([aster]), 0, NOW, seq(0, 0, 0.5))!;
     expect(r.save.herbier["aster:violet"]).toEqual({ discoveredAt: NOW, pressed: 1, variants: [] });
     expect(r.seed).toEqual({ species: "aster", color: "lilac", rarity: "commune" });
     const { seeds } = r.save.inventory;

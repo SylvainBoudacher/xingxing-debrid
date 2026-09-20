@@ -25,8 +25,8 @@ describe("rollPickSeed", () => {
     expect(rollPickSeed(flower, true, () => 0.45)).toBeNull();
   });
 
-  it("la graine reprend espèce, couleur et rareté, sans variante", () => {
-    expect(rollPickSeed(flower, false, () => 0)).toEqual({
+  it("la graine reprend espèce, couleur et rareté de la fleur", () => {
+    expect(rollPickSeed(flower, false, seq(0, 0.5))).toEqual({
       species: "dahlia",
       color: "red",
       rarity: "rare",
@@ -51,17 +51,17 @@ describe("rollPressSeed", () => {
   it("pondère les autres couleurs par rareté, jamais la couleur pressée", () => {
     // autres couleurs du cosmos : white C 60, red R 25, orange R 25, yellow E 12, black L 3 = 125
     expect(RARITY_WEIGHT).toEqual({ commune: 60, rare: 25, epique: 12, legendaire: 3 });
-    expect(rollPressSeed(cosmos, seq(0, 0))).toEqual({
+    expect(rollPressSeed(cosmos, seq(0, 0, 0.5))).toEqual({
       species: "cosmos",
       color: "white",
       rarity: "commune",
     });
-    expect(rollPressSeed(cosmos, seq(0, 60 / 125))).toEqual({
+    expect(rollPressSeed(cosmos, seq(0, 60 / 125, 0.5))).toEqual({
       species: "cosmos",
       color: "red",
       rarity: "rare",
     });
-    expect(rollPressSeed(cosmos, seq(0, 0.999))).toEqual({
+    expect(rollPressSeed(cosmos, seq(0, 0.999, 0.5))).toEqual({
       species: "cosmos",
       color: "black",
       rarity: "legendaire",
@@ -150,5 +150,21 @@ describe("rollVariant", () => {
     expect(rollVariant(seq(0.019, 0))).toBe("givree");
     expect(rollVariant(seq(0, 0.4))).toBe("doree");
     expect(rollVariant(seq(0, 0.9))).toBe("lumineuse");
+  });
+});
+
+describe("variantes des graines de cueillette et de pressage", () => {
+  const cosmos: Flower = { species: "cosmos", color: "pink", rarity: "commune" };
+
+  it("la cueillette peut donner une variante, 2 % du temps", () => {
+    // tirage de la graine, variante, choix de la variante
+    expect(rollPickSeed(cosmos, false, seq(0, 0.01, 0))?.variant).toBe("givree");
+    expect(rollPickSeed(cosmos, false, seq(0, 0.5, 0))?.variant).toBeUndefined();
+  });
+
+  it("le pressage aussi", () => {
+    // tirage, couleur, variante, choix de la variante
+    expect(rollPressSeed(cosmos, seq(0, 0, 0.01, 0.9))?.variant).toBe("lumineuse");
+    expect(rollPressSeed(cosmos, seq(0, 0, 0.5))?.variant).toBeUndefined();
   });
 });

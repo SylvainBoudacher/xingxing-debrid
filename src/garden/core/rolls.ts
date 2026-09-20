@@ -9,7 +9,13 @@ export const pickSeedChance = (beautiful: boolean): number => (beautiful ? 0.45 
 
 export function rollPickSeed(flower: Flower, beautiful: boolean, rng: Rng): Seed | null {
   if (rng() >= pickSeedChance(beautiful)) return null;
-  return { species: flower.species, color: flower.color, rarity: flower.rarity };
+  const variant = rollVariant(rng);
+  return {
+    species: flower.species,
+    color: flower.color,
+    rarity: flower.rarity,
+    ...(variant && { variant }),
+  };
 }
 
 export const pressSeedChance = 0.35;
@@ -28,8 +34,15 @@ export function rollPressSeed(flower: Flower, rng: Rng): Seed | null {
   if (!others.length) return null;
   const total = others.reduce((sum, c) => sum + RARITY_WEIGHT[c.rarity], 0);
   let r = rng() * total;
-  const pick = others.find((c) => (r -= RARITY_WEIGHT[c.rarity]) < 0) ?? others[others.length - 1];
-  return { species: flower.species, color: pick.color, rarity: pick.rarity };
+  const chosen =
+    others.find((c) => (r -= RARITY_WEIGHT[c.rarity]) < 0) ?? others[others.length - 1];
+  const variant = rollVariant(rng);
+  return {
+    species: flower.species,
+    color: chosen.color,
+    rarity: chosen.rarity,
+    ...(variant && { variant }),
+  };
 }
 
 export const VARIANT_CHANCE = 0.02;
