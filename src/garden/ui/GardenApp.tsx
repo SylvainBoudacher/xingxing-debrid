@@ -9,6 +9,7 @@ import { FieldView } from "./FieldView";
 import { gardenReducer, INITIAL_GARDEN } from "./gardenReducer";
 import { GardenTabs, type GardenTab } from "./GardenTabs";
 import { HerbierPage } from "./herbier/HerbierPage";
+import { SachetsPage } from "./sachets/SachetsPage";
 import { announceGardenClosed, announceGardenOpened } from "./gardenWindow";
 
 const TICK_MS = 60_000;
@@ -85,7 +86,7 @@ export default function GardenApp() {
   return (
     <div className="flex h-screen flex-col bg-[#1a1216] text-[#f1e6d2]">
       <Toaster theme="dark" position="top-center" />
-      <GardenTabs tab={tab} onTab={setTab} />
+      <GardenTabs tab={tab} onTab={setTab} sachets={state.save?.sachets.pending.length ?? 0} />
       {!webglOk
         ? tab === "champ" && (
             <div className="flex flex-1 items-center justify-center p-6 text-center text-sm">
@@ -98,6 +99,13 @@ export default function GardenApp() {
             </div>
           )}
       {tab === "herbier" && state.save && <HerbierPage save={state.save} />}
+      {tab === "sachets" && state.save && (
+        <SachetsPage
+          save={state.save}
+          opened={state.opened}
+          onOpen={() => dispatch({ type: "open-sachet", now: Date.now(), rng: Math.random })}
+        />
+      )}
     </div>
   );
 }

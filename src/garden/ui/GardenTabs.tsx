@@ -1,11 +1,20 @@
-export type GardenTab = "champ" | "herbier";
+export type GardenTab = "champ" | "herbier" | "sachets";
 
 const TABS: { id: GardenTab; label: string }[] = [
   { id: "champ", label: "Champ" },
   { id: "herbier", label: "Herbier" },
+  { id: "sachets", label: "Sachets" },
 ];
 
-export function GardenTabs({ tab, onTab }: { tab: GardenTab; onTab: (tab: GardenTab) => void }) {
+export function GardenTabs({
+  tab,
+  onTab,
+  sachets,
+}: {
+  tab: GardenTab;
+  onTab: (tab: GardenTab) => void;
+  sachets: number;
+}) {
   return (
     <nav className="flex gap-1 border-b border-amber-300/25 px-4 pt-2">
       {TABS.map(({ id, label }) => (
@@ -20,6 +29,11 @@ export function GardenTabs({ tab, onTab }: { tab: GardenTab; onTab: (tab: Garden
           }`}
         >
           {label}
+          {id === "sachets" && sachets > 0 && (
+            <span className="ml-1.5 rounded-full bg-[#c0452f] px-1.5 py-px align-middle text-[10px] font-bold text-white">
+              {sachets}
+            </span>
+          )}
         </button>
       ))}
     </nav>
