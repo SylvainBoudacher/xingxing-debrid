@@ -1,4 +1,4 @@
-import type { GardenSave } from "./types";
+import type { GardenSave, SachetType } from "./types";
 
 export const SAVE_VERSION = 1;
 
@@ -19,5 +19,15 @@ export function parseSave(raw: unknown): GardenSave | null {
     isObject(raw.leaves) && typeof raw.leaves.checkedAt === "number"
       ? { checkedAt: raw.leaves.checkedAt }
       : { checkedAt: 0 };
-  return { ...(raw as unknown as GardenSave), leaves };
+  // pending était un nombre avant le sous-projet 4 : le validateur ne regarde pas
+  // l'intérieur de sachets, une sauvegarde de développement casserait en silence.
+  const count = typeof sachets.pending === "number" ? Math.max(0, Math.floor(sachets.pending)) : 0;
+  const pending: SachetType[] = Array.isArray(sachets.pending)
+    ? (sachets.pending as SachetType[])
+    : Array.from({ length: count }, () => "quotidien");
+  return {
+    ...(raw as unknown as GardenSave),
+    leaves,
+    sachets: { lastDailyAt: Number(sachets.lastDailyAt) || 0, pending },
+  };
 }

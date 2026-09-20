@@ -24,7 +24,7 @@ export function createStarterSave(): GardenSave {
     },
     herbier: {},
     pity: { dryDiscovery: 0, dryRare: 0 },
-    sachets: { lastDailyAt: 0, pending: 1 },
+    sachets: { lastDailyAt: 0, pending: ["quotidien"] },
     progress: { nodes: {}, counters: {} },
     atelier: { brew: null },
     leaves: { checkedAt: Math.floor(Date.now() / LEAF_SLOT_MS) * LEAF_SLOT_MS },

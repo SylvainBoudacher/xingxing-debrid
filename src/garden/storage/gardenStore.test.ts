@@ -40,9 +40,9 @@ describe("loadGarden", () => {
 
   it("relit une sauvegarde existante", async () => {
     const s = { ...createStarterSave(), plots: ["p1" as const] };
-    s.sachets.pending = 4;
+    s.sachets.pending = ["quotidien", "quotidien", "quotidien", "quotidien"];
     await saveGarden(s);
-    expect((await loadGarden()).save.sachets.pending).toBe(4);
+    expect((await loadGarden()).save.sachets.pending).toHaveLength(4);
   });
 
   it("met de côté une sauvegarde illisible et repart de zéro", async () => {
@@ -61,7 +61,10 @@ describe("createSaveScheduler", () => {
     vi.useFakeTimers();
     const saver = createSaveScheduler(1000);
     const a = createStarterSave();
-    const b = { ...createStarterSave(), sachets: { lastDailyAt: 0, pending: 9 } };
+    const b = {
+      ...createStarterSave(),
+      sachets: { lastDailyAt: 0, pending: ["quotidien" as const] },
+    };
     saver.schedule(a);
     saver.schedule(b);
     expect(registry.get("garden.json")?.get("save")).toBeUndefined();

@@ -21,7 +21,7 @@ describe("createStarterSave", () => {
     expect(s.version).toBe(1);
     expect(s.plots).toEqual(["p1"]);
     expect(s.inventory.seeds).toHaveLength(3);
-    expect(s.sachets.pending).toBe(1);
+    expect(s.sachets.pending).toEqual(["quotidien"]);
     expect(s.tiles["0,1"]).toEqual({ kind: "decor", id: "lanterne" });
   });
 
@@ -45,6 +45,25 @@ describe("parseSave", () => {
     expect(parseSave({ ...createStarterSave(), version: 2 })).toBeNull();
     expect(parseSave({ ...createStarterSave(), tiles: [] })).toBeNull();
     expect(parseSave({ ...createStarterSave(), inventory: undefined })).toBeNull();
+  });
+
+  it("convertit un pending numérique des anciennes sauvegardes", () => {
+    const old = { ...createStarterSave(), sachets: { lastDailyAt: 123, pending: 3 } };
+    expect(parseSave(old)?.sachets).toEqual({
+      lastDailyAt: 123,
+      pending: ["quotidien", "quotidien", "quotidien"],
+    });
+  });
+
+  it("laisse intact un pending déjà en tableau, et rend une liste vide sinon", () => {
+    const s = createStarterSave();
+    expect(parseSave({ ...s, sachets: { lastDailyAt: 1, pending: [] } })?.sachets.pending).toEqual(
+      [],
+    );
+    expect(parseSave({ ...s, sachets: { lastDailyAt: 1, pending: 0 } })?.sachets.pending).toEqual(
+      [],
+    );
+    expect(parseSave({ ...s, sachets: { lastDailyAt: 1 } })?.sachets.pending).toEqual([]);
   });
 });
 
