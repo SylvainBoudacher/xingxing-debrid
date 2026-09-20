@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { LEAF_SLOT_MS } from "../core/leaves";
 import { createStarterSave } from "../core/starter";
-import { HOUR } from "../core/time";
+import { DAY, HOUR, startOfDay } from "../core/time";
 import type { GardenSave } from "../core/types";
 import { gardenReducer, INITIAL_GARDEN, type GardenState } from "./gardenReducer";
 
@@ -79,5 +79,33 @@ describe("press", () => {
   it("index invalide : état inchangé", () => {
     const state = withFlower();
     expect(gardenReducer(state, { type: "press", index: 4, now: 5, rng: () => 0 })).toBe(state);
+  });
+});
+
+describe("sachets", () => {
+  const withSachets = (lastDailyAt: number, pending: "quotidien"[]): GardenState =>
+    gardenReducer(INITIAL_GARDEN, {
+      type: "load",
+      save: { ...createStarterSave(), sachets: { lastDailyAt, pending } },
+    });
+
+  it("ouvre un sachet, range les graines et avance le compteur de lot", () => {
+    const state = withSachets(startOfDay(NOW), ["quotidien"]);
+    const next = gardenReducer(state, { type: "open-sachet", now: NOW, rng: () => 0.5 });
+    expect(next.opened.seq).toBe(1);
+    expect(next.opened.seeds).toHaveLength(3);
+    expect(next.save!.sachets.pending).toEqual([]);
+    expect(next.save!.inventory.seeds).toHaveLength(6);
+  });
+
+  it("sans sachet en attente, l'état ne bouge pas", () => {
+    const state = withSachets(startOfDay(NOW), []);
+    expect(gardenReducer(state, { type: "open-sachet", now: NOW, rng: () => 0.5 })).toBe(state);
+  });
+
+  it("le tick crédite le sachet du jour", () => {
+    const state = withSachets(startOfDay(NOW) - 2 * DAY, []);
+    const next = gardenReducer(state, { type: "tick", now: NOW });
+    expect(next.save!.sachets.pending).toHaveLength(2);
   });
 });
