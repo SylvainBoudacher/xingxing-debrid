@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { CATALOG_ENTRIES, entriesOfRarity } from "./catalog/species";
+import { entryId } from "./discovery";
 import {
   pickSeedChance,
   pressSeedChance,
   RARITY_WEIGHT,
   rollPickSeed,
   rollPressSeed,
+  rollSachetSeed,
+  rollVariant,
+  VARIANT_CHANCE,
 } from "./rolls";
 import type { Flower } from "./types";
 
@@ -69,5 +74,81 @@ describe("rollPressSeed", () => {
     const v: Flower = { species: "lanternelune", color: "blue", rarity: "legendaire" };
     const colors = new Set([0, 0.3, 0.6, 0.99].map((r) => rollPressSeed(v, seq(0, r))!.color));
     expect([...colors].sort()).toEqual(["violet", "white"]);
+  });
+});
+
+describe("rollSachetSeed", () => {
+  const none = new Set<string>();
+  const pity = { dryDiscovery: 0, dryRare: 0 };
+  // Ordre des tirages : rareté, poids (seulement si rare ou mieux), nouveauté,
+  // poids de promotion (seulement si promotion), index, variante.
+  // `seq` boucle sur ses valeurs : une séquence trop longue ou trop courte passe inaperçue.
+  const noVariant = 0.99;
+
+  it("sous 25 % la graine est commune, au-dessus elle est rare ou mieux", () => {
+    expect(rollSachetSeed(none, pity, seq(0.24, 0, 0, 0, noVariant)).rarity).toBe("rare");
+    expect(rollSachetSeed(none, pity, seq(0.25, 0, 0, noVariant)).rarity).toBe("commune");
+  });
+
+  it("répartit rare, épique et légendaire selon les poids du catalogue", () => {
+    const at = (weight: number) =>
+      rollSachetSeed(none, pity, seq(0, weight, 0, 0, noVariant)).rarity;
+    expect(at(0)).toBe("rare");
+    expect(at(25 / 40 + 0.01)).toBe("epique");
+    expect(at(0.99)).toBe("legendaire");
+  });
+
+  it("suit la jauge de rareté quand elle est montée", () => {
+    const hot = { dryDiscovery: 0, dryRare: 10 }; // 45 %
+    expect(rollSachetSeed(none, hot, seq(0.44, 0, 0, 0, noVariant)).rarity).toBe("rare");
+    expect(rollSachetSeed(none, hot, seq(0.45, 0, 0, noVariant)).rarity).toBe("commune");
+  });
+
+  it("pioche une inconnue quand le jet de nouveauté réussit", () => {
+    const known = new Set(
+      entriesOfRarity("commune")
+        .slice(1)
+        .map((e) => entryId(e.species, e.color)),
+    );
+    const first = entriesOfRarity("commune")[0];
+    const seed = rollSachetSeed(known, pity, seq(0.99, 0.24, 0, noVariant));
+    expect(entryId(seed.species, seed.color)).toBe(entryId(first.species, first.color));
+  });
+
+  it("pioche une connue quand le jet de nouveauté échoue", () => {
+    const first = entriesOfRarity("commune")[0];
+    const known = new Set([entryId(first.species, first.color)]);
+    const seed = rollSachetSeed(known, pity, seq(0.99, 0.99, 0, noVariant));
+    expect(entryId(seed.species, seed.color)).toBe(entryId(first.species, first.color));
+  });
+
+  it("début de partie : jet manqué mais aucune connue, la graine est quand même une nouveauté", () => {
+    const seed = rollSachetSeed(none, pity, seq(0.99, 0.99, 0, noVariant));
+    expect(seed.rarity).toBe("commune");
+    expect(
+      entriesOfRarity("commune").some((e) => e.species === seed.species && e.color === seed.color),
+    ).toBe(true);
+  });
+
+  it("promeut la graine quand la rareté tirée n'a plus d'inconnue", () => {
+    const known = new Set(entriesOfRarity("commune").map((e) => entryId(e.species, e.color)));
+    const seed = rollSachetSeed(known, pity, seq(0.99, 0, 0, 0, noVariant));
+    expect(seed.rarity).not.toBe("commune");
+  });
+
+  it("Herbier complet : la graine reste dans sa rareté", () => {
+    const all = new Set(CATALOG_ENTRIES.map((e) => entryId(e.species, e.color)));
+    const seed = rollSachetSeed(all, pity, seq(0.99, 0, 0, noVariant));
+    expect(seed.rarity).toBe("commune");
+  });
+});
+
+describe("rollVariant", () => {
+  it("2 % de chance, les trois variantes à parts égales", () => {
+    expect(VARIANT_CHANCE).toBe(0.02);
+    expect(rollVariant(seq(0.02))).toBeUndefined();
+    expect(rollVariant(seq(0.019, 0))).toBe("givree");
+    expect(rollVariant(seq(0, 0.4))).toBe("doree");
+    expect(rollVariant(seq(0, 0.9))).toBe("lumineuse");
   });
 });
