@@ -18,7 +18,8 @@ function withTiles(tiles: GardenSave["tiles"]): GardenSave {
   return { ...createStarterSave(), tiles };
 }
 
-const describe1 = (s: GardenSave, key: `${number},${number}`) => describeTile(s, key, NOW, noRain);
+const describe1 = (s: GardenSave, key: `${number},${number}`) =>
+  describeTile(s, key, NOW, { rain: noRain });
 
 describe("describeTile", () => {
   it("herbe et terre libre", () => {
@@ -33,7 +34,7 @@ describe("describeTile", () => {
 
   it("trou, avec ou sans graines", () => {
     const s = withTiles({ "1,1": { kind: "hole", dugAt: NOW } });
-    expect(describe1(s, "1,1").lines).toEqual(["Prêt à recevoir une graine"]);
+    expect(describe1(s, "1,1").lines).toEqual(["Prêt à recevoir une graine commune"]);
     const empty = { ...s, inventory: { ...s.inventory, seeds: [] } };
     expect(describe1(empty, "1,1").lines).toEqual(["Plus de graines"]);
   });
@@ -107,5 +108,28 @@ describe("describeCrow", () => {
       title: "Corbeau",
       lines: ["Il picore tranquillement."],
     });
+  });
+});
+
+describe("infobulle du trou", () => {
+  it("annonce la rareté réellement semée", () => {
+    const base = createStarterSave();
+    const save: GardenSave = {
+      ...base,
+      inventory: {
+        ...base.inventory,
+        seeds: [
+          { species: "tournesol", color: "yellow", rarity: "commune" },
+          { species: "dahlia", color: "blue", rarity: "legendaire" },
+        ],
+      },
+      tiles: { ...base.tiles, "1,1": { kind: "hole", dugAt: 0 } },
+    };
+    expect(describeTile(save, "1,1", NOW).lines).toEqual(["Prêt à recevoir une graine commune"]);
+    expect(describeTile(save, "1,1", NOW, { seedRarity: "legendaire" }).lines).toEqual([
+      "Prêt à recevoir une graine légendaire",
+    ]);
+    const empty = { ...save, inventory: { ...save.inventory, seeds: [] } };
+    expect(describeTile(empty, "1,1", NOW).lines).toEqual(["Plus de graines"]);
   });
 });

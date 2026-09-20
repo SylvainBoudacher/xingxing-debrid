@@ -6,7 +6,7 @@ import { rollPickSeed, type Rng } from "./rolls";
 import { harvestTool } from "./catalog/species";
 import { setTile } from "./tiles";
 import { mergeIntervals } from "./time";
-import type { Flower, GardenSave, PlantTile, TileKey } from "./types";
+import type { Flower, GardenSave, PlantTile, Rarity, Seed, TileKey } from "./types";
 import { rainIntervals, type RainSource } from "./weather";
 
 export type Tool = "main" | "creuser" | "semer" | "arroser" | "secateur" | "rateau";
@@ -31,15 +31,30 @@ const no = (label: string, reason: string): Plan => ({ ok: false, label, reason 
 const yes = (label: string, apply: () => Outcome): Plan => ({ ok: true, label, apply });
 const burst = (key: TileKey, particle: Particle): Effect => ({ kind: "burst", key, particle });
 
+export interface PlanOptions {
+  rng?: Rng;
+  rain?: RainSource;
+  seedRarity?: Rarity | null;
+}
+
+// La plus ancienne graine de la rareté demandée, sinon la plus ancienne tout court.
+export function nextSeedIndex(seeds: Seed[], rarity: Rarity | null | undefined): number {
+  if (rarity) {
+    const i = seeds.findIndex((s) => s.rarity === rarity);
+    if (i >= 0) return i;
+  }
+  return seeds.length ? 0 : -1;
+}
+
 // Même fonction pour l'infobulle (avant le clic) et pour l'effet (au clic).
 export function planAction(
   save: GardenSave,
   target: Target,
   tool: Tool,
   now: number,
-  rng: Rng = Math.random,
-  rain: RainSource = rainIntervals,
+  opts: PlanOptions = {},
 ): Plan | null {
+  const { rng = Math.random, rain = rainIntervals, seedRarity = null } = opts;
   if (target.kind === "crow")
     return yes("Chasser", () => ({
       save: bump(save, "crowsChased"),
@@ -63,9 +78,11 @@ export function planAction(
     case "semer": {
       if (tile?.kind !== "hole")
         return no("Semer", soil && !tile ? "creuse d'abord un trou" : "il faut un trou");
-      const [seed, ...rest] = save.inventory.seeds;
-      if (!seed) return no("Semer", "plus de graines");
+      const index = nextSeedIndex(save.inventory.seeds, seedRarity);
+      if (index < 0) return no("Semer", "plus de graines");
+      const seed = save.inventory.seeds[index];
       return yes("Semer une graine", () => {
+        const rest = save.inventory.seeds.filter((_, i) => i !== index);
         const next = { ...save, inventory: { ...save.inventory, seeds: rest } };
         const planted = setTile(next, key, { kind: "plant", seed, sownAt: now, watered: [] });
         return { save: bump(planted, "sown"), effects: [burst(key, "dirt")] };

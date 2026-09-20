@@ -3,7 +3,7 @@ import { planAction, type Plan, type Target, type Tool } from "./actions";
 import { WATER_MS } from "./growth";
 import { createStarterSave } from "./starter";
 import { HOUR } from "./time";
-import type { GardenSave, Interval, PlantTile, SpeciesId } from "./types";
+import type { GardenSave, Interval, PlantTile, Rarity, Seed, SpeciesId } from "./types";
 
 const noRain = (): Interval[] => [];
 const NOW = new Date(2026, 9, 1, 12).getTime();
@@ -22,8 +22,13 @@ const flower = (species: SpeciesId, watered: Interval[] = []): PlantTile => ({
 
 const young: PlantTile = { ...flower("cosmos"), sownAt: NOW - HOUR };
 
-function plan(s: GardenSave, target: Target, tool: Tool, rng = () => 0.99): Plan | null {
-  return planAction(s, target, tool, NOW, rng, noRain);
+function plan(
+  s: GardenSave,
+  target: Target,
+  tool: Tool,
+  opts: { rng?: () => number; seedRarity?: Rarity | null } = {},
+): Plan | null {
+  return planAction(s, target, tool, NOW, { rng: () => 0.99, rain: noRain, ...opts });
 }
 
 function refused(p: Plan | null) {
@@ -111,7 +116,7 @@ describe("cueillir", () => {
 
   it("donne parfois une graine de la même fleur", () => {
     const s = withTiles({ "1,1": flower("cosmos") });
-    const out = run(plan(s, tile("1,1"), "main", () => 0.1));
+    const out = run(plan(s, tile("1,1"), "main", { rng: () => 0.1 }));
     expect(out.save.inventory.seeds[out.save.inventory.seeds.length - 1]).toEqual({
       species: "cosmos",
       color: "pink",
@@ -125,8 +130,8 @@ describe("cueillir", () => {
     const beautiful = withTiles({ "1,1": flower("cosmos", wetAll) });
     const dry = withTiles({ "1,1": flower("cosmos") });
     const rng = () => 0.4;
-    expect(run(plan(beautiful, tile("1,1"), "main", rng)).save.inventory.seeds).toHaveLength(4);
-    expect(run(plan(dry, tile("1,1"), "main", rng)).save.inventory.seeds).toHaveLength(3);
+    expect(run(plan(beautiful, tile("1,1"), "main", { rng })).save.inventory.seeds).toHaveLength(4);
+    expect(run(plan(dry, tile("1,1"), "main", { rng })).save.inventory.seeds).toHaveLength(3);
   });
 
   it("au sécateur pour les tiges épaisses", () => {
@@ -188,5 +193,47 @@ describe("corbeau et limites", () => {
     const copy = structuredClone(s);
     plan(s, tile("0,0"), "creuser");
     expect(s).toEqual(copy);
+  });
+});
+
+describe("semer une rareté choisie", () => {
+  const seeds: Seed[] = [
+    { species: "tournesol", color: "yellow", rarity: "commune" },
+    { species: "dahlia", color: "blue", rarity: "legendaire" },
+    { species: "cosmos", color: "pink", rarity: "commune" },
+  ];
+  const withHole = (): GardenSave => {
+    const base = createStarterSave();
+    return {
+      ...base,
+      inventory: { ...base.inventory, seeds },
+      tiles: { ...base.tiles, "1,1": { kind: "hole", dugAt: NOW - 1000 } },
+    };
+  };
+  const sown = (save: GardenSave) => {
+    const t = save.tiles["1,1"];
+    return t?.kind === "plant" ? t.seed : null;
+  };
+
+  it("sème la plus ancienne graine de la rareté demandée", () => {
+    const out = run(plan(withHole(), tile("1,1"), "semer", { seedRarity: "legendaire" }));
+    expect(sown(out.save)?.rarity).toBe("legendaire");
+    expect(out.save.inventory.seeds.map((s) => s.species)).toEqual(["tournesol", "cosmos"]);
+  });
+
+  it("sans rareté demandée, sème la plus ancienne", () => {
+    const out = run(plan(withHole(), tile("1,1"), "semer"));
+    expect(sown(out.save)?.species).toBe("tournesol");
+  });
+
+  it("rareté demandée absente : retombe sur la plus ancienne", () => {
+    const out = run(plan(withHole(), tile("1,1"), "semer", { seedRarity: "epique" }));
+    expect(sown(out.save)?.species).toBe("tournesol");
+  });
+
+  it("inventaire vide : refus", () => {
+    const base = withHole();
+    const empty = { ...base, inventory: { ...base.inventory, seeds: [] } };
+    expect(refused(plan(empty, tile("1,1"), "semer"))).toBe("plus de graines");
   });
 });
