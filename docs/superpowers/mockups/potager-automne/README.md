@@ -9,6 +9,8 @@ Maquettes validées pendant le brainstorming du 2026-09-16. Elles servent de bas
 - `champ.html` : onglet Champ jouable (outils séparés, dernière version validée).
 - `herbier.html` : page Herbier, 3 mises en page (retenue : B, carnet ouvert). Fragment pour le compagnon de brainstorming.
 - `rarete-effets.html` : effets de rareté et variantes animés (retenue : B, marqué), esquisse de la Lanterne-de-lune.
+- `sachets.html` : page Sachets, 3 mises en page (retenue : A, établi). Fragment pour le compagnon de brainstorming.
+- `sachets-ouverture.html` : animations d'ouverture d'un sachet (retenue : B, cartes retournées). Fragment pour le compagnon de brainstorming.
 - `gs.js` : générateur de sprites du jeu compilé pour ces deux maquettes (`bun build`).
 - `pixelgen.js` : générateur de sprites pixel art (formes rastérisées, 4 tons, contour coloré automatique).
 - `hd2dfield.js` : scène three.js (billboards, ombres, lumières, bloom, tilt-shift, particules, raycast).

@@ -1,0 +1,369 @@
+<style>
+  .gd {
+    font-family: ui-serif, Georgia, serif;
+  }
+  .dark {
+    background: #1a1216;
+    color: #f1e6d2;
+    border-radius: 12px;
+  }
+  .panel {
+    border: 1px solid rgba(252, 211, 77, 0.3);
+    background: rgba(26, 18, 22, 0.85);
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .gold {
+    color: #f3dca0;
+  }
+  .muted {
+    color: #a99a8a;
+  }
+  .pack {
+    width: 88px;
+    height: 112px;
+    border-radius: 6px 6px 10px 10px;
+    background: linear-gradient(#caa46a, #a9804a);
+    box-shadow:
+      inset 0 0 0 3px #6a4428,
+      0 6px 14px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 10px;
+    font-size: 11px;
+    color: #3a2418;
+  }
+  .seed {
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    background: #241a20;
+    box-shadow: inset 0 0 0 2px currentColor;
+  }
+  .bar {
+    height: 12px;
+    border-radius: 6px;
+    background: #2c2027;
+    box-shadow: inset 0 0 0 1px rgba(252, 211, 77, 0.25);
+    overflow: hidden;
+  }
+  .fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8a6a3a, #f3c34a);
+  }
+  .paper {
+    background: #e9dcc0;
+    color: #3a2418;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 4px #6a4428;
+  }
+  .pbar {
+    height: 12px;
+    border-radius: 6px;
+    background: #d6c39c;
+    box-shadow: inset 0 0 0 1px #6a4428;
+    overflow: hidden;
+  }
+  .pfill {
+    height: 100%;
+    background: #8a5a2a;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    font-size: 12px;
+    border-bottom: 1px solid rgba(252, 211, 77, 0.25);
+    padding: 0 10px;
+  }
+  .tab {
+    padding: 5px 12px;
+    border-radius: 6px 6px 0 0;
+    color: #a99a8a;
+  }
+  .tab.on {
+    background: rgba(252, 211, 77, 0.1);
+    color: #f3dca0;
+    box-shadow: inset 0 -2px 0 #d9b46a;
+  }
+  .pill {
+    background: #c0452f;
+    color: #fff;
+    border-radius: 999px;
+    font-size: 9px;
+    padding: 1px 5px;
+    margin-left: 5px;
+  }
+</style>
+
+<h2>Page Sachets : quelle mise en page ?</h2>
+<p class="subtitle">
+  Elle doit loger le sachet du jour, les trois graines révélées à l'ouverture (rareté visible,
+  espèce cachée) et les deux jauges avec leur règle écrite en clair.
+</p>
+
+<div class="cards" style="grid-template-columns: 1fr">
+  <div class="card" data-choice="etabli" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 0; background: #120d10">
+      <div class="gd dark" style="padding: 0 0 14px">
+        <div class="tabs">
+          <div class="tab">Champ</div>
+          <div class="tab">Herbier</div>
+          <div class="tab on">Sachets<span class="pill">2</span></div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 240px; gap: 14px; padding: 16px">
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 14px;
+              background: radial-gradient(60% 70% at 50% 40%, rgba(243, 195, 74, 0.1), transparent);
+              border-radius: 12px;
+              padding: 14px 0;
+            "
+          >
+            <div class="pack">Sachet du jour</div>
+            <button
+              style="
+                border: 1px solid rgba(252, 211, 77, 0.5);
+                background: rgba(252, 211, 77, 0.12);
+                color: #f3dca0;
+                border-radius: 8px;
+                padding: 6px 18px;
+                font-size: 13px;
+              "
+              class="gd"
+            >
+              Ouvrir
+            </button>
+            <div style="display: flex; gap: 12px; margin-top: 4px">
+              <div class="seed" style="color: #d6cdbf">&#9679;</div>
+              <div class="seed" style="color: #6db6f0">&#9679;</div>
+              <div
+                class="seed"
+                style="
+                  color: #f3c34a;
+                  box-shadow:
+                    inset 0 0 0 2px currentColor,
+                    0 0 18px rgba(243, 195, 74, 0.55);
+                "
+              >
+                &#9679;
+              </div>
+            </div>
+            <div class="muted" style="font-size: 11px">
+              Commune &middot; Rare &middot; Légendaire
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <div class="panel">
+              <div class="gd gold" style="font-size: 15px; margin-bottom: 6px">
+                Chance de nouveauté
+              </div>
+              <div class="bar"><div class="fill" style="width: 33%"></div></div>
+              <div class="muted" style="font-size: 11px; margin-top: 5px">
+                31 % &middot; +2 points par graine sans nouveauté, jusqu'à 75 %. Retour à 25 % dès
+                qu'une fleur inconnue sort.
+              </div>
+            </div>
+            <div class="panel">
+              <div class="gd gold" style="font-size: 15px; margin-bottom: 6px">
+                Chance de rare ou mieux
+              </div>
+              <div class="bar"><div class="fill" style="width: 27%"></div></div>
+              <div class="muted" style="font-size: 11px; margin-top: 5px">
+                27 % &middot; +2 points par graine sans rare, jusqu'à 70 %. Retour à 25 % dès qu'une
+                rare sort.
+              </div>
+            </div>
+            <div class="panel muted" style="font-size: 11px">
+              Prochain sachet à minuit<br />2 en attente (7 au maximum)
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A &mdash; Établi</h3>
+      <p>
+        Panneaux sombres à liseré doré, comme le Champ. Le sachet occupe le centre sur un halo de
+        lumière, les jauges tiennent dans une colonne à droite. L'ouverture a de la place pour
+        respirer.
+      </p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="carnet" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 0; background: #120d10">
+      <div class="gd dark" style="padding: 0 0 14px">
+        <div class="tabs">
+          <div class="tab">Champ</div>
+          <div class="tab">Herbier</div>
+          <div class="tab on">Sachets<span class="pill">2</span></div>
+        </div>
+        <div style="padding: 16px">
+          <div
+            class="paper gd"
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; padding: 16px"
+          >
+            <div
+              style="
+                border-right: 1px dashed #6a4428;
+                padding-right: 16px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+              "
+            >
+              <div style="font-size: 17px">Sachet du jour</div>
+              <div class="pack">Graines mêlées</div>
+              <button
+                style="
+                  border: 1px solid #6a4428;
+                  background: #d8c49a;
+                  color: #3a2418;
+                  border-radius: 8px;
+                  padding: 5px 16px;
+                  font-size: 13px;
+                "
+                class="gd"
+              >
+                Ouvrir
+              </button>
+              <div style="display: flex; gap: 10px">
+                <div class="seed" style="color: #8a7a5a; background: #d6c39c">&#9679;</div>
+                <div class="seed" style="color: #2f6ea8; background: #d6c39c">&#9679;</div>
+                <div class="seed" style="color: #a8741a; background: #d6c39c">&#9679;</div>
+              </div>
+              <div style="font-size: 11px; opacity: 0.75">
+                2 en attente &middot; prochain à minuit
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 14px">
+              <div style="font-size: 17px">Notes du semencier</div>
+              <div>
+                <div style="font-size: 13px; margin-bottom: 5px">
+                  Chance de nouveauté &mdash; 31 %
+                </div>
+                <div class="pbar"><div class="pfill" style="width: 33%"></div></div>
+                <div style="font-size: 11px; opacity: 0.8; margin-top: 4px">
+                  +2 points par graine sans nouveauté, jusqu'à 75 %. Retour à 25 % dès qu'une fleur
+                  inconnue sort.
+                </div>
+              </div>
+              <div>
+                <div style="font-size: 13px; margin-bottom: 5px">
+                  Chance de rare ou mieux &mdash; 27 %
+                </div>
+                <div class="pbar"><div class="pfill" style="width: 27%"></div></div>
+                <div style="font-size: 11px; opacity: 0.8; margin-top: 4px">
+                  +2 points par graine sans rare, jusqu'à 70 %. Retour à 25 % dès qu'une rare sort.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B &mdash; Carnet du semencier</h3>
+      <p>
+        Le même carnet de papier que l'Herbier : page de gauche le sachet, page de droite les règles
+        écrites à la main. Cohérent avec l'onglet voisin, mais le papier clair éteint les effets de
+        rareté (halo, lueur dorée) qui font tout le sel de l'ouverture.
+      </p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="colonne" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 0; background: #120d10">
+      <div class="gd dark" style="padding: 0 0 14px">
+        <div class="tabs">
+          <div class="tab">Champ</div>
+          <div class="tab">Herbier</div>
+          <div class="tab on">Sachets<span class="pill">2</span></div>
+        </div>
+        <div style="padding: 16px; display: flex; justify-content: center">
+          <div
+            style="
+              width: 340px;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 12px;
+            "
+          >
+            <div class="pack">Sachet du jour</div>
+            <div class="muted" style="font-size: 11px">2 en attente &middot; prochain à minuit</div>
+            <button
+              style="
+                border: 1px solid rgba(252, 211, 77, 0.5);
+                background: rgba(252, 211, 77, 0.12);
+                color: #f3dca0;
+                border-radius: 8px;
+                padding: 6px 18px;
+                font-size: 13px;
+              "
+              class="gd"
+            >
+              Ouvrir
+            </button>
+            <div style="display: flex; gap: 12px">
+              <div class="seed" style="color: #d6cdbf">&#9679;</div>
+              <div class="seed" style="color: #6db6f0">&#9679;</div>
+              <div
+                class="seed"
+                style="
+                  color: #f3c34a;
+                  box-shadow:
+                    inset 0 0 0 2px currentColor,
+                    0 0 18px rgba(243, 195, 74, 0.55);
+                "
+              >
+                &#9679;
+              </div>
+            </div>
+            <div class="panel" style="width: 100%">
+              <div style="display: flex; justify-content: space-between; font-size: 12px">
+                <span class="gold gd">Nouveauté</span><span class="muted">31 %</span>
+              </div>
+              <div class="bar" style="margin-top: 5px">
+                <div class="fill" style="width: 33%"></div>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  font-size: 12px;
+                  margin-top: 10px;
+                "
+              >
+                <span class="gold gd">Rare ou mieux</span><span class="muted">27 %</span>
+              </div>
+              <div class="bar" style="margin-top: 5px">
+                <div class="fill" style="width: 27%"></div>
+              </div>
+              <div class="muted" style="font-size: 10px; margin-top: 8px">
+                +2 points par graine sans, retour à 25 % dès qu'elle sort. <u>Détail</u>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C &mdash; Colonne centrée</h3>
+      <p>
+        Tout empilé dans une colonne étroite, les jauges réduites à deux barres avec le détail
+        replié. Sobre et vite fait, mais les règles disparaissent derrière un lien, ce qui va contre
+        le "pity visible" de la vision.
+      </p>
+    </div>
+  </div>
+</div>
