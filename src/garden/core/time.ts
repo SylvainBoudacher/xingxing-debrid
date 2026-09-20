@@ -3,6 +3,12 @@ import type { Interval } from "./types";
 export const HOUR = 3_600_000;
 export const DAY = 24 * HOUR;
 
+export function startOfDay(t: number): number {
+  const d = new Date(t);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
 export function mergeIntervals(list: Interval[]): Interval[] {
   const sorted = list.filter((i) => i.end > i.start).sort((a, b) => a.start - b.start);
   const out: Interval[] = [];
