@@ -6,7 +6,7 @@ import { withDemoPlants } from "../core/demo";
 import { planMove } from "../core/move";
 import { HOUR } from "../core/time";
 import { isMovable } from "../core/tiles";
-import type { GardenSave, TileKey } from "../core/types";
+import type { GardenSave, Rarity, TileKey } from "../core/types";
 import { isRaining } from "../core/weather";
 import { createGardenScene, type GardenScene } from "../render/createGardenScene";
 import type { PickResult } from "../render/picking";
@@ -45,6 +45,7 @@ export function FieldView({
   const down = useRef<Pointer | null>(null);
   const drag = useRef<{ from: TileKey; to: TileKey | null; reason: string | null } | null>(null);
   const [tool, setTool] = useState<Tool>("main");
+  const [seedRarity, setSeedRarity] = useState<Rarity | null>(null);
   const [dragging, setDragging] = useState(false);
   const [devTod, setDevTod] = useState<Tod | null>(null);
   // un geste est postérieur au dernier tick : la vue doit le voir tout de suite
@@ -82,7 +83,8 @@ export function FieldView({
   }, [flash]);
 
   // vue dérivée à chaque rendu : suit la sauvegarde, l'outil et l'heure
-  const view = hover?.pick && !dragging ? describeTarget(save, hover.pick.target, tool, at) : null;
+  const view =
+    hover?.pick && !dragging ? describeTarget(save, hover.pick.target, tool, at, seedRarity) : null;
   const shown = view && !(view.info.kind === "grass" && !view.plan) ? view : null;
 
   useEffect(() => {
@@ -166,7 +168,7 @@ export function FieldView({
     }
     if (!start?.pick) return;
     const t = Date.now();
-    const plan = planAction(save, start.pick.target, tool, t);
+    const plan = planAction(save, start.pick.target, tool, t, { seedRarity });
     if (!plan?.ok) return;
     const out = plan.apply();
     setActedAt(t);
@@ -195,6 +197,8 @@ export function FieldView({
       <SidePanel
         save={save}
         raining={isRaining(at)}
+        seedRarity={seedRarity}
+        onSeedRarity={setSeedRarity}
         onPress={(index) => dispatch({ type: "press", index, now: Date.now(), rng: Math.random })}
       />
       {shown && hover && <TileTooltip x={hover.x} y={hover.y} view={shown} />}
