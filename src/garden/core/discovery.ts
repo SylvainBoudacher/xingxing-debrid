@@ -4,6 +4,16 @@ import { rainIntervals, type RainSource } from "./weather";
 
 export const entryId = (species: SpeciesId, color: ColorId): string => `${species}:${color}`;
 
+// Une entrée déjà tenue en graine ou déjà en terre ne doit pas ressortir comme
+// nouveauté : on gaspillerait une remise à zéro de la jauge sans que ça se voie.
+export function knownEntries(save: GardenSave): Set<string> {
+  const known = new Set(Object.keys(save.herbier));
+  for (const seed of save.inventory.seeds) known.add(entryId(seed.species, seed.color));
+  for (const tile of Object.values(save.tiles))
+    if (tile?.kind === "plant") known.add(entryId(tile.seed.species, tile.seed.color));
+  return known;
+}
+
 export function collectDiscoveries(
   save: GardenSave,
   now: number,

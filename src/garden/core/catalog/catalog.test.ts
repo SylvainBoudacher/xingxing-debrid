@@ -3,7 +3,15 @@ import { COLOR_RAMP } from "../../sprites/colorRamps";
 import { PAL } from "../../sprites/palette";
 import { SPECIES_DRAW } from "../../sprites/species/index";
 import { COLORS } from "./colors";
-import { CATALOG_ENTRIES, harvestTool, isSpeciesId, rarityOf, SPECIES, speciesOf } from "./species";
+import {
+  CATALOG_ENTRIES,
+  entriesOfRarity,
+  harvestTool,
+  isSpeciesId,
+  rarityOf,
+  SPECIES,
+  speciesOf,
+} from "./species";
 
 describe("catalogue", () => {
   it("65 entrées, 26 / 18 / 11 / 10", () => {
@@ -43,5 +51,20 @@ describe("catalogue", () => {
     expect(rarityOf("dahlia", "lilac")).toBeNull();
     expect(isSpeciesId("sedum")).toBe(true);
     expect(isSpeciesId("pissenlit")).toBe(false);
+  });
+});
+
+describe("entriesOfRarity", () => {
+  it("répartit les 65 entrées en 26 / 18 / 11 / 10", () => {
+    expect(entriesOfRarity("commune")).toHaveLength(26);
+    expect(entriesOfRarity("rare")).toHaveLength(18);
+    expect(entriesOfRarity("epique")).toHaveLength(11);
+    expect(entriesOfRarity("legendaire")).toHaveLength(10);
+    expect(entriesOfRarity("commune").every((e) => e.rarity === "commune")).toBe(true);
+  });
+
+  it("l'index couvre exactement le catalogue", () => {
+    const total = (["commune", "rare", "epique", "legendaire"] as const).flatMap(entriesOfRarity);
+    expect(total).toHaveLength(CATALOG_ENTRIES.length);
   });
 });

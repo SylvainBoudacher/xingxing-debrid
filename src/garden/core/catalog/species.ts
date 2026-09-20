@@ -225,3 +225,16 @@ export const rarityOf = (species: SpeciesId, color: ColorId): Rarity | null =>
 export const CATALOG_ENTRIES = SPECIES.flatMap((s) =>
   s.colors.map(({ color, rarity }) => ({ species: s.id as SpeciesId, color, rarity })),
 );
+
+export interface CatalogEntry {
+  species: SpeciesId;
+  color: ColorId;
+  rarity: Rarity;
+}
+
+const BY_RARITY = CATALOG_ENTRIES.reduce<Record<string, CatalogEntry[]>>((acc, e) => {
+  (acc[e.rarity] ??= []).push(e);
+  return acc;
+}, {});
+
+export const entriesOfRarity = (rarity: Rarity): CatalogEntry[] => BY_RARITY[rarity] ?? [];

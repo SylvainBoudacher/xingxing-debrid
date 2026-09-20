@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collectDiscoveries, entryId } from "./discovery";
+import { collectDiscoveries, entryId, knownEntries } from "./discovery";
 import { createStarterSave } from "./starter";
 import { HOUR } from "./time";
 import type { GardenSave, Interval, PlantTile, Seed } from "./types";
@@ -73,5 +73,33 @@ describe("collectDiscoveries", () => {
     const out = collectDiscoveries(s, NOW, noRain);
     expect(out.found).toEqual([{ ...cosmos, variant: "givree" }]);
     expect(out.save.herbier["cosmos:pink"].variants).toEqual(["givree"]);
+  });
+});
+
+describe("knownEntries", () => {
+  it("réunit l'Herbier, les graines en inventaire et les plantes en terre", () => {
+    const base = createStarterSave();
+    const save: GardenSave = {
+      ...base,
+      herbier: { "aster:violet": { discoveredAt: 1, pressed: 0, variants: [] } },
+      inventory: {
+        ...base.inventory,
+        seeds: [{ species: "dahlia", color: "red", rarity: "commune" }],
+      },
+      tiles: {
+        ...base.tiles,
+        "1,1": {
+          kind: "plant",
+          seed: { species: "cosmos", color: "white", rarity: "commune" },
+          sownAt: 0,
+          watered: [],
+        },
+      },
+    };
+    const known = knownEntries(save);
+    expect(known.has("aster:violet")).toBe(true);
+    expect(known.has("dahlia:red")).toBe(true);
+    expect(known.has("cosmos:white")).toBe(true);
+    expect(known.has("tournesol:yellow")).toBe(false);
   });
 });
