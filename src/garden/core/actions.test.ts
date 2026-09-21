@@ -3,7 +3,7 @@ import { planAction, type Plan, type Target, type Tool } from "./actions";
 import { WATER_MS } from "./growth";
 import { createStarterSave } from "./starter";
 import { HOUR } from "./time";
-import type { GardenSave, Interval, PlantTile, Rarity, Seed, SpeciesId } from "./types";
+import type { DecorId, GardenSave, Interval, PlantTile, Rarity, Seed, SpeciesId } from "./types";
 
 const noRain = (): Interval[] => [];
 const NOW = new Date(2026, 9, 1, 12).getTime();
@@ -26,7 +26,7 @@ function plan(
   s: GardenSave,
   target: Target,
   tool: Tool,
-  opts: { rng?: () => number; seedRarity?: Rarity | null } = {},
+  opts: { rng?: () => number; seedRarity?: Rarity | null; decor?: DecorId | null } = {},
 ): Plan | null {
   return planAction(s, target, tool, NOW, { rng: () => 0.99, rain: noRain, ...opts });
 }
@@ -191,10 +191,9 @@ describe("corbeau et limites", () => {
     },
   );
 
-  it("aucune action hors de la grille, ni main sur du décor", () => {
+  it("aucune action hors de la grille ni sur une case vide", () => {
     const s = withTiles({ "0,1": { kind: "decor", id: "lanterne" } });
     expect(plan(s, tile("12,0"), "creuser")).toBeNull();
-    expect(plan(s, tile("0,1"), "main")).toBeNull();
     expect(plan(s, tile("0,0"), "main")).toBeNull();
   });
 
@@ -245,5 +244,57 @@ describe("semer une rareté choisie", () => {
     const base = withHole();
     const empty = { ...base, inventory: { ...base.inventory, seeds: [] } };
     expect(refused(plan(empty, tile("1,1"), "semer"))).toBe("plus de graines");
+  });
+});
+
+describe("décor", () => {
+  const withDecor = (
+    decor: Partial<Record<DecorId, number>>,
+    tiles: GardenSave["tiles"] = {},
+  ): GardenSave => {
+    const s = withTiles(tiles);
+    return { ...s, inventory: { ...s.inventory, decor } };
+  };
+
+  it("pose le décor choisi sur une case libre hors de la terre", () => {
+    const s = withDecor({ citrouille: 2 });
+    const out = run(plan(s, tile("4,0"), "decor", { decor: "citrouille" }));
+    expect(out.save.tiles["4,0"]).toEqual({ kind: "decor", id: "citrouille" });
+    expect(out.save.inventory.decor.citrouille).toBe(1);
+  });
+
+  it("refuse sans sélection, sur une case occupée ou sur la terre", () => {
+    const s = withDecor({ citrouille: 1 }, { "4,0": { kind: "leaves", since: 0 } });
+    expect(refused(plan(s, tile("3,0"), "decor"))).toBe("choisis un décor dans le panneau");
+    expect(refused(plan(s, tile("4,0"), "decor", { decor: "citrouille" }))).toBe(
+      "il y a déjà quelque chose ici",
+    );
+    expect(refused(plan(s, tile("1,1"), "decor", { decor: "citrouille" }))).toBe(
+      "pas sur la terre d'une parcelle",
+    );
+  });
+
+  it("refuse un décor qu'on ne possède plus", () => {
+    expect(
+      refused(plan(withDecor({ citrouille: 0 }), tile("4,0"), "decor", { decor: "citrouille" })),
+    ).toBe("il ne t'en reste plus");
+  });
+
+  it("ne plante un arbre qu'en bordure du champ", () => {
+    const s = withDecor({ arbre: 2 });
+    expect(refused(plan(s, tile("7,2"), "decor", { decor: "arbre" }))).toBe(
+      "un arbre ne se plante qu'en bordure du champ",
+    );
+    expect(plan(s, tile("4,0"), "decor", { decor: "arbre" })?.ok).toBe(true);
+    expect(plan(s, tile("0,2"), "decor", { decor: "arbre" })?.ok).toBe(true);
+  });
+
+  it("la main range un décor posé dans l'inventaire", () => {
+    const s = withDecor({}, { "4,0": { kind: "decor", id: "lanterne" } });
+    const p = plan(s, tile("4,0"), "main");
+    expect(p).toMatchObject({ ok: true, label: "Ranger la lanterne" });
+    const out = run(p);
+    expect(out.save.tiles["4,0"]).toBeUndefined();
+    expect(out.save.inventory.decor.lanterne).toBe(1);
   });
 });

@@ -1,16 +1,25 @@
 import { bump } from "./counters";
 import { growthOf, WATER_MS } from "./growth";
-import { flowerName, pickedWord } from "./labels";
-import { isInField, isSoil } from "./plots";
+import { DECOR_LE, flowerName, pickedWord } from "./labels";
+import { fieldRect, isInField, isSoil } from "./plots";
 import { rollPickSeed, type Rng } from "./rolls";
 import { harvestTool } from "./catalog/species";
 import { setTile } from "./tiles";
 import { mergeIntervals } from "./time";
-import type { Flower, GardenSave, PlantTile, Rarity, Seed, TileKey } from "./types";
+import {
+  parseTileKey,
+  type DecorId,
+  type Flower,
+  type GardenSave,
+  type PlantTile,
+  type Rarity,
+  type Seed,
+  type TileKey,
+} from "./types";
 import { rainIntervals, type RainSource } from "./weather";
 
-export type Tool = "main" | "creuser" | "semer" | "arroser" | "secateur" | "rateau";
-export const TOOLS: Tool[] = ["main", "creuser", "semer", "arroser", "secateur", "rateau"];
+export type Tool = "main" | "creuser" | "semer" | "arroser" | "secateur" | "rateau" | "decor";
+export const TOOLS: Tool[] = ["main", "creuser", "semer", "arroser", "secateur", "rateau", "decor"];
 
 export type Target = { kind: "tile"; key: TileKey } | { kind: "crow"; id: string };
 export type Particle = "dirt" | "water" | "leaves" | "petals" | "feathers";
@@ -35,6 +44,14 @@ export interface PlanOptions {
   rng?: Rng;
   rain?: RainSource;
   seedRarity?: Rarity | null;
+  decor?: DecorId | null;
+}
+
+// L'arbre est haut et large : il masquerait le champ s'il était planté au milieu.
+function onBorder(plots: GardenSave["plots"], key: TileKey): boolean {
+  const f = fieldRect(plots);
+  const [x, y] = parseTileKey(key);
+  return x === f.x || y === f.y || x === f.x + f.w - 1 || y === f.y + f.h - 1;
 }
 
 // La plus ancienne graine de la rareté demandée, sinon la plus ancienne tout court.
@@ -54,7 +71,7 @@ export function planAction(
   now: number,
   opts: PlanOptions = {},
 ): Plan | null {
-  const { rng = Math.random, rain = rainIntervals, seedRarity = null } = opts;
+  const { rng = Math.random, rain = rainIntervals, seedRarity = null, decor = null } = opts;
   if (target.kind === "crow")
     return yes("Chasser", () => ({
       save: bump(save, "crowsChased"),
@@ -106,9 +123,35 @@ export function planAction(
         effects: [burst(key, "leaves")],
       }));
 
+    case "decor": {
+      if (!decor) return no("Décor", "choisis un décor dans le panneau");
+      if ((save.inventory.decor[decor] ?? 0) <= 0) return no("Décor", "il ne t'en reste plus");
+      if (tile) return no("Décor", "il y a déjà quelque chose ici");
+      if (soil) return no("Décor", "pas sur la terre d'une parcelle");
+      if (decor === "arbre" && !onBorder(save.plots, key))
+        return no("Décor", "un arbre ne se plante qu'en bordure du champ");
+      return yes(`Poser ${DECOR_LE[decor]}`, () => {
+        const left = { ...save.inventory.decor, [decor]: save.inventory.decor[decor] - 1 };
+        const next = { ...save, inventory: { ...save.inventory, decor: left } };
+        return { save: setTile(next, key, { kind: "decor", id: decor }), effects: [] };
+      });
+    }
+
     case "main":
     case "secateur": {
       const cut = tool === "secateur";
+      if (!cut && tile?.kind === "decor")
+        return yes(`Ranger ${DECOR_LE[tile.id]}`, () => {
+          const decors = save.inventory.decor;
+          const next = {
+            ...save,
+            inventory: {
+              ...save.inventory,
+              decor: { ...decors, [tile.id]: (decors[tile.id] ?? 0) + 1 },
+            },
+          };
+          return { save: setTile(next, key, undefined), effects: [] };
+        });
       if (tile?.kind === "leaves")
         return cut ? no("Couper", "rien à couper ici") : no("Ramasser", "prends le râteau");
       const g = tile?.kind === "plant" ? growthOf(tile, now, rain) : null;

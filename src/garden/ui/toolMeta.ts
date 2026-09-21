@@ -9,6 +9,7 @@ export const TOOL_META: Record<Tool, { label: string; icon: SpriteRef }> = {
   arroser: { label: "Arroser", icon: { name: "arrosoir" } },
   secateur: { label: "Sécateur", icon: { name: "secateur" } },
   rateau: { label: "Râteau", icon: { name: "rateau" } },
+  decor: { label: "Décor", icon: { name: "lanterne" } },
 };
 
 export const RARITY_COLOR: Record<Rarity, string> = {

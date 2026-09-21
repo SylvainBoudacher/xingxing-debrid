@@ -25,6 +25,15 @@ export const DECOR_FR: Record<DecorId, string> = {
   arbre: "Arbre",
 };
 
+// Avec l'article, pour les libellés d'action ("Ranger la lanterne").
+export const DECOR_LE: Record<DecorId, string> = {
+  lanterne: "la lanterne",
+  citrouille: "la citrouille",
+  paille: "la botte de paille",
+  cloture: "le segment de clôture",
+  arbre: "l'arbre",
+};
+
 export function flowerName(f: { species: SpeciesId; color: ColorId }): string {
   if (!isSpeciesId(f.species)) return "Fleur inconnue";
   const s = speciesOf(f.species);

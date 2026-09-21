@@ -20,11 +20,11 @@ describe("describeTarget", () => {
     expect(toneOf(no)).toBe("no");
   });
 
-  it("la Main sur du décor propose le déplacement", () => {
+  it("la Main sur du décor le range et le laisse déplaçable", () => {
     const v = describeTarget(s, { kind: "tile", key: "0,1" }, "main", NOW);
-    expect(v.plan).toBeNull();
+    expect(v.plan).toMatchObject({ ok: true, label: "Ranger la lanterne" });
     expect(v.movable).toBe(true);
-    expect(toneOf(v)).toBe("info");
+    expect(toneOf(v)).toBe("ok");
     expect(describeTarget(s, { kind: "tile", key: "0,1" }, "arroser", NOW).movable).toBe(false);
   });
 
