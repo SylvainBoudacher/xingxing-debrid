@@ -7,10 +7,12 @@ import { vinePath } from "./vines";
 export function TreeView({
   save,
   selected,
+  blooming,
   onSelect,
 }: {
   save: GardenSave;
   selected: NodeId;
+  blooming: NodeId | null;
   onSelect: (id: NodeId) => void;
 }) {
   return (
@@ -42,6 +44,7 @@ export function TreeView({
             state={stateOf(save, n)}
             ratio={Math.min(1, value / target)}
             selected={n.id === selected}
+            blooming={n.id === blooming}
             onSelect={() => onSelect(n.id)}
           />
         );

@@ -1183,7 +1183,7 @@ export const PATCH_NOTES: PatchNote[] = [
         items: [
           "L'application vérifie désormais automatiquement si une nouvelle version est disponible à chaque démarrage.",
           "Une notification discrète apparaît en haut de l'interface lorsqu'une mise à jour est prête à être installée - rien de forcé, vous choisissez quand installer.",
-          "Le téléchargement et l'installation se font en arrière-plan. Une fois termine, l'application vous propose de redémarrer pour appliquer la mise à jour.",
+          "Le téléchargement et l'installation se font en arrière-plan. Une fois terminé, l'application vous propose de redémarrer pour appliquer la mise à jour.",
           "Plus besoin de télécharger manuellement le programme d'installation : tout se passe depuis l'intérieur de l'application.",
         ],
       },

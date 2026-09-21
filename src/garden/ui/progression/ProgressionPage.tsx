@@ -15,18 +15,23 @@ export function ProgressionPage({
   onDeposit: (id: NodeId, species: SpeciesId) => void;
 }) {
   const [selected, setSelected] = useState<NodeId>("root");
+  // le nœud qui vient d'être récupéré : son bouton éclot une fois
+  const [blooming, setBlooming] = useState<NodeId | null>(null);
   const node = nodeById(selected) ?? nodeById("root")!;
   return (
     <div className="flex flex-1 flex-col overflow-auto">
       <SummaryBar save={save} />
       <div className="flex flex-1 gap-4 p-5">
         <div className="flex flex-1 items-center justify-center rounded-xl bg-[radial-gradient(60%_60%_at_50%_60%,rgba(143,207,90,.08),transparent)]">
-          <TreeView save={save} selected={selected} onSelect={setSelected} />
+          <TreeView save={save} selected={selected} blooming={blooming} onSelect={setSelected} />
         </div>
         <NodeDetail
           save={save}
           node={node}
-          onClaim={() => onClaim(node.id)}
+          onClaim={() => {
+            onClaim(node.id);
+            setBlooming(node.id);
+          }}
           onDeposit={(species) => onDeposit(node.id, species)}
         />
       </div>

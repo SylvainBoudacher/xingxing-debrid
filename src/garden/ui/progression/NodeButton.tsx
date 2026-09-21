@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import { BRANCHES, type TreeNode } from "../../core/catalog/tree";
 import type { NodeState } from "../../core/progression";
 import { SpriteIcon } from "../SpriteIcon";
@@ -10,12 +11,14 @@ export function NodeButton({
   state,
   ratio,
   selected,
+  blooming,
   onSelect,
 }: {
   node: TreeNode;
   state: NodeState;
   ratio: number;
   selected: boolean;
+  blooming: boolean;
   onSelect: () => void;
 }) {
   const color = BRANCHES[node.branch].color;
@@ -32,12 +35,14 @@ export function NodeButton({
       } ${ready ? "animate-pulse" : ""}`}
       style={{ left: `${node.x / 10}%`, top: `${node.y / 6.4}%` }}
     >
-      <span
+      <motion.span
         className="relative flex size-12 items-center justify-center rounded-full"
         style={{
           background: done ? `${color}22` : "#1a1216cc",
           boxShadow: `inset 0 0 0 2px ${done || ready ? color : "#5a4a3a"}`,
         }}
+        animate={blooming ? { scale: [0.5, 1.25, 1], rotate: [-14, 6, 0] } : { scale: 1 }}
+        transition={{ duration: blooming ? 0.7 : 0.2 }}
       >
         <SpriteIcon
           sprite={locked ? { name: "graine", color: "cream" } : node.icon}
@@ -58,7 +63,7 @@ export function NodeButton({
             />
           </svg>
         )}
-      </span>
+      </motion.span>
     </button>
   );
 }
