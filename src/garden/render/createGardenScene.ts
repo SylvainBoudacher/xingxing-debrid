@@ -1,9 +1,11 @@
 import * as THREE from "three";
 import { spawnLeaves } from "../core/leaves";
+import { fieldRect } from "../core/plots";
 import type { GardenSave, PlotId, TileKey } from "../core/types";
 import { spriteCanvas } from "../sprites/sprite";
 import { createAmbience } from "./ambience";
 import { createBillboards } from "./billboards";
+import { framing, VIEWS, type SceneProfile } from "./framing";
 import { createGround } from "./ground";
 import { createInteraction, type GardenInteraction } from "./interaction";
 import { createLighting } from "./lighting";
@@ -11,8 +13,6 @@ import { createPost } from "./post";
 import { buildSceneModel, diffItems, type SceneItem } from "./sceneModel";
 import { todOf, type Tod } from "./tod";
 import { wx, wz } from "./world";
-
-export type SceneProfile = "backdrop" | "garden";
 
 export interface GardenScene {
   start(): void;
@@ -29,14 +29,6 @@ export interface GardenScene {
 
 const FRAME_MS = 1000 / 30;
 
-const VIEWS: Record<
-  SceneProfile,
-  { y: number; z: number; look: [number, number, number]; parallax: number }
-> = {
-  backdrop: { y: 6.2, z: 11.5, look: [0, 0.9, -0.6], parallax: 0 },
-  garden: { y: 7.4, z: 11.8, look: [0.9, 0.2, 0.6], parallax: 0.6 },
-};
-
 const TREES: [number, number][] = [
   [-3.2, -3.3],
   [-0.6, -3.9],
@@ -49,7 +41,8 @@ const TREES: [number, number][] = [
 
 // Scène HD-2D : sprites pixel art debout dans une scène 3D éclairée, bridée à 30 images/s.
 export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfile): GardenScene {
-  const view = VIEWS[profile];
+  const base = VIEWS[profile];
+  let view = framing(base, fieldRect(["p1"]));
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
   renderer.setPixelRatio(Math.min(2, devicePixelRatio));
   renderer.shadowMap.enabled = true;
@@ -59,6 +52,10 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(28, 16 / 9, 0.1, 100);
   const look = new THREE.Vector3(...view.look);
+  const reframe = (plots: PlotId[]) => {
+    view = framing(base, fieldRect(plots));
+    look.set(...view.look);
+  };
 
   const ground = createGround(scene);
   const billboards = createBillboards(scene);
@@ -71,7 +68,7 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
       : undefined;
 
   const fence = spriteCanvas({ name: "cloture" });
-  for (let tx = -2; tx < 10; tx++)
+  for (let tx = -2; tx < 15; tx++)
     billboards.addStatic(fence, wx(tx), wz(-1) + 0.2, 1, 1.5, false, 0);
   const tree = spriteCanvas({ name: "arbre" });
   TREES.forEach(([x, z], i) => billboards.addStatic(tree, x, z, 3, 4.5, true, i));
@@ -105,6 +102,7 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
 
   function sync(save: GardenSave, now: number) {
     // idempotent : le fond passif affiche les mêmes tas que le Potager sans écrire
+    if (save.plots.length !== plots.length) reframe(save.plots);
     plots = save.plots;
     const model = buildSceneModel(spawnLeaves(save, now), now);
     const { remove, add } = diffItems(shown, model.items);
