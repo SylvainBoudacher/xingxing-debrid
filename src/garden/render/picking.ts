@@ -28,32 +28,51 @@ function opaqueAt(canvas: HTMLCanvasElement, uv: THREE.Vector2): boolean {
   return data[(py * canvas.width + px) * 4 + 3] > 0;
 }
 
+export interface GroundProbe {
+  // le rayon reste celui du dernier appel à at() : les sprites se testent dessus
+  readonly ray: THREE.Raycaster;
+  at(clientX: number, clientY: number): { key: TileKey; x: number; z: number } | null;
+}
+
+// Point du sol sous le curseur : la seule conversion écran -> monde de la scène.
+export function createGroundProbe(camera: THREE.Camera, canvas: HTMLCanvasElement): GroundProbe {
+  const ray = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const hit = new THREE.Vector3();
+
+  return {
+    ray,
+    at(clientX, clientY) {
+      const r = canvas.getBoundingClientRect();
+      ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      if (!ray.ray.intersectPlane(floor, hit)) return null;
+      return {
+        key: tileKey(Math.floor(hit.x - WORLD.X0), Math.floor(hit.z + 2)),
+        x: hit.x,
+        z: hit.z,
+      };
+    },
+  };
+}
+
 export function createPicker(
   camera: THREE.Camera,
   canvas: HTMLCanvasElement,
   plotsOf: () => PlotId[],
 ) {
-  const ray = new THREE.Raycaster();
-  const ndc = new THREE.Vector2();
-  const floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-  const hit = new THREE.Vector3();
+  const probe = createGroundProbe(camera, canvas);
 
   return function pickAt(
     clientX: number,
     clientY: number,
     pickables: Pickable[],
   ): PickResult | null {
-    const r = canvas.getBoundingClientRect();
-    ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
-    ray.setFromCamera(ndc, camera);
-
-    const onFloor = ray.ray.intersectPlane(floor, hit);
-    const ground = onFloor
-      ? { key: tileKey(Math.floor(hit.x - WORLD.X0), Math.floor(hit.z + 2)), x: hit.x, z: hit.z }
-      : null;
+    const ground = probe.at(clientX, clientY);
 
     const meshes = pickables.map((p) => p.mesh);
-    for (const h of ray.intersectObjects(meshes, false)) {
+    for (const h of probe.ray.intersectObjects(meshes, false)) {
       const canvasOf = h.object.userData.canvas as HTMLCanvasElement | undefined;
       if (!h.uv || !canvasOf || !opaqueAt(canvasOf, h.uv)) continue;
       return { target: pickables[meshes.indexOf(h.object as THREE.Mesh)].target, ground };

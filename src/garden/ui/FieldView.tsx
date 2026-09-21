@@ -14,9 +14,11 @@ import type { Tod } from "../render/tod";
 import type { GardenAction } from "./gardenReducer";
 import { GardenDevBar } from "./GardenDevBar";
 import { describeTarget, toneOf } from "./hover";
+import { RecenterButton } from "./RecenterButton";
 import { SidePanel } from "./SidePanel";
 import { TileTooltip } from "./TileTooltip";
 import { ToolBar } from "./ToolBar";
+import { useCameraControls } from "./useCameraControls";
 import { useCrows } from "./useCrows";
 
 const DRAG_PX = 6;
@@ -55,6 +57,7 @@ export function FieldView({
   const [hover, setHover] = useState<Pointer | null>(null);
   const [flash, setFlash] = useState<{ x: number; y: number; text: string } | null>(null);
   const { spawn } = useCrows(sceneRef, saveRef, active);
+  const { panning, moved, recenter } = useCameraControls(canvasRef, sceneRef, active);
   const hasDecor = Object.values(save.inventory.decor).some((n) => n > 0);
   const tools = hasDecor ? TOOLS : TOOLS.filter((t) => t !== "decor");
 
@@ -87,7 +90,7 @@ export function FieldView({
 
   // vue dérivée à chaque rendu : suit la sauvegarde, l'outil et l'heure
   const view =
-    hover?.pick && !dragging
+    hover?.pick && !dragging && !panning
       ? describeTarget(save, hover.pick.target, tool, at, { seedRarity, decor: decorId })
       : null;
   const shown = view && !(view.info.kind === "grass" && !view.plan) ? view : null;
@@ -117,7 +120,7 @@ export function FieldView({
 
   function onPointerMove(e: PointerEvent<HTMLCanvasElement>) {
     const interaction = sceneRef.current?.interaction;
-    if (!interaction) return;
+    if (!interaction || panning) return;
     const pos = local(e);
     const start = down.current;
     const startKey = start?.pick?.target.kind === "tile" ? start.pick.target.key : null;
@@ -149,6 +152,8 @@ export function FieldView({
 
   function onPointerDown(e: PointerEvent<HTMLCanvasElement>) {
     const interaction = sceneRef.current?.interaction;
+    // le clic droit cadre la caméra : l'infobulle du survol n'a plus rien à dire
+    if (e.button === 2) setHover(null);
     if (!interaction || e.button !== 0) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     down.current = { ...local(e), pick: interaction.pickAt(e.clientX, e.clientY) };
@@ -193,7 +198,7 @@ export function FieldView({
       <canvas
         ref={canvasRef}
         className="absolute inset-0 h-full w-full"
-        style={{ cursor: dragging ? "grabbing" : cursor }}
+        style={{ cursor: dragging ? "grabbing" : panning ? "move" : cursor }}
         onPointerMove={onPointerMove}
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
@@ -219,6 +224,7 @@ export function FieldView({
         </div>
       )}
       <ToolBar tools={tools} tool={tool} onSelect={setTool} />
+      {moved && <RecenterButton onClick={recenter} />}
       {import.meta.env.DEV && (
         <GardenDevBar
           tod={devTod}

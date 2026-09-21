@@ -5,10 +5,12 @@ import type { GardenSave, PlotId, TileKey } from "../core/types";
 import { spriteCanvas } from "../sprites/sprite";
 import { createAmbience } from "./ambience";
 import { createBillboards } from "./billboards";
+import { createCameraRig, type CameraRig } from "./camera";
 import { framing, VIEWS, type SceneProfile } from "./framing";
 import { createGround } from "./ground";
 import { createInteraction, type GardenInteraction } from "./interaction";
 import { createLighting } from "./lighting";
+import { createGroundProbe } from "./picking";
 import { createPost } from "./post";
 import { buildSceneModel, diffItems, type SceneItem } from "./sceneModel";
 import { todOf, type Tod } from "./tod";
@@ -23,11 +25,26 @@ export interface GardenScene {
   renderOnce(): void;
   dispose(): void;
   readonly interaction?: GardenInteraction;
+  readonly camera?: GardenCamera;
   // force une ambiance (outil de développement) ; null = heure réelle
   setTod(tod: Tod | null): void;
 }
 
+// Commandes de cadrage manuel exposées à l'interface (fenêtre Potager seulement).
+export interface GardenCamera {
+  // (dx, dz) en unités monde : ce que la sonde de sol a mesuré sous le curseur
+  pan(dx: number, dz: number): void;
+  zoomBy(delta: number): void;
+  // direction clavier appliquée à chaque image tant qu'une touche est tenue
+  setNudge(dir: { x: number; z: number } | null): void;
+  reset(): void;
+  groundAt(clientX: number, clientY: number): { x: number; z: number } | null;
+  readonly moved: boolean;
+}
+
+// 30 images/s suffisent à un décor qui respire ; un cadrage qui se déplace à 30 saute.
 const FRAME_MS = 1000 / 30;
+const MOVING_FRAME_MS = 1000 / 60;
 
 const TREES: [number, number][] = [
   [-3.2, -3.3],
@@ -57,9 +74,11 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
   const billboards = createBillboards(scene);
   const ambience = createAmbience(scene);
   const lighting = createLighting(scene);
+  const rig: CameraRig = createCameraRig(view, fieldRect(["p1"]));
   const reframe = (plots: PlotId[]) => {
-    view = framing(base, fieldRect(plots));
-    look.set(...view.look);
+    const rect = fieldRect(plots);
+    view = framing(base, rect);
+    rig.setFrame(view, rect);
     lighting.setScale(view.scale);
   };
   const post = createPost(renderer, scene, camera);
@@ -67,6 +86,20 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
     profile === "garden"
       ? createInteraction(scene, camera, canvas, billboards, () => plots)
       : undefined;
+  const probe = profile === "garden" ? createGroundProbe(camera, canvas) : undefined;
+  let nudge: { x: number; z: number } | null = null;
+  const controls: GardenCamera | undefined = probe && {
+    pan: rig.pan,
+    zoomBy: rig.zoomBy,
+    setNudge(dir) {
+      nudge = dir;
+    },
+    reset: rig.reset,
+    groundAt: probe.at,
+    get moved() {
+      return rig.moved;
+    },
+  };
 
   const fence = spriteCanvas({ name: "cloture" });
   for (let tx = -2; tx < 15; tx++)
@@ -121,6 +154,8 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
     const t = ms / 1000;
     const dt = lastT ? Math.min(0.1, Math.max(0, t - lastT)) : 0;
     lastT = t;
+    if (nudge) rig.nudge(dt, nudge);
+    const pose = rig.pose();
     const tod = forcedTod ?? todOf(new Date());
     const L = lighting.apply(tod, raining, {
       renderer,
@@ -129,9 +164,12 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
       lanterns: billboards.lanterns(),
       setGroundRaining: ground.setRaining,
     });
-    // légère dérive automatique ; la parallaxe souris n'existe que dans la fenêtre Potager
-    const cx = mx * view.parallax + Math.sin(t * 0.1) * 0.3;
-    camera.position.set(cx + view.look[0], view.y - my * 0.8 * (view.parallax ? 1 : 0), view.z);
+    // légère dérive automatique ; la parallaxe souris n'existe que dans la fenêtre Potager.
+    // Dès que le joueur cadre lui-même, les deux se taisent : elles lui reprendraient la main.
+    const drift = rig.moved ? 0 : mx * view.parallax + Math.sin(t * 0.1) * 0.3;
+    const tilt = rig.moved ? 0 : my * 0.8 * (view.parallax ? 1 : 0);
+    camera.position.set(pose.x + drift, pose.y - tilt, pose.z);
+    look.set(...pose.look);
     camera.lookAt(look);
     billboards.sway(t, raining);
     billboards.updateFx(t, dt, tod === "nuit");
@@ -149,7 +187,8 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
 
   function frame(ms: number) {
     raf = requestAnimationFrame(frame);
-    if (ms - lastDraw < FRAME_MS - 2) return;
+    const budget = rig.moving(ms) ? MOVING_FRAME_MS : FRAME_MS;
+    if (ms - lastDraw < budget - 2) return;
     lastDraw = ms;
     frames++;
     if (ms - fpsT >= 1000) {
@@ -182,6 +221,7 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
     },
     sync,
     interaction,
+    camera: controls,
     setTod(tod) {
       forcedTod = tod;
     },
