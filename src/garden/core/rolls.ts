@@ -69,6 +69,13 @@ export interface PityState {
 
 // Rareté d'abord, nouveauté ensuite : la rareté annoncée est celle tirée, sauf en
 // fin de collection où la graine est promue vers une rareté qui a encore des inconnues.
+// Graine d'une rareté imposée : récompenses de l'arbre et sachet doré.
+export function rollSeedOfRarity(rarity: Rarity, rng: Rng): Seed {
+  const entry = pickOne(entriesOfRarity(rarity), rng);
+  const variant = rollVariant(rng);
+  return { species: entry.species, color: entry.color, rarity, ...(variant && { variant }) };
+}
+
 export function rollSachetSeed(known: Set<string>, pity: PityState, rng: Rng): Seed {
   let rarity: Rarity =
     rng() < chanceOf(GAUGES.rare, pity.dryRare)
