@@ -28,7 +28,7 @@ describe("spawnLeaves", () => {
     const found = leavesOf(next);
     expect(found).toHaveLength(1);
     const [key, tile] = found[0];
-    expect(fieldTiles()).toContain(key);
+    expect(fieldTiles(save().plots)).toContain(key);
     expect(s.tiles[key as keyof GardenSave["tiles"]]).toBeUndefined();
     expect(tile).toEqual({ kind: "leaves", since: SLOT0 + LEAF_SLOT_MS });
     expect(next.leaves.checkedAt).toBe(SLOT0 + LEAF_SLOT_MS);
@@ -63,7 +63,7 @@ describe("spawnLeaves", () => {
   it("choisit la seule case libre", () => {
     const tiles: GardenSave["tiles"] = {};
     const full: TileContent = { kind: "decor", id: "paille" };
-    for (const key of fieldTiles()) tiles[key] = full;
+    for (const key of fieldTiles(save().plots)) tiles[key] = full;
     delete tiles["5,3"];
     const next = spawnLeaves(save(SLOT0, tiles), SLOT0 + LEAF_SLOT_MS);
     expect(next.tiles["5,3"]).toEqual({ kind: "leaves", since: SLOT0 + LEAF_SLOT_MS });

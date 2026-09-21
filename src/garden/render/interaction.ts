@@ -1,6 +1,6 @@
 import type * as THREE from "three";
 import type { Particle, Target } from "../core/actions";
-import { parseTileKey, type TileKey } from "../core/types";
+import { parseTileKey, type PlotId, type TileKey } from "../core/types";
 import type { Billboards } from "./billboards";
 import { createCrows } from "./crows";
 import { createHighlight, TONES, type HighlightTone } from "./highlight";
@@ -27,8 +27,9 @@ export function createInteraction(
   camera: THREE.Camera,
   canvas: HTMLCanvasElement,
   billboards: Billboards,
+  plotsOf: () => PlotId[],
 ): GardenInteraction {
-  const pick = createPicker(camera, canvas);
+  const pick = createPicker(camera, canvas, plotsOf);
   const highlight = createHighlight(scene);
   const particles = createParticles(scene);
   const crows = createCrows(scene);

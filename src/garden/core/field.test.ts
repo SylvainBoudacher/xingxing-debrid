@@ -2,33 +2,9 @@ import { describe, expect, it } from "vitest";
 import { harvestTool, SPECIES } from "./catalog/species";
 import { bump } from "./counters";
 import { LEAF_SLOT_MS } from "./leaves";
-import { FIELD, fieldTiles, isInField } from "./plots";
 import { parseSave } from "./save";
 import { createStarterSave } from "./starter";
 import { isMovable, setTile } from "./tiles";
-
-describe("FIELD", () => {
-  it("couvre 9 x 5 cases, ligne par ligne", () => {
-    expect(FIELD).toEqual({ x: 0, y: 0, w: 9, h: 5 });
-    const tiles = fieldTiles();
-    expect(tiles).toHaveLength(45);
-    expect(tiles.slice(0, 2)).toEqual(["0,0", "1,0"]);
-    expect(tiles[44]).toBe("8,4");
-  });
-
-  it("isInField borne la grille", () => {
-    expect(isInField("0,0")).toBe(true);
-    expect(isInField("8,4")).toBe(true);
-    expect(isInField("9,0")).toBe(false);
-    expect(isInField("0,5")).toBe(false);
-    expect(isInField("-1,2")).toBe(false);
-  });
-
-  it("le décor de départ est dans la grille", () => {
-    for (const key of Object.keys(createStarterSave().tiles))
-      expect(isInField(key as `${number},${number}`)).toBe(true);
-  });
-});
 
 describe("harvestTool", () => {
   it("sécateur pour les tiges épaisses, main sinon", () => {

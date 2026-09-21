@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import type { Target } from "../core/actions";
 import { isInField } from "../core/plots";
-import { tileKey, type TileKey } from "../core/types";
+import { tileKey, type PlotId, type TileKey } from "../core/types";
 import { WORLD } from "./world";
 
 export interface PickResult {
@@ -28,7 +28,11 @@ function opaqueAt(canvas: HTMLCanvasElement, uv: THREE.Vector2): boolean {
   return data[(py * canvas.width + px) * 4 + 3] > 0;
 }
 
-export function createPicker(camera: THREE.Camera, canvas: HTMLCanvasElement) {
+export function createPicker(
+  camera: THREE.Camera,
+  canvas: HTMLCanvasElement,
+  plotsOf: () => PlotId[],
+) {
   const ray = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   const floor = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -54,7 +58,7 @@ export function createPicker(camera: THREE.Camera, canvas: HTMLCanvasElement) {
       if (!h.uv || !canvasOf || !opaqueAt(canvasOf, h.uv)) continue;
       return { target: pickables[meshes.indexOf(h.object as THREE.Mesh)].target, ground };
     }
-    if (!ground || !isInField(ground.key)) return null;
+    if (!ground || !isInField(plotsOf(), ground.key)) return null;
     return { target: { kind: "tile", key: ground.key }, ground };
   };
 }

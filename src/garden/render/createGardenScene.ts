@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { spawnLeaves } from "../core/leaves";
-import type { GardenSave, TileKey } from "../core/types";
+import type { GardenSave, PlotId, TileKey } from "../core/types";
 import { spriteCanvas } from "../sprites/sprite";
 import { createAmbience } from "./ambience";
 import { createBillboards } from "./billboards";
@@ -66,7 +66,9 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
   const lighting = createLighting(scene);
   const post = createPost(renderer, scene, camera);
   const interaction =
-    profile === "garden" ? createInteraction(scene, camera, canvas, billboards) : undefined;
+    profile === "garden"
+      ? createInteraction(scene, camera, canvas, billboards, () => plots)
+      : undefined;
 
   const fence = spriteCanvas({ name: "cloture" });
   for (let tx = -2; tx < 10; tx++)
@@ -96,12 +98,14 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
   };
   if (view.parallax) window.addEventListener("pointermove", onPointer);
 
+  let plots: PlotId[] = ["p1"];
   let shown = new Map<TileKey, SceneItem>();
   let raining = false;
   let forcedTod: Tod | null = null;
 
   function sync(save: GardenSave, now: number) {
     // idempotent : le fond passif affiche les mêmes tas que le Potager sans écrire
+    plots = save.plots;
     const model = buildSceneModel(spawnLeaves(save, now), now);
     const { remove, add } = diffItems(shown, model.items);
     remove.forEach((k) => billboards.remove(k));

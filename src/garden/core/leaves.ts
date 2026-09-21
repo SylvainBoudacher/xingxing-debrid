@@ -19,7 +19,7 @@ export function spawnLeaves(save: GardenSave, now: number): GardenSave {
   const tiles = { ...save.tiles };
   let count = Object.values(tiles).filter((t) => t?.kind === "leaves").length;
   for (let slot = first; slot <= current && count < MAX_LEAVES; slot++) {
-    const free = fieldTiles().filter((key) => !tiles[key]);
+    const free = fieldTiles(save.plots).filter((key) => !tiles[key]);
     if (!free.length) break;
     tiles[free[Math.floor(hash(slot, 17) * free.length)]] = {
       kind: "leaves",

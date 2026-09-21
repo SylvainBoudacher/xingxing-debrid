@@ -62,7 +62,7 @@ export function planAction(
     }));
 
   const { key } = target;
-  if (!isInField(key)) return null;
+  if (!isInField(save.plots, key)) return null;
   const tile = save.tiles[key];
   const soil = isSoil(save.plots, key);
 

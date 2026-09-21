@@ -7,7 +7,7 @@ export type Rarity = "commune" | "rare" | "epique" | "legendaire";
 
 export type VariantId = "givree" | "doree" | "lumineuse";
 export type DecorId = "lanterne" | "citrouille" | "paille";
-export type PlotId = "p1";
+export type PlotId = "p1" | "p2" | "p3" | "p4";
 export type SachetType = "quotidien";
 export type Stage = 0 | 1 | 2 | 3 | 4;
 

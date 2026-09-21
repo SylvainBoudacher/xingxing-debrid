@@ -8,7 +8,7 @@ export function planMove(save: GardenSave, from: TileKey, to: TileKey): MoveResu
   const tile = save.tiles[from];
   if (!tile || !isMovable(tile)) return { ok: false, reason: "rien à déplacer ici" };
   if (from === to) return { ok: true, save };
-  if (!isInField(to)) return { ok: false, reason: "hors du champ" };
+  if (!isInField(save.plots, to)) return { ok: false, reason: "hors du champ" };
   if (save.tiles[to]) return { ok: false, reason: "la case est occupée" };
   if (tile.kind === "plant" && !isSoil(save.plots, to))
     return { ok: false, reason: "une plante ne va que sur de la terre" };

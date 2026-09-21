@@ -22,7 +22,7 @@ export function useCrows(
     const interaction = sceneRef.current?.interaction;
     const save = saveRef.current;
     if (!interaction || !save) return;
-    const spots = fieldTiles().filter((key) => {
+    const spots = fieldTiles(save.plots).filter((key) => {
       const tile = save.tiles[key];
       return !tile || tile.kind === "plant";
     });
