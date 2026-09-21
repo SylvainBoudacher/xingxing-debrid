@@ -48,6 +48,9 @@ export function SummaryBar({ save }: { save: GardenSave }) {
           {goals.slice(0, 3).map((n) => (
             <li key={n.id}>{n.taskLabel}</li>
           ))}
+          {goals.length > 3 && (
+            <li className="text-[#a99a8a]">et {goals.length - 3} autres objectifs</li>
+          )}
           {!goals.length && <li className="text-[#a99a8a]">Tout est terminé.</li>}
         </ul>
       </section>

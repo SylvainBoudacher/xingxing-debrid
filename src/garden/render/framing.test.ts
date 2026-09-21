@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fieldRect } from "../core/plots";
 import type { PlotId } from "../core/types";
 import { framing, VIEWS } from "./framing";
-import { wx, wz } from "./world";
+import { WORLD, wx, wz } from "./world";
 
 const ALL: PlotId[] = ["p1", "p2", "p3", "p4"];
 const dist = (plots: PlotId[]) => {
@@ -40,7 +40,22 @@ describe("framing", () => {
     expect(three).toBeLessThan(one * 2);
   });
 
+  it("annonce de combien le champ a grandi", () => {
+    expect(framing(VIEWS.garden, fieldRect(["p1"])).scale).toBe(1);
+    expect(framing(VIEWS.garden, fieldRect(ALL)).scale).toBeCloseTo(9 / 5, 5);
+  });
+
   it("garde la hauteur de visée", () => {
     expect(framing(VIEWS.garden, fieldRect(ALL)).look[1]).toBe(VIEWS.garden.look[1]);
+  });
+});
+
+describe("étendue du sol", () => {
+  it("couvre le plus grand champ avec une marge d'herbe", () => {
+    const f = fieldRect(ALL);
+    expect(WORLD.MIN_X).toBeLessThanOrEqual(f.x - 1);
+    expect(WORLD.MAX_X).toBeGreaterThanOrEqual(f.x + f.w + 1);
+    expect(WORLD.MIN_Y).toBeLessThanOrEqual(f.y - 1);
+    expect(WORLD.MAX_Y).toBeGreaterThanOrEqual(f.y + f.h + 1);
   });
 });

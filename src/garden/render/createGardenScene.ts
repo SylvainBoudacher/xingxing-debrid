@@ -52,15 +52,16 @@ export function createGardenScene(canvas: HTMLCanvasElement, profile: SceneProfi
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(28, 16 / 9, 0.1, 100);
   const look = new THREE.Vector3(...view.look);
-  const reframe = (plots: PlotId[]) => {
-    view = framing(base, fieldRect(plots));
-    look.set(...view.look);
-  };
 
   const ground = createGround(scene);
   const billboards = createBillboards(scene);
   const ambience = createAmbience(scene);
   const lighting = createLighting(scene);
+  const reframe = (plots: PlotId[]) => {
+    view = framing(base, fieldRect(plots));
+    look.set(...view.look);
+    lighting.setScale(view.scale);
+  };
   const post = createPost(renderer, scene, camera);
   const interaction =
     profile === "garden"

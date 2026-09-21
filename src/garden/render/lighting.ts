@@ -96,6 +96,8 @@ export interface LightingContext {
 
 export interface Lighting {
   apply(tod: Tod, raining: boolean, ctx: LightingContext): Look;
+  // le champ agrandi éloigne la caméra : brouillard et ombres suivent
+  setScale(scale: number): void;
 }
 
 // Soleil (ou lune), lumière d'ambiance et brouillard, recalculés seulement quand l'ambiance change.
@@ -118,11 +120,24 @@ export function createLighting(scene: THREE.Scene): Lighting {
   scene.fog = new THREE.Fog(0xffffff, 10, 30);
   const fog = scene.fog;
   let memo = "";
+  let scale = 1;
 
   return {
+    setScale(next) {
+      if (next === scale) return;
+      scale = next;
+      Object.assign(sun.shadow.camera, {
+        left: -10 * scale,
+        right: 10 * scale,
+        top: 10 * scale,
+        bottom: -10 * scale,
+        far: 40 * scale,
+      });
+      sun.shadow.camera.updateProjectionMatrix();
+    },
     apply(tod, raining, ctx) {
       const L = LOOKS[tod];
-      const key = `${tod}:${raining}:${ctx.lanterns.lights.length}`;
+      const key = `${tod}:${raining}:${ctx.lanterns.lights.length}:${scale}`;
       if (key === memo) return L;
       memo = key;
       sun.position.set(...L.sunDir);
@@ -134,8 +149,8 @@ export function createLighting(scene: THREE.Scene): Lighting {
       const fogColor = new THREE.Color(L.fog);
       if (raining) fogColor.lerp(RAIN_FOG, 0.5);
       fog.color.copy(fogColor);
-      fog.near = raining ? Math.min(L.near, 9) : L.near;
-      fog.far = raining ? Math.min(L.far, 30) : L.far;
+      fog.near = (raining ? Math.min(L.near, 9) : L.near) * scale;
+      fog.far = (raining ? Math.min(L.far, 30) : L.far) * scale;
       scene.background = fogColor;
       ctx.bloom.strength = L.bloom;
       ctx.renderer.toneMappingExposure = L.exp;

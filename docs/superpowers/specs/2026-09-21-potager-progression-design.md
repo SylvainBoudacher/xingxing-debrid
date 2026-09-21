@@ -170,7 +170,8 @@ Les quatre parcelles forment un carré, séparées par une allée d'herbe en x =
 - `FIELD`, aujourd'hui une constante, devient `fieldRect(plots)`, lu dans une table indexée par le nombre de parcelles débloquées. Les appelants (`fieldTiles`, `isInField`, les corbeaux, les feuilles) prennent les parcelles en paramètre.
 - Le cadrage de la caméra se déduit du rectangle du champ : `render/framing.ts`, fonction pure partagée par la fenêtre Potager et le fond passif, qui donne le centre du champ et le recul pour qu'il remplisse l'image.
 - La rangée de clôture décorative suit la largeur du champ.
-- La toile du sol ne bouge pas : `WORLD` couvre déjà x -5 à 13 et y -4 à 7, plus que le champ final.
+- La toile du sol s'étend pour couvrir le champ final et la marge d'herbe que la caméra reculée laisse voir : `WORLD` passe à x -9 à 19 et y -5 à 14. Un test garde cette propriété.
+- Le brouillard et la boîte d'ombre du soleil suivent le même facteur d'agrandissement, sinon le champ éloigné passerait derrière la brume.
 
 ## 6. L'outil Décor
 
@@ -191,7 +192,7 @@ La main reprend un décor posé et le remet dans l'inventaire, y compris les cin
 
 Quatrième onglet, après Sachets, avec une pastille comptant les nœuds prêts (`readyCount`).
 
-**Bandeau de résumé :** paliers récupérés sur 17 avec barre, Herbier sur 62, parcelles sur 4, sachets à ouvrir, et la liste des objectifs en cours (`openNodes`).
+**Bandeau de résumé :** paliers récupérés sur 17 avec barre, Herbier sur 65, parcelles sur 4, sachets à ouvrir, et la liste des objectifs en cours (`openNodes`).
 
 **Arbre :** espace 1000 x 640 mis à l'échelle de son conteneur. Lianes en courbes SVG calculées par `vines.ts`, module pur. Nœuds en boutons positionnés en pourcentage, quatre états :
 
@@ -227,7 +228,7 @@ Le reste (arbre, page, animations) se vérifie dans l'aperçu navigateur, comme 
 
 ## 10. Écarts par rapport à la vision et à la maquette
 
-- Les seuils de découverte passent de 12 / 30 / 60 à 8 / 20 / 35 : le catalogue ne compte que 62 entrées, 60 revenait à exiger l'Herbier presque complet pour la dernière parcelle.
+- Les seuils de découverte passent de 12 / 30 / 60 à 8 / 20 / 35 : le catalogue ne compte que 65 entrées, 60 revenait à exiger l'Herbier presque complet pour la dernière parcelle.
 - Le nœud "Hybrideur" disparaît (les hybrides sont le sous-projet 6).
 - "Après l'averse", "Allée de pierre", "Gardien du champ" disparaissent : la première demande un suivi de la pluie case par case, les deux autres un sprite et une mécanique absents. Trois nœuds les remplacent avec des récompenses branchables.
 - Les récompenses de la branche Jardinage ne sont plus des outils améliorés (arrosoir de cuivre, compost, récupérateur d'eau) mais des sachets, des graines et du décor. Les outils reviendront se greffer sur cette branche.
