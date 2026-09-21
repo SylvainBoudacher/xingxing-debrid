@@ -9,6 +9,9 @@ import { FieldView } from "./FieldView";
 import { gardenReducer, INITIAL_GARDEN } from "./gardenReducer";
 import { GardenTabs, type GardenTab } from "./GardenTabs";
 import { HerbierPage } from "./herbier/HerbierPage";
+import { ProgressionPage } from "./progression/ProgressionPage";
+import { nodeById } from "../core/catalog/tree";
+import { readyCount } from "../core/progression";
 import { withExtraSachet, withPreviousDay } from "./sachets/devSachets";
 import { SachetsPage } from "./sachets/SachetsPage";
 import { announceGardenClosed, announceGardenOpened } from "./gardenWindow";
@@ -57,6 +60,15 @@ export default function GardenApp() {
     toast(<DiscoveryToast found={found} />, { duration: 6000 });
   }, [state.discoveries]);
 
+  const toastedClaim = useRef(0);
+  useEffect(() => {
+    const { seq, id } = state.claimed;
+    if (seq === toastedClaim.current) return;
+    toastedClaim.current = seq;
+    const node = id ? nodeById(id) : undefined;
+    if (node) toast(`${node.title} : ${node.rewardLabel}`);
+  }, [state.claimed]);
+
   const toastedPress = useRef(0);
   useEffect(() => {
     const { seq, seed } = state.pressed;
@@ -87,7 +99,12 @@ export default function GardenApp() {
   return (
     <div className="flex h-screen flex-col bg-[#1a1216] text-[#f1e6d2]">
       <Toaster theme="dark" position="top-center" />
-      <GardenTabs tab={tab} onTab={setTab} sachets={state.save?.sachets.pending.length ?? 0} />
+      <GardenTabs
+        tab={tab}
+        onTab={setTab}
+        sachets={state.save?.sachets.pending.length ?? 0}
+        ready={state.save ? readyCount(state.save) : 0}
+      />
       {!webglOk
         ? tab === "champ" && (
             <div className="flex flex-1 items-center justify-center p-6 text-center text-sm">
@@ -100,6 +117,13 @@ export default function GardenApp() {
             </div>
           )}
       {tab === "herbier" && state.save && <HerbierPage save={state.save} />}
+      {tab === "progression" && state.save && (
+        <ProgressionPage
+          save={state.save}
+          onClaim={(id) => dispatch({ type: "claim", id, now: Date.now(), rng: Math.random })}
+          onDeposit={(id, species) => dispatch({ type: "deposit", id, species })}
+        />
+      )}
       {tab === "sachets" && state.save && (
         <SachetsPage
           save={state.save}

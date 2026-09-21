@@ -1,5 +1,7 @@
+import type { Tool } from "../core/actions";
 import { flowerName, RARITY_FR } from "../core/labels";
-import type { GardenSave, Rarity } from "../core/types";
+import type { DecorId, GardenSave, Rarity } from "../core/types";
+import { DecorPicker } from "./DecorPicker";
 import { SpriteIcon } from "./SpriteIcon";
 import { RARITY_COLOR } from "./toolMeta";
 
@@ -11,14 +13,20 @@ const heading = "mb-1.5 font-serif text-[17px] text-[#f3dca0]";
 export function SidePanel({
   save,
   raining,
+  tool,
   seedRarity,
   onSeedRarity,
+  decorId,
+  onDecor,
   onPress,
 }: {
   save: GardenSave;
   raining: boolean;
+  tool: Tool;
   seedRarity: Rarity | null;
   onSeedRarity: (rarity: Rarity) => void;
+  decorId: DecorId | null;
+  onDecor: (decor: DecorId) => void;
   onPress: (index: number) => void;
 }) {
   const { seeds, basket } = save.inventory;
@@ -29,6 +37,9 @@ export function SidePanel({
     : (seeds[0]?.rarity ?? null);
   return (
     <aside className="absolute right-3 top-2.5 flex w-[210px] flex-col gap-2 text-xs">
+      {tool === "decor" && (
+        <DecorPicker decor={save.inventory.decor} selected={decorId} onSelect={onDecor} />
+      )}
       <section className={section}>
         <h4 className={heading}>Graines</h4>
         {seeds.length === 0 && (

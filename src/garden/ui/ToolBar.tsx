@@ -1,22 +1,30 @@
 import { useEffect } from "react";
-import { TOOLS, type Tool } from "../core/actions";
+import type { Tool } from "../core/actions";
 import { SpriteIcon } from "./SpriteIcon";
 import { TOOL_META } from "./toolMeta";
 
-export function ToolBar({ tool, onSelect }: { tool: Tool; onSelect: (tool: Tool) => void }) {
+export function ToolBar({
+  tools,
+  tool,
+  onSelect,
+}: {
+  tools: Tool[];
+  tool: Tool;
+  onSelect: (tool: Tool) => void;
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onSelect("main");
-      const next = TOOLS[Number(e.key) - 1];
+      const next = tools[Number(e.key) - 1];
       if (next) onSelect(next);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onSelect]);
+  }, [onSelect, tools]);
 
   return (
     <div className="absolute bottom-5 left-1/2 flex -translate-x-1/2 gap-2 rounded-2xl border border-amber-300/35 bg-[#1a1216]/85 p-2 backdrop-blur">
-      {TOOLS.map((id, i) => (
+      {tools.map((id, i) => (
         <button
           key={id}
           type="button"

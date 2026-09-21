@@ -1,20 +1,24 @@
-export type GardenTab = "champ" | "herbier" | "sachets";
+export type GardenTab = "champ" | "herbier" | "sachets" | "progression";
 
 const TABS: { id: GardenTab; label: string }[] = [
   { id: "champ", label: "Champ" },
   { id: "herbier", label: "Herbier" },
   { id: "sachets", label: "Sachets" },
+  { id: "progression", label: "Progression" },
 ];
 
 export function GardenTabs({
   tab,
   onTab,
   sachets,
+  ready,
 }: {
   tab: GardenTab;
   onTab: (tab: GardenTab) => void;
   sachets: number;
+  ready: number;
 }) {
+  const badge = (id: GardenTab) => (id === "sachets" ? sachets : id === "progression" ? ready : 0);
   return (
     <nav className="flex gap-1 border-b border-amber-300/25 px-4 pt-2">
       {TABS.map(({ id, label }) => (
@@ -29,9 +33,9 @@ export function GardenTabs({
           }`}
         >
           {label}
-          {id === "sachets" && sachets > 0 && (
+          {badge(id) > 0 && (
             <span className="ml-1.5 rounded-full bg-[#c0452f] px-1.5 py-px align-middle text-[10px] font-bold text-white">
-              {sachets}
+              {badge(id)}
             </span>
           )}
         </button>

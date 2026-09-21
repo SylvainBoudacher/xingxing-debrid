@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type Dispatch, type PointerEvent } from "react";
 import { toast } from "sonner";
 import type { Effect, Tool } from "../core/actions";
-import { planAction } from "../core/actions";
+import { planAction, TOOLS } from "../core/actions";
 import { withDemoPlants } from "../core/demo";
 import { planMove } from "../core/move";
 import { HOUR } from "../core/time";
 import { isMovable } from "../core/tiles";
-import type { GardenSave, Rarity, TileKey } from "../core/types";
+import type { DecorId, GardenSave, Rarity, TileKey } from "../core/types";
 import { isRaining } from "../core/weather";
 import { createGardenScene, type GardenScene } from "../render/createGardenScene";
 import type { PickResult } from "../render/picking";
@@ -46,6 +46,7 @@ export function FieldView({
   const drag = useRef<{ from: TileKey; to: TileKey | null; reason: string | null } | null>(null);
   const [tool, setTool] = useState<Tool>("main");
   const [seedRarity, setSeedRarity] = useState<Rarity | null>(null);
+  const [decorId, setDecorId] = useState<DecorId | null>(null);
   const [dragging, setDragging] = useState(false);
   const [devTod, setDevTod] = useState<Tod | null>(null);
   // un geste est postérieur au dernier tick : la vue doit le voir tout de suite
@@ -54,6 +55,8 @@ export function FieldView({
   const [hover, setHover] = useState<Pointer | null>(null);
   const [flash, setFlash] = useState<{ x: number; y: number; text: string } | null>(null);
   const { spawn } = useCrows(sceneRef, saveRef, active);
+  const hasDecor = Object.values(save.inventory.decor).some((n) => n > 0);
+  const tools = hasDecor ? TOOLS : TOOLS.filter((t) => t !== "decor");
 
   useEffect(() => {
     const scene = createGardenScene(canvasRef.current!, "garden");
@@ -84,7 +87,9 @@ export function FieldView({
 
   // vue dérivée à chaque rendu : suit la sauvegarde, l'outil et l'heure
   const view =
-    hover?.pick && !dragging ? describeTarget(save, hover.pick.target, tool, at, seedRarity) : null;
+    hover?.pick && !dragging
+      ? describeTarget(save, hover.pick.target, tool, at, { seedRarity, decor: decorId })
+      : null;
   const shown = view && !(view.info.kind === "grass" && !view.plan) ? view : null;
 
   useEffect(() => {
@@ -168,7 +173,7 @@ export function FieldView({
     }
     if (!start?.pick) return;
     const t = Date.now();
-    const plan = planAction(save, start.pick.target, tool, t, { seedRarity });
+    const plan = planAction(save, start.pick.target, tool, t, { seedRarity, decor: decorId });
     if (!plan?.ok) return;
     const out = plan.apply();
     setActedAt(t);
@@ -197,8 +202,11 @@ export function FieldView({
       <SidePanel
         save={save}
         raining={isRaining(at)}
+        tool={tool}
         seedRarity={seedRarity}
         onSeedRarity={setSeedRarity}
+        decorId={decorId}
+        onDecor={setDecorId}
         onPress={(index) => dispatch({ type: "press", index, now: Date.now(), rng: Math.random })}
       />
       {shown && hover && <TileTooltip x={hover.x} y={hover.y} view={shown} />}
@@ -210,7 +218,7 @@ export function FieldView({
           {flash.text}
         </div>
       )}
-      <ToolBar tool={tool} onSelect={setTool} />
+      <ToolBar tools={tools} tool={tool} onSelect={setTool} />
       {import.meta.env.DEV && (
         <GardenDevBar
           tod={devTod}
