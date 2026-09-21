@@ -203,7 +203,7 @@ Quatrième onglet, après Sachets, avec une pastille comptant les nœuds prêts 
 
 **Détail à droite :** titre, tâche en clair, avancement chiffré, récompense, bouton "Récupérer" quand le nœud est prêt. Pour un panier, les cases à remplir espèce par espèce et un bouton "Déposer" actif seulement si la fleur demandée est dans le panier. La récupération fait éclore la fleur du nœud avec `motion/react` et annonce la récompense par un toast.
 
-**Découpage**, un fichier par composant dans `src/garden/ui/progression/` : `ProgressionPage.tsx`, `SummaryBar.tsx`, `TreeView.tsx`, `TreeNode.tsx`, `NodeDetail.tsx`, `BasketDeposit.tsx`, plus `vines.ts` et `branch.ts` (couleurs et libellés des branches).
+**Découpage**, un fichier par composant dans `src/garden/ui/progression/` : `ProgressionPage.tsx`, `SummaryBar.tsx`, `TreeView.tsx`, `TreeNode.tsx`, `NodeDetail.tsx`, `BasketDeposit.tsx`, plus `vines.ts`. Les couleurs et les libellés des branches restent dans le catalogue.
 
 ## 8. Erreurs
 
@@ -217,9 +217,9 @@ Quatrième onglet, après Sachets, avec une pastille comptant les nœuds prêts 
 - `catalog/tree.test.ts` : identifiants uniques, parent existant, pas de cycle, chaque récompense pointe une parcelle ou un décor du catalogue, chaque panier une espèce du catalogue, positions dans 1000 x 640.
 - `unlocks.test.ts` : `sachetsPerDay` avant et après `j1`, et le crédit quotidien qui en découle.
 - `plots.test.ts` : `fieldRect` pour une à quatre parcelles, `isSoil`, `isInField`.
-- Cadrage de caméra : fonction pure, les quatre tailles de champ.
+- `framing.test.ts` : cadrage pour les quatre tailles de champ, facteur d'agrandissement, et étendue du sol.
 - Scan de champ : `bloomed` et `nightBloom` comptés une seule fois par plante, `bloomedAt` idempotent sur plusieurs ticks.
-- `rolls.test.ts` : sachet doré (au moins une graine rare ou mieux), sachet de famille (trois graines de la même espèce).
+- `sachets.test.ts` : sachet doré (au moins une graine rare ou mieux), sachet de famille (trois graines de la même espèce).
 - `actions.test.ts` : poser un décor, les quatre refus, reprendre un décor à la main.
 - `vines.test.ts` : chemins SVG sur des coordonnées connues.
 - `accents.test.ts` : ajout de `decor`, `depose`, `deposer`, `eclose`, `ecloses`, `pret`, `recolte`, `termine`, `verrouille` à la liste `WRONG`.
