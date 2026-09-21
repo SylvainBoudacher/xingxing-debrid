@@ -134,6 +134,16 @@ describe("cueillir", () => {
     expect(run(plan(dry, tile("1,1"), "main", { rng })).save.inventory.seeds).toHaveLength(3);
   });
 
+  it("compte à part la cueillette d'une belle plante", () => {
+    const wetAll = [{ start: NOW - 10 * HOUR, end: NOW }];
+    const beautiful = run(
+      plan(withTiles({ "1,1": flower("cosmos", wetAll) }), tile("1,1"), "main"),
+    );
+    expect(beautiful.save.progress.counters.pickedBeautiful).toBe(1);
+    const dry = run(plan(withTiles({ "1,1": flower("cosmos") }), tile("1,1"), "main"));
+    expect(dry.save.progress.counters.pickedBeautiful).toBeUndefined();
+  });
+
   it("au sécateur pour les tiges épaisses", () => {
     const s = withTiles({ "1,1": flower("dahlia") });
     const p = plan(s, tile("1,1"), "secateur");

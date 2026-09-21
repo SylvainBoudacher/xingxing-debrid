@@ -21,6 +21,8 @@ export const DECOR_FR: Record<DecorId, string> = {
   lanterne: "Lanterne",
   citrouille: "Citrouille",
   paille: "Botte de paille",
+  cloture: "Segment de clôture",
+  arbre: "Arbre",
 };
 
 export function flowerName(f: { species: SpeciesId; color: ColorId }): string {

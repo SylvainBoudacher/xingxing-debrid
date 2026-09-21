@@ -147,8 +147,9 @@ function pickFlower(
     },
   };
   const text = `${flowerName(flower)} ${pickedWord(species)}${seed ? " : +1 graine" : ""}`;
+  const counted = beautiful ? bump(bump(next, "picked"), "pickedBeautiful") : bump(next, "picked");
   return {
-    save: bump(next, "picked"),
+    save: counted,
     effects: [burst(key, "petals"), { kind: "toast", text }],
   };
 }

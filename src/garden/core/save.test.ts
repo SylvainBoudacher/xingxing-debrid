@@ -80,3 +80,17 @@ describe("withDemoPlants", () => {
     expect(stages).toEqual(new Set([0, 1, 2, 3, 4]));
   });
 });
+
+describe("paniers dans la sauvegarde", () => {
+  it("complète progress.baskets s'il manque", () => {
+    const raw = JSON.parse(JSON.stringify(createStarterSave()));
+    delete raw.progress.baskets;
+    expect(parseSave(raw)!.progress.baskets).toEqual({});
+  });
+
+  it("garde les dépôts déjà faits", () => {
+    const raw = JSON.parse(JSON.stringify(createStarterSave()));
+    raw.progress.baskets = { d4: { dahlia: 2 } };
+    expect(parseSave(raw)!.progress.baskets).toEqual({ d4: { dahlia: 2 } });
+  });
+});

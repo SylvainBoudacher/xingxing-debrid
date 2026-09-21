@@ -44,9 +44,9 @@ describe("collectDiscoveries", () => {
     expect(collectDiscoveries(s, NOW, noRain).found).toHaveLength(1);
   });
 
-  it("renvoie la même sauvegarde quand tout est déjà connu", () => {
+  it("renvoie la même sauvegarde quand tout est déjà connu et déjà compté", () => {
     const s = withTiles(
-      { "1,1": plant(cosmos, 9 * HOUR) },
+      { "1,1": { ...plant(cosmos, 9 * HOUR), bloomedAt: NOW - HOUR } },
       { "cosmos:pink": { discoveredAt: 1, pressed: 0, variants: [] } },
     );
     const out = collectDiscoveries(s, NOW, noRain);
@@ -101,5 +101,49 @@ describe("knownEntries", () => {
     expect(known.has("dahlia:red")).toBe(true);
     expect(known.has("cosmos:white")).toBe(true);
     expect(known.has("tournesol:yellow")).toBe(false);
+  });
+});
+
+describe("comptage des éclosions", () => {
+  it("compte chaque plante éclose une seule fois", () => {
+    const s = withTiles({
+      "1,1": plant(cosmos, 9 * HOUR),
+      "2,1": plant(aster, 13 * HOUR),
+      "3,1": plant({ ...cosmos, color: "white" }, 1 * HOUR),
+    });
+    const once = collectDiscoveries(s, NOW, noRain).save;
+    expect(once.progress.counters.bloomed).toBe(2);
+    expect((once.tiles["1,1"] as PlantTile).bloomedAt).toBe(NOW);
+    const twice = collectDiscoveries(once, NOW + HOUR, noRain).save;
+    expect(twice.progress.counters.bloomed).toBe(2);
+    expect(twice.tiles["1,1"]).toEqual(once.tiles["1,1"]);
+  });
+
+  it("compte aussi une éclosion déjà connue de l'Herbier", () => {
+    const s = withTiles(
+      { "1,1": plant(cosmos, 9 * HOUR) },
+      { [entryId("cosmos", "pink")]: { discoveredAt: 1, pressed: 0, variants: [] } },
+    );
+    const { save, found } = collectDiscoveries(s, NOW, noRain);
+    expect(found).toEqual([]);
+    expect(save.progress.counters.bloomed).toBe(1);
+  });
+
+  it("compte à part les fleurs écloses à partir de 18 h", () => {
+    const night = new Date(2026, 9, 1, 19).getTime();
+    const s = withTiles({ "1,1": plant(cosmos, 0) });
+    const late = {
+      ...s,
+      tiles: { "1,1": { ...(s.tiles["1,1"] as PlantTile), sownAt: night - 9 * HOUR } },
+    };
+    const save = collectDiscoveries(late, night, noRain).save;
+    expect(save.progress.counters.bloomed).toBe(1);
+    expect(save.progress.counters.nightBloom).toBe(1);
+  });
+
+  it("ne compte pas la nuit une éclosion de l'après-midi", () => {
+    const s = withTiles({ "1,1": plant(cosmos, 9 * HOUR) });
+    const save = collectDiscoveries(s, NOW, noRain).save;
+    expect(save.progress.counters.nightBloom).toBeUndefined();
   });
 });

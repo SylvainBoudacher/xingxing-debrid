@@ -25,9 +25,14 @@ export function parseSave(raw: unknown): GardenSave | null {
   const pending: SachetType[] = Array.isArray(sachets.pending)
     ? (sachets.pending as SachetType[])
     : Array.from({ length: count }, () => "quotidien");
+  // baskets est arrivé avec les paniers de saison : absent dans les parties antérieures
+  const baskets = isObject(progress.baskets)
+    ? (progress.baskets as GardenSave["progress"]["baskets"])
+    : {};
   return {
     ...(raw as unknown as GardenSave),
     leaves,
     sachets: { lastDailyAt: Number(sachets.lastDailyAt) || 0, pending },
+    progress: { ...(progress as unknown as GardenSave["progress"]), baskets },
   };
 }
