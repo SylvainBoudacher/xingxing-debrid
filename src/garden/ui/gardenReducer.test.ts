@@ -109,3 +109,53 @@ describe("sachets", () => {
     expect(next.save!.sachets.pending).toHaveLength(2);
   });
 });
+
+describe("progression", () => {
+  const withProgress = (save: GardenSave): GardenState =>
+    gardenReducer(INITIAL_GARDEN, { type: "load", save });
+
+  it("claim applique la récompense et marque le nœud", () => {
+    const base = createStarterSave();
+    const state = withProgress({
+      ...base,
+      progress: { ...base.progress, counters: { sown: 1 } },
+    });
+    const next = gardenReducer(state, { type: "claim", id: "root", now: NOW, rng: () => 0.5 });
+    expect(next.save!.inventory.seeds).toHaveLength(6);
+    expect(next.save!.progress.nodes.root).toBe(NOW);
+    expect(next.claimed.seq).toBe(1);
+    expect(next.claimed.id).toBe("root");
+  });
+
+  it("claim sur un nœud qui n'est pas prêt ne change rien", () => {
+    const state = withProgress(createStarterSave());
+    expect(gardenReducer(state, { type: "claim", id: "root", now: NOW, rng: () => 0.5 })).toBe(
+      state,
+    );
+  });
+
+  it("deposit retire la fleur du panier", () => {
+    const base = createStarterSave();
+    const state = withProgress({
+      ...base,
+      progress: { ...base.progress, nodes: { root: 1, d1: 1, d2: 1 } },
+      inventory: {
+        ...base.inventory,
+        basket: [{ species: "dahlia", color: "red", rarity: "commune" }],
+      },
+    });
+    const next = gardenReducer(state, { type: "deposit", id: "d4", species: "dahlia" });
+    expect(next.save!.inventory.basket).toEqual([]);
+    expect(next.save!.progress.baskets.d4).toEqual({ dahlia: 1 });
+  });
+
+  it("le tick crédite deux sachets par jour après Main verte", () => {
+    const base = createStarterSave();
+    const state = withProgress({
+      ...base,
+      progress: { ...base.progress, nodes: { j1: 1 } },
+      sachets: { lastDailyAt: startOfDay(NOW) - DAY, pending: [] },
+    });
+    expect(gardenReducer(state, { type: "tick", now: NOW }).save!.sachets.pending).toHaveLength(2);
+  });
+});

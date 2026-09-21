@@ -1,7 +1,7 @@
 import { entriesOfRarity, speciesOf, type CatalogEntry } from "./catalog/species";
 import { entryId } from "./discovery";
 import { chanceOf, GAUGES } from "./pity";
-import type { Flower, Rarity, Seed, VariantId } from "./types";
+import type { Flower, Rarity, Seed, SpeciesId, VariantId } from "./types";
 
 export type Rng = () => number;
 
@@ -56,12 +56,6 @@ export function rollVariant(rng: Rng): VariantId | undefined {
   return rng() < VARIANT_CHANCE ? pickOne(VARIANTS, rng) : undefined;
 }
 
-function weightedRarity(pool: Rarity[], rng: Rng): Rarity {
-  const total = pool.reduce((sum, r) => sum + RARITY_WEIGHT[r], 0);
-  let r = rng() * total;
-  return pool.find((x) => (r -= RARITY_WEIGHT[x]) < 0) ?? pool[pool.length - 1];
-}
-
 export interface PityState {
   dryDiscovery: number;
   dryRare: number;
@@ -69,6 +63,28 @@ export interface PityState {
 
 // Rareté d'abord, nouveauté ensuite : la rareté annoncée est celle tirée, sauf en
 // fin de collection où la graine est promue vers une rareté qui a encore des inconnues.
+function weightedRarity(pool: Rarity[], rng: Rng): Rarity {
+  const total = pool.reduce((sum, r) => sum + RARITY_WEIGHT[r], 0);
+  let r = rng() * total;
+  return pool.find((x) => (r -= RARITY_WEIGHT[x]) < 0) ?? pool[pool.length - 1];
+}
+
+// Graine rare ou mieux, proportions habituelles : première graine du sachet doré.
+export function rollGoldSeed(rng: Rng): Seed {
+  return rollSeedOfRarity(weightedRarity(["rare", "epique", "legendaire"], rng), rng);
+}
+
+// Graine d'une espèce imposée, couleur pondérée par rareté : sachet de famille.
+export function rollFamilySeed(species: SpeciesId, rng: Rng): Seed {
+  const colors = speciesOf(species).colors;
+  const total = colors.reduce((sum, c) => sum + RARITY_WEIGHT[c.rarity], 0);
+  let r = rng() * total;
+  const chosen =
+    colors.find((c) => (r -= RARITY_WEIGHT[c.rarity]) < 0) ?? colors[colors.length - 1];
+  const variant = rollVariant(rng);
+  return { species, color: chosen.color, rarity: chosen.rarity, ...(variant && { variant }) };
+}
+
 // Graine d'une rareté imposée : récompenses de l'arbre et sachet doré.
 export function rollSeedOfRarity(rarity: Rarity, rng: Rng): Seed {
   const entry = pickOne(entriesOfRarity(rarity), rng);

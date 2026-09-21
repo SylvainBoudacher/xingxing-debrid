@@ -1,10 +1,13 @@
+import type { NodeId } from "../core/catalog/tree";
 import { collectDiscoveries } from "../core/discovery";
 import { pressFlower } from "../core/herbier";
 import { spawnLeaves } from "../core/leaves";
 import { planMove } from "../core/move";
 import type { Rng } from "../core/rolls";
+import { claim, deposit } from "../core/progression";
 import { creditDaily, openSachet } from "../core/sachets";
-import type { Flower, GardenSave, Seed, TileKey } from "../core/types";
+import { sachetsPerDay } from "../core/unlocks";
+import type { Flower, GardenSave, Seed, SpeciesId, TileKey } from "../core/types";
 
 export interface GardenState {
   save: GardenSave | null;
@@ -13,6 +16,8 @@ export interface GardenState {
   pressed: { seq: number; seed: boolean };
   // seq change à chaque sachet ouvert, pour rejouer l'animation de révélation
   opened: { seq: number; seeds: Seed[] };
+  // seq change à chaque nœud récupéré, pour jouer l'éclosion et annoncer la récompense
+  claimed: { seq: number; id: NodeId | null };
 }
 
 export const INITIAL_GARDEN: GardenState = {
@@ -20,6 +25,7 @@ export const INITIAL_GARDEN: GardenState = {
   discoveries: { seq: 0, found: [] },
   pressed: { seq: 0, seed: false },
   opened: { seq: 0, seeds: [] },
+  claimed: { seq: 0, id: null },
 };
 
 export type GardenAction =
@@ -28,7 +34,9 @@ export type GardenAction =
   | { type: "move"; from: TileKey; to: TileKey }
   | { type: "tick"; now: number }
   | { type: "press"; index: number; now: number; rng: Rng }
-  | { type: "open-sachet"; now: number; rng: Rng };
+  | { type: "open-sachet"; now: number; rng: Rng }
+  | { type: "claim"; id: NodeId; now: number; rng: Rng }
+  | { type: "deposit"; id: NodeId; species: SpeciesId };
 
 export function gardenReducer(state: GardenState, action: GardenAction): GardenState {
   if (action.type === "load") return { ...state, save: action.save };
@@ -45,13 +53,25 @@ export function gardenReducer(state: GardenState, action: GardenAction): GardenS
       if (!r) return state;
       return { ...state, save: r.save, pressed: { seq: state.pressed.seq + 1, seed: !!r.seed } };
     }
+    case "claim": {
+      const save = claim(state.save, action.id, action.now, action.rng);
+      if (!save) return state;
+      return { ...state, save, claimed: { seq: state.claimed.seq + 1, id: action.id } };
+    }
+    case "deposit": {
+      const save = deposit(state.save, action.id, action.species);
+      return save ? { ...state, save } : state;
+    }
     case "open-sachet": {
-      const r = openSachet(creditDaily(state.save, action.now), action.rng);
+      const r = openSachet(
+        creditDaily(state.save, action.now, sachetsPerDay(state.save)),
+        action.rng,
+      );
       if (!r) return state;
       return { ...state, save: r.save, opened: { seq: state.opened.seq + 1, seeds: r.seeds } };
     }
     case "tick": {
-      const fresh = creditDaily(state.save, action.now);
+      const fresh = creditDaily(state.save, action.now, sachetsPerDay(state.save));
       const { save, found } = collectDiscoveries(spawnLeaves(fresh, action.now), action.now);
       if (save === state.save) return state;
       return {

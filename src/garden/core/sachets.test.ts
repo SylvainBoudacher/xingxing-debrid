@@ -85,3 +85,31 @@ describe("openSachet", () => {
     expect(new Set(ids).size).toBe(SEEDS_PER_SACHET);
   });
 });
+
+describe("sachets spéciaux", () => {
+  // suite pseudo-aléatoire : un rng constant rendrait trois fois la même graine
+  const varied = () => {
+    let x = 12345;
+    return () => (x = (x * 1103515245 + 12345) % 2147483648) / 2147483648;
+  };
+  const rng = varied();
+
+  it("le sachet doré donne au moins une graine rare ou mieux", () => {
+    const s = withSachets(day(0), ["dore"]);
+    const { seeds } = openSachet(s, varied())!;
+    expect(seeds).toHaveLength(SEEDS_PER_SACHET);
+    expect(seeds.some((seed) => seed.rarity !== "commune")).toBe(true);
+  });
+
+  it("le sachet de famille donne trois graines de la même espèce", () => {
+    const s = withSachets(day(0), ["famille"]);
+    const { seeds } = openSachet(s, varied())!;
+    expect(seeds).toHaveLength(SEEDS_PER_SACHET);
+    expect(new Set(seeds.map((seed) => seed.species)).size).toBe(1);
+  });
+
+  it("ouvre le premier sachet de la pile et garde les autres", () => {
+    const s = withSachets(day(0), ["famille", "quotidien"]);
+    expect(openSachet(s, rng)!.save.sachets.pending).toEqual(["quotidien"]);
+  });
+});
