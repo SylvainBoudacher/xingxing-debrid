@@ -18,6 +18,11 @@ function plant(
   };
 }
 
+const boosted = (boosts: number[], watered: Interval[] = []): PlantTile => ({
+  ...plant(watered),
+  boosts,
+});
+
 describe("growthOf", () => {
   it("une commune sèche passe une étape toutes les 2 h", () => {
     expect(growthOf(plant(), T0 + 1 * HOUR, noRain)).toMatchObject({
@@ -81,5 +86,39 @@ describe("growthOf", () => {
   it("pas belle plante tant qu'elle n'a pas fleuri", () => {
     const always = plant([{ start: T0, end: T0 + 10 * HOUR }]);
     expect(growthOf(always, T0 + HOUR, noRain).beautiful).toBe(false);
+  });
+});
+
+describe("élixir de croissance", () => {
+  it("fait gagner une étape d'un coup, à l'instant où il est versé", () => {
+    const p = boosted([T0 + HOUR]);
+    expect(effectiveMs(p, T0 + HOUR - 1, noRain)).toBe(HOUR - 1);
+    expect(effectiveMs(p, T0 + HOUR, noRain)).toBe(3 * HOUR);
+    expect(growthOf(p, T0 + HOUR, noRain)).toMatchObject({ stage: 1, stageProgress: 0.5 });
+  });
+
+  it("ignore un élixir postérieur à l'instant demandé", () => {
+    expect(effectiveMs(boosted([T0 + 5 * HOUR]), T0 + 2 * HOUR, noRain)).toBe(2 * HOUR);
+  });
+
+  it("cumule plusieurs élixirs", () => {
+    expect(growthOf(boosted([T0, T0 + HOUR]), T0 + HOUR, noRain).stage).toBe(2);
+  });
+
+  it("fait éclore une plante au stade bouton", () => {
+    const p = boosted([T0 + 7 * HOUR]);
+    expect(growthOf(p, T0 + 7 * HOUR - 1, noRain).stage).toBe(3);
+    expect(growthOf(p, T0 + 7 * HOUR, noRain).stage).toBe(4);
+  });
+
+  it("une étape entièrement sautée ne compte pas contre la belle plante", () => {
+    // mouillée : l'étape 0 finit à 80 min, l'élixir saute toute l'étape 1
+    const p = boosted([T0 + 80 * 60_000], [{ start: T0, end: T0 + 10 * HOUR }]);
+    expect(growthOf(p, T0 + 10 * HOUR, noRain).beautiful).toBe(true);
+  });
+
+  it("une étape vécue en partie doit toujours avoir été mouillée", () => {
+    const p = boosted([T0 + 80 * 60_000], [{ start: T0, end: T0 + 80 * 60_000 }]);
+    expect(growthOf(p, T0 + 10 * HOUR, noRain).beautiful).toBe(false);
   });
 });
