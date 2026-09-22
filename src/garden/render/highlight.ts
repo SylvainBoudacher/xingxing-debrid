@@ -15,7 +15,7 @@ export const TONES: Record<HighlightTone, string> = {
 };
 
 export interface Highlight {
-  set(key: TileKey | null, tone?: HighlightTone): void;
+  set(keys: TileKey[], tone?: HighlightTone): void;
   update(t: number): void;
   dispose(): void;
 }
@@ -47,25 +47,37 @@ export function createHighlight(scene: THREE.Scene): Highlight {
     depthWrite: false,
     toneMapped: false,
   });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.visible = false;
-  scene.add(mesh);
+  const geometry = new THREE.PlaneGeometry(1, 1);
+  // un cadre par case surlignée, créés à la demande et réutilisés
+  const meshes: THREE.Mesh[] = [];
+
+  function meshAt(i: number): THREE.Mesh {
+    if (!meshes[i]) {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.rotation.x = -Math.PI / 2;
+      scene.add(mesh);
+      meshes[i] = mesh;
+    }
+    return meshes[i];
+  }
 
   return {
-    set(key, tone = "info") {
-      mesh.visible = key !== null;
-      if (!key) return;
-      const [tx, ty] = parseTileKey(key);
-      mesh.position.set(wx(tx), 0.015, wz(ty));
+    set(keys, tone = "info") {
+      keys.forEach((key, i) => {
+        const [tx, ty] = parseTileKey(key);
+        const mesh = meshAt(i);
+        mesh.position.set(wx(tx), 0.015, wz(ty));
+        mesh.visible = true;
+      });
+      for (let i = keys.length; i < meshes.length; i++) meshes[i].visible = false;
       material.color.set(TONES[tone]).multiplyScalar(HIGHLIGHT_BOOST);
     },
     update(t) {
       material.opacity = pulse(t);
     },
     dispose() {
-      scene.remove(mesh);
-      mesh.geometry.dispose();
+      for (const mesh of meshes) scene.remove(mesh);
+      geometry.dispose();
       material.dispose();
       map.dispose();
     },

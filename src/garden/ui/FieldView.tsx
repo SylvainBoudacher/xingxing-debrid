@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type PointerEv
 import { toast } from "sonner";
 import type { Effect, Tool } from "../core/actions";
 import { planAction, TOOLS } from "../core/actions";
+import type { RecipeId } from "../core/catalog/recipes";
 import { withDemoPlants } from "../core/demo";
 import { planMove } from "../core/move";
+import { roseeArea } from "../core/potions";
 import { HOUR } from "../core/time";
 import { isMovable } from "../core/tiles";
 import type { DecorId, GardenSave, Rarity, TileKey } from "../core/types";
@@ -11,6 +13,7 @@ import { isRaining } from "../core/weather";
 import { createGardenScene, type GardenScene } from "../render/createGardenScene";
 import type { PickResult } from "../render/picking";
 import type { Tod } from "../render/tod";
+import { withAllPotions, withAtelierUnlocked } from "./atelier/devAtelier";
 import type { GardenAction } from "./gardenReducer";
 import { GardenDevBar } from "./GardenDevBar";
 import { describeTarget, toneOf } from "./hover";
@@ -49,6 +52,7 @@ export function FieldView({
   const [tool, setTool] = useState<Tool>("main");
   const [seedRarity, setSeedRarity] = useState<Rarity | null>(null);
   const [decorId, setDecorId] = useState<DecorId | null>(null);
+  const [potionId, setPotionId] = useState<RecipeId | null>(null);
   const [dragging, setDragging] = useState(false);
   const [devTod, setDevTod] = useState<Tod | null>(null);
   // un geste est postérieur au dernier tick : la vue doit le voir tout de suite
@@ -92,18 +96,25 @@ export function FieldView({
   // vue dérivée à chaque rendu : suit la sauvegarde, l'outil et l'heure
   const view =
     hover?.pick && !dragging && !panning
-      ? describeTarget(save, hover.pick.target, tool, at, { seedRarity, decor: decorId })
+      ? describeTarget(save, hover.pick.target, tool, at, {
+          seedRarity,
+          decor: decorId,
+          potion: potionId,
+        })
       : null;
   const shown = view && !(view.info.kind === "grass" && !view.plan) ? view : null;
 
   useEffect(() => {
     const interaction = sceneRef.current?.interaction;
     if (!interaction || dragging) return;
-    interaction.setHighlight(
-      shown ? (hover?.pick?.target ?? null) : null,
-      shown ? toneOf(shown) : undefined,
-    );
-  }, [shown, hover, dragging]);
+    const target = shown ? (hover?.pick?.target ?? null) : null;
+    // la rosée arrose un carré : on le montre en entier
+    const area =
+      target?.kind === "tile" && tool === "preparer" && potionId === "rosee"
+        ? roseeArea(save.plots, target.key)
+        : undefined;
+    interaction.setHighlight(target, shown ? toneOf(shown) : undefined, area);
+  }, [shown, hover, dragging, tool, potionId, save.plots]);
 
   const local = (e: PointerEvent) => {
     const r = e.currentTarget.getBoundingClientRect();
@@ -179,7 +190,11 @@ export function FieldView({
     }
     if (!start?.pick) return;
     const t = Date.now();
-    const plan = planAction(save, start.pick.target, tool, t, { seedRarity, decor: decorId });
+    const plan = planAction(save, start.pick.target, tool, t, {
+      seedRarity,
+      decor: decorId,
+      potion: potionId,
+    });
     if (!plan?.ok) return;
     const out = plan.apply();
     setActedAt(t);
@@ -213,6 +228,8 @@ export function FieldView({
         onSeedRarity={setSeedRarity}
         decorId={decorId}
         onDecor={setDecorId}
+        potionId={potionId}
+        onPotion={setPotionId}
         onPress={(index) => dispatch({ type: "press", index, now: Date.now(), rng: Math.random })}
       />
       {shown && hover && <TileTooltip x={hover.x} y={hover.y} view={shown} />}
@@ -245,6 +262,10 @@ export function FieldView({
             dispatch({ type: "tick", now: t });
           }}
           onCrow={spawn}
+          onAtelier={() => {
+            const t = Date.now();
+            dispatch({ type: "set", save: withAllPotions(withAtelierUnlocked(save, t)) });
+          }}
         />
       )}
     </div>

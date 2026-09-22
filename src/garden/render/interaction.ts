@@ -10,7 +10,7 @@ import { wx, wz } from "./world";
 
 export interface GardenInteraction {
   pickAt(clientX: number, clientY: number, ignore?: TileKey): PickResult | null;
-  setHighlight(target: Target | null, tone?: HighlightTone): void;
+  setHighlight(target: Target | null, tone?: HighlightTone, area?: TileKey[]): void;
   burst(key: TileKey, particle: Particle): void;
   lift(key: TileKey): void;
   moveLifted(x: number, z: number): void;
@@ -60,9 +60,9 @@ export function createInteraction(
       ];
       return pick(clientX, clientY, pickables);
     },
-    // une seule cible surlignée : cadre au sol pour une case, contour pour un corbeau
-    setHighlight(target, tone = "info") {
-      highlight.set(target?.kind === "tile" ? target.key : null, tone);
+    // cadre au sol pour une case ou une zone, contour pour un corbeau
+    setHighlight(target, tone = "info", area) {
+      highlight.set(area ?? (target?.kind === "tile" ? [target.key] : []), tone);
       crows.outline(target?.kind === "crow" ? target.id : null, TONES[tone]);
     },
     burst: particles.burst,

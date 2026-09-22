@@ -1,4 +1,5 @@
 import { planAction, type Plan, type Target, type Tool } from "../core/actions";
+import type { RecipeId } from "../core/catalog/recipes";
 import { describeCrow, describeTile, type TileInfo } from "../core/target";
 import { isMovable } from "../core/tiles";
 import type { DecorId, GardenSave, Rarity } from "../core/types";
@@ -13,6 +14,7 @@ export interface HoverView {
 export interface HoverOptions {
   seedRarity?: Rarity | null;
   decor?: DecorId | null;
+  potion?: RecipeId | null;
 }
 
 export function describeTarget(
@@ -22,8 +24,8 @@ export function describeTarget(
   now: number,
   opts: HoverOptions = {},
 ): HoverView {
-  const { seedRarity = null, decor = null } = opts;
-  const plan = planAction(save, target, tool, now, { seedRarity, decor });
+  const { seedRarity = null, decor = null, potion = null } = opts;
+  const plan = planAction(save, target, tool, now, { seedRarity, decor, potion });
   if (target.kind === "crow") return { info: describeCrow(), plan, movable: false };
   return {
     info: describeTile(save, target.key, now, { seedRarity }),

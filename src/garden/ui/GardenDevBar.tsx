@@ -15,12 +15,14 @@ export function GardenDevBar({
   onSeed,
   onLeaves,
   onCrow,
+  onAtelier,
 }: {
   tod: Tod | null;
   onTod: (tod: Tod | null) => void;
   onSeed: () => void;
   onLeaves: () => void;
   onCrow: () => void;
+  onAtelier: () => void;
 }) {
   return (
     <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-1">
@@ -45,6 +47,9 @@ export function GardenDevBar({
       </button>
       <button onClick={onCrow} className={button}>
         Dev : faire venir un corbeau
+      </button>
+      <button onClick={onAtelier} className={button}>
+        Dev : débloquer l'atelier et 3 doses de chaque préparation
       </button>
     </div>
   );

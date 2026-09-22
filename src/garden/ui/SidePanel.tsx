@@ -1,7 +1,9 @@
 import type { Tool } from "../core/actions";
+import type { RecipeId } from "../core/catalog/recipes";
 import { flowerName, RARITY_FR } from "../core/labels";
 import type { DecorId, GardenSave, Rarity } from "../core/types";
 import { DecorPicker } from "./DecorPicker";
+import { PotionPicker } from "./PotionPicker";
 import { SpriteIcon } from "./SpriteIcon";
 import { RARITY_COLOR } from "./toolMeta";
 
@@ -18,6 +20,8 @@ export function SidePanel({
   onSeedRarity,
   decorId,
   onDecor,
+  potionId,
+  onPotion,
   onPress,
 }: {
   save: GardenSave;
@@ -27,6 +31,8 @@ export function SidePanel({
   onSeedRarity: (rarity: Rarity) => void;
   decorId: DecorId | null;
   onDecor: (decor: DecorId) => void;
+  potionId: RecipeId | null;
+  onPotion: (id: RecipeId) => void;
   onPress: (index: number) => void;
 }) {
   const { seeds, basket } = save.inventory;
@@ -39,6 +45,9 @@ export function SidePanel({
     <aside className="absolute right-3 top-2.5 flex w-[210px] flex-col gap-2 text-xs">
       {tool === "decor" && (
         <DecorPicker decor={save.inventory.decor} selected={decorId} onSelect={onDecor} />
+      )}
+      {tool === "preparer" && (
+        <PotionPicker potions={save.inventory.potions} selected={potionId} onSelect={onPotion} />
       )}
       <section className={section}>
         <h4 className={heading}>Graines</h4>
