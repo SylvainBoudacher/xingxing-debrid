@@ -1,4 +1,5 @@
 import type { ColorId, VariantId } from "../core/types";
+import { ATELIER_DRAW } from "./atelier";
 import { DECOR_DRAW, drawTree } from "./decor";
 import { PAL } from "./palette";
 import { COLOR_RAMP } from "./colorRamps";
@@ -16,6 +17,7 @@ export type SpriteName =
   | keyof typeof STAGE_DRAW
   | keyof typeof DECOR_DRAW
   | keyof typeof TOOL_DRAW
+  | keyof typeof ATELIER_DRAW
   | "arbre";
 
 export interface SpriteRef {
@@ -52,7 +54,8 @@ export function renderSpriteBuf(ref: SpriteRef): Buf {
     SPECIES_DRAW[ref.name as keyof typeof SPECIES_DRAW] ??
     STAGE_DRAW[ref.name as keyof typeof STAGE_DRAW] ??
     DECOR_DRAW[ref.name as keyof typeof DECOR_DRAW] ??
-    TOOL_DRAW[ref.name as keyof typeof TOOL_DRAW];
+    TOOL_DRAW[ref.name as keyof typeof TOOL_DRAW] ??
+    ATELIER_DRAW[ref.name as keyof typeof ATELIER_DRAW];
   return drawBuf(draw, rampOf(ref.color), ref.variant);
 }
 

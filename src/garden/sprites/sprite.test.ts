@@ -31,6 +31,20 @@ describe("raster", () => {
 });
 
 describe("renderSpriteBuf", () => {
+  it("dessine la fiole, le pot de poudre et le chaudron", () => {
+    for (const name of ["fiole", "poudre", "chaudron"] as const) {
+      const b = renderSpriteBuf({ name, color: "blue" });
+      expect([b.w, b.h]).toEqual([48, 72]);
+      expect(opaque(b)).toBeGreaterThan(150);
+    }
+  });
+
+  it("teinte la fiole selon la couleur demandée", () => {
+    const blue = renderSpriteBuf({ name: "fiole", color: "blue" }).c.join();
+    const lime = renderSpriteBuf({ name: "fiole", color: "lime" }).c.join();
+    expect(blue).not.toBe(lime);
+  });
+
   it("les 65 entrées du catalogue produisent un sprite 48x72 non vide", () => {
     for (const { species, color } of CATALOG_ENTRIES) {
       const b = renderSpriteBuf({ name: species, color });
