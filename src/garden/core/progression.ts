@@ -66,8 +66,9 @@ export const readyCount = (save: GardenSave): number =>
 
 function applyReward(save: GardenSave, reward: Reward, rng: Rng): GardenSave {
   switch (reward.kind) {
-    // le deuxième sachet du jour se déduit du nœud récupéré, rien à écrire
+    // le deuxième sachet du jour et les recettes se déduisent du nœud récupéré
     case "sachet-quotidien":
+    case "recettes":
       return save;
     case "sachet": {
       const pending = save.sachets.pending;

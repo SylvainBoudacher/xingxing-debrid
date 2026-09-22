@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { creditDaily } from "./sachets";
 import { createStarterSave } from "./starter";
 import { DAY, startOfDay } from "./time";
-import { sachetsPerDay } from "./unlocks";
+import { knownRecipes, recipeNode, sachetsPerDay } from "./unlocks";
 import type { GardenSave } from "./types";
 
 const NOW = new Date(2026, 9, 20, 15, 30).getTime();
@@ -31,5 +31,26 @@ describe("creditDaily avec deux sachets par jour", () => {
     };
     expect(creditDaily(s, NOW, 2).sachets.pending).toHaveLength(4);
     expect(creditDaily(s, NOW, 1).sachets.pending).toHaveLength(2);
+  });
+});
+
+describe("knownRecipes", () => {
+  it("ne connaît aucune recette au départ", () => {
+    expect(knownRecipes(createStarterSave())).toEqual([]);
+  });
+
+  it("le chaudron apporte la croissance et la rosée", () => {
+    expect(knownRecipes(withNode("a1"))).toEqual(["croissance", "rosee"]);
+  });
+
+  it("les poussières d'étoiles apportent l'or et la lune", () => {
+    expect(knownRecipes(withNode("a5"))).toEqual(["or", "lune"]);
+  });
+});
+
+describe("recipeNode", () => {
+  it("retrouve le nœud qui débloque une recette", () => {
+    expect(recipeNode("teinture")?.id).toBe("a2");
+    expect(recipeNode("croissance")?.id).toBe("a1");
   });
 });

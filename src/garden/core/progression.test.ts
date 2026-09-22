@@ -212,3 +212,15 @@ describe("résumé", () => {
     ).toEqual(["c1", "d1", "h1", "j1"]);
   });
 });
+
+describe("nœuds de l'atelier", () => {
+  it("le chaudron s'ouvre après Main verte et se récupère après 3 pressages", () => {
+    const opened = withNodes(base(), "root", "j1");
+    expect(stateOf(opened, node("a1"))).toBe("ouvert");
+    const ready = withCounter(opened, "pressed", 3);
+    expect(stateOf(ready, node("a1"))).toBe("pret");
+    const next = claim(ready, "a1", NOW, () => 0)!;
+    expect(next.progress.nodes.a1).toBe(NOW);
+    expect(next.inventory).toEqual(ready.inventory);
+  });
+});

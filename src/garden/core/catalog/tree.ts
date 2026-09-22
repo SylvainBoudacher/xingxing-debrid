@@ -1,6 +1,7 @@
 import type { SpriteRef } from "../../sprites/sprite";
 import type { CounterId } from "../counters";
 import type { DecorId, PlotId, Rarity, SachetType, SpeciesId } from "../types";
+import type { RecipeId } from "./recipes";
 
 export type NodeId = string;
 export type BranchId = "jardin" | "collection" | "decor" | "champ";
@@ -16,7 +17,8 @@ export type Reward =
   | { kind: "sachet"; sachet: SachetType }
   | { kind: "parcelle"; plot: PlotId }
   | { kind: "decor"; decor: DecorId; count: number }
-  | { kind: "graines"; rarity: Rarity; count: number };
+  | { kind: "graines"; rarity: Rarity; count: number }
+  | { kind: "recettes"; recipes: RecipeId[] };
 
 export interface TreeNode {
   id: NodeId;
@@ -301,6 +303,77 @@ export const TREE: TreeNode[] = [
     icon: { name: "chrysantheme", color: "bronze" },
     task: herbier("entrees", 35),
     reward: { kind: "parcelle", plot: "p4" },
+  },
+  // Atelier (sous-projet 6a) : greffé sur Jardinage et Collection
+  {
+    id: "a1",
+    branch: "jardin",
+    parent: "j1",
+    x: 290,
+    y: 340,
+    title: "Le chaudron",
+    taskLabel: "Presser 3 fleurs",
+    rewardLabel: "L'atelier",
+    rewardNote: "Le chaudron, l'élixir de croissance et la rosée du matin",
+    icon: { name: "chaudron" },
+    task: counter("pressed", 3),
+    reward: { kind: "recettes", recipes: ["croissance", "rosee"] },
+  },
+  {
+    id: "a2",
+    branch: "jardin",
+    parent: "j4",
+    x: 215,
+    y: 120,
+    title: "Teinturier",
+    taskLabel: "Récupérer 3 brassages",
+    rewardLabel: "Teinture",
+    rewardNote: "Change la couleur d'une plante avant l'éclosion",
+    icon: { name: "fiole", color: "pink" },
+    task: counter("brewed", 3),
+    reward: { kind: "recettes", recipes: ["teinture"] },
+  },
+  {
+    id: "a3",
+    branch: "collection",
+    parent: "h3",
+    x: 300,
+    y: 60,
+    title: "Seconde vue",
+    taskLabel: "Utiliser 5 préparations",
+    rewardLabel: "Élixir de clairvoyance",
+    rewardNote: "Révèle une plante avant l'éclosion",
+    icon: { name: "fiole", color: "violet" },
+    task: counter("potionsUsed", 5),
+    reward: { kind: "recettes", recipes: ["clairvoyance"] },
+  },
+  {
+    id: "a4",
+    branch: "collection",
+    parent: "h4",
+    x: 430,
+    y: 65,
+    title: "Premier givre",
+    taskLabel: "Récupérer 5 brassages",
+    rewardLabel: "Poudre de givre",
+    rewardNote: "Une chance de fleur givrée",
+    icon: { name: "poudre", color: "white" },
+    task: counter("brewed", 5),
+    reward: { kind: "recettes", recipes: ["givre"] },
+  },
+  {
+    id: "a5",
+    branch: "collection",
+    parent: "a4",
+    x: 545,
+    y: 95,
+    title: "Poussières d'étoiles",
+    taskLabel: "Utiliser 15 préparations",
+    rewardLabel: "Poudres d'or et de lune",
+    rewardNote: "Des chances de fleurs dorées et lumineuses",
+    icon: { name: "poudre", color: "yellow" },
+    task: counter("potionsUsed", 15),
+    reward: { kind: "recettes", recipes: ["or", "lune"] },
   },
 ];
 

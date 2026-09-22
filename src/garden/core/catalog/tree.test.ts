@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ATELIER_DRAW } from "../../sprites/atelier";
 import { DECOR_DRAW } from "../../sprites/decor";
 import { SPECIES_DRAW } from "../../sprites/species";
 import { STAGE_DRAW } from "../../sprites/stages";
@@ -6,6 +7,7 @@ import { TOOL_DRAW } from "../../sprites/tools";
 import { DECOR_FR, RARITY_FR } from "../labels";
 import { PLOTS } from "../plots";
 import { BRANCHES, nodeById, TREE, type TreeNode } from "./tree";
+import { RECIPES } from "./recipes";
 import { isSpeciesId } from "./species";
 
 const SPRITES = new Set([
@@ -13,13 +15,23 @@ const SPRITES = new Set([
   ...Object.keys(STAGE_DRAW),
   ...Object.keys(DECOR_DRAW),
   ...Object.keys(TOOL_DRAW),
+  ...Object.keys(ATELIER_DRAW),
   "arbre",
 ]);
 
 describe("catalogue de l'arbre", () => {
-  it("compte 17 nœuds aux identifiants uniques", () => {
-    expect(TREE).toHaveLength(17);
-    expect(new Set(TREE.map((n) => n.id)).size).toBe(17);
+  it("compte 22 nœuds aux identifiants uniques", () => {
+    expect(TREE).toHaveLength(22);
+    expect(new Set(TREE.map((n) => n.id)).size).toBe(22);
+  });
+
+  it("débloque chaque recette par exactement un nœud", () => {
+    for (const r of RECIPES) {
+      const nodes = TREE.filter(
+        (n) => n.reward.kind === "recettes" && n.reward.recipes.includes(r.id),
+      );
+      expect(nodes).toHaveLength(1);
+    }
   });
 
   it("a une seule racine et des parents qui existent", () => {
