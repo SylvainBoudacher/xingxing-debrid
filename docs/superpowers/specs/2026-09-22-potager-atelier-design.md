@@ -102,7 +102,7 @@ export interface PlantTile {
 }
 ```
 
-`parseSave` ne change pas : il n'inspecte ni `potions`, ni l'intérieur des cases. Une recette inconnue dans `atelier.brew` vide le chaudron au chargement ; une clé inconnue dans `potions` est ignorée à l'affichage.
+`parseSave` n'inspecte ni `potions`, ni l'intérieur des cases : l'absence de `boosts` ou de `revealed` veut dire aucun. Il gagne une seule vérification : une recette inconnue dans `atelier.brew` vide le chaudron. Une clé inconnue dans `potions` est ignorée à l'affichage.
 
 ## 5. Moteur
 
