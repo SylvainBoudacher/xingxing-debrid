@@ -59,7 +59,8 @@ export function FieldView({
   const { spawn } = useCrows(sceneRef, saveRef, active);
   const { panning, moved, recenter } = useCameraControls(canvasRef, sceneRef, active);
   const hasDecor = Object.values(save.inventory.decor).some((n) => n > 0);
-  const tools = hasDecor ? TOOLS : TOOLS.filter((t) => t !== "decor");
+  const hasPotion = Object.values(save.inventory.potions).some((n) => (n ?? 0) > 0);
+  const tools = TOOLS.filter((t) => (t !== "decor" || hasDecor) && (t !== "preparer" || hasPotion));
 
   useEffect(() => {
     const scene = createGardenScene(canvasRef.current!, "garden");

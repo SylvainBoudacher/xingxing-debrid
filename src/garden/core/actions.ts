@@ -1,7 +1,9 @@
+import type { RecipeId } from "./catalog/recipes";
 import { bump } from "./counters";
 import { growthOf, WATER_MS } from "./growth";
 import { DECOR_LE, flowerName, pickedWord } from "./labels";
 import { fieldRect, isInField, isSoil } from "./plots";
+import { planPotion } from "./potions";
 import { rollPickSeed, type Rng } from "./rolls";
 import { harvestTool } from "./catalog/species";
 import { setTile } from "./tiles";
@@ -18,11 +20,21 @@ import {
 } from "./types";
 import { rainIntervals, type RainSource } from "./weather";
 
-export type Tool = "main" | "creuser" | "semer" | "arroser" | "secateur" | "rateau" | "decor";
-export const TOOLS: Tool[] = ["main", "creuser", "semer", "arroser", "secateur", "rateau", "decor"];
+export type Tool =
+  "main" | "creuser" | "semer" | "arroser" | "secateur" | "rateau" | "decor" | "preparer";
+export const TOOLS: Tool[] = [
+  "main",
+  "creuser",
+  "semer",
+  "arroser",
+  "secateur",
+  "rateau",
+  "decor",
+  "preparer",
+];
 
 export type Target = { kind: "tile"; key: TileKey } | { kind: "crow"; id: string };
-export type Particle = "dirt" | "water" | "leaves" | "petals" | "feathers";
+export type Particle = "dirt" | "water" | "leaves" | "petals" | "feathers" | "sparkles";
 export type Effect =
   | { kind: "burst"; key: TileKey; particle: Particle }
   | { kind: "chase"; id: string }
@@ -45,6 +57,7 @@ export interface PlanOptions {
   rain?: RainSource;
   seedRarity?: Rarity | null;
   decor?: DecorId | null;
+  potion?: RecipeId | null;
 }
 
 // L'arbre est haut et large : il masquerait le champ s'il était planté au milieu.
@@ -71,7 +84,13 @@ export function planAction(
   now: number,
   opts: PlanOptions = {},
 ): Plan | null {
-  const { rng = Math.random, rain = rainIntervals, seedRarity = null, decor = null } = opts;
+  const {
+    rng = Math.random,
+    rain = rainIntervals,
+    seedRarity = null,
+    decor = null,
+    potion = null,
+  } = opts;
   if (target.kind === "crow")
     return yes("Chasser", () => ({
       save: bump(save, "crowsChased"),
@@ -136,6 +155,9 @@ export function planAction(
         return { save: setTile(next, key, { kind: "decor", id: decor }), effects: [] };
       });
     }
+
+    case "preparer":
+      return planPotion(save, key, potion, now, rng, rain);
 
     case "main":
     case "secateur": {

@@ -62,6 +62,18 @@ const KINDS: Record<Particle, Kind> = {
     g: -2,
     life: 1.0,
   },
+  sparkles: {
+    n: 28,
+    cols: [
+      [1.9, 1.7, 0.8],
+      [1.5, 1.3, 1.9],
+      [1.9, 1.9, 1.9],
+    ],
+    y: [0.6, 1.2],
+    v: [0.9, 1.4, 0.9],
+    g: -0.6,
+    life: 1.2,
+  },
   feathers: {
     n: 14,
     cols: [
