@@ -4,6 +4,7 @@ import type { GardenSave, SpeciesId } from "../../core/types";
 import { SummaryBar } from "./SummaryBar";
 import { NodeDetail } from "./NodeDetail";
 import { TreeView } from "./TreeView";
+import { TreeViewport } from "./TreeViewport";
 
 export function ProgressionPage({
   save,
@@ -22,9 +23,9 @@ export function ProgressionPage({
     <div className="flex flex-1 flex-col overflow-auto">
       <SummaryBar save={save} />
       <div className="flex flex-1 gap-4 p-5">
-        <div className="flex flex-1 items-center justify-center rounded-xl bg-[radial-gradient(60%_60%_at_50%_60%,rgba(143,207,90,.08),transparent)]">
+        <TreeViewport>
           <TreeView save={save} selected={selected} blooming={blooming} onSelect={setSelected} />
-        </div>
+        </TreeViewport>
         <NodeDetail
           save={save}
           node={node}

@@ -3,6 +3,7 @@ import { progressOf, stateOf } from "../../core/progression";
 import type { GardenSave, SpeciesId } from "../../core/types";
 import { SpriteIcon } from "../SpriteIcon";
 import { BasketDeposit } from "./BasketDeposit";
+import { SILHOUETTE } from "./nodeStyle";
 
 const STATE_FR = {
   verrouille: "Verrouillé",
@@ -29,11 +30,7 @@ export function NodeDetail({
   return (
     <aside className="flex w-[260px] flex-col gap-3 rounded-xl border border-amber-300/30 bg-[#1a1216]/85 p-3.5">
       <div className="flex items-center gap-2.5">
-        <SpriteIcon
-          sprite={locked ? { name: "graine", color: "cream" } : node.icon}
-          cropped
-          className={`h-10 ${locked ? "opacity-40 grayscale" : ""}`}
-        />
+        <SpriteIcon sprite={node.icon} cropped className={`h-10 ${locked ? SILHOUETTE : ""}`} />
         <div>
           <h3 className="font-serif text-lg leading-tight text-[#f3dca0]">
             {locked ? "Palier verrouillé" : node.title}

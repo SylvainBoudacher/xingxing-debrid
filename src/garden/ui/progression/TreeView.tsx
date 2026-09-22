@@ -1,8 +1,12 @@
 import { BRANCHES, nodeById, TREE, type NodeId } from "../../core/catalog/tree";
 import { progressOf, stateOf } from "../../core/progression";
 import type { GardenSave } from "../../core/types";
+import { branchLabels } from "./branchLabels";
 import { NodeButton } from "./NodeButton";
-import { vinePath } from "./vines";
+import { Vine } from "./Vine";
+
+const LABELS = branchLabels(TREE);
+const ROOT = nodeById("root")!;
 
 export function TreeView({
   save,
@@ -15,26 +19,39 @@ export function TreeView({
   blooming: NodeId | null;
   onSelect: (id: NodeId) => void;
 }) {
+  const rootColor = BRANCHES[ROOT.branch].color;
   return (
-    <div className="relative mx-auto aspect-[1000/640] w-full max-w-[860px]">
+    <div className="relative size-full">
       <svg viewBox="0 0 1000 640" className="absolute inset-0 size-full" aria-hidden>
+        <path
+          d={`M${ROOT.x} 640 L${ROOT.x} ${ROOT.y}`}
+          stroke={rootColor}
+          strokeWidth="10"
+          strokeLinecap="round"
+        />
         {TREE.map((n) => {
           const parent = n.parent ? nodeById(n.parent) : undefined;
           if (!parent) return null;
-          const open = stateOf(save, n) !== "verrouille";
           return (
-            <path
+            <Vine
               key={n.id}
-              d={vinePath(parent, n)}
-              fill="none"
-              stroke={open ? BRANCHES[n.branch].color : "#4a3c32"}
-              strokeOpacity={open ? 0.7 : 0.45}
-              strokeWidth={open ? 4 : 3}
-              strokeLinecap="round"
+              from={parent}
+              to={n}
+              state={stateOf(save, n)}
+              color={BRANCHES[n.branch].color}
             />
           );
         })}
       </svg>
+      {LABELS.map(({ branch, x, y }) => (
+        <span
+          key={branch}
+          className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 font-serif text-[15px] font-bold tracking-wide [text-shadow:0_1px_6px_#000]"
+          style={{ left: `${x / 10}%`, top: `${y / 6.4}%`, color: BRANCHES[branch].color }}
+        >
+          {BRANCHES[branch].name}
+        </span>
+      ))}
       {TREE.map((n) => {
         const { value, target } = progressOf(save, n);
         return (
