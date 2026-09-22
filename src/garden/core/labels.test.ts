@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   flowerName,
   formatDuration,
+  ingredientLabel,
+  missingLabel,
   pickedWord,
   pressedLabel,
   RARITY_FR,
@@ -59,5 +61,20 @@ describe("herbier", () => {
 
   it("noms des variantes", () => {
     expect(VARIANT_FR).toEqual({ givree: "Givrée", doree: "Dorée", lumineuse: "Lumineuse" });
+  });
+});
+
+describe("ingrédients", () => {
+  it("accorde la rareté au nombre", () => {
+    expect(ingredientLabel("commune", 3)).toBe("3 communes");
+    expect(ingredientLabel("epique", 1)).toBe("1 épique");
+  });
+
+  it("dit ce qui manque, ou rien", () => {
+    expect(missingLabel({})).toBe("");
+    expect(missingLabel({ rare: 1 })).toBe("Il manque 1 fleur rare");
+    expect(missingLabel({ commune: 2, rare: 1 })).toBe(
+      "Il manque 2 fleurs communes et 1 fleur rare",
+    );
   });
 });

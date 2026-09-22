@@ -63,3 +63,18 @@ export function formatDuration(ms: number): string {
   const m = min % 60;
   return m ? `${h} h ${String(m).padStart(2, "0")}` : `${h} h`;
 }
+
+const rarityWord = (rarity: Rarity, n: number): string =>
+  `${RARITY_FR[rarity].toLowerCase()}${n > 1 ? "s" : ""}`;
+
+// "3 communes", "1 épique"
+export const ingredientLabel = (rarity: Rarity, n: number): string =>
+  `${n} ${rarityWord(rarity, n)}`;
+
+// "Il manque 2 fleurs communes et 1 fleur rare" ; vide quand rien ne manque.
+export function missingLabel(missing: Partial<Record<Rarity, number>>): string {
+  const parts = (Object.entries(missing) as [Rarity, number][]).map(
+    ([rarity, n]) => `${n} ${n > 1 ? "fleurs" : "fleur"} ${rarityWord(rarity, n)}`,
+  );
+  return parts.length ? `Il manque ${parts.join(" et ")}` : "";
+}
