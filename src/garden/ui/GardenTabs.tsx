@@ -1,10 +1,11 @@
-export type GardenTab = "champ" | "herbier" | "sachets" | "progression";
+export type GardenTab = "champ" | "herbier" | "sachets" | "progression" | "atelier";
 
 const TABS: { id: GardenTab; label: string }[] = [
   { id: "champ", label: "Champ" },
   { id: "herbier", label: "Herbier" },
   { id: "sachets", label: "Sachets" },
   { id: "progression", label: "Progression" },
+  { id: "atelier", label: "Atelier" },
 ];
 
 export function GardenTabs({
@@ -12,16 +13,27 @@ export function GardenTabs({
   onTab,
   sachets,
   ready,
+  atelier,
+  brewReady,
 }: {
   tab: GardenTab;
   onTab: (tab: GardenTab) => void;
   sachets: number;
   ready: number;
+  atelier: boolean;
+  brewReady: boolean;
 }) {
-  const badge = (id: GardenTab) => (id === "sachets" ? sachets : id === "progression" ? ready : 0);
+  const badge = (id: GardenTab) =>
+    id === "sachets"
+      ? sachets
+      : id === "progression"
+        ? ready
+        : id === "atelier"
+          ? Number(brewReady)
+          : 0;
   return (
     <nav className="flex gap-1 border-b border-amber-300/25 px-4 pt-2">
-      {TABS.map(({ id, label }) => (
+      {TABS.filter((t) => t.id !== "atelier" || atelier).map(({ id, label }) => (
         <button
           key={id}
           onClick={() => onTab(id)}

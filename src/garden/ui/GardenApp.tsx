@@ -2,8 +2,13 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useReducer, useRef, useState } from "react";
 import { toast, Toaster } from "sonner";
 import { isBrowserPreview } from "@/lib/devTauriShim";
+import { brewStatus } from "../core/atelier";
+import { recipeById } from "../core/catalog/recipes";
+import { knownRecipes } from "../core/unlocks";
 import { hasWebgl } from "../render/webgl";
 import { createSaveScheduler, loadGarden } from "../storage/gardenStore";
+import { AtelierPage } from "./atelier/AtelierPage";
+import { withBrewDone } from "./atelier/devAtelier";
 import { DiscoveryToast } from "./DiscoveryToast";
 import { FieldView } from "./FieldView";
 import { gardenReducer, INITIAL_GARDEN } from "./gardenReducer";
@@ -96,6 +101,9 @@ export default function GardenApp() {
     };
   }, [saver]);
 
+  const hasAtelier = !!state.save && knownRecipes(state.save).length > 0;
+  const brew = state.save ? brewStatus(state.save, now) : null;
+
   return (
     <div className="flex h-screen flex-col bg-[#1a1216] text-[#f1e6d2]">
       <Toaster theme="dark" position="top-center" />
@@ -104,6 +112,8 @@ export default function GardenApp() {
         onTab={setTab}
         sachets={state.save?.sachets.pending.length ?? 0}
         ready={state.save ? readyCount(state.save) : 0}
+        atelier={hasAtelier}
+        brewReady={!!brew?.ready}
       />
       {!webglOk
         ? tab === "champ" && (
@@ -133,6 +143,29 @@ export default function GardenApp() {
           onDevNextDay={() => {
             dispatch({ type: "set", save: withPreviousDay(state.save!) });
             dispatch({ type: "tick", now: Date.now() });
+          }}
+        />
+      )}
+      {tab === "atelier" && state.save && (
+        <AtelierPage
+          save={state.save}
+          now={now}
+          onBrew={(recipe) => {
+            const t = Date.now();
+            setNow(t);
+            dispatch({ type: "brew", recipe, now: t });
+          }}
+          onCollect={() => {
+            const t = Date.now();
+            const status = brewStatus(state.save!, t);
+            if (!status?.ready) return;
+            const { name, doses } = recipeById(status.recipe);
+            dispatch({ type: "collect-brew", now: t });
+            toast(`${name} : ${doses} doses récupérées`);
+          }}
+          onDevFinish={() => {
+            setNow(Date.now());
+            dispatch({ type: "set", save: withBrewDone(state.save!) });
           }}
         />
       )}
