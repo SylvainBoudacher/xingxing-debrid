@@ -1,7 +1,8 @@
 import type { ColorId } from "./catalog/colors";
+import type { RecipeId } from "./catalog/recipes";
 import type { SpeciesId } from "./catalog/species";
 
-export type { ColorId, SpeciesId };
+export type { ColorId, RecipeId, SpeciesId };
 
 export type Rarity = "commune" | "rare" | "epique" | "legendaire";
 
@@ -41,6 +42,10 @@ export interface PlantTile {
   watered: Interval[];
   // posé au premier scan qui voit la plante éclose, pour ne la compter qu'une fois
   bloomedAt?: number;
+  // instants d'application de l'élixir de croissance : chacun fait gagner une étape
+  boosts?: number[];
+  // clairvoyance ou teinture : l'infobulle montre l'espèce et la couleur
+  revealed?: boolean;
 }
 
 export type TileContent =
@@ -62,7 +67,7 @@ export interface GardenSave {
   inventory: {
     seeds: Seed[];
     basket: Flower[];
-    potions: Record<string, number>;
+    potions: Partial<Record<RecipeId, number>>;
     decor: Record<string, number>;
   };
   herbier: Record<string, HerbierEntry>;
@@ -73,7 +78,7 @@ export interface GardenSave {
     counters: Record<string, number>;
     baskets: Record<string, Partial<Record<SpeciesId, number>>>;
   };
-  atelier: { brew: { recipe: string; startedAt: number } | null };
+  atelier: { brew: { recipe: RecipeId; startedAt: number } | null };
   leaves: { checkedAt: number };
 }
 

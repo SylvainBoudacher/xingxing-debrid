@@ -1,3 +1,4 @@
+import { isRecipeId } from "./catalog/recipes";
 import type { GardenSave, SachetType } from "./types";
 
 export const SAVE_VERSION = 1;
@@ -29,10 +30,18 @@ export function parseSave(raw: unknown): GardenSave | null {
   const baskets = isObject(progress.baskets)
     ? (progress.baskets as GardenSave["progress"]["baskets"])
     : {};
+  // une recette retirée du catalogue ne doit pas bloquer le chaudron pour toujours
+  const brew =
+    isObject(atelier.brew) &&
+    isRecipeId(atelier.brew.recipe) &&
+    typeof atelier.brew.startedAt === "number"
+      ? { recipe: atelier.brew.recipe, startedAt: atelier.brew.startedAt }
+      : null;
   return {
     ...(raw as unknown as GardenSave),
     leaves,
     sachets: { lastDailyAt: Number(sachets.lastDailyAt) || 0, pending },
     progress: { ...(progress as unknown as GardenSave["progress"]), baskets },
+    atelier: { brew },
   };
 }

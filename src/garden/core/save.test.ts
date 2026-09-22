@@ -34,6 +34,14 @@ describe("createStarterSave", () => {
 });
 
 describe("parseSave", () => {
+  it("garde un brassage valide et vide un chaudron à recette inconnue", () => {
+    const s = createStarterSave();
+    const brewing = { ...s, atelier: { brew: { recipe: "rosee", startedAt: 42 } } };
+    expect(parseSave(brewing)?.atelier.brew).toEqual({ recipe: "rosee", startedAt: 42 });
+    const odd = { ...s, atelier: { brew: { recipe: "philtre", startedAt: 42 } } };
+    expect(parseSave(odd)?.atelier.brew).toBeNull();
+  });
+
   it("accepte une sauvegarde valide", () => {
     const s = createStarterSave();
     expect(parseSave(JSON.parse(JSON.stringify(s)))).toEqual(s);

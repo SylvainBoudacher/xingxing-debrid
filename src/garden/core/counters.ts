@@ -11,7 +11,9 @@ export type CounterId =
   | "pressed"
   | "sachetsOpened"
   | "bloomed"
-  | "nightBloom";
+  | "nightBloom"
+  | "brewed"
+  | "potionsUsed";
 
 export function bumpBy(save: GardenSave, id: CounterId, n: number): GardenSave {
   if (n <= 0) return save;
