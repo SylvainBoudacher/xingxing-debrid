@@ -159,3 +159,32 @@ describe("progression", () => {
     expect(gardenReducer(state, { type: "tick", now: NOW }).save!.sachets.pending).toHaveLength(2);
   });
 });
+
+describe("atelier", () => {
+  const c = { species: "cosmos", color: "pink", rarity: "commune" } as const;
+  const withAtelier = (): GardenState => {
+    const s = createStarterSave();
+    return gardenReducer(INITIAL_GARDEN, {
+      type: "load",
+      save: {
+        ...s,
+        inventory: { ...s.inventory, basket: [c, c, c] },
+        progress: { ...s.progress, nodes: { a1: 1 } },
+      },
+    });
+  };
+
+  it("brasse puis récupère les doses une fois le temps écoulé", () => {
+    const brewing = gardenReducer(withAtelier(), { type: "brew", recipe: "croissance", now: NOW });
+    expect(brewing.save!.atelier.brew).toEqual({ recipe: "croissance", startedAt: NOW });
+    expect(gardenReducer(brewing, { type: "collect-brew", now: NOW + HOUR })).toBe(brewing);
+    const done = gardenReducer(brewing, { type: "collect-brew", now: NOW + 2 * HOUR });
+    expect(done.save!.inventory.potions.croissance).toBe(3);
+    expect(done.save!.atelier.brew).toBeNull();
+  });
+
+  it("ignore une recette verrouillée", () => {
+    const state = withAtelier();
+    expect(gardenReducer(state, { type: "brew", recipe: "lune", now: NOW })).toBe(state);
+  });
+});

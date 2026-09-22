@@ -91,6 +91,7 @@ function describePlant(plant: PlantTile, now: number, rain: RainSource): TileInf
       ? `Mouillée encore ${formatDuration(wetLeft)}`
       : "Terre sèche : arrose pour pousser plus vite",
   ];
-  if (g.stage === 0) lines.push("Espèce et couleur inconnues");
+  if (plant.revealed) lines.push(`Révélée : ${flowerName(plant.seed)}`);
+  else if (g.stage === 0) lines.push("Espèce et couleur inconnues");
   return { kind: "plant", title: STAGE_FR[g.stage], lines, progress: g.stageProgress };
 }

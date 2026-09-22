@@ -1,3 +1,5 @@
+import { collectBrew, startBrew } from "../core/atelier";
+import type { RecipeId } from "../core/catalog/recipes";
 import type { NodeId } from "../core/catalog/tree";
 import { collectDiscoveries } from "../core/discovery";
 import { pressFlower } from "../core/herbier";
@@ -36,7 +38,9 @@ export type GardenAction =
   | { type: "press"; index: number; now: number; rng: Rng }
   | { type: "open-sachet"; now: number; rng: Rng }
   | { type: "claim"; id: NodeId; now: number; rng: Rng }
-  | { type: "deposit"; id: NodeId; species: SpeciesId };
+  | { type: "deposit"; id: NodeId; species: SpeciesId }
+  | { type: "brew"; recipe: RecipeId; now: number }
+  | { type: "collect-brew"; now: number };
 
 export function gardenReducer(state: GardenState, action: GardenAction): GardenState {
   if (action.type === "load") return { ...state, save: action.save };
@@ -60,6 +64,14 @@ export function gardenReducer(state: GardenState, action: GardenAction): GardenS
     }
     case "deposit": {
       const save = deposit(state.save, action.id, action.species);
+      return save ? { ...state, save } : state;
+    }
+    case "brew": {
+      const save = startBrew(state.save, action.recipe, action.now);
+      return save ? { ...state, save } : state;
+    }
+    case "collect-brew": {
+      const save = collectBrew(state.save, action.now);
       return save ? { ...state, save } : state;
     }
     case "open-sachet": {

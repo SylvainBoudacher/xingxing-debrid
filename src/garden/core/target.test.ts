@@ -133,3 +133,31 @@ describe("infobulle du trou", () => {
     expect(describeTile(empty, "1,1", NOW).lines).toEqual(["Plus de graines"]);
   });
 });
+
+describe("plante révélée", () => {
+  const revealNow = new Date(2026, 9, 1, 12).getTime();
+  const dry = (): Interval[] => [];
+  const withPlant = (revealed: boolean): GardenSave => ({
+    ...createStarterSave(),
+    tiles: {
+      "1,1": {
+        kind: "plant",
+        seed: { species: "dahlia", color: "blue", rarity: "legendaire" },
+        sownAt: revealNow - HOUR,
+        watered: [],
+        revealed,
+      },
+    },
+  });
+
+  it("montre l'espèce et la couleur avant l'éclosion", () => {
+    const lines = describeTile(withPlant(true), "1,1", revealNow, { rain: dry }).lines;
+    expect(lines).toContain("Révélée : Dahlia bleu");
+    expect(lines).not.toContain("Espèce et couleur inconnues");
+  });
+
+  it("garde le mystère sans révélation", () => {
+    const lines = describeTile(withPlant(false), "1,1", revealNow, { rain: dry }).lines;
+    expect(lines).toContain("Espèce et couleur inconnues");
+  });
+});
