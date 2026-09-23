@@ -1,0 +1,307 @@
+<style>
+  .gd {
+    font-family: ui-serif, Georgia, serif;
+  }
+  .stage {
+    background: #1a1216;
+    border-radius: 12px;
+    height: 250px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    overflow: hidden;
+  }
+  .halo {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(55% 60% at 50% 42%, rgba(243, 195, 74, 0.12), transparent);
+  }
+  .pack {
+    width: 66px;
+    height: 86px;
+    border-radius: 5px 5px 8px 8px;
+    position: relative;
+    background: linear-gradient(#caa46a, #a9804a);
+    box-shadow:
+      inset 0 0 0 3px #6a4428,
+      0 6px 14px rgba(0, 0, 0, 0.5);
+  }
+  .row {
+    display: flex;
+    gap: 14px;
+  }
+  .s {
+    width: 46px;
+    height: 46px;
+    border-radius: 9px;
+    background: #241a20;
+    box-shadow: inset 0 0 0 2px #d6cdbf;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #d6cdbf;
+    font-size: 18px;
+  }
+  .s.rare {
+    box-shadow: inset 0 0 0 2px #6db6f0;
+    color: #6db6f0;
+  }
+  .s.leg {
+    box-shadow:
+      inset 0 0 0 2px #f3c34a,
+      0 0 20px rgba(243, 195, 74, 0.6);
+    color: #f3c34a;
+  }
+  .lab {
+    font-size: 10px;
+    color: #a99a8a;
+    text-align: center;
+    margin-top: 4px;
+  }
+
+  /* A : déchirure et saut */
+  @keyframes tearShake {
+    0%,
+    8% {
+      transform: rotate(0);
+    }
+    3% {
+      transform: rotate(-4deg);
+    }
+    5% {
+      transform: rotate(4deg);
+    }
+    60%,
+    100% {
+      transform: rotate(0) scale(0.9);
+      opacity: 0.35;
+    }
+  }
+  @keyframes jump {
+    0%,
+    12% {
+      transform: translateY(0) scale(0.3);
+      opacity: 0;
+    }
+    35% {
+      transform: translateY(-70px) scale(1);
+      opacity: 1;
+    }
+    55%,
+    100% {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+  }
+  .a .pack {
+    animation: tearShake 4s infinite;
+  }
+  .a .s {
+    animation: jump 4s infinite;
+  }
+  .a .s:nth-child(2) {
+    animation-delay: 0.28s;
+  }
+  .a .s:nth-child(3) {
+    animation-delay: 0.56s;
+  }
+
+  /* B : cartes retournées */
+  @keyframes flip {
+    0%,
+    20% {
+      transform: rotateY(0);
+    }
+    40%,
+    100% {
+      transform: rotateY(180deg);
+    }
+  }
+  @keyframes faceIn {
+    0%,
+    30% {
+      opacity: 0;
+    }
+    45%,
+    100% {
+      opacity: 1;
+    }
+  }
+  .b .card3 {
+    width: 46px;
+    height: 46px;
+    perspective: 300px;
+    position: relative;
+  }
+  .b .back,
+  .b .face {
+    position: absolute;
+    inset: 0;
+    border-radius: 9px;
+    backface-visibility: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+  }
+  .b .back {
+    background: #3a2b33;
+    box-shadow: inset 0 0 0 2px rgba(252, 211, 77, 0.35);
+    color: #7a6a5a;
+    animation: flip 3.6s infinite;
+  }
+  .b .face {
+    background: #241a20;
+    animation: faceIn 3.6s infinite;
+  }
+  .b .card3:nth-child(2) .back {
+    animation-delay: 0.3s;
+  }
+  .b .card3:nth-child(2) .face {
+    animation-delay: 0.3s;
+  }
+  .b .card3:nth-child(3) .back {
+    animation-delay: 0.6s;
+  }
+  .b .card3:nth-child(3) .face {
+    animation-delay: 0.6s;
+  }
+
+  /* C : versé */
+  @keyframes tilt {
+    0%,
+    15% {
+      transform: rotate(0);
+    }
+    35%,
+    70% {
+      transform: rotate(115deg) translateX(10px);
+    }
+    90%,
+    100% {
+      transform: rotate(0);
+    }
+  }
+  @keyframes roll {
+    0%,
+    25% {
+      transform: translate(0, -54px) scale(0.4);
+      opacity: 0;
+    }
+    50% {
+      transform: translate(0, 0) scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(0, 0) scale(1);
+      opacity: 1;
+    }
+  }
+  .c .pack {
+    animation: tilt 4s infinite;
+    transform-origin: bottom center;
+  }
+  .c .s {
+    animation: roll 4s infinite;
+  }
+  .c .s:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+  .c .s:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+</style>
+
+<h2>Animation d'ouverture : laquelle ?</h2>
+<p class="subtitle">
+  Trois graines, rareté révélée (commune, rare, légendaire ici), espèce et couleur cachées jusqu'à
+  l'éclosion. Les trois maquettes tournent en boucle.
+</p>
+
+<div class="cards" style="grid-template-columns: repeat(3, 1fr)">
+  <div class="card" data-choice="dechirure" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 0">
+      <div class="stage a">
+        <div class="halo"></div>
+        <div class="pack"></div>
+        <div class="row">
+          <div class="s">&#9679;</div>
+          <div class="s rare">&#9679;</div>
+          <div class="s leg">&#9679;</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A &mdash; Déchirure</h3>
+      <p>
+        Le sachet tremble, se déchire, et les graines sautent dehors l'une après l'autre avant de
+        retomber en ligne. Le halo de rareté s'allume à l'atterrissage. Physique et gai ; c'est le
+        geste réel d'ouvrir un sachet.
+      </p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="cartes" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 0">
+      <div class="stage b">
+        <div class="halo"></div>
+        <div class="pack" style="opacity: 0.3"></div>
+        <div class="row">
+          <div class="card3">
+            <div class="face s">&#9679;</div>
+            <div class="back">?</div>
+          </div>
+          <div class="card3">
+            <div class="face s rare">&#9679;</div>
+            <div class="back">?</div>
+          </div>
+          <div class="card3">
+            <div class="face s leg">&#9679;</div>
+            <div class="back">?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B &mdash; Cartes retournées</h3>
+      <p>
+        Les trois graines se posent face cachée, puis se retournent une par une. Le suspense est
+        maximal et l'attente se contrôle au millième, mais c'est le geste des jeux à butin, pas
+        celui d'un jardin.
+      </p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="verse" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 0">
+      <div class="stage c">
+        <div class="halo"></div>
+        <div class="pack"></div>
+        <div class="row">
+          <div class="s">&#9679;</div>
+          <div class="s rare">&#9679;</div>
+          <div class="s leg">&#9679;</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C &mdash; Versé</h3>
+      <p>
+        Le sachet s'incline et verse les graines, qui roulent se ranger en ligne. Calme et
+        tr&egrave;s proche du potager, mais le sachet masque un instant les graines et la
+        r&eacute;v&eacute;lation manque de relief.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top: 18px">
+  <p class="subtitle">
+    Dans les trois cas : une légendaire ajoute une lueur dorée, des étincelles et une seconde de
+    pause avant la suivante ; le bouton "Ouvrir" reste actif pour enchaîner les sachets en attente,
+    et une ouverture en cours peut être passée d'un clic.
+  </p>
+</div>
