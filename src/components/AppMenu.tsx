@@ -7,6 +7,7 @@ import {
   FlaskConical,
   Home,
   KeyRound,
+  LifeBuoy,
   Library,
   Magnet,
   Menu,
@@ -40,6 +41,7 @@ export type Page =
   | "library"
   | "preferences"
   | "patchnotes"
+  | "help"
   | "discover"
   | "manga"
   | "mangalibrary"
@@ -155,6 +157,12 @@ export function AppMenu({
               Patch notes
             </DropdownMenuItem>
           )}
+          {currentPage !== "help" && (
+            <DropdownMenuItem onClick={() => onNavigate("help")}>
+              <LifeBuoy className="mr-2 h-4 w-4" />
+              Aide
+            </DropdownMenuItem>
+          )}
           {currentPage !== "preferences" && (
             <DropdownMenuItem onClick={() => onNavigate("preferences")}>
               <SlidersHorizontal className="mr-2 h-4 w-4" />
@@ -167,7 +175,7 @@ export function AppMenu({
               <DropdownMenuItem onClick={onShowPendingUpdate}>
                 <RefreshCw className="mr-2 h-4 w-4 text-green-500" />
                 <span className="text-green-600 dark:text-green-400 font-medium">
-                  Mise a jour disponible
+                  Mise à jour disponible
                 </span>
               </DropdownMenuItem>
             </>

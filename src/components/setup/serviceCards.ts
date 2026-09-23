@@ -47,7 +47,7 @@ export const SERVICE_CARDS: ServiceCardData[] = [
     badge: { label: "Gratuit", tone: "free" },
     accent: "indigo",
     description:
-      "Un site de torrents français, utilise ici comme source principale. XingXing y cherche films, séries et musiques et récupère le lien vers le fichier. L'inscription gratuite suffit.",
+      "Un site de torrents français, utilisé ici comme source principale. XingXing y cherche films, séries et musiques et récupère le lien vers le fichier. L'inscription gratuite suffit.",
   },
   {
     logo: allDebridLogo,

@@ -328,7 +328,7 @@ function FilesModal({
     try {
       const url = await invoke<string>("unlock_link", { link, alldebridKey: apiKey });
       await navigator.clipboard.writeText(url);
-      toast.success("Lien copie");
+      toast.success("Lien copié");
     } catch (err) {
       toastNetworkError(err, () => handleCopy(link));
     } finally {
@@ -775,7 +775,7 @@ export function MagnetsPage({
         await deleteMagnet(apiKeyRef.current, id);
         deleted.push(id);
       });
-      toast.success(ids.length > 1 ? `${ids.length} magnets supprimés` : "Magnet supprime");
+      toast.success(ids.length > 1 ? `${ids.length} magnets supprimés` : "Magnet supprimé");
       setConfirmDelete(null);
       // Invalide le cache pour que le prochain chargement soit à jour
       queryClient.invalidateQueries({ queryKey: allDebridKeys.magnets() });
@@ -821,7 +821,7 @@ export function MagnetsPage({
       const files = (json.data?.magnets ?? [])
         .flatMap((m) => flattenFiles(m.files ?? []))
         .filter((f) => !skipNfoDownload || !isNfoFile(f.name));
-      if (files.length === 0) throw new Error("Aucun fichier trouve");
+      if (files.length === 0) throw new Error("Aucun fichier trouvé");
       setBulkDownloading({ done: 0, total: files.length });
       beginBulkDownload(files.length);
       const batchSize = await getDownloadBatchSize();

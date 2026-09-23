@@ -472,7 +472,7 @@ export function MainPage({
         throw new Error(json.error?.message ?? "Erreur AllDebrid inconnue");
 
       const uploaded = json.data?.files?.[0] ?? json.data?.magnets?.[0];
-      if (!uploaded) throw new Error("Reponse AllDebrid inattendue");
+      if (!uploaded) throw new Error("Réponse AllDebrid inattendue");
 
       if (uploaded.ready) {
         const filesJson = await invoke<{

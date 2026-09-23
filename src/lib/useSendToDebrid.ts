@@ -67,7 +67,7 @@ export function useSendToDebrid({
 
       const uploaded = json.data?.files?.[0] as
         { id: number; name: string; ready: boolean } | undefined;
-      if (!uploaded) throw new Error("Reponse AllDebrid inattendue");
+      if (!uploaded) throw new Error("Réponse AllDebrid inattendue");
 
       if (uploaded.ready) {
         const filesJson = await invoke<{

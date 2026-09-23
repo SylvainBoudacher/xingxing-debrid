@@ -1,13 +1,9 @@
-import { useRef, useState } from "react";
 import { motion } from "motion/react";
 import { ArrowRight, Loader2 } from "lucide-react";
-import { NetworkCheck } from "./NetworkCheck";
-import { NetworkExplainer } from "./NetworkExplainer";
-import { NetworkGuideSection } from "./NetworkGuideSection";
+import type { DnsStatus } from "@/lib/useDnsCheck";
+import { NetworkTroubleshooter } from "./NetworkTroubleshooter";
 import { StepKindBadge } from "./StepKindBadge";
 import { item, stagger } from "./motionVariants";
-
-export type DnsStatus = "idle" | "checking" | "ok" | "fail";
 
 export function NetworkStep({
   dnsStatus,
@@ -20,33 +16,6 @@ export function NetworkStep({
   onCheck: () => void;
   onNext: () => void;
 }) {
-  const [explainerOpen, setExplainerOpen] = useState(dnsStatus !== "ok");
-  const [guideOpen, setGuideOpen] = useState(dnsStatus !== "ok");
-  const testRef = useRef<HTMLElement>(null);
-
-  // Le tutoriel est loin du resultat : on ramene l'utilisateur au test qu'il
-  // vient de relancer, sinon rien ne bouge visiblement a l'ecran.
-  const retestFromGuide = () => {
-    onCheck();
-    testRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  };
-
-  // Le resultat du test decide de l'explicatif : replie quand tout va bien,
-  // deplie quand l'utilisateur doit agir. Un clic manuel reste prioritaire
-  // jusqu'au prochain changement de statut.
-  const [prevStatus, setPrevStatus] = useState(dnsStatus);
-  if (prevStatus !== dnsStatus) {
-    setPrevStatus(dnsStatus);
-    if (dnsStatus === "ok") {
-      setExplainerOpen(false);
-      setGuideOpen(false);
-    }
-    if (dnsStatus === "fail") {
-      setExplainerOpen(true);
-      setGuideOpen(true);
-    }
-  }
-
   return (
     <motion.div
       key="network"
@@ -66,32 +35,12 @@ export function NetworkStep({
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
             XingXing a besoin d'internet, et surtout de pouvoir joindre C411. Chez certains
-            operateurs, cet acces est bloque au niveau du DNS. On verifie ca tout de suite.
+            opérateurs, cet acces est bloqué au niveau du DNS. On vérifie ça tout de suite.
           </p>
         </div>
       </motion.div>
 
-      <motion.div variants={item}>
-        <NetworkCheck
-          sectionRef={testRef}
-          dnsStatus={dnsStatus}
-          dnsError={dnsError}
-          onCheck={onCheck}
-        />
-      </motion.div>
-
-      <motion.div variants={item}>
-        <NetworkExplainer open={explainerOpen} onToggle={() => setExplainerOpen((open) => !open)} />
-      </motion.div>
-
-      <motion.div variants={item}>
-        <NetworkGuideSection
-          open={guideOpen}
-          onToggle={() => setGuideOpen((open) => !open)}
-          onRetest={retestFromGuide}
-          retesting={dnsStatus === "checking"}
-        />
-      </motion.div>
+      <NetworkTroubleshooter dnsStatus={dnsStatus} dnsError={dnsError} onCheck={onCheck} />
 
       <motion.div variants={item} className="pt-2">
         <motion.button
@@ -111,13 +60,13 @@ export function NetworkStep({
         </motion.button>
         {dnsStatus === "fail" && (
           <p className="mt-2 text-center text-[11px] text-red-500 dark:text-red-400">
-            c411.org doit etre joignable pour continuer : sans cela l'application ne peut rien
+            c411.org doit être joignable pour continuer : sans cela l'application ne peut rien
             chercher.
           </p>
         )}
         {dnsStatus === "idle" && (
           <p className="mt-2 text-center text-[11px] text-zinc-400 dark:text-zinc-600">
-            Lancez le test d'acces a c411.org pour continuer.
+            Lancez le test d'accès à c411.org pour continuer.
           </p>
         )}
       </motion.div>

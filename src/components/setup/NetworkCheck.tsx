@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Wifi, XCircle } from "lucide-react";
 import { DnsFlow } from "./DnsFlow";
-import type { DnsStatus } from "./NetworkStep";
+import type { DnsStatus } from "@/lib/useDnsCheck";
 
 export function NetworkCheck({
   sectionRef,
@@ -13,6 +14,13 @@ export function NetworkCheck({
   dnsError: string;
   onCheck: () => void;
 }) {
+  // Pendant un retest, le schema garde le dernier resultat au lieu de
+  // disparaitre puis reapparaitre (saut de mise en page).
+  const [lastResult, setLastResult] = useState<"ok" | "fail" | null>(null);
+  if ((dnsStatus === "ok" || dnsStatus === "fail") && dnsStatus !== lastResult) {
+    setLastResult(dnsStatus);
+  }
+
   return (
     <section ref={sectionRef}>
       <div className="flex items-center gap-2 px-1 pb-2">
@@ -37,17 +45,17 @@ export function NetworkCheck({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-0.5">
-              Ou en est votre connexion ?
+              Où en est votre connexion ?
             </p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              On tente de joindre c411.org depuis votre reseau, avec vos reglages actuels.
+              On tente de joindre c411.org depuis votre réseau, avec vos réglages actuels.
             </p>
           </div>
         </div>
 
-        {(dnsStatus === "ok" || dnsStatus === "fail") && (
+        {lastResult && (
           <div className="mt-4">
-            <DnsFlow live={dnsStatus} />
+            <DnsFlow live={lastResult} />
           </div>
         )}
 
@@ -56,7 +64,7 @@ export function NetworkCheck({
             {dnsStatus === "checking" && (
               <>
                 <Loader2 className="h-4 w-4 shrink-0 animate-spin text-zinc-400" />
-                <p className="text-xs text-zinc-500">Vérification de l'accès a c411.org...</p>
+                <p className="text-xs text-zinc-500">Vérification de l'accès à c411.org...</p>
               </>
             )}
             {dnsStatus === "ok" && (
@@ -67,7 +75,7 @@ export function NetworkCheck({
                     Votre DNS est bon.
                   </p>
                   <p className="text-xs text-zinc-500 mt-0.5">
-                    c411.org repond depuis votre reseau : vous n'avez rien a changer.
+                    c411.org répond depuis votre réseau : vous n'avez rien à changer.
                   </p>
                 </div>
               </>
@@ -94,7 +102,7 @@ export function NetworkCheck({
             {dnsStatus === "idle" && (
               <>
                 <AlertTriangle className="h-4 w-4 shrink-0 text-zinc-400" />
-                <p className="text-xs text-zinc-500">Accès a c411.org non vérifie.</p>
+                <p className="text-xs text-zinc-500">Accès à c411.org non vérifié.</p>
               </>
             )}
           </div>
@@ -115,9 +123,9 @@ export function NetworkCheck({
         {dnsStatus === "fail" && (
           <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
             Changer le DNS en <span className="font-semibold">IPv4</span> ne suffit pas toujours :
-            faites de meme en <span className="font-semibold">IPv6</span>, sinon le systeme peut
-            continuer a utiliser l'ancien annuaire. Un antivirus, un pare-feu ou un VPN peuvent
-            aussi bloquer l'acces : verifiez leurs reglages si le test echoue malgre un DNS correct.
+            faites de même en <span className="font-semibold">IPv6</span>, sinon le système peut
+            continuer à utiliser l'ancien annuaire. Un antivirus, un pare-feu ou un VPN peuvent
+            aussi bloquer l'accès : vérifiez leurs réglages si le test échoue malgré un DNS correct.
           </p>
         )}
       </div>

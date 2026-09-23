@@ -19,11 +19,11 @@ import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { toast } from "sonner";
 import { setApiKey } from "@/lib/apiKeys";
-import { httpFetch } from "@/lib/networkError";
 import { pickBackupFile } from "@/lib/profileBackup";
 import { ImportProfileModal } from "@/components/ImportProfileModal";
 import { ServicesStep } from "@/components/setup/ServicesStep";
-import { NetworkStep, type DnsStatus } from "@/components/setup/NetworkStep";
+import { NetworkStep } from "@/components/setup/NetworkStep";
+import { useDnsCheck, type DnsSim } from "@/lib/useDnsCheck";
 import { KeyWizard } from "@/components/setup/keys/KeyWizard";
 import { PlayerStep, type VlcSim } from "@/components/setup/PlayerStep";
 import { KEY_SERVICES } from "@/lib/keyServices";
@@ -64,11 +64,16 @@ interface SetupPageProps {
 export function SetupPage({ onComplete }: SetupPageProps) {
   const [step, setStep] = useState<"intro" | StepId>("intro");
   const [keyIndex, setKeyIndex] = useState(0);
-  const [dnsStatus, setDnsStatus] = useState<DnsStatus>("idle");
-  const [dnsError, setDnsError] = useState("");
   // Simulation dev : le resultat force survit aux retests, sinon le vrai
   // reseau reprend la main des le clic suivant.
-  const [dnsSim, setDnsSim] = useState<"none" | "ok" | "fail">("none");
+  const [dnsSim, setDnsSim] = useState<DnsSim>("none");
+  const {
+    status: dnsStatus,
+    error: dnsError,
+    check: checkDns,
+    setStatus: setDnsStatus,
+    setError: setDnsError,
+  } = useDnsCheck(dnsSim);
   const [vlcSim, setVlcSim] = useState<VlcSim>("none");
   const [downloadDir, setDownloadDir] = useState("");
   const [batchSize, setBatchSize] = useState(2);
@@ -84,24 +89,6 @@ export function SetupPage({ onComplete }: SetupPageProps) {
     store.get<Theme>("theme").then((v) => setThemeState(v === "light" ? "light" : "dark"));
     store.get<boolean>("summer_pool_enabled").then((v) => setSummerEnabled(v ?? false));
   }, []);
-
-  async function checkDns() {
-    setDnsError("");
-    setDnsStatus("checking");
-    if (import.meta.env.DEV && dnsSim !== "none") {
-      await new Promise((r) => setTimeout(r, 600));
-      setDnsError(dnsSim === "fail" ? "[DEV] échec simule" : "");
-      setDnsStatus(dnsSim);
-      return;
-    }
-    try {
-      await httpFetch("https://c411.org", { method: "HEAD", signal: AbortSignal.timeout(6000) });
-      setDnsStatus("ok");
-    } catch (e) {
-      setDnsError(e instanceof Error ? `${e.name}: ${e.message}` : String(e));
-      setDnsStatus("fail");
-    }
-  }
 
   function goToServices() {
     setStep("services");
@@ -570,7 +557,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
               onClick={() => {
                 setDnsSim(mode);
                 if (mode !== "none") {
-                  setDnsError(mode === "fail" ? "[DEV] échec simule" : "");
+                  setDnsError(mode === "fail" ? "[DEV] échec simulé" : "");
                   setDnsStatus(mode);
                 }
               }}

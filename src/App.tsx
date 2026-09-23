@@ -57,6 +57,7 @@ const PreferencesPage = lazy(() =>
 const PatchnotesPage = lazy(() =>
   import("@/pages/PatchnotesPage").then((m) => ({ default: m.PatchnotesPage })),
 );
+const HelpPage = lazy(() => import("@/pages/HelpPage").then((m) => ({ default: m.HelpPage })));
 const BoatGamePage = lazy(() =>
   import("@/pages/BoatGamePage").then((m) => ({ default: m.BoatGamePage })),
 );
@@ -643,6 +644,22 @@ function App() {
               transition={{ duration: 0.22, ease: "easeInOut" }}
             >
               <PatchnotesPage
+                onBack={() => setPage("main")}
+                onNavigate={handleNavigate}
+                hasPendingUpdate={availableUpdate !== null}
+                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+              />
+            </motion.div>
+          )}
+          {effectivePhase === "done" && page === "help" && (
+            <motion.div
+              key="help"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -12 }}
+              transition={{ duration: 0.22, ease: "easeInOut" }}
+            >
+              <HelpPage
                 onBack={() => setPage("main")}
                 onNavigate={handleNavigate}
                 hasPendingUpdate={availableUpdate !== null}

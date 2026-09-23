@@ -75,7 +75,7 @@ export function useAddMangaRelease({
           throw new Error(json.error?.message ?? "Erreur AllDebrid inconnue");
 
         const uploaded = json.data?.files?.[0];
-        if (!uploaded) throw new Error("Reponse AllDebrid inattendue");
+        if (!uploaded) throw new Error("Réponse AllDebrid inattendue");
 
         if (!uploaded.ready) {
           const entry = await upsertMangaRelease(item, {
