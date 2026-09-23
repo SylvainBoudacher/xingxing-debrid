@@ -1,4 +1,4 @@
+- 3 nouveaux canards à collectionner ! La suite arrive la saison prochaine
 - Nouvelle page d'aide et page Paramètres plus lisible
 - Bibliothèque : taille des jaquettes réglable, bandeau « Reprendre » animé et corrigé
-- Canards : bandit manchot mis à jour, la suite arrive la saison prochaine
-- Corrections diverses (texte de la bibliothèque, reprise des mangas)
+- Bandit manchot mis à jour et corrections diverses

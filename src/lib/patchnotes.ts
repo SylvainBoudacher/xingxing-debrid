@@ -1,3 +1,4 @@
+import newCanardV173Img from "@/assets/patchnote/v1.7.3/newCanard.webp";
 import newPageSerieV170Img from "@/assets/patchnote/v1.7.0/newPageSerie.webp";
 import recoV170Img from "@/assets/patchnote/v1.7.0/reco.webp";
 import reprendreV170Img from "@/assets/patchnote/v1.7.0/reprendre.webp";
@@ -52,11 +53,16 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.7.3",
     date: "23 septembre 2026",
     intro:
-      "La 1.7.3 apporte une nouvelle page d'aide, des jaquettes redimensionnables dans la bibliothèque et plusieurs corrections. La suite des canards est en cours de création pour la prochaine saison !",
+      "La 1.7.3 accueille 3 nouveaux canards ! Elle apporte aussi une nouvelle page d'aide, des jaquettes redimensionnables dans la bibliothèque et plusieurs corrections. La suite des canards est en cours de création pour la prochaine saison !",
+    introImage: {
+      src: newCanardV173Img,
+      caption: "Les 3 nouveaux canards",
+    },
     sections: [
       {
         title: "Canards",
         items: [
+          "Ajout de 3 nouveaux canards à collectionner !",
           "La suite de l'aventure des canards est en cours de création pour la prochaine saison.",
           "Mise à jour du bandit manchot des canards.",
           "Nouveau paramètre pour quitter la page découverte en cliquant sur l'arrière-plan pendant la piscine (dans les paramètres « Summer et canard »).",
