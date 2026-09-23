@@ -70,6 +70,11 @@ describe("parseMangaName", () => {
 describe("volumeFromFileName", () => {
   it("lit les formes courantes", () => {
     expect(volumeFromFileName("One Piece - Tome 03.cbz")).toBe(3);
+    expect(
+      volumeFromFileName(
+        "One Piece (Oda)/Compressed_One_Piece_Team_Chromatique_Tome_#001_Perfect_Edition.cbz",
+      ),
+    ).toBe(1);
     expect(volumeFromFileName("One.Piece.T01.cbz")).toBe(1);
     expect(volumeFromFileName("Naruto v12.cbz")).toBe(12);
     expect(volumeFromFileName("Berserk - 42.cbz")).toBe(42);
