@@ -4,6 +4,9 @@ import { SACHET_H, SACHET_W, sachetDataUrl } from "../../sprites/sachet";
 import { PACK_SCALE } from "./packFlow";
 
 const TILT = [-7, 5, -3, 8, -5, 3];
+// débord de la pile pleine sous le sachet du dessus (décalage + coin tourné), réservé
+// en permanence pour que le texte en dessous ne bouge pas selon le nombre de sachets
+const SPREAD = 48;
 
 // Sachets en attente sous celui du dessus, décalés et tournés ; les plus profonds d'abord.
 export function PackStack({ under, children }: { under: SachetType[]; children: ReactNode }) {
@@ -11,7 +14,11 @@ export function PackStack({ under, children }: { under: SachetType[]; children: 
   return (
     <div
       className="relative"
-      style={{ width: SACHET_W * PACK_SCALE, height: SACHET_H * PACK_SCALE }}
+      style={{
+        width: SACHET_W * PACK_SCALE,
+        height: SACHET_H * PACK_SCALE,
+        marginBottom: SPREAD,
+      }}
     >
       {shown
         .map((type, i) => (
