@@ -1,12 +1,11 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { colorName } from "../../core/catalog/colors";
 import { speciesOf } from "../../core/catalog/species";
 import { pressedLabel, RARITY_FR } from "../../core/labels";
 import type { Rarity, SpeciesId, VariantId } from "../../core/types";
+import { LiveFlower } from "../cards/LiveFlower";
 import { SpriteIcon } from "../SpriteIcon";
-import { CARD_H, CARD_W } from "./cardFx";
 import type { Specimen } from "./plate";
-import { useCardFx } from "./useCardFx";
 import { VariantSlots } from "./VariantSlots";
 
 // Teintes de rareté lisibles sur le papier du carnet.
@@ -16,27 +15,6 @@ const INK: Record<Rarity, string> = {
   epique: "#7a44b0",
   legendaire: "#a8740c",
 };
-
-function LiveSprite({
-  species,
-  specimen,
-  variant,
-}: {
-  species: SpeciesId;
-  specimen: Specimen;
-  variant: VariantId | null;
-}) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useCardFx(ref, species, specimen.color, specimen.rarity, variant);
-  return (
-    <canvas
-      ref={ref}
-      width={CARD_W}
-      height={CARD_H}
-      className="mx-auto block w-[112px] [image-rendering:pixelated]"
-    />
-  );
-}
 
 export function SpecimenCard({
   species,
@@ -56,7 +34,13 @@ export function SpecimenCard({
         style={{ transform: `rotate(${tilt}deg)` }}
       >
         {entry ? (
-          <LiveSprite species={species} specimen={specimen} variant={shown} />
+          <LiveFlower
+            species={species}
+            color={specimen.color}
+            rarity={specimen.rarity}
+            variant={shown}
+            className="mx-auto w-[112px]"
+          />
         ) : (
           <div className="flex h-[152px] items-end justify-center">
             <SpriteIcon
