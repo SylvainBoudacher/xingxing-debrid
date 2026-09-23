@@ -1,5 +1,8 @@
 import { useRef, type PointerEvent as ReactPointerEvent } from "react";
 import { animate, motion, useMotionValue, useTransform } from "motion/react";
+import { PixelSprite } from "./PixelSprite";
+import { KNOB_PATHS } from "./slotPixelArt";
+import { PX, pixelFrame } from "./slotPixel";
 
 // Le levier de la borne. On peut attraper le pommeau et le tirer vers le bas:
 // le bras bascule vers le joueur (le pommeau descend à la verticale à travers
@@ -64,8 +67,12 @@ export function SlotLever({ disabled, onPull }: { disabled: boolean; onPull: () 
   return (
     <div className="relative h-[248px] w-12 shrink-0 select-none">
       {/* moyeu du pivot, à mi-hauteur */}
-      <div className="absolute left-1/2 top-[118px] h-8 w-8 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-b from-zinc-500 to-zinc-800 ring-1 ring-black/40" />
-      <div className="absolute left-1/2 top-[118px] h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-zinc-900/80" />
+      <div
+        className="absolute left-1/2 top-[118px] flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center"
+        style={pixelFrame(PX.steelDark, PX.outline, 3, { light: PX.steel, dark: "#4A4A54" })}
+      >
+        <span className="h-2 w-2" style={{ background: PX.outline }} />
+      </div>
 
       <button
         type="button"
@@ -78,27 +85,25 @@ export function SlotLever({ disabled, onPull }: { disabled: boolean; onPull: () 
         // les clics souris passent par le geste ci-dessus; celui-ci ne sert
         // qu'aux activations clavier, qui n'émettent aucun pointer event
         onClick={(e) => !disabled && e.detail === 0 && autoPull()}
-        className="absolute inset-0 cursor-grab touch-none active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+        className="absolute inset-0 cursor-grab touch-none active:cursor-grabbing disabled:cursor-not-allowed"
       >
         {/* tige, du pivot au pommeau */}
         <motion.span
-          style={{ scaleY: stemScale, originY: 1, x: "-50%" }}
-          className={`absolute left-1/2 top-[14px] h-[104px] w-[9px] rounded-full bg-gradient-to-r ${
-            disabled
-              ? "from-zinc-600 via-zinc-400 to-zinc-600"
-              : "from-zinc-500 via-zinc-200 to-zinc-500"
-          }`}
+          style={{
+            scaleY: stemScale,
+            originY: 1,
+            x: "-50%",
+            ...pixelFrame(
+              `linear-gradient(90deg, ${PX.steelLight} 0 3px, ${PX.steel} 3px 6px, ${PX.steelDark} 6px)`,
+              PX.outline,
+              2,
+            ),
+          }}
+          className="absolute left-1/2 top-[14px] h-[104px] w-[9px]"
         />
         {/* pommeau */}
-        <motion.span
-          style={{ y: knobY, x: "-50%" }}
-          className={`absolute left-1/2 top-[-1px] h-[30px] w-[30px] rounded-full ring-2 shadow-lg ${
-            disabled
-              ? "bg-gradient-to-br from-zinc-500 to-zinc-700 ring-white/10"
-              : "bg-gradient-to-br from-[#FF7A6B] to-[#A81B26] ring-white/30"
-          }`}
-        >
-          <span className="absolute left-[7px] top-[5px] h-2 w-3 rounded-full bg-white/40 blur-[1px]" />
+        <motion.span style={{ y: knobY, x: "-50%" }} className="absolute left-1/2 top-[-1px]">
+          <PixelSprite paths={KNOB_PATHS[disabled ? "off" : "on"]} w={10} h={10} scale={3} />
         </motion.span>
       </button>
     </div>
