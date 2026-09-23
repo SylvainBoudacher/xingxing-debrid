@@ -1,4 +1,4 @@
-- Refonte de la page des œuvres côté manga, comme pour les séries
-- Boutons de menu et de retour toujours au même endroit
-- Retouche du bandeau « Reprendre » de la bibliothèque
-- Mise à jour des dépendances : application plus légère et plus performante
+- Nouvelle page d'aide et page Paramètres plus lisible
+- Bibliothèque : taille des jaquettes réglable, bandeau « Reprendre » animé et corrigé
+- Canards : bandit manchot mis à jour, la suite arrive la saison prochaine
+- Corrections diverses (texte de la bibliothèque, reprise des mangas)

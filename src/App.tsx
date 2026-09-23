@@ -122,7 +122,7 @@ function App() {
   const [pendingUpdate, setPendingUpdate] = useState<UpdateInfo | null>(null);
   const fakeUpdate: UpdateInfo = {
     version: "9.9.9",
-    body: "- Nouvelle fonctionnalite incroyable\n- Correction de bugs\n- Amelioration des performances",
+    body: "- Nouvelle fonctionnalité incroyable\n- Correction de bugs sur la recherche C411\n- Amélioration des performances au démarrage\n- Nouveau tri par date dans la bibliothèque\n- Les jaquettes se chargent plus vite\n- Meilleure gestion des erreurs réseau\n- Refonte de la fenêtre de mise à jour\n- Divers ajustements visuels en mode sombre",
     download: async () => {},
   };
   const [availableUpdate, setAvailableUpdate] = useState<UpdateInfo | null>(
@@ -519,7 +519,7 @@ function App() {
                 onShowUpdatePreview={() =>
                   setPendingUpdate({
                     version: "9.9.9",
-                    body: "- Nouvelle fonctionnalite incroyable\n- Correction de bugs\n- Amelioration des performances",
+                    body: "- Nouvelle fonctionnalité incroyable\n- Correction de bugs sur la recherche C411\n- Amélioration des performances au démarrage\n- Nouveau tri par date dans la bibliothèque\n- Les jaquettes se chargent plus vite\n- Meilleure gestion des erreurs réseau\n- Refonte de la fenêtre de mise à jour\n- Divers ajustements visuels en mode sombre",
                     download: async () => {},
                   })
                 }

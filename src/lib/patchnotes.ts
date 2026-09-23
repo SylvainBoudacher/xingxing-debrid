@@ -49,6 +49,36 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.7.3",
+    date: "23 septembre 2026",
+    intro:
+      "La 1.7.3 apporte une nouvelle page d'aide, des jaquettes redimensionnables dans la bibliothèque et plusieurs corrections. La suite des canards est en cours de création pour la prochaine saison !",
+    sections: [
+      {
+        title: "Canards",
+        items: [
+          "La suite de l'aventure des canards est en cours de création pour la prochaine saison.",
+          "Mise à jour du bandit manchot des canards.",
+          "Nouveau paramètre pour quitter la page découverte en cliquant sur l'arrière-plan pendant la piscine (dans les paramètres « Summer et canard »).",
+        ],
+      },
+      {
+        title: "Bibliothèque",
+        items: [
+          "Possibilité de changer la taille des jaquettes.",
+          "Correction d'un bug d'affichage de texte possible.",
+          "Bandeau « Reprendre » : une animation accompagne désormais le passage en première position quand on clique sur la 2e ou 3e carte.",
+          "Bandeau « Reprendre » : correction de l'ombre au survol.",
+          "Correction d'un problème possible sur le bouton de reprise des mangas.",
+        ],
+      },
+      {
+        title: "Interface",
+        items: ["Nouvelle page d'aide.", "Amélioration de la lisibilité de la page Paramètres."],
+      },
+    ],
+  },
+  {
     version: "1.7.2",
     date: "14 septembre 2026",
     intro:
