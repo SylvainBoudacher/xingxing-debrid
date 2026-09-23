@@ -8,7 +8,7 @@ import { NewStamp } from "./NewStamp";
 import { FLIP_MS, REVEAL_FX } from "./packFlow";
 
 const SIZE = {
-  big: { box: "h-[400px] w-[256px]", flower: "w-[224px]", name: "text-xl" },
+  big: { box: "h-[318px] w-[200px]", flower: "w-[160px]", name: "text-lg leading-tight" },
   small: { box: "h-[232px] w-[144px]", flower: "w-[112px]", name: "text-sm" },
 };
 

@@ -25,7 +25,7 @@ export function CardBack({ rarity, className }: { rarity: Rarity; className?: st
         src={sachetDataUrl("quotidien")}
         alt=""
         draggable={false}
-        className="w-12 opacity-30 [image-rendering:pixelated]"
+        className="w-1/3 opacity-30 [image-rendering:pixelated]"
       />
     </motion.div>
   );

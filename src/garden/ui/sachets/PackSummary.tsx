@@ -18,7 +18,7 @@ export function PackSummary({
 }) {
   return (
     <div className="flex flex-col items-center gap-6">
-      <div className="flex gap-4">
+      <div className="flex gap-3">
         {seeds.map((seed, i) => (
           <motion.div
             key={i}
