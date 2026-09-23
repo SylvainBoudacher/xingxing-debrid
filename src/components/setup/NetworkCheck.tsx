@@ -24,21 +24,13 @@ export function NetworkCheck({
   return (
     <section ref={sectionRef}>
       <div className="flex items-center gap-2 px-1 pb-2">
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
           Votre test
         </span>
         <span className="h-px flex-1 bg-black/8 dark:bg-white/8" />
       </div>
 
-      <div
-        className={`rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 px-5 py-4 transition-colors ${
-          dnsStatus === "ok"
-            ? "ring-emerald-500/50"
-            : dnsStatus === "fail"
-              ? "ring-red-500/50"
-              : "ring-black/6 dark:ring-white/6"
-        }`}
-      >
+      <div className="rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 ring-1 ring-black/6 dark:ring-white/10 px-5 py-4">
         <div className="flex items-start gap-4">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500/12 ring-1 ring-sky-500/20">
             <Wifi className="h-4 w-4 text-sky-600 dark:text-sky-400" />
@@ -59,7 +51,7 @@ export function NetworkCheck({
           </div>
         )}
 
-        <div className="mt-4 rounded-xl bg-zinc-100 dark:bg-zinc-950/60 ring-1 ring-black/6 dark:ring-white/6 px-4 py-3">
+        <div className="mt-4 rounded-xl bg-white dark:bg-zinc-950/50 px-4 py-3">
           <div className="flex items-center gap-3">
             {dnsStatus === "checking" && (
               <>
@@ -74,7 +66,7 @@ export function NetworkCheck({
                   <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                     Votre DNS est bon.
                   </p>
-                  <p className="text-xs text-zinc-500 mt-0.5">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                     c411.org répond depuis votre réseau : vous n'avez rien à changer.
                   </p>
                 </div>
@@ -87,7 +79,7 @@ export function NetworkCheck({
                   <p className="text-xs font-medium text-red-600 dark:text-red-400">
                     c411.org n'est pas joignable.
                   </p>
-                  <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
                     C'est le cas classique du DNS qui bloque. Suivez le guide, puis relancez le test
                     ici.
                   </p>

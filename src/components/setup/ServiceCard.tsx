@@ -15,7 +15,7 @@ export function ServiceCard({
   return (
     <motion.div
       variants={item}
-      className={`group relative flex h-full flex-col overflow-hidden rounded-2xl bg-white/80 px-5 py-4 ring-1 ring-black/6 transition-colors dark:bg-zinc-900/70 dark:ring-white/6 ${tone.glow}`}
+      className={`group relative flex h-full flex-col overflow-hidden rounded-2xl bg-zinc-50 px-5 py-4 ring-1 ring-black/6 transition-colors dark:bg-zinc-800/50 dark:ring-white/10 ${tone.glow}`}
     >
       <div
         className={`pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r to-transparent ${tone.bar}`}
