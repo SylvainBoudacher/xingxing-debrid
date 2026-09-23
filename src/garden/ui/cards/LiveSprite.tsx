@@ -1,24 +1,22 @@
 import { useRef } from "react";
-import type { ColorId, Rarity, SpeciesId, VariantId } from "../../core/types";
+import type { Rarity, VariantId } from "../../core/types";
 import { CARD_H, CARD_W } from "./cardFx";
 import { useCardFx } from "./useCardFx";
 
-// Fleur animée d'une carte : halo, lueur, reflet et particules selon la rareté.
-export function LiveFlower({
-  species,
-  color,
+// Sprite animé d'une carte : halo, lueur, reflet et particules selon la rareté.
+export function LiveSprite({
+  sprite,
   rarity,
   variant,
   className,
 }: {
-  species: SpeciesId;
-  color: ColorId;
+  sprite: HTMLCanvasElement;
   rarity: Rarity;
   variant: VariantId | null;
   className?: string;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  useCardFx(ref, species, color, rarity, variant);
+  useCardFx(ref, sprite, rarity, variant);
   return (
     <canvas
       ref={ref}

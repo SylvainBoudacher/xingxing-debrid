@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { creditDaily, freshFlags, MAX_PENDING, openSachet, SEEDS_PER_SACHET } from "./sachets";
+import { creditDaily, MAX_PENDING, openSachet, SEEDS_PER_SACHET } from "./sachets";
 import { createStarterSave } from "./starter";
 import { DAY, startOfDay } from "./time";
-import type { GardenSave, SachetType, Seed } from "./types";
+import type { GardenSave, SachetType } from "./types";
 
 const NOW = new Date(2026, 9, 20, 15, 30).getTime();
 const day = (n: number) => startOfDay(NOW) - n * DAY;
@@ -111,32 +111,5 @@ describe("sachets spéciaux", () => {
   it("ouvre le premier sachet de la pile et garde les autres", () => {
     const s = withSachets(day(0), ["famille", "quotidien"]);
     expect(openSachet(s, rng)!.save.sachets.pending).toEqual(["quotidien"]);
-  });
-});
-
-describe("freshFlags", () => {
-  const seed = (species: Seed["species"], color: Seed["color"]): Seed => ({
-    species,
-    color,
-    rarity: "commune",
-  });
-
-  it("marque les fleurs inconnues", () => {
-    const known = new Set(["cosmos:pink"]);
-    expect(freshFlags(known, [seed("cosmos", "pink"), seed("aster", "violet")])).toEqual([
-      false,
-      true,
-    ]);
-  });
-
-  it("une fleur tirée deux fois n'est nouvelle que la première fois", () => {
-    const seeds = [seed("aster", "blue"), seed("cosmos", "red"), seed("aster", "blue")];
-    expect(freshFlags(new Set(), seeds)).toEqual([true, true, false]);
-  });
-
-  it("ne modifie pas l'ensemble reçu", () => {
-    const known = new Set<string>();
-    freshFlags(known, [seed("aster", "blue")]);
-    expect(known.size).toBe(0);
   });
 });

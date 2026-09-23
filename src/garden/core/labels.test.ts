@@ -7,6 +7,7 @@ import {
   pickedWord,
   pressedLabel,
   RARITY_FR,
+  seedLabel,
   STAGE_FR,
   VARIANT_FR,
 } from "./labels";
@@ -76,5 +77,13 @@ describe("ingrédients", () => {
     expect(missingLabel({ commune: 2, rare: 1 })).toBe(
       "Il manque 2 fleurs communes et 1 fleur rare",
     );
+  });
+});
+
+describe("seedLabel", () => {
+  it("nomme la graine par sa seule rareté", () => {
+    expect(seedLabel("commune")).toBe("Graine commune");
+    expect(seedLabel("epique")).toBe("Graine épique");
+    expect(seedLabel("legendaire")).toBe("Graine légendaire");
   });
 });

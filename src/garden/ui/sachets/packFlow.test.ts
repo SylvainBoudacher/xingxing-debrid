@@ -16,23 +16,27 @@ import {
 const seed = (rarity: Seed["rarity"]): Seed => ({ species: "cosmos", color: "pink", rarity });
 
 describe("step", () => {
-  it("déroule repos, déchirure, révélation carte par carte, récapitulatif", () => {
+  it("déroule repos, déchirure, chaque carte retournée puis rangée, récapitulatif", () => {
     let p: Phase = IDLE;
-    p = step(p, "startTear", 3);
+    p = step(p, "startTear", 2);
     expect(p).toEqual({ kind: "tearing" });
-    p = step(p, "tear", 3);
-    expect(p).toEqual({ kind: "revealing", current: -1 });
-    p = step(p, "next", 3);
-    p = step(p, "next", 3);
-    p = step(p, "next", 3);
-    expect(p).toEqual({ kind: "revealing", current: 2 });
-    p = step(p, "next", 3);
+    p = step(p, "tear", 2);
+    expect(p).toEqual({ kind: "revealing", current: 0, flipped: false });
+    p = step(p, "next", 2);
+    expect(p).toEqual({ kind: "revealing", current: 0, flipped: true });
+    p = step(p, "next", 2);
+    expect(p).toEqual({ kind: "revealing", current: 1, flipped: false });
+    p = step(p, "next", 2);
+    expect(p).toEqual({ kind: "revealing", current: 1, flipped: true });
+    p = step(p, "next", 2);
     expect(p).toEqual({ kind: "summary" });
-    expect(step(p, "reset", 3)).toBe(IDLE);
+    expect(step(p, "reset", 2)).toBe(IDLE);
   });
 
   it("Tout révéler saute au récapitulatif", () => {
-    expect(step({ kind: "revealing", current: 0 }, "revealAll", 3)).toEqual({ kind: "summary" });
+    expect(step({ kind: "revealing", current: 0, flipped: false }, "revealAll", 3)).toEqual({
+      kind: "summary",
+    });
   });
 
   it("startTear en pleine déchirure ne change rien", () => {

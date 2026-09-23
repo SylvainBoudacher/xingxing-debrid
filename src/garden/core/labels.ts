@@ -67,6 +67,9 @@ export function formatDuration(ms: number): string {
 const rarityWord = (rarity: Rarity, n: number): string =>
   `${RARITY_FR[rarity].toLowerCase()}${n > 1 ? "s" : ""}`;
 
+// Une graine ne dit que sa rareté : l'espèce et la couleur attendent l'éclosion.
+export const seedLabel = (rarity: Rarity): string => `Graine ${rarityWord(rarity, 1)}`;
+
 // "3 communes", "1 épique"
 export const ingredientLabel = (rarity: Rarity, n: number): string =>
   `${n} ${rarityWord(rarity, n)}`;

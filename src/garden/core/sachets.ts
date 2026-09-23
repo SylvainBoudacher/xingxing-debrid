@@ -11,18 +11,6 @@ export const SEEDS_PER_SACHET = 3;
 
 export const nextSachetAt = (now: number): number => startOfDay(now) + DAY;
 
-// Nouveauté de chaque graine à l'ouverture : une fleur tirée deux fois dans le même
-// sachet n'est nouvelle que la première fois.
-export function freshFlags(known: Set<string>, seeds: Seed[]): boolean[] {
-  const seen = new Set(known);
-  return seeds.map((s) => {
-    const id = entryId(s.species, s.color);
-    const fresh = !seen.has(id);
-    seen.add(id);
-    return fresh;
-  });
-}
-
 const pickSpecies = (rng: Rng): SpeciesId =>
   SPECIES[Math.min(SPECIES.length - 1, Math.floor(rng() * SPECIES.length))].id;
 

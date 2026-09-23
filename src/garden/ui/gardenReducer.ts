@@ -1,13 +1,13 @@
 import { collectBrew, startBrew } from "../core/atelier";
 import type { RecipeId } from "../core/catalog/recipes";
 import type { NodeId } from "../core/catalog/tree";
-import { collectDiscoveries, knownEntries } from "../core/discovery";
+import { collectDiscoveries } from "../core/discovery";
 import { pressFlower } from "../core/herbier";
 import { spawnLeaves } from "../core/leaves";
 import { planMove } from "../core/move";
 import type { Rng } from "../core/rolls";
 import { claim, deposit } from "../core/progression";
-import { creditDaily, freshFlags, openSachet } from "../core/sachets";
+import { creditDaily, openSachet } from "../core/sachets";
 import { sachetsPerDay } from "../core/unlocks";
 import type { Flower, GardenSave, SachetType, Seed, SpeciesId, TileKey } from "../core/types";
 
@@ -15,7 +15,6 @@ import type { Flower, GardenSave, SachetType, Seed, SpeciesId, TileKey } from ".
 export interface OpenedLot {
   seq: number;
   seeds: Seed[];
-  fresh: boolean[];
   type: SachetType;
 }
 
@@ -33,7 +32,7 @@ export const INITIAL_GARDEN: GardenState = {
   save: null,
   discoveries: { seq: 0, found: [] },
   pressed: { seq: 0, seed: false },
-  opened: { seq: 0, seeds: [], fresh: [], type: "quotidien" },
+  opened: { seq: 0, seeds: [], type: "quotidien" },
   claimed: { seq: 0, id: null },
 };
 
@@ -92,7 +91,6 @@ export function gardenReducer(state: GardenState, action: GardenAction): GardenS
         opened: {
           seq: state.opened.seq + 1,
           seeds: r.seeds,
-          fresh: freshFlags(knownEntries(before), r.seeds),
           type: before.sachets.pending[0],
         },
       };
@@ -108,7 +106,6 @@ export function gardenReducer(state: GardenState, action: GardenAction): GardenS
         opened: {
           seq: state.opened.seq + 1,
           seeds: action.seeds,
-          fresh: freshFlags(knownEntries(state.save), action.seeds),
           type: "dore",
         },
       };

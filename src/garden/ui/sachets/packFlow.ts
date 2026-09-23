@@ -4,8 +4,8 @@ import type { BurstKind } from "./burst";
 export type Phase =
   | { kind: "idle" }
   | { kind: "tearing" }
-  // current : carte montrée en grand, -1 tant qu'aucune n'est sortie du paquet
-  | { kind: "revealing"; current: number }
+  // current : carte du dessus de la pile ; flipped une fois retournée, le clic suivant la range
+  | { kind: "revealing"; current: number; flipped: boolean }
   | { kind: "summary" };
 
 export type FlowEvent = "startTear" | "tear" | "next" | "revealAll" | "reset";
@@ -17,12 +17,13 @@ export function step(phase: Phase, event: FlowEvent, count: number): Phase {
     case "idle":
       return event === "startTear" ? { kind: "tearing" } : phase;
     case "tearing":
-      return event === "tear" ? { kind: "revealing", current: -1 } : phase;
+      return event === "tear" ? { kind: "revealing", current: 0, flipped: false } : phase;
     case "revealing":
       if (event === "revealAll") return { kind: "summary" };
       if (event !== "next") return phase;
+      if (!phase.flipped) return { ...phase, flipped: true };
       return phase.current < count - 1
-        ? { kind: "revealing", current: phase.current + 1 }
+        ? { kind: "revealing", current: phase.current + 1, flipped: false }
         : { kind: "summary" };
     case "summary":
       return event === "reset" ? IDLE : phase;

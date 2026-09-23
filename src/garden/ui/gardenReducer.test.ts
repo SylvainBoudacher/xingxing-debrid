@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import { LEAF_SLOT_MS } from "../core/leaves";
 import { createStarterSave } from "../core/starter";
 import { DAY, HOUR, startOfDay } from "../core/time";
-import { knownEntries } from "../core/discovery";
-import { freshFlags } from "../core/sachets";
 import type { GardenSave, SachetType, Seed } from "../core/types";
 import { gardenReducer, INITIAL_GARDEN, type GardenState } from "./gardenReducer";
 
@@ -105,19 +103,17 @@ describe("sachets", () => {
     expect(gardenReducer(state, { type: "open-sachet", now: NOW, rng: () => 0.5 })).toBe(state);
   });
 
-  it("renseigne la nouveauté et le type du sachet ouvert", () => {
+  it("renseigne le type du sachet ouvert", () => {
     const state = withSachets(startOfDay(NOW), ["dore", "quotidien"]);
     const next = gardenReducer(state, { type: "open-sachet", now: NOW, rng: () => 0.5 });
     expect(next.opened.type).toBe("dore");
-    expect(next.opened.fresh).toEqual(freshFlags(knownEntries(state.save!), next.opened.seeds));
-    expect(next.opened.fresh).toHaveLength(3);
   });
 
   it("dev-reveal range les graines imposées et les présente comme un sachet doré", () => {
     const state = withSachets(startOfDay(NOW), []);
     const seeds: Seed[] = [{ species: "cosmos", color: "black", rarity: "legendaire" }];
     const next = gardenReducer(state, { type: "dev-reveal", seeds });
-    expect(next.opened).toEqual({ seq: 1, seeds, fresh: [true], type: "dore" });
+    expect(next.opened).toEqual({ seq: 1, seeds, type: "dore" });
     expect(next.save!.inventory.seeds.slice(-1)).toEqual(seeds);
     expect(next.save!.sachets.pending).toEqual([]);
   });

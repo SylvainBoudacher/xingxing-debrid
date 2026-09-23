@@ -9,8 +9,6 @@ import {
 import { useRef, useState } from "react";
 import type { Rarity, SachetType } from "../../core/types";
 import { SACHET_H, SACHET_W, sachetDataUrl, TEAR_ROW } from "../../sprites/sachet";
-import type { SpriteRef } from "../../sprites/sprite";
-import { SpriteIcon } from "../SpriteIcon";
 import { RARITY_COLOR } from "../toolMeta";
 import { PACK_SCALE, TEAR_THRESHOLD, tearProgress } from "./packFlow";
 
@@ -23,14 +21,12 @@ const BAND = TEAR_ROW * PACK_SCALE;
 export function TearablePack({
   type,
   glow,
-  familyIcon,
   onStart,
   onRip,
   onTorn,
 }: {
   type: SachetType;
   glow: Rarity | null;
-  familyIcon: SpriteRef | null;
   onStart: () => void;
   onRip: (clientX: number, clientY: number) => void;
   onTorn: () => void;
@@ -105,15 +101,6 @@ export function TearablePack({
             animate={{ backgroundPosition: ["150% 0%", "-50% 0%"] }}
             transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1, ease: "easeInOut" }}
           />
-        )}
-        {familyIcon && (
-          <motion.div
-            className="absolute inset-x-0 top-[42%] flex justify-center"
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1 }}
-          >
-            <SpriteIcon sprite={familyIcon} cropped className="w-16 drop-shadow-[0_0_6px_#fff8]" />
-          </motion.div>
         )}
       </div>
       {glow && (

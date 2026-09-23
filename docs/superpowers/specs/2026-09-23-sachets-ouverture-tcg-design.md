@@ -4,6 +4,8 @@ Date : 2026-09-23
 
 Refonte de la mise en scène de la page Sachets. Référence : [spec Sachets](2026-09-20-potager-sachets-design.md).
 
+**Révision (même jour) :** la première version révélait la fleur (sprite, nom, variante, tampon "Nouveau !"), ce qui contredit la règle de la spec Sachets : "La rareté d'une graine est connue dès l'ouverture du sachet ; l'espèce, la couleur et la variante ne se révèlent qu'à l'éclosion". Les cartes montrent désormais une **graine** (sprite par rareté, titre "Graine rare"), sans nouveauté ni variante, et le sachet famille ne montre pas d'espèce. La révélation se fait sur une pile en grand au centre : un clic retourne la carte du dessus, le suivant la range dans l'une des trois cases fixes du bas. Les sections ci-dessous sont corrigées en conséquence.
+
 ## 1. Objectif et périmètre
 
 L'ouverture actuelle est trop pauvre : un bouton "Ouvrir", puis trois cartes qui se retournent sur un simple point coloré, sans nom de fleur ni indication de nouveauté. Les trois types de sachet (quotidien, doré, famille) ont le même visuel. On veut une ouverture qui donne envie d'ouvrir et récompense le joueur, comme un booster de jeu de cartes à collectionner.
@@ -14,7 +16,7 @@ Dans le périmètre :
 - Déchirure du sachet au glisser (ou au clic).
 - Révélation carte par carte, avec indice de rareté sur le dos et effets croissants selon la rareté.
 - Récapitulatif, enchaînement vers le sachet suivant, raccourci vers le champ.
-- Tampon "Nouveau !" et mention de variante sur les cartes.
+- Cartes de graine : rareté seule, jamais l'espèce, la couleur, la variante ni la nouveauté.
 
 Hors périmètre :
 
@@ -32,7 +34,7 @@ La page suit quatre phases.
 - Visuel par type :
   - `quotidien` : papier kraft.
   - `dore` : feuille d'or, reflet qui balaye le sachet.
-  - `famille` : papier imprimé, icône de l'espèce sur la face. L'espèce n'est tirée qu'à l'ouverture : la face montre un motif floral générique avant, l'icône de l'espèce apparaît pendant la déchirure.
+  - `famille` : papier imprimé à motif floral générique. L'espèce n'est jamais montrée : elle se découvre à l'éclosion.
 - Aucun sachet : un sachet grisé, immobile, et "Prochain sachet à minuit".
 - Les jauges de pity restent dans la colonne de droite.
 
@@ -47,9 +49,9 @@ La page suit quatre phases.
 
 ### 2.3 Révélation
 
-- Les 3 cartes sortent du sachet et forment un paquet face cachée. Le dos de chaque carte est teinté par sa rareté (commune neutre, rare bleu, épique violet, légendaire or), avec une lueur qui pulse pour rare et au-dessus.
-- Chaque clic sur le paquet fait glisser la carte du dessus au centre, en grand, où elle se retourne. La carte précédente rejoint la rangée du récapitulatif en bas.
-- Face de carte : la fleur animée par `cardFx` (halo légendaire, lueur épique, étincelles rares, effets de variante), le nom accentué (`flowerName`), la rareté (`RARITY_FR`), la variante (`VARIANT_FR`) s'il y en a une, et un tampon "Nouveau !" si la fleur était inconnue.
+- Les 3 cartes sortent du sachet et forment une pile en grand au centre, face cachée. Le dos de chaque carte est teinté par sa rareté (commune neutre, rare bleu, épique violet, légendaire or), avec une lueur qui pulse pour rare et au-dessus.
+- Un clic retourne la carte du dessus sur place ; le clic suivant l'envoie dans sa case en bas (trois cases fixes en pointillés), et la carte suivante de la pile devient celle du dessus.
+- Face de carte : une graine animée par `cardFx` (sprite `sprites/seed.ts`, un aspect par rareté ; halo légendaire, lueur épique, étincelles rares) et le titre "Graine commune", "Graine rare", etc. Ni espèce, ni couleur, ni variante, ni nouveauté.
 - Effets au retournement :
 
 | Rareté     | Avant le retournement                              | Au retournement                                                               |
@@ -63,7 +65,7 @@ La page suit quatre phases.
 
 ### 2.4 Récapitulatif
 
-- Les 3 cartes côte à côte, en taille réduite, face visible avec leur tampon et leurs effets.
+- Les 3 cartes côte à côte, en taille réduite, face visible avec leurs effets.
 - Les jauges de pity s'animent à ce moment seulement.
 - Boutons : "Sachet suivant (n)" si des sachets restent, "Aller au champ".
 - "Sachet suivant" ramène à la phase repos avec le sachet suivant au-dessus de la pile.
@@ -81,20 +83,11 @@ Avec `prefers-reduced-motion` : pas de secousse, pas de flash, pas de tremblemen
 `GardenState.opened` devient :
 
 ```ts
-opened: { seq: number; seeds: Seed[]; fresh: boolean[]; type: SachetType };
+opened: { seq: number; seeds: Seed[]; type: SachetType };
 ```
-
-- `fresh[i]` vaut `true` si la graine `i` était inconnue avant l'ouverture. Calcul pur dans `core/sachets.ts` :
-
-```ts
-export function freshFlags(known: Set<string>, seeds: Seed[]): boolean[];
-```
-
-`known` vient de `knownEntries(save)` avant l'ouverture. Une fleur qui sort deux fois dans le même sachet n'est nouvelle que la première fois.
 
 - `type` est le type du sachet ouvert (`pending[0]` avant ouverture).
-- Pour le sachet famille, l'espèce se lit sur `seeds[0].species`.
-- Valeur initiale : `{ seq: 0, seeds: [], fresh: [], type: "quotidien" }`.
+- Valeur initiale : `{ seq: 0, seeds: [], type: "quotidien" }`.
 
 Aucun changement de sauvegarde, de tirage ni de pity.
 
@@ -102,7 +95,7 @@ Aucun changement de sauvegarde, de tirage ni de pity.
 
 ### 4.1 Logique pure
 
-- `core/sachets.ts` : ajout de `freshFlags`.
+- `core/labels.ts` : ajout de `seedLabel`.
 - `ui/sachets/packFlow.ts` : phases `idle | tearing | revealing | summary` (index de carte dans `revealing`), transitions `startTear`, `tear`, `next`, `revealAll`, `reset`. Timings et intensités par rareté (pause, durée de vibration, force de secousse, flash). `bestRarity(seeds)` pour la lueur de la fente. Remplace `reveal.ts`.
 - `ui/sachets/burst.ts` : particules du canvas superposé (confettis, étincelles, rayons, paillettes) : émission, mise à jour, durée de vie. Sans DOM.
 
@@ -113,9 +106,8 @@ Aucun changement de sauvegarde, de tirage ni de pity.
 | `SachetsPage.tsx`   | tient la phase, orchestre, garde les jauges à droite                                      |
 | `PackStack.tsx`     | pile des sachets en attente, sachet grisé si vide                                         |
 | `TearablePack.tsx`  | sachet du dessus : glisser de la bande, tremblement, lueur par la fente, clic pour ouvrir |
-| `CardDeck.tsx`      | paquet face cachée, un clic sort la carte suivante                                        |
 | `CardBack.tsx`      | dos teinté par la rareté, lueur pulsée                                                    |
-| `RevealCard.tsx`    | carte en grand : face `cardFx`, nom, rareté, variante, tampon                             |
+| `RevealCard.tsx`    | carte de graine, en grand (se retourne) ou en petit                                       |
 | `BurstLayer.tsx`    | canvas superposé piloté par `burst.ts`                                                    |
 | `useScreenShake.ts` | secousse du conteneur, dosée par la rareté                                                |
 | `PackSummary.tsx`   | rangée des 3 cartes, boutons de fin                                                       |
@@ -137,9 +129,9 @@ Les animations DOM passent par `motion/react` (drag de la bande avec `drag="x"`,
 ## 5. Tests et vérification
 
 - Vitest :
-  - `freshFlags` : fleur connue, inconnue, doublon dans le même sachet.
+  - `seedLabel` : "Graine commune", "Graine épique", "Graine légendaire".
   - `packFlow` : transitions valides et ignorées, "Tout révéler", timings par rareté, `bestRarity`.
   - `burst` : émission bornée, particules retirées en fin de vie.
-  - `gardenReducer` : `opened.fresh` et `opened.type` renseignés à l'ouverture.
+  - `gardenReducer` : `opened.type` renseigné à l'ouverture.
 - `src/lib/accents.test.ts` couvre les nouveaux textes.
 - Vérification visuelle dans l'aperçu navigateur (`bun run dev` et le shim Tauri) : déchirure au glisser et au clic, relâché avant le seuil, les quatre raretés, sachet famille et doré, "Tout révéler", "Sachet suivant", changement d'onglet en pleine révélation, pile vide. Le panneau doit être visible : les animations `requestAnimationFrame` sont gelées quand il est caché.

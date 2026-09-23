@@ -5,13 +5,11 @@ import { BUTTON, BUTTON_GHOST } from "./styles";
 
 export function PackSummary({
   seeds,
-  fresh,
   pending,
   onNextPack,
   onGoToField,
 }: {
   seeds: Seed[];
-  fresh: boolean[];
   pending: number;
   onNextPack: () => void;
   onGoToField: () => void;
@@ -26,7 +24,7 @@ export function PackSummary({
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: i * 0.08 }}
           >
-            <RevealCard seed={seed} fresh={fresh[i]} size="small" />
+            <RevealCard seed={seed} size="small" />
           </motion.div>
         ))}
       </div>

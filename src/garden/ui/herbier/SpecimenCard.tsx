@@ -3,7 +3,8 @@ import { colorName } from "../../core/catalog/colors";
 import { speciesOf } from "../../core/catalog/species";
 import { pressedLabel, RARITY_FR } from "../../core/labels";
 import type { Rarity, SpeciesId, VariantId } from "../../core/types";
-import { LiveFlower } from "../cards/LiveFlower";
+import { spriteCanvas } from "../../sprites/sprite";
+import { LiveSprite } from "../cards/LiveSprite";
 import { SpriteIcon } from "../SpriteIcon";
 import type { Specimen } from "./plate";
 import { VariantSlots } from "./VariantSlots";
@@ -34,9 +35,12 @@ export function SpecimenCard({
         style={{ transform: `rotate(${tilt}deg)` }}
       >
         {entry ? (
-          <LiveFlower
-            species={species}
-            color={specimen.color}
+          <LiveSprite
+            sprite={spriteCanvas({
+              name: species,
+              color: specimen.color,
+              ...(shown && { variant: shown }),
+            })}
             rarity={specimen.rarity}
             variant={shown}
             className="mx-auto w-[112px]"

@@ -84,10 +84,6 @@ export function SachetsPage({
   // pendant la déchirure, opened est le lot du sachet tenu en main
   const lot = phase.kind === "tearing" ? opened : null;
   const best = lot ? bestRarity(lot.seeds) : "commune";
-  const familyIcon =
-    lot?.type === "famille" && lot.seeds[0]
-      ? { name: lot.seeds[0].species, color: lot.seeds[0].color }
-      : null;
   // même clé au repos et pendant la déchirure du même sachet : opened.seq avance au premier geste
   const packKey = opened.seq + (phase.kind === "idle" ? 1 : 0);
 
@@ -101,8 +97,8 @@ export function SachetsPage({
         {phase.kind === "revealing" ? (
           <RevealStage
             seeds={opened.seeds}
-            fresh={opened.fresh}
             current={phase.current}
+            flipped={phase.flipped}
             onNext={() => go("next")}
             onRevealAll={() => go("revealAll")}
             onFlip={onFlip}
@@ -110,7 +106,6 @@ export function SachetsPage({
         ) : phase.kind === "summary" ? (
           <PackSummary
             seeds={opened.seeds}
-            fresh={opened.fresh}
             pending={pending.length}
             onNextPack={() => go("reset")}
             onGoToField={onGoToField}
@@ -122,7 +117,6 @@ export function SachetsPage({
                 key={packKey}
                 type={top}
                 glow={best === "commune" ? null : best}
-                familyIcon={familyIcon}
                 onStart={() => startTear(onOpen)}
                 onRip={(x, y) => burst.current?.fire("paper", x, y)}
                 onTorn={() => go("tear")}

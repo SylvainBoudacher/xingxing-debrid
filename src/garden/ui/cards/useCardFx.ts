@@ -1,20 +1,18 @@
 import { useEffect, type RefObject } from "react";
-import type { ColorId, Rarity, SpeciesId, VariantId } from "../../core/types";
-import { spriteCanvas } from "../../sprites/sprite";
+import type { Rarity, VariantId } from "../../core/types";
 import { createCardFx, drawCardFx } from "./cardFx";
 
-// Anime une carte ; en pause quand la fenêtre est cachée.
+// Anime une carte ; en pause quand la fenêtre est cachée. sprite doit venir d'un cache
+// (spriteCanvas, seedCanvas) pour ne pas relancer l'animation à chaque rendu.
 export function useCardFx(
   ref: RefObject<HTMLCanvasElement | null>,
-  species: SpeciesId,
-  color: ColorId,
+  sprite: HTMLCanvasElement,
   rarity: Rarity,
   variant: VariantId | null,
 ) {
   useEffect(() => {
     const g = ref.current?.getContext("2d");
     if (!g) return;
-    const sprite = spriteCanvas({ name: species, color, ...(variant && { variant }) });
     const fx = createCardFx(sprite, rarity, variant);
     let raf = 0;
     let last = 0;
@@ -27,5 +25,5 @@ export function useCardFx(
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [ref, species, color, rarity, variant]);
+  }, [ref, sprite, rarity, variant]);
 }
