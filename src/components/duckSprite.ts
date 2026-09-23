@@ -1,4 +1,6 @@
 import { drawAccessory } from "./duckAccessories";
+import { drawBehindHead } from "./duckFlowerAccessories";
+import { isFlowerDuck } from "./duckFlowers";
 import { fillEll } from "./duckDraw";
 import { bodyFill, paintPattern } from "./duckPatterns";
 import type { Variant } from "./duckTypes";
@@ -70,6 +72,8 @@ export function makeDuckSprite(v: Variant): HTMLCanvasElement {
   c.quadraticCurveTo(88, 74, 84, 100);
   c.stroke();
 
+  drawBehindHead(c, v);
+
   // ---- HEAD ----
   fillEll(c, HEAD.cx, HEAD.cy, HEAD.r, HEAD.r, fill);
   c.save();
@@ -129,6 +133,8 @@ export function makeDuckSprite(v: Variant): HTMLCanvasElement {
       fillEll(c, 96, 38, 2.8, 2.8, "#3FE0C8");
       fillEll(c, 95, 37, 1, 1, "#CFFFF2");
     } else {
+      // le cœur brun du tournesol avalerait l'oeil: on le cercle d'or
+      if (v.pattern === "seeds") fillEll(c, 96, 38, 6.6, 7.2, v.shiny ? "#DDE6F5" : "#FFE49A");
       fillEll(c, 96, 38, 4.7, 5.3, "#181818");
       fillEll(c, 94.4, 35.8, 1.7, 1.9, "#ffffff");
     }
@@ -137,15 +143,29 @@ export function makeDuckSprite(v: Variant): HTMLCanvasElement {
   drawAccessory(c, v);
 
   c.setTransform(1, 0, 0, 1, 0, 0);
-  if (v.shiny) applyShinyOverlay(c, cv);
+  if (v.shiny) applyShinyOverlay(c, cv, !isFlowerDuck(v));
 
   return cv;
 }
 
 // Shiny recolor: hue-blend a diagonal iridescent gradient over the finished
 // sprite (keeping its shading), restore the original alpha, then bake a few
-// star glints so a shiny reads as shiny even on low-saturation bodies.
-function applyShinyOverlay(c: CanvasRenderingContext2D, cv: HTMLCanvasElement) {
+// star glints so a shiny reads as shiny even on low-saturation bodies. The
+// flower ducks bring their own shiny palette and only take the glints.
+function applyShinyOverlay(c: CanvasRenderingContext2D, cv: HTMLCanvasElement, recolor: boolean) {
+  if (recolor) applyShinyHue(c, cv);
+  for (const [sx, sy, r] of [
+    [38, 58 + PAD, 4],
+    [96, 22 + PAD, 3],
+    [66, 96 + PAD, 3],
+  ]) {
+    c.fillStyle = "rgba(255,255,255,0.9)";
+    c.fillRect(sx - r, sy - 0.8, r * 2, 1.6);
+    c.fillRect(sx - 0.8, sy - r, 1.6, r * 2);
+  }
+}
+
+function applyShinyHue(c: CanvasRenderingContext2D, cv: HTMLCanvasElement) {
   const mask = document.createElement("canvas");
   mask.width = SW;
   mask.height = SH;
@@ -161,14 +181,4 @@ function applyShinyOverlay(c: CanvasRenderingContext2D, cv: HTMLCanvasElement) {
   c.globalCompositeOperation = "destination-in";
   c.drawImage(mask, 0, 0);
   c.globalCompositeOperation = "source-over";
-
-  for (const [sx, sy, r] of [
-    [38, 58 + PAD, 4],
-    [96, 22 + PAD, 3],
-    [66, 96 + PAD, 3],
-  ]) {
-    c.fillStyle = "rgba(255,255,255,0.9)";
-    c.fillRect(sx - r, sy - 0.8, r * 2, 1.6);
-    c.fillRect(sx - 0.8, sy - r, 1.6, r * 2);
-  }
 }

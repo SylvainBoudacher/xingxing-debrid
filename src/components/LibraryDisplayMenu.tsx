@@ -3,7 +3,8 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { LibrarySort } from "@/lib/libraryPrefs";
+import { POSTER_SIZES } from "@/lib/libraryPosterSize";
+import type { LibraryPosterSize, LibrarySort } from "@/lib/libraryPrefs";
 import type { GenreOption, GroupMode } from "@/lib/librarySections";
 import { Check, SlidersHorizontal, X } from "lucide-react";
 
@@ -29,6 +30,9 @@ interface LibraryDisplayMenuProps {
   allowManualSort: boolean;
   grouping: GroupMode;
   onGroupingChange: (grouping: GroupMode) => void;
+  /** Absent en vue liste : la taille ne concerne que les jaquettes de la grille. */
+  posterSize?: LibraryPosterSize;
+  onPosterSizeChange: (size: LibraryPosterSize) => void;
   genreOptions: GenreOption[];
   genreFilter: Set<string>;
   onToggleGenre: (name: string) => void;
@@ -43,6 +47,8 @@ export function LibraryDisplayMenu({
   allowManualSort,
   grouping,
   onGroupingChange,
+  posterSize,
+  onPosterSizeChange,
   genreOptions,
   genreFilter,
   onToggleGenre,
@@ -107,6 +113,21 @@ export function LibraryDisplayMenu({
             ))}
           </div>
         </Section>
+
+        {posterSize && (
+          <Section label="Taille des jaquettes">
+            <div className="flex flex-wrap gap-1.5">
+              {POSTER_SIZES.map((p) => (
+                <Chip
+                  key={p.id}
+                  label={p.label}
+                  on={posterSize === p.id}
+                  onClick={() => onPosterSizeChange(p.id)}
+                />
+              ))}
+            </div>
+          </Section>
+        )}
 
         {genreOptions.length > 0 && (
           <Section

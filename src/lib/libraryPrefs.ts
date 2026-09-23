@@ -4,6 +4,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 export type LibraryFilter = "all" | "todo" | "done";
 export type LibraryLayout = "list" | "grid";
 export type LibrarySort = "manual" | "recent" | "title" | "size" | "progress";
+export type LibraryPosterSize = "compact" | "normal" | "large";
 
 // Réglages d'affichage de la bibliothèque. Lus au lancement (pendant le
 // splash) pour que la page s'ouvre déjà triée et rangée, sans recalcul visible.
@@ -17,6 +18,7 @@ export interface LibraryPrefs {
   collapsed: string[];
   /** Rangée « Reprendre » repliée. */
   resumeCollapsed: boolean;
+  posterSize: LibraryPosterSize;
 }
 
 export const DEFAULT_LIBRARY_PREFS: LibraryPrefs = {
@@ -27,6 +29,7 @@ export const DEFAULT_LIBRARY_PREFS: LibraryPrefs = {
   genres: [],
   collapsed: [],
   resumeCollapsed: false,
+  posterSize: "normal",
 };
 
 const KEYS = {
@@ -37,6 +40,7 @@ const KEYS = {
   genres: "library_genres",
   collapsed: "library_collapsed",
   resumeCollapsed: "library_resume_collapsed",
+  posterSize: "library_poster_size",
   legacySplit: "library_split",
 } as const;
 
@@ -50,19 +54,29 @@ export function getCachedLibraryPrefs(): LibraryPrefs | null {
 }
 
 export async function loadLibraryPrefs(): Promise<LibraryPrefs> {
-  const [layout, grouping, sort, filter, genres, collapsed, resumeCollapsed, legacySplit] =
-    await Promise.all([
-      store.get<LibraryLayout>(KEYS.layout),
-      store.get<GroupMode>(KEYS.grouping),
-      store.get<LibrarySort>(KEYS.sort),
-      store.get<LibraryFilter>(KEYS.filter),
-      store.get<string[]>(KEYS.genres),
-      store.get<string[]>(KEYS.collapsed),
-      store.get<boolean>(KEYS.resumeCollapsed),
-      // Ancien réglage films/séries (booléen) : repli tant que le nouveau mode
-      // de regroupement n'a jamais été choisi.
-      store.get<boolean>(KEYS.legacySplit),
-    ]);
+  const [
+    layout,
+    grouping,
+    sort,
+    filter,
+    genres,
+    collapsed,
+    resumeCollapsed,
+    posterSize,
+    legacySplit,
+  ] = await Promise.all([
+    store.get<LibraryLayout>(KEYS.layout),
+    store.get<GroupMode>(KEYS.grouping),
+    store.get<LibrarySort>(KEYS.sort),
+    store.get<LibraryFilter>(KEYS.filter),
+    store.get<string[]>(KEYS.genres),
+    store.get<string[]>(KEYS.collapsed),
+    store.get<boolean>(KEYS.resumeCollapsed),
+    store.get<LibraryPosterSize>(KEYS.posterSize),
+    // Ancien réglage films/séries (booléen) : repli tant que le nouveau mode
+    // de regroupement n'a jamais été choisi.
+    store.get<boolean>(KEYS.legacySplit),
+  ]);
 
   const legacyGrouping: GroupMode | null =
     legacySplit === null || legacySplit === undefined ? null : legacySplit ? "type" : "none";
@@ -75,6 +89,7 @@ export async function loadLibraryPrefs(): Promise<LibraryPrefs> {
     genres: genres ?? DEFAULT_LIBRARY_PREFS.genres,
     collapsed: collapsed ?? DEFAULT_LIBRARY_PREFS.collapsed,
     resumeCollapsed: resumeCollapsed ?? DEFAULT_LIBRARY_PREFS.resumeCollapsed,
+    posterSize: posterSize ?? DEFAULT_LIBRARY_PREFS.posterSize,
   };
   return cache;
 }

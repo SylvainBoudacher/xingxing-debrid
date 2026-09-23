@@ -24,7 +24,17 @@ import {
   updateCannon,
 } from "./cannon";
 import { APP_LAUNCH_TS } from "@/lib/launchTime";
-import { getRarity, randomVariant } from "./duckRandom";
+import {
+  drawCactusBack,
+  drawCactusFront,
+  drawDaisyBack,
+  drawDaisyFront,
+  drawSunflowerBack,
+  drawSunflowerFront,
+  type FlowerFrame,
+} from "./duckFlowerEffects";
+import { FLOWER_VARIANTS } from "./duckFlowers";
+import { getRarity, randomVariant, randOf } from "./duckRandom";
 import { makeDuckSprite, SH, SW, type Effect } from "./duckSprite";
 import type { Variant } from "./duckTypes";
 import {
@@ -142,12 +152,20 @@ function leaving(d: Duck) {
   return !!(d.draining || d.storing || d.exiting || d.sucked);
 }
 
-// Push hierarchy: the king, the supernova and the phoenix stand their ground
+// Push hierarchy: the king, the flower ducks, the supernova and the phoenix stand their ground
 // against ordinary ducks and cannonballs; only Zeus the duck god can shove
 // them, and Zeus himself yields to nothing.
 function pushRank(d: Duck): number {
   if (d.effect === "godly") return 2;
-  if (d.effect === "royal" || d.effect === "nova" || d.effect === "phoenix") return 1;
+  if (
+    d.effect === "royal" ||
+    d.effect === "nova" ||
+    d.effect === "phoenix" ||
+    d.effect === "daisy" ||
+    d.effect === "sunflower" ||
+    d.effect === "cactus"
+  )
+    return 1;
   return 0;
 }
 
@@ -282,6 +300,12 @@ function spawnDuck() {
 function spawnShinyDuck() {
   const v = randomVariant();
   v.shiny = true;
+  enterPool(v, scaleFor(v));
+}
+
+// Dev-only (Shift+F): fait entrer un des trois canards fleurs mythiques.
+function spawnFlowerDuck() {
+  const v = randOf(FLOWER_VARIANTS)();
   enterPool(v, scaleFor(v));
 }
 
@@ -785,6 +809,8 @@ export function PixelPool({
       }
       if (import.meta.env.DEV && e.shiftKey && e.code === "KeyS" && activeRef.current && !typing(e))
         spawnShinyDuck();
+      if (import.meta.env.DEV && e.shiftKey && e.code === "KeyF" && activeRef.current && !typing(e))
+        spawnFlowerDuck();
     }
 
     function onKeyUp(e: KeyboardEvent) {
@@ -1165,6 +1191,23 @@ export function PixelPool({
       if (d.effect === "croupier")
         drawCroupierNeon({ ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase });
 
+      // canards fleurs: corolle de la Marguerite, soleil du Tournesol, couchant
+      // du Cactus
+      const flower: FlowerFrame = {
+        ctx,
+        cx: d.x,
+        cy: d.y + bob,
+        dw,
+        dh,
+        t,
+        phase: d.phase,
+        flip,
+        shiny: !!d.variant.shiny,
+      };
+      if (d.effect === "daisy") drawDaisyBack(flower);
+      else if (d.effect === "sunflower") drawSunflowerBack(flower);
+      else if (d.effect === "cactus") drawCactusBack(flower);
+
       // supernova (dex completion reward): pulsing aura cycling through hues
       if (d.effect === "nova")
         drawNovaAura({ ctx, cx: d.x, cy: d.y + bob, dw, dh, t, phase: d.phase });
@@ -1282,6 +1325,10 @@ export function PixelPool({
         drawHatConfetti(frame);
         drawBirthdayFireworks(frame);
       }
+
+      if (d.effect === "daisy") drawDaisyFront(flower);
+      else if (d.effect === "sunflower") drawSunflowerFront(flower);
+      else if (d.effect === "cactus") drawCactusFront(flower);
 
       // braises du Phénix, devant lui
       if (d.effect === "phoenix")

@@ -4,6 +4,7 @@ import { DownloadsOverlay } from "@/components/DownloadsOverlay";
 import { subscribeMangaRead } from "@/lib/mangaReadRequest";
 import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
+import { cactusVariant, margueriteVariant, tournesolVariant } from "@/components/duckFlowers";
 import { SplashScreen } from "@/components/SplashScreen";
 import { SplashTransition } from "@/components/SplashTransition";
 import { MangaWelcomeModal } from "@/components/MangaWelcomeModal";
@@ -71,6 +72,12 @@ const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
  *  "done"       — transition terminée, MainPage seule visible
  */
 type StartPhase = "splash" | "transition" | "done";
+
+const DEV_FLOWER_DUCKS = [
+  ["marguerite", margueriteVariant],
+  ["tournesol", tournesolVariant],
+  ["cactus", cactusVariant],
+] as const;
 
 function App() {
   const {
@@ -457,6 +464,16 @@ function App() {
               + roi
             </button>
           )}
+          {summerEnabled &&
+            DEV_FLOWER_DUCKS.map(([label, variant]) => (
+              <button
+                key={label}
+                onClick={() => spawnVariant(variant())}
+                className="rounded-md bg-yellow-400/20 ring-1 ring-yellow-400/40 px-2 py-0.5 text-[10px] font-bold text-yellow-600 dark:text-yellow-300 hover:bg-yellow-400/30 transition-colors"
+              >
+                + {label}
+              </button>
+            ))}
         </div>
       )}
 

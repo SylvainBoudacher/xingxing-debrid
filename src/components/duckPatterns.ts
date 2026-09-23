@@ -1,4 +1,6 @@
 import { fillEll } from "./duckDraw";
+import { paintFlowerPattern } from "./duckFlowerPatterns";
+import { flowerBody } from "./duckFlowers";
 import type { Variant } from "./duckTypes";
 
 // The body fill for a variant. Most patterns tint the base color via an
@@ -52,7 +54,7 @@ export function bodyFill(c: CanvasRenderingContext2D, v: Variant): string | Canv
     ax.addColorStop(1, "#020810");
     return ax;
   }
-  return v.body;
+  return flowerBody(v);
 }
 
 // Draw a pattern overlay clipped to an ellipse (the body or the head).
@@ -227,6 +229,8 @@ export function paintPattern(
     sh.addColorStop(0, "rgba(0,0,0,0.26)");
     sh.addColorStop(1, "rgba(0,0,0,0)");
     fillEll(c, sx, sy, rx, ry, sh);
+  } else if (v.pattern === "seeds" || v.pattern === "cactus") {
+    paintFlowerPattern(c, v, cx, cy, rx, ry);
   } else if (v.pattern === "abyss") {
     // bioluminescent spots drifting in the deep
     const bioColors = ["rgba(0,255,180,0.75)", "rgba(0,200,255,0.65)", "rgba(120,255,200,0.55)"];

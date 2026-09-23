@@ -5,14 +5,19 @@ import { DiscoverReleasesModal } from "@/components/DiscoverReleasesModal";
 import { LibraryBlocks } from "@/components/LibraryBlocks";
 import { LibraryTitlePage } from "@/components/libraryTitle/LibraryTitlePage";
 import { LibraryDisplayMenu } from "@/components/LibraryDisplayMenu";
-import { LibraryEntryCard, type DebridControls } from "@/components/LibraryEntryCard";
+import { LibraryDraggableCard } from "@/components/LibraryDraggableCard";
+import { LibraryEmptyState } from "@/components/LibraryEmptyState";
+import { LibraryEntryCard } from "@/components/LibraryEntryCard";
 import { LibraryCategoryMenu } from "@/components/LibraryCategoryMenu";
 import { LibraryCustomBar } from "@/components/LibraryCustomBar";
 import { LibraryListNameModal } from "@/components/LibraryListNameModal";
 import { LibraryMangaSection } from "@/components/LibraryMangaSection";
 import { LibraryPosterCard } from "@/components/LibraryPosterCard";
+import { LibraryReorderableCard } from "@/components/LibraryReorderableCard";
 import { LibraryResumeBanner } from "@/components/LibraryResumeBanner";
+import { LibrarySummary } from "@/components/LibrarySummary";
 import { LibraryTabs, type LibraryTab } from "@/components/LibraryTabs";
+import { LibraryToolbar } from "@/components/LibraryToolbar";
 import { DEFAULT_MANGA_PREFS, getCachedMangaPrefs, type MangaLayout } from "@/lib/mangaPrefs";
 import { hasMangaReadRequest, subscribeMangaRead } from "@/lib/mangaReadRequest";
 import { LibrarySelectionBar } from "@/components/LibrarySelectionBar";
@@ -67,8 +72,10 @@ import {
   saveLibraryPref,
   type LibraryFilter,
   type LibraryLayout,
+  type LibraryPosterSize,
   type LibrarySort,
 } from "@/lib/libraryPrefs";
+import { POSTER_GRID } from "@/lib/libraryPosterSize";
 import { cardKey } from "@/lib/libraryTitle";
 import { toastNetworkError } from "@/lib/networkError";
 import { queryClient } from "@/lib/queryClient";
@@ -83,7 +90,6 @@ import { ownedTmdbKeys } from "@/lib/recommendations";
 import { useLikes } from "@/lib/useLikes";
 import { useSendToDebrid } from "@/lib/useSendToDebrid";
 import type { TmdbItem } from "@/lib/tmdbItem";
-import { useDragScroll } from "@/lib/useDragScroll";
 import { useStickyBar } from "@/lib/useStickyBar";
 import { useTitleTransition } from "@/lib/useTitleTransition";
 import { useLibraryGenres } from "@/lib/useLibraryGenres";
@@ -92,16 +98,7 @@ import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { PageHeader } from "@/components/PageHeader";
-import {
-  CheckSquare,
-  Compass,
-  GripVertical,
-  LayoutGrid,
-  Library as LibraryIcon,
-  List,
-  Search,
-} from "lucide-react";
-import { AnimatePresence, motion, Reorder, useDragControls, type PanInfo } from "motion/react";
+import { AnimatePresence, motion, Reorder } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -140,12 +137,6 @@ const RECEDE_TRANSITION = { duration: 0.3, ease: [0.22, 1, 0.36, 1] } as const;
 type Filter = LibraryFilter;
 type Layout = LibraryLayout;
 type Sort = LibrarySort;
-
-const FILTERS: { id: Filter; label: string }[] = [
-  { id: "all", label: "Tout" },
-  { id: "todo", label: "À voir" },
-  { id: "done", label: "Vu" },
-];
 
 const SORTERS: Record<Exclude<Sort, "manual">, (a: LibraryEntry, b: LibraryEntry) => number> = {
   recent: (a, b) => b.addedAt - a.addedAt,
@@ -192,6 +183,7 @@ export function LibraryPage({
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode ?? "simple");
   const [layout, setLayout] = useState<Layout>(prefs.layout);
+  const [posterSize, setPosterSize] = useState<LibraryPosterSize>(prefs.posterSize);
   const [grouping, setGrouping] = useState<GroupMode>(prefs.grouping);
   const [genreFilter, setGenreFilter] = useState<Set<string>>(() => new Set(prefs.genres));
   const [collapsedBlocks, setCollapsedBlocks] = useState<Set<string>>(
@@ -201,15 +193,8 @@ export function LibraryPage({
   const [categories, setCategories] = useState<CategoryConfig>(
     () => getCachedCategories() ?? EMPTY_CATEGORIES,
   );
-  // Titre en cours de glissement : dataTransfer ne se lit pas pendant dragover,
-  // et une ref suffit puisque le glisser-déposer reste dans la page.
-  const draggedHashes = useRef<string[]>([]);
+  // Bloc catégorie survolé pendant le glisser d'une carte.
   const [hoveredDrop, setHoveredDrop] = useState<string | null>(null);
-  const [draggingKey, setDraggingKey] = useState<string | null>(null);
-  // Le relâchement d'un drag émet un click sur le bouton de la carte, qui
-  // ouvrirait la modale de détail : on l'avale en phase capture.
-  const suppressClick = useRef(false);
-  const { ref: toolbarRef, dragProps: toolbarDrag } = useDragScroll<HTMLDivElement>();
   // La barre de recherche et les filtres restent accessibles au défilement,
   // posés juste sous le header.
   const {
@@ -333,6 +318,7 @@ export function LibraryPage({
         setGrouping(p.grouping);
         setGenreFilter(new Set(p.genres));
         setResumeCollapsed(p.resumeCollapsed);
+        setPosterSize(p.posterSize);
       });
     }
     // Purge des références mortes au chargement seulement : pendant la session,
@@ -394,6 +380,16 @@ export function LibraryPage({
       saveLibraryPref("collapsed", [...next]);
       return next;
     });
+  }
+
+  function changePosterSize(next: LibraryPosterSize) {
+    setPosterSize(next);
+    saveLibraryPref("posterSize", next);
+  }
+
+  function resetSearch() {
+    setQuery("");
+    changeFilter("all");
   }
 
   function changeGrouping(next: GroupMode) {
@@ -518,6 +514,30 @@ export function LibraryPage({
       return merged;
     });
   }, []);
+
+  // Dernier état rendu, pour retrouver les entrées supprimées sans passer par
+  // un updater (qui s'exécute deux fois en StrictMode).
+  const entriesRef = useRef(entries);
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
+
+  // Suppression d'un titre depuis sa carte (toutes ses entrées pour une série),
+  // annulable comme la suppression groupée.
+  const removeTitle = useCallback(
+    (hashes: string[]) => {
+      const set = new Set(hashes);
+      const removed = entriesRef.current.filter((e) => set.has(e.infoHash));
+      if (removed.length === 0) return;
+      removeHashes(hashes);
+      toast.success("Titre supprimé", {
+        action: { label: "Annuler", onClick: () => restoreEntries(removed) },
+      });
+    },
+    [removeHashes, restoreEntries],
+  );
+
+  const removeEntry = useCallback((hash: string) => removeTitle([hash]), [removeTitle]);
 
   // ---------- Sélection multiple (vue grille) ----------
   const [selectMode, setSelectMode] = useState(false);
@@ -735,70 +755,19 @@ export function LibraryPage({
     );
   };
 
-  // Bloc catégorie sous le curseur. `elementsFromPoint` traverse la pile :
-  // la carte en cours de glissement, au-dessus, n'occulte pas la cible.
-  //
-  // L'événement pointeur donne des coordonnées écran directement ; `info.point`
-  // est relatif à la page et sert de repli (tactile).
-  function dropIdAt(event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo): string | null {
-    const native = event as PointerEvent;
-    const x = typeof native.clientX === "number" ? native.clientX : info.point.x - window.scrollX;
-    const y = typeof native.clientY === "number" ? native.clientY : info.point.y - window.scrollY;
-    for (const el of document.elementsFromPoint(x, y)) {
-      // La carte glissée est sous le curseur : remonter son DOM mènerait à son
-      // bloc d'origine, jamais à la cible. On saute tous ses éléments.
-      if ((el as HTMLElement).closest("[data-dragging]")) continue;
-      const dropId = (el as HTMLElement).closest<HTMLElement>("[data-drop-id]")?.dataset.dropId;
-      if (dropId) return dropId;
-    }
-    return null;
-  }
-
-  // En mode Personnalisé, chaque carte se glisse dans un bloc catégorie.
-  // Le glisser passe par motion (pointer events) et non par le drag HTML5 :
-  // dans le WebView, l'image de la jaquette et le bouton de la carte captent
-  // le geste natif, et le dépôt n'arrive jamais.
   const draggableCard = (item: DisplayItem, card: ReactNode) => {
     if (grouping !== "category") return card;
     return (
-      <motion.div
+      <LibraryDraggableCard
         key={itemKey(item)}
-        drag
-        dragSnapToOrigin
-        dragMomentum={false}
-        dragElastic={0.2}
-        whileDrag={{ scale: 0.92, zIndex: 30, cursor: "grabbing" }}
-        data-dragging={draggingKey === itemKey(item) ? "" : undefined}
-        onDragStart={() => {
-          draggedHashes.current = itemHashes(item);
-          setDraggingKey(itemKey(item));
-          suppressClick.current = true;
+        onHover={setHoveredDrop}
+        onDrop={(dropId) => {
+          if (categoryOf(categories, item) !== (dropId === UNCLASSIFIED ? null : dropId))
+            classify(itemHashes(item), dropId);
         }}
-        onDrag={(event, info) => setHoveredDrop(dropIdAt(event, info))}
-        onDragEnd={(event, info) => {
-          const dropId = dropIdAt(event, info);
-          setHoveredDrop(null);
-          setDraggingKey(null);
-          if (dropId && categoryOf(categories, item) !== (dropId === UNCLASSIFIED ? null : dropId))
-            classify(draggedHashes.current, dropId);
-          draggedHashes.current = [];
-          // Le click éventuel arrive juste après le pointerup, avant ce timeout :
-          // on ne bloque donc jamais un vrai clic ultérieur.
-          setTimeout(() => {
-            suppressClick.current = false;
-          }, 0);
-        }}
-        onClickCapture={(e) => {
-          if (suppressClick.current) {
-            suppressClick.current = false;
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        }}
-        className="relative cursor-grab touch-none select-none active:cursor-grabbing [&_img]:[-webkit-user-drag:none]"
       >
         {card}
-      </motion.div>
+      </LibraryDraggableCard>
     );
   };
 
@@ -810,7 +779,7 @@ export function LibraryPage({
           key={item.entry.infoHash}
           entry={item.entry}
           onChange={handleChange}
-          onRemove={handleRemove}
+          onRemove={removeEntry}
           onOpen={openEntry}
           debrid={debrid}
           simple={viewMode === "simple"}
@@ -824,7 +793,7 @@ export function LibraryPage({
           key={item.group.tmdbId}
           group={item.group}
           onChange={handleChange}
-          onRemove={handleRemove}
+          onRemove={removeTitle}
           onOpen={openGroup}
           debrid={debrid}
           autoWatchOnPlay={autoWatchOnPlay}
@@ -848,7 +817,7 @@ export function LibraryPage({
             selectMode ? toggleSelected([item.entry.infoHash]) : openEntry(item.entry.infoHash)
           }
           onEnrichTmdb={enrichHandler(item.entry)}
-          onRemove={() => handleRemove(item.entry.infoHash)}
+          onRemove={() => removeEntry(item.entry.infoHash)}
           onToggleWatched={() => toggleWatched(item.entry)}
           magnet={magnetFor(item.entry)}
           onCancelDebrid={cancelDebrid}
@@ -867,7 +836,7 @@ export function LibraryPage({
               ? toggleSelected(item.group.entries.map((e) => e.infoHash))
               : openGroup(item.group.tmdbId)
           }
-          onRemove={() => removeHashes(item.group.entries.map((e) => e.infoHash))}
+          onRemove={() => removeTitle(item.group.entries.map((e) => e.infoHash))}
         />
       ),
     );
@@ -927,111 +896,37 @@ export function LibraryPage({
 
           {tab === "media" && (
             <>
-              {/* Recherche + filtres : collés sous le header, pour rester à portée
-            sans remonter en haut d'une grosse bibliothèque. Une fois accrochés,
-            ils prennent l'aspect d'une carte flottante (verre + ombre) ; posés,
-            ils se fondent dans la page. Le padding et la bordure existent dans
-            les deux états (-mx compensé) pour que rien ne bouge à la bascule.
-            Le z-index dépasse celui des pastilles des jaquettes (z-10), qui
-            sinon défileraient par-dessus. */}
-              <div
-                ref={barRef}
-                style={{ top: barTop }}
-                className={`sticky z-20 -mx-3 mb-4 rounded-2xl border p-3 transition-[background-color,border-color,box-shadow] duration-200 ${
-                  barStuck
-                    ? "border-black/10 bg-white/70 shadow-lg backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/70"
-                    : "border-transparent"
-                }`}
-              >
-                <div className="relative mb-3">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Rechercher un titre..."
-                    className="w-full rounded-lg border border-black/10 bg-white/70 py-2 pl-9 pr-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-indigo-400 dark:border-white/10 dark:bg-zinc-900/60 dark:text-white"
+              <LibrarySummary entries={entries} />
+
+              <LibraryToolbar
+                barRef={barRef}
+                top={barTop}
+                stuck={barStuck}
+                query={query}
+                onQueryChange={setQuery}
+                filter={filter}
+                counts={counts}
+                onFilterChange={changeFilter}
+                layout={layout}
+                onLayoutChange={changeLayout}
+                selectMode={selectMode}
+                onToggleSelect={() => (selectMode ? exitSelect() : setSelectMode(true))}
+                displayMenu={
+                  <LibraryDisplayMenu
+                    sort={sort}
+                    onSortChange={changeSort}
+                    allowManualSort={layout === "list"}
+                    grouping={grouping}
+                    onGroupingChange={changeGrouping}
+                    posterSize={layout === "grid" ? posterSize : undefined}
+                    onPosterSizeChange={changePosterSize}
+                    genreOptions={genreOpts}
+                    genreFilter={genreFilter}
+                    onToggleGenre={toggleGenre}
+                    onClearGenres={() => changeGenreFilter(new Set())}
                   />
-                </div>
-
-                {/* La barre défile horizontalement plutôt que d'écraser ses
-              libellés quand elle déborde (min-w-max), le glisser reproduit le
-              défilement là où la molette horizontale manque. */}
-                <div
-                  ref={toolbarRef}
-                  {...toolbarDrag}
-                  className="cursor-grab overflow-x-auto select-none active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                >
-                  <div className="flex w-full min-w-max items-center justify-between gap-2">
-                    <div className="flex flex-none items-center gap-1.5">
-                      {FILTERS.map((f) => (
-                        <button
-                          key={f.id}
-                          onClick={() => changeFilter(f.id)}
-                          className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                            filter === f.id
-                              ? "bg-indigo-600 text-white"
-                              : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                          }`}
-                        >
-                          {f.label} ({counts[f.id]})
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex flex-none items-center gap-2">
-                      {layout === "grid" && (
-                        <button
-                          onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}
-                          title="Sélection multiple"
-                          className={`flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
-                            selectMode
-                              ? "bg-indigo-600 text-white"
-                              : "bg-black/5 text-zinc-600 hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                          }`}
-                        >
-                          <CheckSquare className="h-3.5 w-3.5" />
-                          Sélection
-                        </button>
-                      )}
-
-                      <LibraryDisplayMenu
-                        sort={sort}
-                        onSortChange={changeSort}
-                        allowManualSort={layout === "list"}
-                        grouping={grouping}
-                        onGroupingChange={changeGrouping}
-                        genreOptions={genreOpts}
-                        genreFilter={genreFilter}
-                        onToggleGenre={toggleGenre}
-                        onClearGenres={() => changeGenreFilter(new Set())}
-                      />
-
-                      <div className="flex items-center rounded-full bg-black/5 p-0.5 dark:bg-white/10">
-                        {(
-                          [
-                            ["list", List],
-                            ["grid", LayoutGrid],
-                          ] as const
-                        ).map(([id, Icon]) => (
-                          <button
-                            key={id}
-                            onClick={() => changeLayout(id)}
-                            title={id === "list" ? "Vue liste" : "Vue grille"}
-                            className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                              layout === id
-                                ? "bg-white text-indigo-600 shadow-sm dark:bg-zinc-700 dark:text-indigo-300"
-                                : "text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
-                            }`}
-                          >
-                            <Icon className="h-4 w-4" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                }
+              />
 
               {/* Reprise du prochain épisode : masquée dès qu'une recherche,
               un filtre ou un genre est actif, on cherche alors autre chose. */}
@@ -1062,44 +957,20 @@ export function LibraryPage({
                 )}
               </AnimatePresence>
 
-              {visible.length === 0 ? (
-                <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
-                  <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
-                  <p className="text-sm">
-                    {entries.length === 0
-                      ? "Aucun téléchargement pour l'instant."
-                      : "Rien ne correspond à cette recherche."}
-                  </p>
-                  {entries.length === 0 && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <button
-                        onClick={() => onNavigate("main")}
-                        className="flex items-center gap-1.5 rounded-full bg-indigo-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-500"
-                      >
-                        <Search className="h-3.5 w-3.5" />
-                        Rechercher
-                      </button>
-                      <button
-                        onClick={() => onNavigate("discover")}
-                        className="flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                      >
-                        <Compass className="h-3.5 w-3.5" />
-                        Découvrir
-                      </button>
-                    </div>
-                  )}
-                </div>
+              {entries.length === 0 ? (
+                <LibraryEmptyState kind="empty" onNavigate={onNavigate} />
+              ) : visible.length === 0 ? (
+                <LibraryEmptyState
+                  kind="noMatch"
+                  query={query}
+                  filter={filter}
+                  onReset={resetSearch}
+                />
               ) : displayItems.length === 0 && genreFilter.size > 0 ? (
-                <div className="mt-24 flex flex-col items-center gap-3 text-center text-zinc-400 dark:text-zinc-500">
-                  <LibraryIcon className="h-10 w-10" strokeWidth={1.5} />
-                  <p className="text-sm">Aucun titre dans ces genres.</p>
-                  <button
-                    onClick={() => changeGenreFilter(new Set())}
-                    className="mt-1 flex items-center gap-1.5 rounded-full bg-black/5 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-black/10 dark:bg-white/10 dark:text-zinc-300 dark:hover:bg-white/15"
-                  >
-                    Effacer les genres
-                  </button>
-                </div>
+                <LibraryEmptyState
+                  kind="noGenre"
+                  onClearGenres={() => changeGenreFilter(new Set())}
+                />
               ) : layout === "grid" ? (
                 <LibraryBlocks
                   blocks={blocks}
@@ -1109,7 +980,7 @@ export function LibraryPage({
                   onToggleCollapsed={toggleCollapsedBlock}
                 >
                   {(items) => (
-                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+                    <div className={`grid gap-3 ${POSTER_GRID[posterSize]}`}>
                       {items.map(renderPoster)}
                     </div>
                   )}
@@ -1117,11 +988,11 @@ export function LibraryPage({
               ) : canReorder ? (
                 <Reorder.Group axis="y" values={visible} onReorder={persist} className="space-y-2">
                   {visible.map((e) => (
-                    <ReorderableCard
+                    <LibraryReorderableCard
                       key={e.infoHash}
                       entry={e}
                       onChange={handleChange}
-                      onRemove={handleRemove}
+                      onRemove={removeEntry}
                       onOpen={openEntry}
                       debrid={debrid}
                       simple={viewMode === "simple"}
@@ -1309,40 +1180,5 @@ export function LibraryPage({
         onCancel={debrid.cancelBulk}
       />
     </main>
-  );
-}
-
-interface ReorderableCardProps {
-  entry: LibraryEntry;
-  onChange: (entry: LibraryEntry) => void;
-  onRemove: (infoHash: string) => void;
-  onOpen: (infoHash: string) => void;
-  debrid: DebridControls;
-  simple: boolean;
-  autoWatchOnPlay?: boolean;
-  magnet?: MagnetEntry;
-  onCancelDebrid?: (entry: LibraryEntry) => void;
-  cancellingDebrid?: boolean;
-}
-
-function ReorderableCard({ entry, ...props }: ReorderableCardProps) {
-  const controls = useDragControls();
-  return (
-    <Reorder.Item
-      value={entry}
-      dragListener={false}
-      dragControls={controls}
-      className="flex items-center gap-1.5"
-    >
-      <button
-        onPointerDown={(e) => controls.start(e)}
-        className="flex h-7 w-5 flex-none cursor-grab touch-none items-center justify-center text-zinc-400 hover:text-zinc-600 active:cursor-grabbing dark:hover:text-zinc-200"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <div className="min-w-0 flex-1">
-        <LibraryEntryCard entry={entry} {...props} />
-      </div>
-    </Reorder.Item>
   );
 }

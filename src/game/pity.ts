@@ -134,7 +134,7 @@ const shuffled = (n: number) => {
 const ALL_RARITIES: Rarity[] = ["common", "uncommon", "rare", "legendary", "mythic", "god"];
 
 // Poids du repli pondere. Version adoucie des taux de spawn reels
-// (60/28/9/3/0.5, voir randomVariant): assez proche pour que le Roi reste rare
+// (58/28/9/3/2, voir randomVariant): assez proche pour que les mythiques restent rares
 // sous pity, assez plate pour que la derniere espece ne soit pas hors de
 // portee. "god" est absent, aucune espece collectable n'est de ce palier.
 const FALLBACK_WEIGHTS: [Rarity, number][] = [
