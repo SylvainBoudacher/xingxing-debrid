@@ -10,7 +10,7 @@ export function HelpRail({
 }) {
   return (
     <aside className="w-56 shrink-0">
-      <div className="sticky top-24 flex flex-col gap-5">
+      <div className="sticky top-24 flex flex-col gap-5 rounded-2xl border border-black/8 bg-white/70 p-2 pt-4 backdrop-blur-md dark:border-white/8 dark:bg-zinc-950/70">
         {HELP_GROUPS.map((g) => (
           <div key={g.id}>
             <div className="mb-2 flex items-center gap-2 px-3">

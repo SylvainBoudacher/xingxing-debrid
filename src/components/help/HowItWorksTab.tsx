@@ -19,7 +19,7 @@ export function HowItWorksTab() {
         <ServicesFlow />
         <div className="flex flex-col gap-3">
           {SERVICE_CARDS.map((card) => (
-            <ServiceCard key={card.title} {...card} />
+            <ServiceCard key={card.title} {...card} hideBadge />
           ))}
         </div>
       </div>

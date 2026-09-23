@@ -71,8 +71,9 @@ export function HelpPage({
 
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] dark:bg-[#05060c]">
-      {/* Grid background */}
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(15,23,42,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.06)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.13)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.13)_1px,transparent_1px)] bg-[size:36px_36px] [mask-image:linear-gradient(to_right,black,transparent_38%,transparent_62%,black),radial-gradient(ellipse_85%_80%_at_50%_0%,black_25%,transparent_90%)] [mask-composite:intersect]" />
+      {/* Dot background + top glow (distinct from the Preferences grid) */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(15,23,42,0.2)_1px,transparent_1.5px)] dark:bg-[radial-gradient(rgba(255,255,255,0.28)_1px,transparent_1.5px)] bg-[size:22px_22px] [mask-image:radial-gradient(ellipse_90%_70%_at_50%_0%,black_20%,transparent_85%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[520px] bg-[radial-gradient(ellipse_60%_100%_at_50%_0%,rgba(16,185,129,0.08),transparent_70%)] dark:bg-[radial-gradient(ellipse_60%_100%_at_50%_0%,rgba(16,185,129,0.1),transparent_70%)]" />
 
       <PageHeader
         title="Aide"

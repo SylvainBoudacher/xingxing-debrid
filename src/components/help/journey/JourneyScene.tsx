@@ -74,7 +74,7 @@ export function JourneyScene({
   }, []);
 
   return (
-    <div ref={rootRef} className="overflow-x-auto">
+    <div ref={rootRef} className="overflow-x-auto p-px">
       <div
         className="relative mx-auto overflow-hidden rounded-2xl bg-zinc-50 ring-1 ring-black/8 dark:bg-zinc-950/70 dark:ring-white/10"
         style={{ width: STAGE.width, height: STAGE.height }}

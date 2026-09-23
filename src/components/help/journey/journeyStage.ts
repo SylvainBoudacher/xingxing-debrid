@@ -1,5 +1,5 @@
 /** Reperes de la scene, en px depuis le coin haut-gauche du cadre. */
-export const STAGE = { width: 520, height: 220 };
+export const STAGE = { width: 520, height: 260 };
 
 /** Duree de chaque etape : la timeline et la liste se calent dessus. */
 export const STEP_MS = 4000;
@@ -10,8 +10,8 @@ export const NODE = { width: 96, height: 56 };
 const MID_Y = (STAGE.height - NODE.height) / 2;
 const CENTER_X = (STAGE.width - NODE.width) / 2;
 const RIGHT_X = STAGE.width - 20 - NODE.width;
-const TOP_Y = 24;
-const BOTTOM_Y = STAGE.height - 24 - NODE.height;
+const TOP_Y = 40;
+const BOTTOM_Y = STAGE.height - 40 - NODE.height;
 
 /**
  * Schema des etapes 2 et 3 : le choix d'une version sur C411 l'ajoute a la

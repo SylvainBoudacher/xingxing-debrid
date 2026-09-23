@@ -2,7 +2,14 @@ import { motion } from "motion/react";
 import { ACCENTS, TONES, type ServiceCardData } from "./serviceCards";
 import { item } from "./motionVariants";
 
-export function ServiceCard({ logo, title, badge, description, accent }: ServiceCardData) {
+export function ServiceCard({
+  logo,
+  title,
+  badge,
+  description,
+  accent,
+  hideBadge,
+}: ServiceCardData & { hideBadge?: boolean }) {
   const tone = ACCENTS[accent];
 
   return (
@@ -22,11 +29,13 @@ export function ServiceCard({ logo, title, badge, description, accent }: Service
         <p className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-900 dark:text-white">
           {title}
         </p>
-        <span
-          className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONES[badge.tone]}`}
-        >
-          {badge.label}
-        </span>
+        {!hideBadge && (
+          <span
+            className={`shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TONES[badge.tone]}`}
+          >
+            {badge.label}
+          </span>
+        )}
       </div>
       <p className="text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">{description}</p>
     </motion.div>
