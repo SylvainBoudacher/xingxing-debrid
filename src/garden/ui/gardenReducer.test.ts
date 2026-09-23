@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { LEAF_SLOT_MS } from "../core/leaves";
 import { createStarterSave } from "../core/starter";
 import { DAY, HOUR, startOfDay } from "../core/time";
-import type { GardenSave } from "../core/types";
+import { knownEntries } from "../core/discovery";
+import { freshFlags } from "../core/sachets";
+import type { GardenSave, SachetType, Seed } from "../core/types";
 import { gardenReducer, INITIAL_GARDEN, type GardenState } from "./gardenReducer";
 
 const NOW = 10_000 * LEAF_SLOT_MS + HOUR;
@@ -83,7 +85,7 @@ describe("press", () => {
 });
 
 describe("sachets", () => {
-  const withSachets = (lastDailyAt: number, pending: "quotidien"[]): GardenState =>
+  const withSachets = (lastDailyAt: number, pending: SachetType[]): GardenState =>
     gardenReducer(INITIAL_GARDEN, {
       type: "load",
       save: { ...createStarterSave(), sachets: { lastDailyAt, pending } },
@@ -101,6 +103,23 @@ describe("sachets", () => {
   it("sans sachet en attente, l'état ne bouge pas", () => {
     const state = withSachets(startOfDay(NOW), []);
     expect(gardenReducer(state, { type: "open-sachet", now: NOW, rng: () => 0.5 })).toBe(state);
+  });
+
+  it("renseigne la nouveauté et le type du sachet ouvert", () => {
+    const state = withSachets(startOfDay(NOW), ["dore", "quotidien"]);
+    const next = gardenReducer(state, { type: "open-sachet", now: NOW, rng: () => 0.5 });
+    expect(next.opened.type).toBe("dore");
+    expect(next.opened.fresh).toEqual(freshFlags(knownEntries(state.save!), next.opened.seeds));
+    expect(next.opened.fresh).toHaveLength(3);
+  });
+
+  it("dev-reveal range les graines imposées et les présente comme un sachet doré", () => {
+    const state = withSachets(startOfDay(NOW), []);
+    const seeds: Seed[] = [{ species: "cosmos", color: "black", rarity: "legendaire" }];
+    const next = gardenReducer(state, { type: "dev-reveal", seeds });
+    expect(next.opened).toEqual({ seq: 1, seeds, fresh: [true], type: "dore" });
+    expect(next.save!.inventory.seeds.slice(-1)).toEqual(seeds);
+    expect(next.save!.sachets.pending).toEqual([]);
   });
 
   it("le tick crédite le sachet du jour", () => {
