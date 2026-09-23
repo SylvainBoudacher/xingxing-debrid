@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import type { Rarity } from "../../core/types";
-import { SpriteIcon } from "../SpriteIcon";
+import { sachetDataUrl } from "../../sprites/sachet";
 import { RARITY_COLOR } from "../toolMeta";
 
 const NEUTRAL = "#7a6a5a";
@@ -21,7 +21,12 @@ export function CardBack({ rarity, className }: { rarity: Rarity; className?: st
       }
       transition={glow ? { duration: 1.1, repeat: Infinity, repeatType: "reverse" } : undefined}
     >
-      <SpriteIcon sprite={{ name: "graine", color: "cream" }} cropped className="w-10 opacity-60" />
+      <img
+        src={sachetDataUrl("quotidien")}
+        alt=""
+        draggable={false}
+        className="w-12 opacity-30 [image-rendering:pixelated]"
+      />
     </motion.div>
   );
 }

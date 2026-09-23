@@ -40,6 +40,8 @@ export function TearablePack({
   const bandRef = useRef<HTMLDivElement>(null);
   const started = useRef(false);
   const ripped = useRef(false);
+  // un clic qui termine un glisser n'est pas un clic
+  const dragged = useRef(false);
   const [torn, setTorn] = useState(false);
   const x = useMotionValue(0);
   const bandY = useMotionValue(0);
@@ -116,10 +118,10 @@ export function TearablePack({
       </div>
       {glow && (
         <motion.div
-          className="pointer-events-none absolute inset-x-1 blur-[4px]"
+          className="pointer-events-none absolute -inset-x-6 blur-[6px]"
           style={{
-            top: BAND - 10,
-            height: 20,
+            top: BAND - 20,
+            height: 40,
             opacity: glowOpacity,
             background: `radial-gradient(50% 50% at 50% 50%, ${RARITY_COLOR[glow]}, transparent)`,
           }}
@@ -133,12 +135,18 @@ export function TearablePack({
         dragConstraints={{ left: 0, right: W }}
         dragElastic={0}
         dragMomentum={false}
-        onDragStart={start}
+        onPointerDown={() => (dragged.current = false)}
+        onDragStart={() => {
+          dragged.current = true;
+          start();
+        }}
         onDragEnd={() => {
           if (progress.get() >= TEAR_THRESHOLD) rip();
           else animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
         }}
-        onTap={autoTear}
+        onClick={() => {
+          if (!dragged.current) autoTear();
+        }}
       >
         <img
           src={url}

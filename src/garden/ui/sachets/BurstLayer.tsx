@@ -85,5 +85,5 @@ export function BurstLayer({ ref }: { ref: Ref<BurstHandle> }) {
     [reduced],
   );
 
-  return <canvas ref={canvas} className="pointer-events-none absolute inset-0 z-20 size-full" />;
+  return <canvas ref={canvas} className="pointer-events-none absolute inset-0 -z-10 size-full" />;
 }

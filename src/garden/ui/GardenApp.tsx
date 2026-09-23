@@ -17,7 +17,7 @@ import { HerbierPage } from "./herbier/HerbierPage";
 import { ProgressionPage } from "./progression/ProgressionPage";
 import { nodeById } from "../core/catalog/tree";
 import { readyCount } from "../core/progression";
-import { withExtraSachet, withPreviousDay } from "./sachets/devSachets";
+import { devLegendarySeeds, withExtraSachet, withPreviousDay } from "./sachets/devSachets";
 import { SachetsPage } from "./sachets/SachetsPage";
 import { announceGardenClosed, announceGardenOpened } from "./gardenWindow";
 
@@ -29,6 +29,8 @@ export default function GardenApp() {
   const [state, dispatch] = useReducer(gardenReducer, INITIAL_GARDEN);
   const [now, setNow] = useState(Date.now);
   const [tab, setTab] = useState<GardenTab>("champ");
+  // dernier lot de sachet vu jusqu'au récapitulatif, pour ne pas rejouer la révélation
+  const [seenSachet, setSeenSachet] = useState(0);
   const toastedSeq = useRef(0);
 
   useEffect(() => {
@@ -138,12 +140,18 @@ export default function GardenApp() {
         <SachetsPage
           save={state.save}
           opened={state.opened}
+          seenSeq={seenSachet}
+          onSeen={setSeenSachet}
           onOpen={() => dispatch({ type: "open-sachet", now: Date.now(), rng: Math.random })}
+          onGoToField={() => setTab("champ")}
           onDevSachet={() => dispatch({ type: "set", save: withExtraSachet(state.save!) })}
           onDevNextDay={() => {
             dispatch({ type: "set", save: withPreviousDay(state.save!) });
             dispatch({ type: "tick", now: Date.now() });
           }}
+          onDevLegendary={() =>
+            dispatch({ type: "dev-reveal", seeds: devLegendarySeeds(Math.random) })
+          }
         />
       )}
       {tab === "atelier" && state.save && (

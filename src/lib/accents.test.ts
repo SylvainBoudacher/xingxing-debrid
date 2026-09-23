@@ -86,6 +86,7 @@ const WRONG = [
   "resultat",
   "resultats",
   "revelee",
+  "reveler",
   "rosee",
   "selection",
   "serie",

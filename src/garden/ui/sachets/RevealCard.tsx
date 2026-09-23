@@ -32,6 +32,7 @@ export function RevealCard({
   return (
     <motion.div
       className={`relative ${s.box}`}
+      style={{ perspective: 1200 }}
       animate={shake ? { x: [0, -2, 2, -3, 3, -4, 4, -5, 5, 0] } : undefined}
       transition={shake ? { duration: hold, ease: "easeIn" } : undefined}
     >
