@@ -29,6 +29,9 @@ export function RevealCard({
   const color = RARITY_COLOR[seed.rarity];
   const hold = big ? REVEAL_FX[seed.rarity].hold / 1000 : 0;
   const shake = big && hold > 0 && !reduced;
+  // mouvement réduit : le dos s'efface en fondu au lieu de se retourner
+  const flip = big && !reduced;
+  const fade = big && !!reduced;
   return (
     <motion.div
       className={`relative ${s.box}`}
@@ -39,16 +42,18 @@ export function RevealCard({
       <motion.div
         className="relative size-full"
         style={{ transformStyle: "preserve-3d" }}
-        initial={big ? { rotateY: 180 } : false}
+        initial={flip ? { rotateY: 180 } : false}
         animate={{ rotateY: 0 }}
         transition={{ delay: hold, duration: FLIP_MS / 1000, ease: "easeOut" }}
       >
-        <div
-          className="absolute inset-0 [backface-visibility:hidden]"
-          style={{ transform: "rotateY(180deg)" }}
-        >
-          <CardBack rarity={seed.rarity} className="size-full" />
-        </div>
+        {!fade && (
+          <div
+            className="absolute inset-0 [backface-visibility:hidden]"
+            style={{ transform: "rotateY(180deg)" }}
+          >
+            <CardBack rarity={seed.rarity} className="size-full" />
+          </div>
+        )}
         <div
           className="absolute inset-0 flex flex-col items-center gap-1 rounded-xl bg-[#241a20] p-3 [backface-visibility:hidden]"
           style={{ boxShadow: `inset 0 0 0 3px ${color}` }}
@@ -67,6 +72,16 @@ export function RevealCard({
           </span>
           {fresh && <NewStamp delay={big ? hold + FLIP_MS / 1000 : 0} />}
         </div>
+        {fade && (
+          <motion.div
+            className="absolute inset-0"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 0 }}
+            transition={{ delay: hold, duration: FLIP_MS / 1000 }}
+          >
+            <CardBack rarity={seed.rarity} className="size-full" />
+          </motion.div>
+        )}
       </motion.div>
     </motion.div>
   );

@@ -36,6 +36,14 @@ describe("burst", () => {
     expect(gold.flash).toBe(1);
   });
 
+  it("en mouvement réduit, les particules restent mais ni rayons ni flash", () => {
+    const b = newBurst();
+    emit(b, "gold", 0, 0, rng, true);
+    expect(b.parts).toHaveLength(90);
+    expect(b.rays).toEqual([]);
+    expect(b.flash).toBe(0);
+  });
+
   it("tout s'éteint en fin de vie", () => {
     const b = newBurst();
     emit(b, "gold", 0, 0, rng);

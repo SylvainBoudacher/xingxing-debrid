@@ -94,7 +94,15 @@ const between = (rng: Rng, [a, b]: [number, number]) => a + rng() * (b - a);
 
 export const newBurst = (): Burst => ({ parts: [], rays: [], flash: 0 });
 
-export function emit(b: Burst, kind: BurstKind, x: number, y: number, rng: Rng = Math.random) {
+// calm : mouvement réduit, les particules restent mais ni rayons tournants ni flash.
+export function emit(
+  b: Burst,
+  kind: BurstKind,
+  x: number,
+  y: number,
+  rng: Rng = Math.random,
+  calm = false,
+) {
   const r = RECIPES[kind];
   const n = Math.min(r.count, Math.max(0, MAX_PARTICLES - b.parts.length));
   for (let i = 0; i < n; i++) {
@@ -117,6 +125,7 @@ export function emit(b: Burst, kind: BurstKind, x: number, y: number, rng: Rng =
       max: life,
     });
   }
+  if (calm) return;
   if (r.ray) b.rays.push({ x, y, color: r.ray.color, life: r.ray.life, max: r.ray.life });
   if (r.flash) b.flash = Math.max(b.flash, r.flash);
 }

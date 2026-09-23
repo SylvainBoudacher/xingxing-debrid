@@ -68,8 +68,7 @@ export function BurstLayer({ ref }: { ref: Ref<BurstHandle> }) {
           cv.height = cv.clientHeight;
         }
         const box = cv.getBoundingClientRect();
-        emit(burst.current, kind, clientX - box.left, clientY - box.top);
-        if (reduced) burst.current.flash = 0;
+        emit(burst.current, kind, clientX - box.left, clientY - box.top, Math.random, !!reduced);
         if (raf.current) return;
         let last = performance.now();
         const frame = (now: number) => {
