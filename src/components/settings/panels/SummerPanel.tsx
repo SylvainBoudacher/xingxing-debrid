@@ -15,6 +15,8 @@ export interface SummerPanelProps {
   onSetSummerMaxDucks: (v: number) => void;
   idleAutoHide: boolean;
   onSetIdleAutoHide: (v: boolean) => void;
+  poolBackdropExit: boolean;
+  onSetPoolBackdropExit: (v: boolean) => void;
 }
 
 export function SummerPanel({
@@ -26,6 +28,8 @@ export function SummerPanel({
   onSetSummerMaxDucks,
   idleAutoHide,
   onSetIdleAutoHide,
+  poolBackdropExit,
+  onSetPoolBackdropExit,
 }: SummerPanelProps) {
   const importDucksInputRef = useRef<HTMLInputElement>(null);
   const [draftMaxDucks, setDraftMaxDucks] = useState(String(summerMaxDucks));
@@ -91,6 +95,17 @@ export function SummerPanel({
             description="Cache l'interface après 30 s d'inactivité. Un mouvement de souris la restaure."
           >
             <Toggle checked={idleAutoHide} onChange={onSetIdleAutoHide} />
+          </SettingRow>
+        </div>
+      )}
+
+      {summerEnabled && (
+        <div className="mt-3">
+          <SettingRow
+            title="Quitter la page Découverte en cliquant sur l'eau"
+            description="Un clic sur la piscine, en dehors du contenu, ramène à l'accueil."
+          >
+            <Toggle checked={poolBackdropExit} onChange={onSetPoolBackdropExit} />
           </SettingRow>
         </div>
       )}

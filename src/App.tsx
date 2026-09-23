@@ -113,6 +113,7 @@ function App() {
   const [summerFps, setSummerFps] = useState<30 | 60>(60);
   const [summerMaxDucks, setSummerMaxDucks] = useState(15);
   const [idleAutoHide, setIdleAutoHide] = useState(true);
+  const [poolBackdropExit, setPoolBackdropExit] = useState(false);
   // En preview navigateur, les animations rAF gèlent quand l'onglet est en
   // arrière-plan : on saute splash + transition pour ne pas bloquer dessus.
   const [startPhase, setStartPhase] = useState<StartPhase>(isBrowserPreview ? "done" : "splash");
@@ -214,6 +215,8 @@ function App() {
       if (typeof savedMaxDucks === "number") setSummerMaxDucks(savedMaxDucks);
       const savedIdleAutoHide = await store.get<boolean>("idle_auto_hide");
       if (typeof savedIdleAutoHide === "boolean") setIdleAutoHide(savedIdleAutoHide);
+      const savedBackdropExit = await store.get<boolean>("pool_backdrop_exit");
+      if (typeof savedBackdropExit === "boolean") setPoolBackdropExit(savedBackdropExit);
     })();
   }, []);
 
@@ -250,6 +253,12 @@ function App() {
   async function handleSetIdleAutoHide(v: boolean) {
     setIdleAutoHide(v);
     await store.set("idle_auto_hide", v);
+    await store.save();
+  }
+
+  async function handleSetPoolBackdropExit(v: boolean) {
+    setPoolBackdropExit(v);
+    await store.set("pool_backdrop_exit", v);
     await store.save();
   }
 
@@ -596,6 +605,8 @@ function App() {
                 onSetSummerMaxDucks={handleSetSummerMaxDucks}
                 idleAutoHide={idleAutoHide}
                 onSetIdleAutoHide={handleSetIdleAutoHide}
+                poolBackdropExit={poolBackdropExit}
+                onSetPoolBackdropExit={handleSetPoolBackdropExit}
                 onKeysSaved={applyKeys}
                 initialPanel={settingsPanel}
               />
@@ -615,6 +626,7 @@ function App() {
                 hasPendingUpdate={availableUpdate !== null}
                 onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
                 summerEnabled={summerEnabled}
+                poolBackdropExit={poolBackdropExit}
                 initialQuery={discoverQuery}
                 initialTab={discoverTab}
                 initialItem={discoverItem}

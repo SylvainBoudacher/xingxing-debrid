@@ -26,6 +26,7 @@ import { FEED_LABELS, useDiscoverFeed, type DiscoverTab } from "@/lib/useDiscove
 import { useRecommendations } from "@/lib/useRecommendations";
 import { useSendToDebrid } from "@/lib/useSendToDebrid";
 import { PageHeader } from "@/components/PageHeader";
+import { onWaterClick } from "@/components/duckShopBridge";
 import { KeyRound, Loader2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -36,6 +37,8 @@ interface DiscoverPageProps {
   hasPendingUpdate: boolean;
   onShowPendingUpdate: () => void;
   summerEnabled: boolean;
+  /** Un clic sur l'eau libre de la piscine ramène à l'accueil */
+  poolBackdropExit: boolean;
   /** Requête pré-remplie depuis la barre de MainPage (mode "Films & Séries") */
   initialQuery?: string;
   /** Onglet ouvert à l'arrivée (ex. "manga" depuis la bibliothèque manga) */
@@ -67,6 +70,7 @@ export function DiscoverPage({
   hasPendingUpdate,
   onShowPendingUpdate,
   summerEnabled,
+  poolBackdropExit,
   initialQuery,
   initialTab,
   initialItem,
@@ -221,6 +225,18 @@ export function DiscoverPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debridModal, selected, mangaBusy, onBack]);
 
+  // Seuls les conteneurs de mise en page (data-pool-backdrop) comptent comme
+  // arrière-plan : un clic sur un titre ou entre deux onglets ne quitte pas.
+  useEffect(() => {
+    if (!poolBackdropExit) return;
+    onWaterClick((target) => {
+      if (!(target instanceof HTMLElement) || !target.hasAttribute("data-pool-backdrop")) return;
+      if (debridModal || selected || mangaBusy) return;
+      onBack();
+    });
+    return () => onWaterClick(null);
+  }, [poolBackdropExit, debridModal, selected, mangaBusy, onBack]);
+
   function switchTab(t: Exclude<DiscoverTab, "all">) {
     if (t === "recos" && mediaType !== "recos" && !recosApi.loading) recosApi.load();
     switchType(t);
@@ -235,6 +251,7 @@ export function DiscoverPage({
 
   return (
     <main
+      data-pool-backdrop
       className={`relative isolate flex min-h-screen flex-col ${
         summerEnabled ? "" : "bg-[#f4f6fc] dark:bg-[#04050c]"
       }`}
@@ -291,7 +308,7 @@ export function DiscoverPage({
         </div>
       )}
 
-      <div className="mx-auto w-full max-w-5xl px-6 pt-8 sm:px-8">
+      <div data-pool-backdrop className="mx-auto w-full max-w-5xl px-6 pt-8 sm:px-8">
         {(mediaType === "manga" || (tmdbKey && !tmdbKeyInvalid)) && (
           <DiscoverSearchBar
             visible={feedMode || mediaType === "manga"}
@@ -320,7 +337,7 @@ export function DiscoverPage({
       </div>
 
       {mediaType === "manga" && (
-        <div className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 sm:px-8">
+        <div data-pool-backdrop className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 sm:px-8">
           <DiscoverMangaSection
             query={mangaQuery}
             initialItem={initialMangaItem}
@@ -333,7 +350,7 @@ export function DiscoverPage({
       )}
 
       {tmdbKey && !tmdbKeyInvalid && mediaType === "roulette" && (
-        <div className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 sm:px-8">
+        <div data-pool-backdrop className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 sm:px-8">
           <RouletteSection
             tmdbKey={tmdbKey}
             likedKeys={likedKeys}
@@ -345,7 +362,7 @@ export function DiscoverPage({
       )}
 
       {tmdbKey && !tmdbKeyInvalid && mediaType !== "manga" && mediaType !== "roulette" && (
-        <div className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 sm:px-8">
+        <div data-pool-backdrop className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 sm:px-8">
           <DiscoverSearchFilters
             visible={mode === "search"}
             active={searchFilter}
@@ -401,6 +418,7 @@ export function DiscoverPage({
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div
               key={gridKey}
+              data-pool-backdrop
               initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: -8 }}

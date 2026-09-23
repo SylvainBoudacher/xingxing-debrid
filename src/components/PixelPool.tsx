@@ -95,6 +95,7 @@ import {
   emitDuckDrop,
   emitDucksReserved,
   emitShopOpen,
+  emitWaterClick,
   registerCapturer,
   registerCounter,
   registerInjector,
@@ -674,6 +675,7 @@ export function PixelPool({
           return;
         }
         pokeWater(e.clientX, e.clientY);
+        if (e.button === 0) emitWaterClick(e.target);
         return;
       }
       dragging = d;

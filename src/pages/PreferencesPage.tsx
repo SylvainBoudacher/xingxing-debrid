@@ -31,6 +31,8 @@ interface PreferencesPageProps {
   onSetSummerMaxDucks: (v: number) => void;
   idleAutoHide: boolean;
   onSetIdleAutoHide: (v: boolean) => void;
+  poolBackdropExit: boolean;
+  onSetPoolBackdropExit: (v: boolean) => void;
   onKeysSaved: (keys: Partial<ApiKeys>) => void;
   initialPanel?: PanelId;
 }
@@ -48,6 +50,8 @@ export function PreferencesPage({
   onSetSummerMaxDucks,
   idleAutoHide,
   onSetIdleAutoHide,
+  poolBackdropExit,
+  onSetPoolBackdropExit,
   onKeysSaved,
   initialPanel,
 }: PreferencesPageProps) {
@@ -97,6 +101,8 @@ export function PreferencesPage({
             onSetSummerMaxDucks={onSetSummerMaxDucks}
             idleAutoHide={idleAutoHide}
             onSetIdleAutoHide={onSetIdleAutoHide}
+            poolBackdropExit={poolBackdropExit}
+            onSetPoolBackdropExit={onSetPoolBackdropExit}
           />
         );
     }
