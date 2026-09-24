@@ -14,6 +14,7 @@ import { LibraryListNameModal } from "@/components/LibraryListNameModal";
 import { LibraryMangaSection } from "@/components/LibraryMangaSection";
 import { LibraryPosterCard } from "@/components/LibraryPosterCard";
 import { LibraryReorderableCard } from "@/components/LibraryReorderableCard";
+import { LibraryReorderablePoster } from "@/components/LibraryReorderablePoster";
 import { LibraryResumeBanner } from "@/components/LibraryResumeBanner";
 import { LibrarySummary } from "@/components/LibrarySummary";
 import { LibraryTabs, type LibraryTab } from "@/components/LibraryTabs";
@@ -398,9 +399,6 @@ export function LibraryPage({
 
   function changeLayout(next: Layout) {
     setLayout(next);
-    // Le tri manuel (glisser-déposer) n'existe qu'en vue liste : on bascule sur
-    // « Plus récents » en passant en grille.
-    if (next === "grid" && sort === "manual") changeSort("recent");
     // La sélection multiple n'existe qu'en vue grille.
     if (next === "list") exitSelect();
     saveLibraryPref("layout", next);
@@ -914,7 +912,6 @@ export function LibraryPage({
                   <LibraryDisplayMenu
                     sort={sort}
                     onSortChange={changeSort}
-                    allowManualSort={layout === "list"}
                     grouping={grouping}
                     onGroupingChange={changeGrouping}
                     posterSize={layout === "grid" ? posterSize : undefined}
@@ -970,6 +967,20 @@ export function LibraryPage({
                   kind="noGenre"
                   onClearGenres={() => changeGenreFilter(new Set())}
                 />
+              ) : layout === "grid" && canReorder && !selectMode ? (
+                <Reorder.Group
+                  as="div"
+                  axis="xy"
+                  values={visible}
+                  onReorder={persist}
+                  className={`grid gap-3 ${POSTER_GRID[posterSize]}`}
+                >
+                  {visible.map((e) => (
+                    <LibraryReorderablePoster key={e.infoHash} entry={e}>
+                      {renderPoster({ type: "single", entry: e })}
+                    </LibraryReorderablePoster>
+                  ))}
+                </Reorder.Group>
               ) : layout === "grid" ? (
                 <LibraryBlocks
                   blocks={blocks}

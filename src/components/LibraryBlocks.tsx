@@ -46,15 +46,16 @@ export function LibraryBlocks({
               layout="position"
               key={block.key}
               data-drop-id={block.dropId}
-              className={
+              // Le bloc de la carte glissée passe devant les autres, sinon elle glisse dessous.
+              className={`relative has-[[data-dragging]]:z-30 ${
                 droppable
                   ? `rounded-2xl p-3 ring-1 transition-colors ${
                       active
                         ? "bg-indigo-500/10 ring-indigo-500"
                         : "bg-black/[0.02] ring-black/5 dark:bg-white/[0.03] dark:ring-white/10"
                     }`
-                  : undefined
-              }
+                  : ""
+              }`}
             >
               {block.label && (
                 <BlockHeader
@@ -74,7 +75,8 @@ export function LibraryBlocks({
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
                     // -m-3 p-3 : laisse de la marge au ring et au zoom au survol, sinon l'overflow les rogne.
-                    className="-m-3 overflow-hidden p-3"
+                    // Pendant un glisser, l'overflow est levé pour que la carte puisse sortir du bloc.
+                    className="-m-3 overflow-hidden p-3 has-[[data-dragging]]:overflow-visible"
                   >
                     <div className="space-y-5">
                       {block.sections.map((section) => (

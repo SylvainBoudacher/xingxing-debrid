@@ -264,3 +264,13 @@
     cursor: pointer;
   }
 }
+
+/* Flou de la barre de page : coupé pendant une View Transition (les captures
+   ne le rendent pas), puis réintroduit en fondu au lieu d'apparaître d'un coup. */
+[data-page-header] {
+  transition: backdrop-filter 0.3s ease-out;
+}
+[data-page-transition] [data-page-header] {
+  backdrop-filter: none;
+  transition: none;
+}

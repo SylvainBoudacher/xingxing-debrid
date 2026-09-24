@@ -5,6 +5,7 @@ import { subscribeMangaRead } from "@/lib/mangaReadRequest";
 import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
 import { cactusVariant, margueriteVariant, tournesolVariant } from "@/components/duckFlowers";
+import { PageView } from "@/components/PageView";
 import { SplashScreen } from "@/components/SplashScreen";
 import { SplashTransition } from "@/components/SplashTransition";
 import { MangaWelcomeModal } from "@/components/MangaWelcomeModal";
@@ -32,8 +33,8 @@ import { useNavShortcuts } from "@/lib/useNavShortcuts";
 import { DiscoverPage } from "@/pages/DiscoverPage";
 import { LibraryPage } from "@/pages/LibraryPage";
 import { LazyStore } from "@tauri-apps/plugin-store";
-import { AnimatePresence, motion } from "motion/react";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { AnimatePresence } from "motion/react";
+import { lazy, startTransition, Suspense, useEffect, useState } from "react";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -89,7 +90,10 @@ function App() {
     prefs: initPrefs,
     applyKeys,
   } = useAppInit();
-  const [page, setPage] = useState<Page | null>(null);
+  const [page, setPageState] = useState<Page | null>(null);
+  // Chaque changement de page passe par une transition : c'est ce qui
+  // déclenche les View Transitions de PageView.
+  const setPage: typeof setPageState = (next) => startTransition(() => setPageState(next));
   const [discoverQuery, setDiscoverQuery] = useState("");
   const [discoverItem, setDiscoverItem] = useState<TmdbItem | null>(null);
   const [discoverTab, setDiscoverTab] = useState<DiscoverTab | undefined>(undefined);
@@ -487,216 +491,154 @@ function App() {
       )}
 
       <Suspense fallback={null}>
-        <AnimatePresence mode="wait">
-          {effectivePhase === "done" && page === "setup" && (
-            <motion.div
-              key="setup"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-            >
-              <SetupPage onComplete={handleSetupComplete} />
-            </motion.div>
-          )}
-          {effectivePhase === "done" && page === "main" && (
-            <motion.div
-              key="main"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.35, ease: "easeOut" }}
-            >
-              <MainPage
-                onNavigate={handleNavigate}
-                onLaunchDiscover={launchDiscover}
-                onLaunchDiscoverItem={launchDiscoverItem}
-                onLaunchDiscoverManga={launchDiscoverManga}
-                onLaunchDiscoverMangaItem={launchDiscoverMangaItem}
-                devMode={devMode}
-                onToggleDevMode={() => setDevMode((v) => !v)}
-                onShowMangaWelcome={() => setShowMangaWelcome(true)}
-                onShowUpdatePreview={() =>
-                  setPendingUpdate({
-                    version: "9.9.9",
-                    body: "- Nouvelle fonctionnalité incroyable\n- Correction de bugs sur la recherche C411\n- Amélioration des performances au démarrage\n- Nouveau tri par date dans la bibliothèque\n- Les jaquettes se chargent plus vite\n- Meilleure gestion des erreurs réseau\n- Refonte de la fenêtre de mise à jour\n- Divers ajustements visuels en mode sombre",
-                    download: async () => {},
-                  })
-                }
-                hasPendingUpdate={availableUpdate !== null}
-                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
-                summerEnabled={summerEnabled}
-                initialC411Key={initC411Key}
-                initialAllDebridKey={initAllDebridKey}
-                initialTmdbKey={initTmdbKey}
-                initialPatchnotesSeen={patchnotesSeenVersion ?? initPrefs.patchnotesSeen}
-                initialSearchViewMode={initPrefs.searchViewMode}
-                initialIdleAutoHide={idleAutoHide && summerEnabled && !isBrowserPreview}
-                searchMode={searchMode}
-                onSearchModeChange={setSearchMode}
-                initialSearch={mainSearch}
-                onSearchConsumed={() => setMainSearch(null)}
-              />
-            </motion.div>
-          )}
-          {effectivePhase === "done" && page === "magnets" && (
-            <motion.div
-              key="magnets"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-            >
-              <MagnetsPage
-                onBack={() => setPage("main")}
-                onNavigate={handleNavigate}
-                hasPendingUpdate={availableUpdate !== null}
-                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
-                initialAllDebridKey={initAllDebridKey}
-                initialViewMode={initPrefs.viewMode}
-                initialHideNfoFiles={initPrefs.hideNfoFiles}
-                initialSkipNfoDownload={initPrefs.skipNfoDownload}
-              />
-            </motion.div>
-          )}
-          {effectivePhase === "done" && page === "library" && (
-            <motion.div
-              key="library"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-            >
-              <LibraryPage
-                onBack={() => setPage("main")}
-                onNavigate={handleNavigate}
-                onSearchTracker={launchTrackerSearch}
-                hasPendingUpdate={availableUpdate !== null}
-                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
-                initialAllDebridKey={initAllDebridKey}
-                initialTmdbKey={initTmdbKey}
-                initialC411Key={initC411Key}
-                initialViewMode={initPrefs.libraryViewMode}
-                initialTab={libraryTab}
-                initialMangaId={mangaLibraryId}
-                initialExpandedHash={libraryExpandedHash}
-                initialExpandedGroupId={libraryExpandedGroupId}
-              />
-            </motion.div>
-          )}
-          {effectivePhase === "done" && page === "preferences" && (
-            <motion.div
-              key="preferences"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-            >
-              <PreferencesPage
-                onBack={() => setPage("main")}
-                onNavigate={handleNavigate}
-                hasPendingUpdate={availableUpdate !== null}
-                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
-                summerEnabled={summerEnabled}
-                onToggleSummer={handleToggleSummer}
-                summerFps={summerFps}
-                onSetSummerFps={handleSetSummerFps}
-                summerMaxDucks={summerMaxDucks}
-                onSetSummerMaxDucks={handleSetSummerMaxDucks}
-                idleAutoHide={idleAutoHide}
-                onSetIdleAutoHide={handleSetIdleAutoHide}
-                poolBackdropExit={poolBackdropExit}
-                onSetPoolBackdropExit={handleSetPoolBackdropExit}
-                onKeysSaved={applyKeys}
-                initialPanel={settingsPanel}
-              />
-            </motion.div>
-          )}
-          {effectivePhase === "done" && page === "discover" && (
-            <motion.div
-              key="discover"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-            >
-              <DiscoverPage
-                onBack={() => setPage("main")}
-                onNavigate={handleNavigate}
-                hasPendingUpdate={availableUpdate !== null}
-                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
-                summerEnabled={summerEnabled}
-                poolBackdropExit={poolBackdropExit}
-                initialQuery={discoverQuery}
-                initialTab={discoverTab}
-                initialItem={discoverItem}
-                initialMangaQuery={discoverMangaQuery}
-                initialMangaItem={discoverMangaItem}
-                initialTmdbKey={initTmdbKey}
-                initialC411Key={initC411Key}
-                initialAllDebridKey={initAllDebridKey}
-                initialLikes={initLikes}
-                onSearchTracker={launchTrackerSearch}
-                onOpenLibraryItem={openLibraryItem}
-                onOpenMangaLibrary={openMangaEntry}
-              />
-            </motion.div>
-          )}
-          {effectivePhase === "done" && page === "nyaa" && devMode && NyaaTestPage && (
-            <motion.div
-              key="nyaa"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-            >
-              <NyaaTestPage onBack={() => setPage("main")} />
-            </motion.div>
-          )}
-          {effectivePhase === "done" && page === "boatgame" && (
-            <motion.div
-              key="boatgame"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4, ease: "easeInOut" }}
-            >
-              <BoatGamePage onExit={() => setPage("main")} />
-            </motion.div>
-          )}
-          {effectivePhase === "done" && page === "patchnotes" && (
-            <motion.div
-              key="patchnotes"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-            >
-              <PatchnotesPage
-                onBack={() => setPage("main")}
-                onNavigate={handleNavigate}
-                hasPendingUpdate={availableUpdate !== null}
-                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
-              />
-            </motion.div>
-          )}
-          {effectivePhase === "done" && page === "help" && (
-            <motion.div
-              key="help"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-            >
-              <HelpPage
-                onBack={() => setPage("main")}
-                onNavigate={handleNavigate}
-                hasPendingUpdate={availableUpdate !== null}
-                onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {effectivePhase === "done" && page === "setup" && (
+          <PageView key="setup">
+            <SetupPage onComplete={handleSetupComplete} />
+          </PageView>
+        )}
+        {effectivePhase === "done" && page === "main" && (
+          <PageView key="main" fade>
+            <MainPage
+              onNavigate={handleNavigate}
+              onLaunchDiscover={launchDiscover}
+              onLaunchDiscoverItem={launchDiscoverItem}
+              onLaunchDiscoverManga={launchDiscoverManga}
+              onLaunchDiscoverMangaItem={launchDiscoverMangaItem}
+              devMode={devMode}
+              onToggleDevMode={() => setDevMode((v) => !v)}
+              onShowMangaWelcome={() => setShowMangaWelcome(true)}
+              onShowUpdatePreview={() =>
+                setPendingUpdate({
+                  version: "9.9.9",
+                  body: "- Nouvelle fonctionnalité incroyable\n- Correction de bugs sur la recherche C411\n- Amélioration des performances au démarrage\n- Nouveau tri par date dans la bibliothèque\n- Les jaquettes se chargent plus vite\n- Meilleure gestion des erreurs réseau\n- Refonte de la fenêtre de mise à jour\n- Divers ajustements visuels en mode sombre",
+                  download: async () => {},
+                })
+              }
+              hasPendingUpdate={availableUpdate !== null}
+              onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+              summerEnabled={summerEnabled}
+              initialC411Key={initC411Key}
+              initialAllDebridKey={initAllDebridKey}
+              initialTmdbKey={initTmdbKey}
+              initialPatchnotesSeen={patchnotesSeenVersion ?? initPrefs.patchnotesSeen}
+              initialSearchViewMode={initPrefs.searchViewMode}
+              initialIdleAutoHide={idleAutoHide && summerEnabled && !isBrowserPreview}
+              searchMode={searchMode}
+              onSearchModeChange={setSearchMode}
+              initialSearch={mainSearch}
+              onSearchConsumed={() => setMainSearch(null)}
+            />
+          </PageView>
+        )}
+        {effectivePhase === "done" && page === "magnets" && (
+          <PageView key="magnets">
+            <MagnetsPage
+              onBack={() => setPage("main")}
+              onNavigate={handleNavigate}
+              hasPendingUpdate={availableUpdate !== null}
+              onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+              initialAllDebridKey={initAllDebridKey}
+              initialViewMode={initPrefs.viewMode}
+              initialHideNfoFiles={initPrefs.hideNfoFiles}
+              initialSkipNfoDownload={initPrefs.skipNfoDownload}
+            />
+          </PageView>
+        )}
+        {effectivePhase === "done" && page === "library" && (
+          <PageView key="library">
+            <LibraryPage
+              onBack={() => setPage("main")}
+              onNavigate={handleNavigate}
+              onSearchTracker={launchTrackerSearch}
+              hasPendingUpdate={availableUpdate !== null}
+              onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+              initialAllDebridKey={initAllDebridKey}
+              initialTmdbKey={initTmdbKey}
+              initialC411Key={initC411Key}
+              initialViewMode={initPrefs.libraryViewMode}
+              initialTab={libraryTab}
+              initialMangaId={mangaLibraryId}
+              initialExpandedHash={libraryExpandedHash}
+              initialExpandedGroupId={libraryExpandedGroupId}
+            />
+          </PageView>
+        )}
+        {effectivePhase === "done" && page === "preferences" && (
+          <PageView key="preferences">
+            <PreferencesPage
+              onBack={() => setPage("main")}
+              onNavigate={handleNavigate}
+              hasPendingUpdate={availableUpdate !== null}
+              onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+              summerEnabled={summerEnabled}
+              onToggleSummer={handleToggleSummer}
+              summerFps={summerFps}
+              onSetSummerFps={handleSetSummerFps}
+              summerMaxDucks={summerMaxDucks}
+              onSetSummerMaxDucks={handleSetSummerMaxDucks}
+              idleAutoHide={idleAutoHide}
+              onSetIdleAutoHide={handleSetIdleAutoHide}
+              poolBackdropExit={poolBackdropExit}
+              onSetPoolBackdropExit={handleSetPoolBackdropExit}
+              onKeysSaved={applyKeys}
+              initialPanel={settingsPanel}
+            />
+          </PageView>
+        )}
+        {effectivePhase === "done" && page === "discover" && (
+          <PageView key="discover">
+            <DiscoverPage
+              onBack={() => setPage("main")}
+              onNavigate={handleNavigate}
+              hasPendingUpdate={availableUpdate !== null}
+              onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+              summerEnabled={summerEnabled}
+              poolBackdropExit={poolBackdropExit}
+              initialQuery={discoverQuery}
+              initialTab={discoverTab}
+              initialItem={discoverItem}
+              initialMangaQuery={discoverMangaQuery}
+              initialMangaItem={discoverMangaItem}
+              initialTmdbKey={initTmdbKey}
+              initialC411Key={initC411Key}
+              initialAllDebridKey={initAllDebridKey}
+              initialLikes={initLikes}
+              onSearchTracker={launchTrackerSearch}
+              onOpenLibraryItem={openLibraryItem}
+              onOpenMangaLibrary={openMangaEntry}
+            />
+          </PageView>
+        )}
+        {effectivePhase === "done" && page === "nyaa" && devMode && NyaaTestPage && (
+          <PageView key="nyaa">
+            <NyaaTestPage onBack={() => setPage("main")} />
+          </PageView>
+        )}
+        {effectivePhase === "done" && page === "boatgame" && (
+          <PageView key="boatgame" fade>
+            <BoatGamePage onExit={() => setPage("main")} />
+          </PageView>
+        )}
+        {effectivePhase === "done" && page === "patchnotes" && (
+          <PageView key="patchnotes">
+            <PatchnotesPage
+              onBack={() => setPage("main")}
+              onNavigate={handleNavigate}
+              hasPendingUpdate={availableUpdate !== null}
+              onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+            />
+          </PageView>
+        )}
+        {effectivePhase === "done" && page === "help" && (
+          <PageView key="help">
+            <HelpPage
+              onBack={() => setPage("main")}
+              onNavigate={handleNavigate}
+              hasPendingUpdate={availableUpdate !== null}
+              onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+            />
+          </PageView>
+        )}
       </Suspense>
     </>
   );

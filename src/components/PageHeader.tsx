@@ -31,6 +31,7 @@ export function PageHeader({
       initial={entrance ? { opacity: 0, y: -16 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      data-page-header
       className={`sticky top-0 ${zIndex} border-b border-black/5 dark:border-white/5 bg-white/60 dark:bg-black/30 backdrop-blur-xl`}
     >
       <div className="relative flex h-14 items-center justify-between px-10">

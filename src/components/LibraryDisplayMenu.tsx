@@ -26,8 +26,6 @@ export const GROUP_MODES: { id: GroupMode; label: string; hint: string }[] = [
 interface LibraryDisplayMenuProps {
   sort: LibrarySort;
   onSortChange: (sort: LibrarySort) => void;
-  /** Le tri manuel (glisser-déposer) n'existe qu'en vue liste. */
-  allowManualSort: boolean;
   grouping: GroupMode;
   onGroupingChange: (grouping: GroupMode) => void;
   /** Absent en vue liste : la taille ne concerne que les jaquettes de la grille. */
@@ -44,7 +42,6 @@ interface LibraryDisplayMenuProps {
 export function LibraryDisplayMenu({
   sort,
   onSortChange,
-  allowManualSort,
   grouping,
   onGroupingChange,
   posterSize,
@@ -57,7 +54,6 @@ export function LibraryDisplayMenu({
   // Mis en avant seulement quand un genre filtre la bibliothèque : le
   // regroupement, lui, ne cache aucun titre.
   const active = genreFilter.size > 0;
-  const sorts = SORTS.filter((s) => s.id !== "manual" || allowManualSort);
 
   return (
     <DropdownMenu>
@@ -83,7 +79,7 @@ export function LibraryDisplayMenu({
       <DropdownMenuContent align="end" className="w-72 space-y-4 p-3">
         <Section label="Trier par">
           <div className="space-y-0.5">
-            {sorts.map((s) => (
+            {SORTS.map((s) => (
               <button
                 key={s.id}
                 onClick={() => onSortChange(s.id)}
