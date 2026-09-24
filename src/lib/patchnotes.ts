@@ -1425,5 +1425,3 @@ export const PATCH_NOTES: PatchNote[] = [
     ],
   },
 ];
-
-export const LATEST_VERSION = PATCH_NOTES[0].version;

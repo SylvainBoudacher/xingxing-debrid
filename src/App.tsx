@@ -16,7 +16,7 @@ import { prefetchLibrary } from "@/lib/library";
 import { loadCategories } from "@/lib/libraryCategories";
 import { loadLibraryPrefs } from "@/lib/libraryPrefs";
 import { loadResume } from "@/lib/resumeWatch";
-import { LATEST_VERSION } from "@/lib/patchnotes";
+import { LATEST_VERSION } from "@/lib/version";
 import type { SearchMode } from "@/lib/searchModes";
 import { loadSeriesFolders } from "@/lib/seriesFolders";
 import { onSettingsPanelRequest } from "@/lib/settingsNavigation";

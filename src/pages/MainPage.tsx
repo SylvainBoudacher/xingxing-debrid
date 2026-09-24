@@ -27,7 +27,7 @@ import { networkErrorMessage, toastNetworkError } from "@/lib/networkError";
 import { loadNyaaDefaults } from "@/lib/nyaaDefaults";
 import { buildNyaaQuery } from "@/lib/nyaaFilters";
 import { parseRelease } from "@/lib/parseRelease";
-import { LATEST_VERSION } from "@/lib/patchnotes";
+import { LATEST_VERSION } from "@/lib/version";
 import { queryClient } from "@/lib/queryClient";
 import { mapNyaaResults, mapTorrents, pageNumbers, type SearchResult } from "@/lib/search";
 import { c411Keys, searchTorrents } from "@/lib/services/c411";

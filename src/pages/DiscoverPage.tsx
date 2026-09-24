@@ -6,7 +6,6 @@ import { DiscoverReleasesModal } from "@/components/DiscoverReleasesModal";
 import { DiscoverSearchBar } from "@/components/DiscoverSearchBar";
 import { DiscoverSearchFilters } from "@/components/DiscoverSearchFilters";
 import { DiscoverTabs } from "@/components/DiscoverTabs";
-import { RouletteSection } from "@/components/RouletteSection";
 import { getApiKey } from "@/lib/apiKeys";
 import {
   filterTvReleases,
@@ -29,7 +28,12 @@ import { PageHeader } from "@/components/PageHeader";
 import { onWaterClick } from "@/components/duckShopBridge";
 import { KeyRound, Loader2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+
+// Onglet peu utilisé : son arbre (composants, viviers, rareté) est chargé à la demande.
+const RouletteSection = lazy(() =>
+  import("@/components/RouletteSection").then((m) => ({ default: m.RouletteSection })),
+);
 
 interface DiscoverPageProps {
   onBack: () => void;
@@ -351,13 +355,15 @@ export function DiscoverPage({
 
       {tmdbKey && !tmdbKeyInvalid && mediaType === "roulette" && (
         <div data-pool-backdrop className="mx-auto w-full max-w-5xl flex-1 px-6 pb-10 sm:px-8">
-          <RouletteSection
-            tmdbKey={tmdbKey}
-            likedKeys={likedKeys}
-            ownedKeys={ownedKeys}
-            onOpen={openItem}
-            onToggleLike={toggleLike}
-          />
+          <Suspense fallback={null}>
+            <RouletteSection
+              tmdbKey={tmdbKey}
+              likedKeys={likedKeys}
+              ownedKeys={ownedKeys}
+              onOpen={openItem}
+              onToggleLike={toggleLike}
+            />
+          </Suspense>
         </div>
       )}
 

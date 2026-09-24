@@ -29,7 +29,7 @@ bunx tsc --noEmit
 
 Rust compilation happens automatically inside `tauri dev` / `tauri build`. Run `cargo check` inside `src-tauri/` for a faster Rust-only type check.
 
-**Publishing an update**: before tagging, update `RELEASE_NOTES.md` with the notes for the release (2-4 lines max) - the CI copies this file verbatim into `latest.json`, which is what the in-app update modal displays. Then bump the version in `tauri.conf.json`, `package.json`, and `src-tauri/Cargo.toml`. Full process in `RELEASING.md`.
+**Publishing an update**: before tagging, update `RELEASE_NOTES.md` with the notes for the release (2-4 lines max) - the CI copies this file verbatim into `latest.json`, which is what the in-app update modal displays. Then bump the version in `tauri.conf.json`, `package.json`, `src-tauri/Cargo.toml`, and `src/lib/version.ts`. Full process in `RELEASING.md`.
 
 ## Architecture
 
