@@ -34,7 +34,7 @@ import { DiscoverPage } from "@/pages/DiscoverPage";
 import { LibraryPage } from "@/pages/LibraryPage";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { AnimatePresence } from "motion/react";
-import { lazy, startTransition, Suspense, useEffect, useState } from "react";
+import { lazy, startTransition, Suspense, useEffect, useEffectEvent, useState } from "react";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -149,7 +149,8 @@ function App() {
 
   // Notification de fin de téléchargement d'un tome : la bibliothèque manga
   // s'ouvre sur l'oeuvre et sa section lance le lecteur.
-  useEffect(() => subscribeMangaRead(({ mangaId }) => openMangaEntry(mangaId)), []);
+  const onMangaRead = useEffectEvent((mangaId: string) => openMangaEntry(mangaId));
+  useEffect(() => subscribeMangaRead(({ mangaId }) => onMangaRead(mangaId)), []);
 
   useEffect(() => {
     checkForUpdate()
