@@ -16,7 +16,6 @@ import { LibraryPosterCard } from "@/components/LibraryPosterCard";
 import { LibraryReorderableCard } from "@/components/LibraryReorderableCard";
 import { LibraryReorderablePoster } from "@/components/LibraryReorderablePoster";
 import { LibraryResumeBanner } from "@/components/LibraryResumeBanner";
-import { LibrarySummary } from "@/components/LibrarySummary";
 import { LibraryTabs, type LibraryTab } from "@/components/LibraryTabs";
 import { LibraryToolbar } from "@/components/LibraryToolbar";
 import { DEFAULT_MANGA_PREFS, getCachedMangaPrefs, type MangaLayout } from "@/lib/mangaPrefs";
@@ -893,8 +892,6 @@ export function LibraryPage({
 
           {tab === "media" && (
             <>
-              <LibrarySummary entries={entries} />
-
               <LibraryToolbar
                 barRef={barRef}
                 top={barTop}
