@@ -100,6 +100,9 @@ fn http_client() -> &'static reqwest::Client {
         reqwest::Client::builder()
             .use_rustls_tls()
             .connect_timeout(std::time::Duration::from_secs(15))
+            // Coupe un flux bloque (aucun octet recu pendant 60 s) sans
+            // limiter la duree totale d'un gros telechargement.
+            .read_timeout(std::time::Duration::from_secs(60))
             .build()
             .expect("client reqwest")
     })
@@ -111,11 +114,47 @@ fn http_client() -> &'static reqwest::Client {
 fn net_err(service: &str, e: reqwest::Error) -> String {
     let e = e.without_url();
     if e.is_timeout() {
-        format!("{} ne repond pas (delai depasse).", service)
+        format!("{} ne répond pas (délai dépassé).", service)
     } else if e.is_connect() {
-        format!("Impossible de joindre {}. Verifiez votre connexion.", service)
+        format!("Impossible de joindre {}. Vérifiez votre connexion.", service)
     } else {
-        format!("Erreur reseau {} : {}", service, e)
+        eprintln!("[{}] erreur reseau : {}", service, e);
+        format!("La connexion avec {} a été interrompue. Réessayez.", service)
+    }
+}
+
+// Debut d'un corps de reponse pour les logs (coupe sur une frontiere de caractere).
+fn snippet(body: &str) -> String {
+    body.chars().take(500).collect()
+}
+
+// Message lisible pour un statut HTTP en erreur. Le corps brut (souvent une
+// page HTML) part dans les logs au lieu d'etre affiche a l'utilisateur.
+fn http_err(service: &str, status: reqwest::StatusCode, body: &str) -> String {
+    eprintln!("[{}] HTTP {} : {}", service, status, snippet(&body));
+    let code = status.as_u16();
+    match code {
+        401 | 403 => format!("{} a refusé la clé API. Vérifiez-la dans les paramètres.", service),
+        404 => format!("{} : ressource introuvable (HTTP 404).", service),
+        429 => format!(
+            "Trop de requêtes vers {}. Patientez quelques secondes puis réessayez.",
+            service
+        ),
+        500..=599 => format!(
+            "{} est temporairement indisponible (HTTP {}). Réessayez plus tard.",
+            service, code
+        ),
+        _ => format!("{} a renvoyé une erreur (HTTP {}).", service, code),
+    }
+}
+
+// Erreur disque traduite pour les cas courants ; le reste garde le message systeme.
+fn io_err(e: std::io::Error) -> String {
+    match e.kind() {
+        std::io::ErrorKind::StorageFull => "Disque plein.".to_string(),
+        std::io::ErrorKind::PermissionDenied => "Accès refusé (droits insuffisants).".to_string(),
+        std::io::ErrorKind::NotFound => "Fichier ou dossier introuvable.".to_string(),
+        _ => e.to_string(),
     }
 }
 
@@ -125,7 +164,7 @@ fn get_api_key(name: String) -> Result<Option<String>, String> {
     match entry.get_password() {
         Ok(v) => Ok(Some(v)),
         Err(keyring::Error::NoEntry) => Ok(None),
-        Err(e) => Err(e.to_string()),
+        Err(e) => Err(format!("Trousseau du système inaccessible : {}", e)),
     }
 }
 
@@ -133,7 +172,31 @@ fn get_api_key(name: String) -> Result<Option<String>, String> {
 fn set_api_key(name: String, value: String) -> Result<(), String> {
     keyring::Entry::new(KEYRING_SERVICE, &name)
         .and_then(|e| e.set_password(&value))
-        .map_err(|e| e.to_string())
+        .map_err(|e| format!("Impossible d'enregistrer la clé dans le trousseau du système : {}", e))
+}
+
+// Envoie une requete AllDebrid et renvoie le JSON, en traduisant les erreurs
+// HTTP et les reponses { status: "error" } en message francais.
+async fn alldebrid_json(req: reqwest::RequestBuilder) -> Result<Value, String> {
+    let res = req
+        .timeout(API_TIMEOUT)
+        .send()
+        .await
+        .map_err(|e| net_err("AllDebrid", e))?;
+    let status = res.status();
+    let body = res.text().await.map_err(|e| net_err("AllDebrid", e))?;
+    if !status.is_success() {
+        return Err(http_err("AllDebrid", status, &body));
+    }
+    let json: Value = serde_json::from_str(&body).map_err(|e| {
+        eprintln!("[AllDebrid] JSON invalide ({}) : {}", e, snippet(&body));
+        "Réponse inattendue d'AllDebrid.".to_string()
+    })?;
+    if json.pointer("/status").and_then(|v| v.as_str()) == Some("error") {
+        let code = json.pointer("/error/code").and_then(|v| v.as_str()).unwrap_or("");
+        return Err(alldebrid_error_message(code));
+    }
+    Ok(json)
 }
 
 #[tauri::command]
@@ -153,17 +216,21 @@ async fn upload_torrent_to_debrid(
     let torrent_bytes = torrent_res.bytes().await.map_err(|e| net_err("C411", e))?;
 
     if !torrent_status.is_success() {
-        return Err(format!(
-            "Telechargement torrent HTTP {} : {}",
+        return Err(http_err(
+            "C411",
             torrent_status,
-            String::from_utf8_lossy(&torrent_bytes[..torrent_bytes.len().min(300)])
+            &String::from_utf8_lossy(&torrent_bytes),
         ));
     }
     if torrent_bytes.first() != Some(&b'd') {
-        return Err(format!(
-            "Fichier recu invalide : {}",
+        eprintln!(
+            "[C411] torrent invalide : {}",
             String::from_utf8_lossy(&torrent_bytes[..torrent_bytes.len().min(300)])
-        ));
+        );
+        return Err(
+            "C411 n'a pas renvoyé de fichier torrent valide. Le torrent a peut-être été retiré."
+                .to_string(),
+        );
     }
 
     let part = multipart::Part::bytes(torrent_bytes.to_vec())
@@ -173,108 +240,51 @@ async fn upload_torrent_to_debrid(
 
     let form = multipart::Form::new().part("files[]", part);
 
-    let upload_res = client
-        .post("https://api.alldebrid.com/v4/magnet/upload/file")
-        .bearer_auth(&alldebrid_key)
-        .multipart(form)
-        .timeout(API_TIMEOUT)
-        .send()
-        .await
-        .map_err(|e| net_err("AllDebrid", e))?;
-
-    let status = upload_res.status();
-    let body = upload_res.text().await.map_err(|e| net_err("AllDebrid", e))?;
-
-    if !status.is_success() {
-        return Err(format!("AllDebrid HTTP {} : {}", status, body));
-    }
-
-    let res: Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
-    Ok(res)
+    alldebrid_json(
+        client
+            .post("https://api.alldebrid.com/v4/magnet/upload/file")
+            .bearer_auth(&alldebrid_key)
+            .multipart(form),
+    )
+    .await
 }
 
 #[tauri::command]
 async fn upload_magnet_to_debrid(magnet: String, alldebrid_key: String) -> Result<Value, String> {
-    let client = http_client();
-
-    let res = client
-        .post("https://api.alldebrid.com/v4/magnet/upload")
-        .bearer_auth(&alldebrid_key)
-        .query(&[("magnets[]", &magnet)])
-        .timeout(API_TIMEOUT)
-        .send()
-        .await
-        .map_err(|e| net_err("AllDebrid", e))?;
-
-    let status = res.status();
-    let body = res.text().await.map_err(|e| net_err("AllDebrid", e))?;
-
-    if !status.is_success() {
-        return Err(format!("AllDebrid HTTP {} : {}", status, body));
-    }
-
-    let json: Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
-    Ok(json)
+    alldebrid_json(
+        http_client()
+            .post("https://api.alldebrid.com/v4/magnet/upload")
+            .bearer_auth(&alldebrid_key)
+            .query(&[("magnets[]", &magnet)]),
+    )
+    .await
 }
 
 #[tauri::command]
 async fn get_magnet_files(id: u64, alldebrid_key: String) -> Result<Value, String> {
-    let client = http_client();
-
-    let res = client
-        .get("https://api.alldebrid.com/v4/magnet/files")
-        .bearer_auth(&alldebrid_key)
-        .query(&[("id[]", id.to_string())])
-        .timeout(API_TIMEOUT)
-        .send()
-        .await
-        .map_err(|e| net_err("AllDebrid", e))?;
-
-    let status = res.status();
-    let body = res.text().await.map_err(|e| net_err("AllDebrid", e))?;
-
-    if !status.is_success() {
-        return Err(format!("AllDebrid HTTP {} : {}", status, body));
-    }
-
-    let json: Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
-    Ok(json)
+    alldebrid_json(
+        http_client()
+            .get("https://api.alldebrid.com/v4/magnet/files")
+            .bearer_auth(&alldebrid_key)
+            .query(&[("id[]", id.to_string())]),
+    )
+    .await
 }
 
 #[tauri::command]
 async fn unlock_link(link: String, alldebrid_key: String) -> Result<String, String> {
-    let client = http_client();
+    let json = alldebrid_json(
+        http_client()
+            .get("https://api.alldebrid.com/v4/link/unlock")
+            .bearer_auth(&alldebrid_key)
+            .query(&[("link", &link)]),
+    )
+    .await?;
 
-    let res = client
-        .get("https://api.alldebrid.com/v4/link/unlock")
-        .bearer_auth(&alldebrid_key)
-        .query(&[("link", &link)])
-        .timeout(API_TIMEOUT)
-        .send()
-        .await
-        .map_err(|e| net_err("AllDebrid", e))?;
-
-    let status = res.status();
-    let body = res.text().await.map_err(|e| net_err("AllDebrid", e))?;
-
-    if !status.is_success() {
-        return Err(format!("AllDebrid HTTP {} : {}", status, body));
-    }
-
-    let json: Value = serde_json::from_str(&body).map_err(|e| e.to_string())?;
-
-    if json.pointer("/status").and_then(|v| v.as_str()) == Some("error") {
-        let code = json.pointer("/error/code").and_then(|v| v.as_str()).unwrap_or("");
-        return Err(alldebrid_error_message(code));
-    }
-
-    let download_url = json
-        .pointer("/data/link")
+    json.pointer("/data/link")
         .and_then(|v| v.as_str())
-        .ok_or_else(|| format!("Lien de telechargement introuvable : {}", body))?
-        .to_string();
-
-    Ok(download_url)
+        .map(str::to_string)
+        .ok_or_else(|| "AllDebrid n'a pas fourni de lien de téléchargement.".to_string())
 }
 
 // Traduit un code d'erreur AllDebrid en message francais lisible. Les codes
@@ -282,23 +292,30 @@ async fn unlock_link(link: String, alldebrid_key: String) -> Result<String, Stri
 fn alldebrid_error_message(code: &str) -> String {
     match code {
         "FREE_TRIAL_LIMIT_REACHED" => {
-            "Limite de l'essai gratuit atteinte (7 jours / 25 Go), ou cet hebergeur n'est pas eligible a l'essai gratuit. Un abonnement AllDebrid est necessaire pour continuer.".to_string()
+            "Limite de l'essai gratuit atteinte (7 jours / 25 Go), ou cet hébergeur n'est pas éligible à l'essai gratuit. Un abonnement AllDebrid est nécessaire pour continuer.".to_string()
         }
         "AUTH_BAD_APIKEY" | "AUTH_MISSING_APIKEY" | "AUTH_APIKEY_INVALID" => {
-            "Cle API AllDebrid invalide ou manquante. Verifiez-la dans les parametres.".to_string()
+            "Clé API AllDebrid invalide ou manquante. Vérifiez-la dans les paramètres.".to_string()
         }
-        "AUTH_BLOCKED" | "AUTH_USER_BANNED" => {
-            "Votre compte AllDebrid est bloque.".to_string()
+        "AUTH_BLOCKED" | "AUTH_USER_BANNED" => "Votre compte AllDebrid est bloqué.".to_string(),
+        "MAGNET_MUST_BE_PREMIUM" => {
+            "Un abonnement AllDebrid premium est nécessaire pour ajouter des torrents.".to_string()
+        }
+        "MAGNET_TOO_MANY_ACTIVE" => {
+            "Trop de torrents en cours sur AllDebrid. Attendez qu'ils se terminent ou supprimez-en.".to_string()
+        }
+        "MAGNET_INVALID_FILE" | "MAGNET_INVALID_URI" => {
+            "AllDebrid a refusé ce torrent (fichier ou magnet invalide).".to_string()
         }
         "LINK_HOST_UNSUPPORTED" | "LINK_HOST_NOT_SUPPORTED" => {
-            "Cet hebergeur n'est pas supporte par AllDebrid.".to_string()
+            "Cet hébergeur n'est pas supporté par AllDebrid.".to_string()
         }
         "LINK_DOWN" | "LINK_HOST_UNAVAILABLE" => {
-            "Ce lien est indisponible ou l'hebergeur est temporairement hors service.".to_string()
+            "Ce lien est indisponible ou l'hébergeur est temporairement hors service.".to_string()
         }
-        "MAINTENANCE" => "AllDebrid est en maintenance. Reessayez plus tard.".to_string(),
-        "" => "AllDebrid a renvoye une erreur inattendue.".to_string(),
-        other => format!("AllDebrid a refuse le debridage ({}).", other),
+        "MAINTENANCE" => "AllDebrid est en maintenance. Réessayez plus tard.".to_string(),
+        "" => "AllDebrid a renvoyé une erreur inattendue.".to_string(),
+        other => format!("AllDebrid a refusé la demande ({}).", other),
     }
 }
 
@@ -306,8 +323,8 @@ fn alldebrid_error_message(code: &str) -> String {
 fn export_json(app: tauri::AppHandle, filename: String, content: String) -> Result<String, String> {
     use tauri::Manager;
     let dir = app.path().download_dir().map_err(|e| e.to_string())?;
-    let path = dir.join(filename);
-    std::fs::write(&path, content).map_err(|e| e.to_string())?;
+    let path = dir.join(sanitize_filename(&filename));
+    std::fs::write(&path, content).map_err(|e| format!("Export impossible : {}", io_err(e)))?;
     Ok(path.to_string_lossy().into_owned())
 }
 
@@ -335,15 +352,15 @@ fn ensure_dir_available(dir: &std::path::Path) -> Result<(), String> {
     // Aucun ancetre existant (ex. "G:\\" absent) : le support n'est pas monte.
     if !dir.ancestors().skip(1).any(|a| a.is_dir()) {
         return Err(format!(
-            "{DIR_ERR}Dossier de telechargement introuvable : {}. Le disque n'est pas branche ou n'est plus monte.",
+            "{DIR_ERR}Dossier de téléchargement introuvable : {}. Le disque n'est pas branché ou n'est plus monté.",
             dir.display()
         ));
     }
     std::fs::create_dir_all(dir).map_err(|e| {
         format!(
-            "{DIR_ERR}Impossible de creer le dossier {} : {}",
+            "{DIR_ERR}Impossible de créer le dossier {} : {}",
             dir.display(),
-            e
+            io_err(e)
         )
     })
 }
@@ -356,6 +373,22 @@ fn is_safe_subdir(sub: &str) -> bool {
         && sub
             .split('/')
             .all(|s| !s.is_empty() && s != "." && s != ".." && !s.contains(':'))
+}
+
+// Premier chemin libre dans `dir` : "nom.ext", puis "nom (1).ext", "nom (2).ext"...
+fn unique_path(dir: &std::path::Path, filename: &str) -> std::path::PathBuf {
+    let candidate = dir.join(filename);
+    if !candidate.exists() {
+        return candidate;
+    }
+    let (stem, ext) = match filename.rsplit_once('.') {
+        Some((s, e)) if !s.is_empty() => (s, format!(".{e}")),
+        _ => (filename, String::new()),
+    };
+    (1..)
+        .map(|n| dir.join(format!("{stem} ({n}){ext}")))
+        .find(|p| !p.exists())
+        .unwrap()
 }
 
 // Telecharge `url` vers `dir` (ou le dossier Telechargements de l'OS si vide),
@@ -391,7 +424,7 @@ async fn download_to_dir(
         _ => base_dir,
     };
 
-    let dest = target_dir.join(filename_from_url(&url));
+    let dest = unique_path(&target_dir, &filename_from_url(&url));
 
     let client = http_client();
     let res = client
@@ -401,44 +434,57 @@ async fn download_to_dir(
         .map_err(|e| net_err("le serveur de telechargement", e))?;
 
     if !res.status().is_success() {
-        return Err(format!("Telechargement HTTP {}", res.status()));
+        let status = res.status();
+        eprintln!("[telechargement] HTTP {}", status);
+        return Err(format!(
+            "Le serveur de téléchargement a répondu HTTP {}. Le lien a peut-être expiré : relancez le débridage.",
+            status.as_u16()
+        ));
     }
 
     let total = res.content_length().unwrap_or(0);
     let mut file = std::fs::File::create(&dest)
-        .map_err(|e| format!("{DIR_ERR}Ecriture impossible dans {} : {}", target_dir.display(), e))?;
+        .map_err(|e| format!("{DIR_ERR}Écriture impossible dans {} : {}", target_dir.display(), io_err(e)))?;
     let mut downloaded: u64 = 0;
     let mut last_emit = std::time::Instant::now();
     let mut stream = res.bytes_stream();
 
-    while let Some(chunk) = stream.next().await {
-        // Verifie l'annulation sans tenir le verrou au-dela de l'await suivant.
-        let is_cancelled = {
-            let mut set = state.cancelled.lock().unwrap();
-            set.remove(&id)
-        };
-        if is_cancelled {
-            drop(file);
-            let _ = std::fs::remove_file(&dest);
-            return Err("cancelled".to_string());
-        }
+    let result: Result<(), String> = async {
+        while let Some(chunk) = stream.next().await {
+            // Verifie l'annulation sans tenir le verrou au-dela de l'await suivant.
+            if state.cancelled.lock().unwrap().remove(&id) {
+                return Err("cancelled".to_string());
+            }
 
-        let chunk = chunk.map_err(|e| e.to_string())?;
-        file.write_all(&chunk).map_err(|e| e.to_string())?;
-        downloaded += chunk.len() as u64;
+            let chunk = chunk.map_err(|e| net_err("le serveur de telechargement", e))?;
+            file.write_all(&chunk)
+                .map_err(|e| format!("Écriture du fichier impossible : {}", io_err(e)))?;
+            downloaded += chunk.len() as u64;
 
-        // Throttle les events (~10/s) pour ne pas noyer le front.
-        if last_emit.elapsed().as_millis() >= 100 {
-            let _ = app.emit(
-                "download-progress",
-                DownloadProgress {
-                    id: id.clone(),
-                    downloaded,
-                    total,
-                },
-            );
-            last_emit = std::time::Instant::now();
+            // Throttle les events (~10/s) pour ne pas noyer le front.
+            if last_emit.elapsed().as_millis() >= 100 {
+                let _ = app.emit(
+                    "download-progress",
+                    DownloadProgress {
+                        id: id.clone(),
+                        downloaded,
+                        total,
+                    },
+                );
+                last_emit = std::time::Instant::now();
+            }
         }
+        Ok(())
+    }
+    .await;
+
+    // Une annulation arrivee apres le dernier chunk ne doit pas rester dans le set.
+    state.cancelled.lock().unwrap().remove(&id);
+
+    if let Err(e) = result {
+        drop(file);
+        let _ = std::fs::remove_file(&dest);
+        return Err(e);
     }
 
     let _ = app.emit(
@@ -479,20 +525,20 @@ fn move_one(from: &str, to: &str) -> Result<(), String> {
         if !src.exists() {
             return Ok(());
         }
-        return Err("destination deja existante".to_string());
+        return Err("un fichier du même nom existe déjà à destination".to_string());
     }
     if !src.exists() {
         return Err("fichier introuvable".to_string());
     }
     if let Some(parent) = dst.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        std::fs::create_dir_all(parent).map_err(io_err)?;
     }
     if std::fs::rename(src, dst).is_ok() {
         return Ok(());
     }
     if let Err(e) = std::fs::copy(src, dst) {
         let _ = std::fs::remove_file(dst);
-        return Err(e.to_string());
+        return Err(io_err(e));
     }
     let _ = std::fs::remove_file(src);
     Ok(())
@@ -524,25 +570,7 @@ fn cancel_download(state: tauri::State<'_, DownloadState>, id: String) {
 // Ouvre un fichier local avec l'application par defaut du systeme.
 #[tauri::command]
 fn open_file(path: String) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
-    std::process::Command::new("open")
-        .arg(&path)
-        .spawn()
-        .map_err(|e| e.to_string())?;
-
-    #[cfg(target_os = "windows")]
-    std::process::Command::new("cmd")
-        .args(["/C", "start", "", &path])
-        .spawn()
-        .map_err(|e| e.to_string())?;
-
-    #[cfg(target_os = "linux")]
-    std::process::Command::new("xdg-open")
-        .arg(&path)
-        .spawn()
-        .map_err(|e| e.to_string())?;
-
-    Ok(())
+    tauri_plugin_opener::open_path(&path, None::<&str>).map_err(|e| e.to_string())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

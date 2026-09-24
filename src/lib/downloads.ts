@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { toast } from "sonner";
 import { openSettingsPanel } from "@/lib/settingsNavigation";
+import { networkErrorMessage } from "@/lib/networkError";
 
 export type DownloadStatus = "active" | "done" | "error" | "cancelled";
 
@@ -200,7 +201,7 @@ export async function startDownload(
     const item = items.get(id);
     if (!item) return null;
     item.speed = undefined;
-    const message = String(err);
+    const message = networkErrorMessage(err);
     if (message === "cancelled") {
       item.status = "cancelled";
     } else {
@@ -245,7 +246,7 @@ export async function openDownload(id: string): Promise<void> {
   try {
     await invoke("open_file", { path: item.path });
   } catch (err) {
-    toast.error(`Ouverture impossible : ${err}`);
+    toast.error(`Ouverture impossible : ${networkErrorMessage(err)}`);
   }
 }
 

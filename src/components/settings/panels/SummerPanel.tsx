@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { SettingsPanel } from "../SettingsPanel";
 import { Segmented, SettingRow, Toggle } from "../controls";
+import { networkErrorMessage } from "@/lib/networkError";
 
 export interface SummerPanelProps {
   summerEnabled: boolean;
@@ -54,7 +55,7 @@ export function SummerPanel({
       });
       toast.success(`Canards exportés : ${path}`);
     } catch (e) {
-      toast.error(`Export impossible : ${e}`);
+      toast.error(`Export impossible : ${networkErrorMessage(e)}`);
     }
   }
 

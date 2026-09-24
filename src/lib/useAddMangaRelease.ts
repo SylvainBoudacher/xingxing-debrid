@@ -71,9 +71,6 @@ export function useAddMangaRelease({
           torrentUrl,
           alldebridKey: allDebridKey,
         });
-        if (json.status !== "success")
-          throw new Error(json.error?.message ?? "Erreur AllDebrid inconnue");
-
         const uploaded = json.data?.files?.[0];
         if (!uploaded) throw new Error("Réponse AllDebrid inattendue");
 

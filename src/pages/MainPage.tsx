@@ -1,4 +1,3 @@
-import vlcLogo from "@/assets/vlc.png";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
 import { NyaaSearchFilters } from "@/components/NyaaSearchFilters";
@@ -19,8 +18,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getApiKey } from "@/lib/apiKeys";
 import type { C411Torrent } from "@/lib/c411";
-import { flattenFiles, formatSize, isVideoFile, type DebridModal } from "@/lib/debrid";
-import { getCachedLibrary, loadLibrary, recordDownload } from "@/lib/library";
+import { formatSize, type DebridModal } from "@/lib/debrid";
+import { getCachedLibrary, loadLibrary } from "@/lib/library";
+import { sendReleaseToDebrid } from "@/lib/sendRelease";
+import { DebridFilesModal } from "@/components/DebridFilesModal";
 import { ownedTmdbKeys } from "@/lib/recommendations";
 import { networkErrorMessage, toastNetworkError } from "@/lib/networkError";
 import { loadNyaaDefaults } from "@/lib/nyaaDefaults";
@@ -31,7 +32,6 @@ import { queryClient } from "@/lib/queryClient";
 import { mapNyaaResults, mapTorrents, pageNumbers, type SearchResult } from "@/lib/search";
 import { c411Keys, searchTorrents } from "@/lib/services/c411";
 import { nyaaKeys, searchNyaa } from "@/lib/services/nyaa";
-import { useDebridActions } from "@/lib/useDebridActions";
 import { MangaLinkModal } from "@/components/MangaLinkModal";
 import { cbzReleaseFromResult } from "@/lib/mangaSearchResult";
 import type { MangaRelease } from "@/lib/mangaReleases";
@@ -39,7 +39,6 @@ import { getCachedMangaLibrary, loadMangaLibrary, ownedMangaIds } from "@/lib/ma
 import { useAddMangaRelease } from "@/lib/useAddMangaRelease";
 import { MODE_BAR_ACCENT, SEARCH_MODES, type SearchMode } from "@/lib/searchModes";
 import { resolvePageViewMode, type ViewMode } from "@/lib/viewMode";
-import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import {
   ArrowDown,
@@ -48,13 +47,11 @@ import {
   BookMarked,
   BookOpen,
   BookmarkPlus,
-  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clapperboard,
   Compass,
-  Copy,
   Download,
   FileText,
   Gamepad2,
@@ -299,15 +296,6 @@ export function MainPage({
     searchViewMode: initialSearchViewMode,
   });
 
-  const {
-    downloadingLink,
-    copiedLink,
-    vlcLink,
-    copyLink: handleCopyLink,
-    openVlc: handleOpenVlc,
-    downloadFile: handleDownloadFile,
-  } = useDebridActions(() => allDebridKeyRef.current);
-
   const { addingHash, addRelease } = useAddMangaRelease({
     getC411Key: () => apiKeyRef.current,
     getAllDebridKey: () => allDebridKeyRef.current,
@@ -450,81 +438,28 @@ export function MainPage({
     const setBusy = addToLibrary ? setLibraryIndex : setSendingIndex;
     setBusy(index);
     try {
-      const json = await invoke<{
-        status: string;
-        data?: {
-          files?: Array<{ id: number; name: string; ready: boolean }>;
-          magnets?: Array<{ id: number; name: string; ready: boolean }>;
-        };
-        error?: { message: string };
-      }>(
-        result.magnet ? "upload_magnet_to_debrid" : "upload_torrent_to_debrid",
-        result.magnet
-          ? { magnet: result.magnet, alldebridKey: allDebridKeyRef.current }
-          : {
-              // Torznab standard download: ?t=get&id={guid}&apikey={key}
-              torrentUrl: `https://c411.org/api?t=get&id=${encodeURIComponent(result.guid)}&apikey=${apiKeyRef.current}`,
-              alldebridKey: allDebridKeyRef.current,
-            },
-      );
-
-      if (json.status !== "success")
-        throw new Error(json.error?.message ?? "Erreur AllDebrid inconnue");
-
-      const uploaded = json.data?.files?.[0] ?? json.data?.magnets?.[0];
-      if (!uploaded) throw new Error("Réponse AllDebrid inattendue");
-
-      if (uploaded.ready) {
-        const filesJson = await invoke<{
-          status: string;
-          data?: { magnets?: Array<{ files?: unknown[] }> };
-        }>("get_magnet_files", {
-          id: uploaded.id,
-          alldebridKey: allDebridKeyRef.current,
-        });
-        const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
-        const files = flattenFiles(rawFiles);
-        const hasVideo = files.some((f) => isVideoFile(f.name));
-        if (addToLibrary) {
-          toast.success(`Ajouté à la bibliothèque : ${uploaded.name ?? result.title}`, {
-            action: { label: "Voir", onClick: () => onNavigate("library") },
-          });
-        } else {
-          setDebridModal({ torrentName: uploaded.name ?? result.title, files });
-        }
-        if (hasVideo) {
-          await recordDownload({
-            infoHash: result.guid,
-            title: uploaded.name ?? result.title,
-            provider: result.magnet ? "nyaa" : "c411",
-            category: result.category,
-            size: result.size,
-            magnetId: uploaded.id,
-            files,
-            enriched: true,
-            releaseName: result.title,
-          });
-        }
-      } else {
-        toast.success(
-          addToLibrary
-            ? `Ajouté à la bibliothèque : ${uploaded.name ?? result.title} (en cours de débridage)`
-            : `Envoyé vers AllDebrid : ${uploaded.name ?? result.title} (en cours de débridage)`,
-          addToLibrary
-            ? { action: { label: "Voir", onClick: () => onNavigate("library") } }
-            : undefined,
-        );
-        await recordDownload({
+      const sent = await sendReleaseToDebrid(
+        {
           infoHash: result.guid,
-          title: uploaded.name ?? result.title,
+          title: result.title,
+          magnet: result.magnet,
           provider: result.magnet ? "nyaa" : "c411",
           category: result.category,
           size: result.size,
-          magnetId: uploaded.id,
-          files: [],
-          enriched: false,
-          releaseName: result.title,
+        },
+        allDebridKeyRef.current,
+        apiKeyRef.current,
+      );
+
+      const pending = sent.ready ? "" : " (en cours de débridage)";
+      if (addToLibrary) {
+        toast.success(`Ajouté à la bibliothèque : ${sent.name}${pending}`, {
+          action: { label: "Voir", onClick: () => onNavigate("library") },
         });
+      } else if (sent.ready) {
+        setDebridModal({ torrentName: sent.name, files: sent.files });
+      } else {
+        toast.success(`Envoyé vers AllDebrid : ${sent.name}${pending}`);
       }
     } catch (err) {
       toastNetworkError(err, () => handleSendToDebrid(result, index, addToLibrary));
@@ -553,7 +488,11 @@ export function MainPage({
     });
   }
 
-  async function fetchNyaaResults(rawQuery: string = query) {
+  // Numero de la derniere recherche lancee : une reponse plus ancienne arrivee
+  // en retard est ignoree au lieu d'ecraser les resultats courants.
+  const searchSeq = useRef(0);
+
+  async function fetchNyaaResults(seq: number, rawQuery: string = query) {
     searchedQueryRef.current = buildNyaaQuery(
       rawQuery.trim(),
       nyaaTeam,
@@ -566,6 +505,7 @@ export function MainPage({
       queryFn: () => searchNyaa({ query: searchedQueryRef.current }),
       staleTime: 60_000,
     });
+    if (seq !== searchSeq.current) return;
     const mapped = mapNyaaResults(nyaa);
     setResults(mapped);
     setTotal(mapped.length);
@@ -586,12 +526,17 @@ export function MainPage({
   useEffect(() => {
     if (source !== "nyaa" || activeSource !== "nyaa" || phase !== "active") return;
     const t = setTimeout(() => {
+      const seq = ++searchSeq.current;
       setLoading(true);
       setError(null);
       setSearchKey((k) => k + 1);
-      fetchNyaaResults()
-        .catch((err) => setError(networkErrorMessage(err)))
-        .finally(() => setLoading(false));
+      fetchNyaaResults(seq)
+        .catch((err) => {
+          if (seq === searchSeq.current) setError(networkErrorMessage(err));
+        })
+        .finally(() => {
+          if (seq === searchSeq.current) setLoading(false);
+        });
     }, 350);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -600,6 +545,7 @@ export function MainPage({
   async function performSearch(src: "c411" | "nyaa", queryOverride?: string) {
     const q = (queryOverride ?? query).trim();
     if (!q) return;
+    const seq = ++searchSeq.current;
 
     setPhase((prev) => (prev === "idle" ? "title-exiting" : "active"));
     setLoading(true);
@@ -616,18 +562,19 @@ export function MainPage({
       setPage(1);
 
       if (src === "nyaa") {
-        await fetchNyaaResults(q);
+        await fetchNyaaResults(seq, q);
       } else {
         searchedQueryRef.current = q;
         const json = await fetchPage(1, "pertinence", "desc");
+        if (seq !== searchSeq.current) return;
         setResults(mapTorrents(json.data));
         setTotal(json.meta.total);
         setTotalPages(json.meta.totalPages);
       }
     } catch (err) {
-      setError(networkErrorMessage(err));
+      if (seq === searchSeq.current) setError(networkErrorMessage(err));
     } finally {
-      setLoading(false);
+      if (seq === searchSeq.current) setLoading(false);
     }
   }
 
@@ -711,18 +658,20 @@ export function MainPage({
 
   async function goToPage(pageNum: number, sort: SortKey = sortBy, dir: "desc" | "asc" = sortDir) {
     if (loading) return;
+    const seq = ++searchSeq.current;
     setLoading(true);
     try {
       const json = await fetchPage(pageNum, sort, dir);
+      if (seq !== searchSeq.current) return;
       setResults(mapTorrents(json.data));
       setTotal(json.meta.total);
       setTotalPages(json.meta.totalPages);
       setPage(pageNum);
       scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      toastNetworkError(err, () => goToPage(pageNum, sort, dir));
+      if (seq === searchSeq.current) toastNetworkError(err, () => goToPage(pageNum, sort, dir));
     } finally {
-      setLoading(false);
+      if (seq === searchSeq.current) setLoading(false);
     }
   }
 
@@ -1528,128 +1477,11 @@ export function MainPage({
 
       <AnimatePresence>
         {debridModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
-            onClick={() => setDebridModal(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 8 }}
-              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
-            >
-              {/* Header */}
-              <div className="px-5 pt-5 pb-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider mb-1">
-                      Fichiers disponibles
-                    </p>
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-white leading-snug line-clamp-2">
-                      {debridModal.torrentName}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setDebridModal(null)}
-                    className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
-                  >
-                    <X className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
-                  </button>
-                </div>
-              </div>
-
-              {/* File list */}
-              <div className="max-h-80 overflow-y-auto px-3 pb-3 space-y-1.5">
-                {debridModal.files.map((file, i) => {
-                  const fileName = file.name.split("/").pop() ?? file.name;
-                  const showName = fileName !== debridModal.torrentName;
-                  return (
-                    <div key={i} className="rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3">
-                      <div className="mb-3">
-                        {showName && (
-                          <p className="text-sm font-medium text-zinc-900 dark:text-white leading-snug line-clamp-2 mb-0.5">
-                            {fileName}
-                          </p>
-                        )}
-                        <p className="text-xs text-zinc-500">{formatSize(file.size)}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => handleOpenVlc(file.link)}
-                          disabled={
-                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
-                          }
-                          className="flex items-center justify-center gap-1.5 h-9 px-3 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {vlcLink === file.link ? (
-                            <Loader2 className="h-3.5 w-3.5 text-zinc-900 dark:text-white animate-spin" />
-                          ) : (
-                            <img src={vlcLogo} className="h-4 w-4" />
-                          )}
-                          <span className="text-xs font-medium text-zinc-900 dark:text-white">
-                            Lire avec VLC
-                          </span>
-                        </motion.button>
-                        <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => handleCopyLink(file.link)}
-                          disabled={
-                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
-                          }
-                          className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {copiedLink === file.link ? (
-                            <>
-                              <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-                              <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                                Copie !
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-3.5 w-3.5 text-zinc-600 dark:text-zinc-300" />
-                              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                                Copier le lien
-                              </span>
-                            </>
-                          )}
-                        </motion.button>
-                        <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => {
-                            handleDownloadFile(file.link);
-                            setDebridModal(null);
-                          }}
-                          disabled={
-                            downloadingLink !== null || copiedLink !== null || vlcLink !== null
-                          }
-                          className="flex-1 flex items-center justify-center gap-2 h-9 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {downloadingLink === file.link ? (
-                            <>
-                              <Loader2 className="h-3.5 w-3.5 text-white animate-spin" />
-                              <span className="text-xs font-medium text-white">Ouverture...</span>
-                            </>
-                          ) : (
-                            <>
-                              <Download className="h-3.5 w-3.5 text-white" />
-                              <span className="text-xs font-medium text-white">Télécharger</span>
-                            </>
-                          )}
-                        </motion.button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          </motion.div>
+          <DebridFilesModal
+            modal={debridModal}
+            getAllDebridKey={() => allDebridKeyRef.current}
+            onClose={() => setDebridModal(null)}
+          />
         )}
       </AnimatePresence>
 

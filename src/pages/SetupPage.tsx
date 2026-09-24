@@ -32,6 +32,7 @@ import { SetupStepper } from "@/components/setup/SetupStepper";
 import { StepKindBadge } from "@/components/setup/StepKindBadge";
 import type { StepId } from "@/components/setup/steps";
 import { applyTheme, type Theme } from "@/lib/theme";
+import { networkErrorMessage } from "@/lib/networkError";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -108,7 +109,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
       }
       setStep("player");
     } catch (err) {
-      toast.error(String(err));
+      toast.error(networkErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -122,7 +123,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
       await store.save();
       setStep("theme");
     } catch (err) {
-      toast.error(String(err));
+      toast.error(networkErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -137,7 +138,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
       await store.save();
       onComplete();
     } catch (err) {
-      toast.error(String(err));
+      toast.error(networkErrorMessage(err));
       setSaving(false);
     }
   }

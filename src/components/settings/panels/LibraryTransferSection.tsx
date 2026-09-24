@@ -15,6 +15,7 @@ import { mergeLibrary } from "@/lib/librarySync/merge";
 import { FieldTitle, SectionHeading } from "../controls";
 import { ImportLibraryDialog, type ImportPreview } from "./ImportLibraryDialog";
 import { PassphraseDialog } from "./PassphraseDialog";
+import { networkErrorMessage } from "@/lib/networkError";
 
 export function LibraryTransferSection() {
   const [path, setPath] = useState<string | undefined>();
@@ -34,7 +35,7 @@ export function LibraryTransferSection() {
     try {
       await action();
     } catch (e) {
-      toast.error(String(e));
+      toast.error(networkErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -89,7 +90,7 @@ export function LibraryTransferSection() {
           localCount: local.entries.length,
         });
       } catch (e) {
-        setImportError(String(e));
+        setImportError(networkErrorMessage(e));
       } finally {
         setBusy(false);
       }

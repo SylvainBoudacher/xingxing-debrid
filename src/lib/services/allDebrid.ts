@@ -29,6 +29,17 @@ export function isMagnetError(m: MagnetEntry): boolean {
   return m.statusCode >= 5;
 }
 
+// Réponse { status: "error" } : message selon le code AllDebrid renvoyé.
+export function allDebridApiError(json: { error?: { code?: string } }): NetworkError {
+  const code = json.error?.code;
+  const message = code?.startsWith("AUTH_")
+    ? "Clé API AllDebrid invalide ou refusée. Vérifiez-la dans les paramètres."
+    : code === "MAINTENANCE"
+      ? "AllDebrid est en maintenance. Réessayez plus tard."
+      : `AllDebrid a refusé la demande${code ? ` (${code})` : ""}.`;
+  return new NetworkError("AllDebrid", "http", message);
+}
+
 export const allDebridKeys = {
   magnets: () => ["alldebrid", "magnets"] as const,
 };
@@ -37,8 +48,8 @@ export async function deleteMagnet(apiKey: string, id: number): Promise<void> {
   const res = await fetchWithTimeout("AllDebrid", `${AD_BASE}/magnet/delete?agent=c411&id=${id}`, {
     headers: { Authorization: `Bearer ${apiKey}` },
   });
-  const json = await readJson<{ status: string }>("AllDebrid", res);
-  if (json.status !== "success") throw new NetworkError("AllDebrid", "http");
+  const json = await readJson<{ status: string; error?: { code?: string } }>("AllDebrid", res);
+  if (json.status !== "success") throw allDebridApiError(json);
 }
 
 export async function fetchMagnets(apiKey: string): Promise<MagnetEntry[]> {
@@ -47,9 +58,10 @@ export async function fetchMagnets(apiKey: string): Promise<MagnetEntry[]> {
   });
   const json = await readJson<{
     status: string;
+    error?: { code?: string };
     data?: { magnets?: MagnetEntry[] };
   }>("AllDebrid", res);
-  if (json.status !== "success") throw new NetworkError("AllDebrid", "http");
+  if (json.status !== "success") throw allDebridApiError(json);
   return json.data?.magnets ?? [];
 }
 

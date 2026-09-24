@@ -268,11 +268,10 @@ export function LibraryPage({
       pending.map(async (e) => {
         try {
           const filesJson = await invoke<{
-            status: string;
             data?: { magnets?: Array<{ files?: unknown[] }> };
           }>("get_magnet_files", { id: e.magnetId, alldebridKey: key });
           const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
-          if (filesJson.status !== "success" || rawFiles.length === 0) return null;
+          if (rawFiles.length === 0) return null;
           return { infoHash: e.infoHash, files: flattenFiles(rawFiles) };
         } catch {
           // magnet retiré du compte partagé ou réseau : on garde la coche unique

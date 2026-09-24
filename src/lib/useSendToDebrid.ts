@@ -1,10 +1,9 @@
 import { toastLibraryAdded } from "@/components/LibraryAddedToast";
-import { flattenFiles, isVideoFile, type DebridModal } from "@/lib/debrid";
+import { type DebridModal } from "@/lib/debrid";
 import type { Occupant } from "@/lib/discoverReleases";
-import { recordDownload } from "@/lib/library";
 import { toastNetworkError } from "@/lib/networkError";
+import { sendReleaseToDebrid } from "@/lib/sendRelease";
 import type { TmdbItem } from "@/lib/tmdbItem";
-import { invoke } from "@tauri-apps/api/core";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -37,8 +36,6 @@ export function useSendToDebrid({
       toast.error("Clé AllDebrid manquante. Configurez-la dans les paramètres.");
       return;
     }
-    const torrentUrl = `https://c411.org/api?t=get&id=${encodeURIComponent(occ.infoHash)}&apikey=${getC411Key()}`;
-
     const tmdbMeta = {
       id: item.id,
       mediaType: item.mediaType,
@@ -53,87 +50,32 @@ export function useSendToDebrid({
     const setBusy = addToLibrary ? setLibraryHash : setSendingHash;
     setBusy(occ.infoHash);
     try {
-      const json = await invoke<{
-        status: string;
-        data?: { files?: Array<{ id: number; name: string }> };
-        error?: { message: string };
-      }>("upload_torrent_to_debrid", {
-        torrentUrl,
-        alldebridKey: allDebridKey,
-      });
-
-      if (json.status !== "success")
-        throw new Error(json.error?.message ?? "Erreur AllDebrid inconnue");
-
-      const uploaded = json.data?.files?.[0] as
-        { id: number; name: string; ready: boolean } | undefined;
-      if (!uploaded) throw new Error("Réponse AllDebrid inattendue");
-
-      if (uploaded.ready) {
-        const filesJson = await invoke<{
-          status: string;
-          data?: { magnets?: Array<{ files?: unknown[] }> };
-        }>("get_magnet_files", {
-          id: uploaded.id,
-          alldebridKey: allDebridKey,
-        });
-        const rawFiles = filesJson.data?.magnets?.[0]?.files ?? [];
-        const files = flattenFiles(rawFiles);
-        const hasVideo = files.some((f) => isVideoFile(f.name));
-        if (addToLibrary) {
-          toastLibraryAdded({
-            item,
-            releaseName: uploaded.name ?? occ.torrentName,
-            onOpen: () => onOpenLibrary(item, occ.infoHash),
-          });
-        } else {
-          setDebridModal({
-            torrentName: uploaded.name ?? occ.torrentName,
-            files,
-          });
-        }
-        if (hasVideo) {
-          await recordDownload({
-            infoHash: occ.infoHash,
-            title: uploaded.name ?? occ.torrentName,
-            provider: "discover",
-            category: 0,
-            size: occ.fileSize,
-            magnetId: uploaded.id,
-            files,
-            enriched: true,
-            tmdb: tmdbMeta,
-            releaseName: occ.torrentName,
-          });
-          onLibraryChange();
-        }
-      } else {
-        if (addToLibrary) {
-          toastLibraryAdded({
-            item,
-            releaseName: uploaded.name ?? occ.torrentName,
-            pending: true,
-            onOpen: () => onOpenLibrary(item, occ.infoHash),
-          });
-        } else {
-          toast.success(
-            `Envoyé vers AllDebrid : ${uploaded.name ?? occ.torrentName} (en cours de débridage)`,
-          );
-        }
-        await recordDownload({
+      const sent = await sendReleaseToDebrid(
+        {
           infoHash: occ.infoHash,
-          title: uploaded.name ?? occ.torrentName,
+          title: occ.torrentName,
           provider: "discover",
           category: 0,
           size: occ.fileSize,
-          magnetId: uploaded.id,
-          files: [],
-          enriched: false,
           tmdb: tmdbMeta,
-          releaseName: occ.torrentName,
+        },
+        allDebridKey,
+        getC411Key(),
+      );
+
+      if (addToLibrary) {
+        toastLibraryAdded({
+          item,
+          releaseName: sent.name,
+          pending: !sent.ready,
+          onOpen: () => onOpenLibrary(item, occ.infoHash),
         });
-        onLibraryChange();
+      } else if (sent.ready) {
+        setDebridModal({ torrentName: sent.name, files: sent.files });
+      } else {
+        toast.success(`Envoyé vers AllDebrid : ${sent.name} (en cours de débridage)`);
       }
+      if (sent.recorded) onLibraryChange();
     } catch (err) {
       toastNetworkError(err, () => sendToDebrid(occ, item, addToLibrary));
     } finally {

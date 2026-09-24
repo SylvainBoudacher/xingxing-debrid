@@ -6,6 +6,7 @@ import { KEY_SERVICES, type KeyService } from "@/lib/keyServices";
 import { KeyScreen, type ScreenStatus } from "@/components/setup/keys/KeyScreen";
 import { KeyServiceTabs } from "@/components/setup/keys/KeyServiceTabs";
 import { SettingsPanel } from "../SettingsPanel";
+import { networkErrorMessage } from "@/lib/networkError";
 
 const FIELDS: Record<KeyService["id"], keyof ApiKeys> = {
   c411: "c411Key",
@@ -35,7 +36,7 @@ export function ApiKeysPanel({ onSaved }: { onSaved: (keys: Partial<ApiKeys>) =>
       onSaved({ [FIELDS[service.id]]: value });
       toast.success(`Clé ${service.name} enregistrée.`);
     } catch (err) {
-      toast.error(String(err));
+      toast.error(networkErrorMessage(err));
     }
   }
 

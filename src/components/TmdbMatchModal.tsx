@@ -10,6 +10,7 @@ import {
 import { Clapperboard, Loader2, Search, Star, Tv, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { networkErrorMessage } from "@/lib/networkError";
 
 interface TmdbMatchModalProps {
   entry: LibraryEntry;
@@ -60,7 +61,7 @@ export function TmdbMatchModal({ entry, tmdbKey, onPick, onClose }: TmdbMatchMod
       });
       setResults(list.results);
     } catch (err) {
-      setError(String(err));
+      setError(networkErrorMessage(err));
     } finally {
       setLoading(false);
     }
