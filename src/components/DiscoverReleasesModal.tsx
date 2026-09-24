@@ -1,7 +1,9 @@
-import c411Logo from "@/assets/sources/C411.webp";
-import nyaaLogo from "@/assets/sources/nyaa.webp";
+import { Collapse } from "@/components/Collapse";
+import { DiscoverQuickPicks } from "@/components/DiscoverQuickPicks";
 import { DiscoverReleaseFilters, type ReleaseSort } from "@/components/DiscoverReleaseFilters";
 import { DiscoverReleaseRow } from "@/components/DiscoverReleaseRow";
+import { DiscoverReleasesEmpty } from "@/components/DiscoverReleasesEmpty";
+import { DiscoverReleasesSkeleton } from "@/components/DiscoverReleasesSkeleton";
 import { DiscoverSeasonTabs, type TmdbSeason } from "@/components/DiscoverSeasonTabs";
 import { ExpandableText } from "@/components/ExpandableText";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
@@ -18,11 +20,13 @@ import {
   type SeasonSelection,
 } from "@/lib/discoverReleases";
 import { networkErrorMessage } from "@/lib/networkError";
+import { quickPicks } from "@/lib/releasePicks";
+import { loadReleasesView, releasesViewQueryKey } from "@/lib/releasesView";
 import { tmdbKeys, tvDetail as tmdbTvDetail } from "@/lib/services/tmdb";
 import { TMDB_STALE_MS } from "@/lib/tmdbCache";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { useQuery } from "@tanstack/react-query";
-import { Heart, Star, X } from "lucide-react";
+import { ChevronDown, Heart, Star, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 
@@ -40,8 +44,8 @@ interface DiscoverReleasesModalProps {
   onSearchTracker: (query: string, source: "c411" | "nyaa") => void;
 }
 
-// Fiche d'un film / d'une série : saisons (TV), tri et filtres des releases
-// C411, actions d'envoi vers AllDebrid.
+// Fiche d'un film / d'une série : saisons (TV), choix rapides par résolution,
+// et liste complète des releases C411 (tri, filtres) repliée pour les initiés.
 export function DiscoverReleasesModal({
   item,
   tmdbKey,
@@ -61,6 +65,14 @@ export function DiscoverReleasesModal({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [resFilter, setResFilter] = useState<string | null>(null);
   const [langFilter, setLangFilter] = useState<string | null>(null);
+  const [expertOpen, setExpertOpen] = useState(false);
+
+  const viewQuery = useQuery({
+    queryKey: releasesViewQueryKey,
+    staleTime: Infinity,
+    queryFn: loadReleasesView,
+  });
+  const fullView = viewQuery.data === "full";
 
   // Detail TV (saisons) : sert a peupler le selecteur de saison et a defaut
   // d'une saison choisie, la premiere.
@@ -136,6 +148,11 @@ export function DiscoverReleasesModal({
     if (releasesQuery.isError) releasesQuery.refetch();
   }
 
+  const picks = useMemo(
+    () => (releases && !fullView ? quickPicks(releases, item.mediaType === "tv") : []),
+    [releases, fullView, item.mediaType],
+  );
+
   const resOptions = useMemo(
     () =>
       releases
@@ -207,9 +224,9 @@ export function DiscoverReleasesModal({
         exit={{ opacity: 0, scale: 0.97, y: 8 }}
         transition={{ type: "spring", stiffness: 260, damping: 26, mass: 0.9 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
       >
-        <div className="flex items-start gap-4 px-5 pt-5 pb-4">
+        <div className="flex shrink-0 items-start gap-4 px-5 pt-5 pb-4">
           {item.posterPath && (
             <img
               src={`https://image.tmdb.org/t/p/w154${item.posterPath}`}
@@ -259,137 +276,97 @@ export function DiscoverReleasesModal({
           </button>
         </div>
 
-        {item.overview && <ExpandableText text={item.overview} className="mx-5 mb-4" />}
+        <div className="min-h-0 flex-1 overflow-y-auto pb-4">
+          {item.overview && <ExpandableText text={item.overview} className="mx-5 mb-4" />}
 
-        {item.mediaType === "tv" && (
-          <DiscoverSeasonTabs
-            seasons={seasons}
-            activeSeason={activeSeason}
-            hasComplete={hasComplete}
-            onChange={changeSeason}
-          />
-        )}
-
-        {releases === null && !releasesError && (
-          <div className="flex flex-wrap items-center gap-1.5 px-5 pb-3">
-            {[64, 48, 56, 52, 44, 48].map((w, i) => (
-              <div
-                key={i}
-                className="h-6 animate-pulse rounded-full bg-white/80 dark:bg-zinc-800/60"
-                style={{ width: w }}
-              />
-            ))}
-          </div>
-        )}
-
-        {releases !== null && releases.length > 0 && (
-          <DiscoverReleaseFilters
-            sort={releaseSort}
-            showEpisodeSort={item.mediaType === "tv"}
-            sortDir={sortDir}
-            resOptions={resOptions}
-            langOptions={langOptions}
-            resFilter={resFilter}
-            langFilter={langFilter}
-            onSort={changeSort}
-            onResFilter={setResFilter}
-            onLangFilter={setLangFilter}
-          />
-        )}
-
-        <div className="h-[32rem] max-h-[65vh] overflow-y-auto px-3 pb-3 space-y-1.5">
-          {releases === null &&
-            !releasesError &&
-            Array.from({ length: 6 }, (_, i) => (
-              <motion.div
-                key={`skeleton-${i}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25, delay: i * 0.07 }}
-                className="flex items-center gap-4 rounded-xl bg-white/80 dark:bg-zinc-800/60 px-4 py-3"
-              >
-                <div className="min-w-0 flex-1 animate-pulse">
-                  <div className="mb-2 flex items-center gap-1.5">
-                    <div className="h-[18px] w-12 rounded-md bg-zinc-300/70 dark:bg-zinc-700/70" />
-                    <div className="h-[18px] w-10 rounded-md bg-zinc-300/70 dark:bg-zinc-700/70" />
-                    <div className="h-[18px] w-12 rounded-md bg-zinc-300/70 dark:bg-zinc-700/70" />
-                    <div className="h-[18px] w-9 rounded-md bg-zinc-300/70 dark:bg-zinc-700/70" />
-                  </div>
-                  <div className="mb-2 flex items-center gap-3">
-                    <div className="h-3 w-14 rounded bg-zinc-300/70 dark:bg-zinc-700/70" />
-                    <div className="h-3 w-20 rounded bg-zinc-300/70 dark:bg-zinc-700/70" />
-                    <div className="h-3 w-16 rounded bg-zinc-300/60 dark:bg-zinc-700/50" />
-                  </div>
-                  <div className="h-2.5 w-3/4 rounded bg-zinc-300/40 dark:bg-zinc-700/40" />
-                </div>
-                <div className="h-8 w-8 shrink-0 rounded-full bg-zinc-300/70 dark:bg-zinc-700/70 animate-pulse" />
-              </motion.div>
-            ))}
-          {releasesError && (
-            <div className="flex h-full items-center justify-center">
-              <NetworkErrorState message={releasesError} onRetry={retryReleases} />
-            </div>
+          {item.mediaType === "tv" && (
+            <DiscoverSeasonTabs
+              seasons={seasons}
+              activeSeason={activeSeason}
+              hasComplete={hasComplete}
+              onChange={changeSeason}
+            />
           )}
-          {releases !== null && releases.length === 0 && (
-            <div className="flex h-full flex-col items-center justify-center gap-5 px-6">
-              <p className="text-center text-sm text-zinc-500">
-                {item.mediaType === "tv"
-                  ? activeSeason === "complete"
-                    ? "Aucune intégrale disponible pour cette série."
-                    : "Aucune version disponible pour cette saison."
-                  : "Aucune version disponible pour ce film."}
-              </p>
-              <div className="flex flex-col items-center gap-3">
-                <p className="max-w-xs text-center text-xs text-zinc-400 dark:text-zinc-500">
-                  Peut-être juste mal répertorié entre TMDB et C411. Cherchez directement sur un
-                  tracker :
-                </p>
-                <div className="flex items-center gap-2.5">
-                  <button
-                    onClick={() => onSearchTracker(item.title, "c411")}
-                    className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-medium text-zinc-700 ring-1 ring-black/10 transition-colors hover:bg-zinc-100 dark:bg-zinc-800/80 dark:text-zinc-200 dark:ring-white/10 dark:hover:bg-zinc-700/80"
-                  >
-                    <img
-                      src={c411Logo}
-                      alt=""
-                      className="h-5 w-5 rounded-full object-cover bg-white"
+
+          <div className="px-5">
+            {(releases === null || !viewQuery.data) && !releasesError && (
+              <DiscoverReleasesSkeleton />
+            )}
+            {releasesError && (
+              <div className="flex justify-center py-16">
+                <NetworkErrorState message={releasesError} onRetry={retryReleases} />
+              </div>
+            )}
+            {viewQuery.data && releases !== null && releases.length === 0 && (
+              <DiscoverReleasesEmpty
+                message={
+                  item.mediaType === "tv"
+                    ? activeSeason === "complete"
+                      ? "Aucune intégrale disponible pour cette série."
+                      : "Aucune version disponible pour cette saison."
+                    : "Aucune version disponible pour ce film."
+                }
+                onSearchC411={() => onSearchTracker(item.title, "c411")}
+                onSearchNyaa={() => onSearchTracker(item.originalTitle || item.title, "nyaa")}
+              />
+            )}
+            {viewQuery.data && picks.length > 0 && (
+              <>
+                <DiscoverQuickPicks
+                  picks={picks}
+                  sendingHash={sendingHash}
+                  libraryHash={libraryHash}
+                  onSend={onSend}
+                />
+                <button
+                  onClick={() => setExpertOpen(!expertOpen)}
+                  className="mt-3 flex items-center gap-1 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-800 dark:hover:text-zinc-200"
+                >
+                  <ChevronDown
+                    className={`h-3.5 w-3.5 transition-transform ${expertOpen ? "rotate-180" : ""}`}
+                  />
+                  Choisir une version précise ({releases?.length})
+                </button>
+              </>
+            )}
+          </div>
+
+          {viewQuery.data && releases !== null && releases.length > 0 && (
+            <Collapse open={expertOpen || picks.length === 0}>
+              <div className="pt-3">
+                <DiscoverReleaseFilters
+                  sort={releaseSort}
+                  showEpisodeSort={item.mediaType === "tv"}
+                  sortDir={sortDir}
+                  resOptions={resOptions}
+                  langOptions={langOptions}
+                  resFilter={resFilter}
+                  langFilter={langFilter}
+                  onSort={changeSort}
+                  onResFilter={setResFilter}
+                  onLangFilter={setLangFilter}
+                />
+                <div className="px-3 space-y-1.5">
+                  {visibleReleases?.length === 0 && (
+                    <p className="py-10 text-center text-sm text-zinc-500">
+                      Aucune version ne correspond aux filtres.
+                    </p>
+                  )}
+                  {visibleReleases?.map((occ, i) => (
+                    <DiscoverReleaseRow
+                      key={occ.infoHash}
+                      occ={occ}
+                      index={i}
+                      isTv={item.mediaType === "tv"}
+                      sendingHash={sendingHash}
+                      libraryHash={libraryHash}
+                      onSend={onSend}
                     />
-                    Chercher sur C411
-                  </button>
-                  <button
-                    onClick={() => onSearchTracker(item.originalTitle || item.title, "nyaa")}
-                    className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-medium text-zinc-700 ring-1 ring-black/10 transition-colors hover:bg-zinc-100 dark:bg-zinc-800/80 dark:text-zinc-200 dark:ring-white/10 dark:hover:bg-zinc-700/80"
-                  >
-                    <img
-                      src={nyaaLogo}
-                      alt=""
-                      className="h-5 w-5 rounded-full object-cover bg-white"
-                    />
-                    Chercher sur Nyaa
-                  </button>
+                  ))}
                 </div>
               </div>
-            </div>
+            </Collapse>
           )}
-          {releases !== null && releases.length > 0 && visibleReleases?.length === 0 && (
-            <div className="flex h-full items-center justify-center">
-              <p className="text-center text-sm text-zinc-500">
-                Aucune version ne correspond aux filtres.
-              </p>
-            </div>
-          )}
-          {visibleReleases?.map((occ, i) => (
-            <DiscoverReleaseRow
-              key={occ.infoHash}
-              occ={occ}
-              index={i}
-              isTv={item.mediaType === "tv"}
-              sendingHash={sendingHash}
-              libraryHash={libraryHash}
-              onSend={onSend}
-            />
-          ))}
         </div>
       </motion.div>
     </motion.div>
