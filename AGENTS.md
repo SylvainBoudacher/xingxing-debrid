@@ -29,7 +29,9 @@ bunx tsc --noEmit
 
 Rust compilation happens automatically inside `tauri dev` / `tauri build`. Run `cargo check` inside `src-tauri/` for a faster Rust-only type check.
 
-**Publishing an update**: before tagging, update `RELEASE_NOTES.md` with the notes for the release (2-4 lines max) - the CI copies this file verbatim into `latest.json`, which is what the in-app update modal displays. Then bump the version in `tauri.conf.json`, `package.json`, and `src-tauri/Cargo.toml`. Full process in `RELEASING.md`.
+**Definition of done**: a change is done when `bunx tsc --noEmit`, `bun run lint` and `bun run test` pass (plus `cargo check` if Rust changed), and any UI change has been checked in the browser preview.
+
+**Publishing an update**: before tagging, update `RELEASE_NOTES.md` with the notes for the release (2-4 lines max) - the CI copies this file verbatim into `latest.json`, which is what the in-app update modal displays. Then bump the version in `tauri.conf.json`, `package.json`, `src-tauri/Cargo.toml`, and `src/lib/version.ts`. Never push a release tag: the user always pushes it manually. Stop after the release commit and give them the push command. Full process in `RELEASING.md`.
 
 ## Architecture
 
@@ -58,6 +60,10 @@ The app follows standard Tauri 2 architecture:
 - Final answers lead with the code or the result; add explanation only when it isn't obvious from the code.
 - Use code comments sparingly - only where logic is unclear.
 - No boilerplate unless explicitly requested.
+- At the end of every long run, report under three headings:
+  - **Blocked on me**: decisions or access only the user can provide.
+  - **Changed**: files and behavior changed, and which checks passed.
+  - **Found**: issues noticed but not fixed, out of scope.
 
 ## Code Rules
 
@@ -84,7 +90,7 @@ The app follows standard Tauri 2 architecture:
 
 - Never speculate about a bug without reading the relevant code first.
 - State what you found, where, and the fix, in a single report.
-- If cause is unclear: say so. Do not guess.
+- If the cause is still unclear after reading the code and reproducing the issue, say so and list what you checked. Do not guess.
 
 ## Simple Formatting
 

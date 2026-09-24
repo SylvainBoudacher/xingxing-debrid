@@ -46,6 +46,8 @@ The app uses Tauri auto-update (`tauri-plugin-updater`). Users receive updates a
    `https://github.com/SylvainBoudacher/xingxing-debrid/releases/latest/download/latest.json`
    and prompt the user to update.
 
+The tag push is always done manually by the user, never by an agent. Agent work is done when the release commit is ready and the push command has been handed over. The release is finished when `release.yml` is green and `latest.json` contains the notes.
+
 ## How it works
 
 - **Signing**: Tauri signs each binary with the private key
