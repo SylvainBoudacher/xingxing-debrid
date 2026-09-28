@@ -46,6 +46,20 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
+// La progression arrive ~10 fois par seconde et par téléchargement : on la
+// regroupe en un seul rendu par intervalle, quel que soit le nombre de
+// téléchargements en parallèle (chaque rendu remesure les lignes animées).
+const PROGRESS_RENDER_MS = 100;
+let progressTimer: ReturnType<typeof setTimeout> | null = null;
+
+function emitProgress() {
+  if (progressTimer) return;
+  progressTimer = setTimeout(() => {
+    progressTimer = null;
+    emit();
+  }, PROGRESS_RENDER_MS);
+}
+
 export function subscribeDownloads(cb: () => void): () => void {
   listeners.add(cb);
   return () => listeners.delete(cb);
@@ -143,7 +157,7 @@ function ensureProgressListener() {
 
     item.downloaded = e.payload.downloaded;
     item.total = e.payload.total;
-    emit();
+    emitProgress();
   });
 }
 

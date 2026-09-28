@@ -42,6 +42,8 @@ export function allDebridApiError(json: { error?: { code?: string } }): NetworkE
 
 export const allDebridKeys = {
   magnets: () => ["alldebrid", "magnets"] as const,
+  // Sous la clé magnets : invalider la liste invalide aussi ces statuts.
+  magnetStatuses: (ids: number[]) => ["alldebrid", "magnets", "status", ids.join(",")] as const,
 };
 
 export async function deleteMagnet(apiKey: string, id: number): Promise<void> {
@@ -63,6 +65,51 @@ export async function fetchMagnets(apiKey: string): Promise<MagnetEntry[]> {
   }>("AllDebrid", res);
   if (json.status !== "success") throw allDebridApiError(json);
   return json.data?.magnets ?? [];
+}
+
+// Statut d'un seul magnet : l'API n'accepte qu'un id par appel. Un magnet
+// supprimé entre-temps du compte (MAGNET_INVALID_ID) renvoie undefined : il ne
+// doit pas bloquer le suivi des autres. L'API répond alors 200 ou 4xx selon les
+// cas ; clé refusée et limite de débit restent des erreurs.
+async function fetchMagnet(apiKey: string, id: number): Promise<MagnetEntry | undefined> {
+  let res: Response;
+  try {
+    res = await fetchWithTimeout("AllDebrid", `${AD_BASE}.1/magnet/status?agent=c411&id=${id}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+  } catch (err) {
+    const status = err instanceof NetworkError ? err.status : undefined;
+    if (status && status >= 400 && status < 500 && ![401, 403, 429].includes(status)) {
+      return undefined;
+    }
+    throw err;
+  }
+  const json = await readJson<{
+    status: string;
+    error?: { code?: string };
+    data?: { magnets?: MagnetEntry[] | MagnetEntry };
+  }>("AllDebrid", res);
+  if (json.error?.code === "MAGNET_INVALID_ID") return undefined;
+  if (json.status !== "success") throw allDebridApiError(json);
+  // La doc montre un tableau ; l'API v4 renvoyait l'objet seul quand un id
+  // était précisé. Les deux formes sont acceptées.
+  const magnets = json.data?.magnets;
+  return Array.isArray(magnets) ? magnets[0] : magnets;
+}
+
+// Au-delà, un appel par magnet dépasserait la limite AllDebrid (12 requêtes/s,
+// appels en parallèle) : la liste complète redevient le moindre mal.
+const MAX_SINGLE_CALLS = 10;
+
+// Statuts des seuls magnets suivis : quelques Ko au lieu de la liste complète
+// du compte, qui peut peser lourd quand elle est relue toutes les 5 s.
+export async function fetchMagnetStatuses(apiKey: string, ids: number[]): Promise<MagnetEntry[]> {
+  if (ids.length > MAX_SINGLE_CALLS) {
+    const wanted = new Set(ids);
+    return (await fetchMagnets(apiKey)).filter((m) => wanted.has(m.id));
+  }
+  const magnets = await Promise.all(ids.map((id) => fetchMagnet(apiKey, id)));
+  return magnets.filter((m): m is MagnetEntry => m !== undefined);
 }
 
 // true si AllDebrid accepte la cle, false si elle est refusee. Les autres
