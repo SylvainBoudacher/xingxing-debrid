@@ -50,6 +50,42 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.7.4",
+    date: "28 septembre 2026",
+    intro:
+      "La 1.7.4 rend le choix d'une version plus rapide grâce aux choix rapides dans Découverte. Elle apporte aussi des messages d'erreur plus clairs, des transitions plus fluides et de nouvelles animations de chargement.",
+    sections: [
+      {
+        title: "Découverte",
+        items: [
+          "Nouveaux choix rapides sur la fiche d'un titre : les versions disponibles sont résumées par résolution, avec leur disponibilité et leur langue.",
+          "Les choix rapides peuvent être masqués dans les paramètres « Affichage ».",
+          "Aucune version trouvée ? La fiche propose de lancer directement la recherche sur C411 ou Nyaa.",
+          "La barre de recherche s'illumine pendant la recherche.",
+        ],
+      },
+      {
+        title: "Bibliothèque",
+        items: ["Le résumé de statistiques en haut de la page a été retiré pour l'alléger."],
+      },
+      {
+        title: "AllDebrid",
+        items: [
+          "Messages d'erreur plus clairs quand AllDebrid, la connexion ou le disque posent problème (clé invalide, délai dépassé, espace insuffisant...).",
+          "Une connexion qui ne répond plus est coupée au lieu de figer l'application.",
+        ],
+      },
+      {
+        title: "Interface",
+        items: [
+          "Transitions plus douces entre les pages.",
+          "Nouvelles animations de chargement dans l'onglet Mangas, pendant un débridage et au lancement d'un épisode dans VLC.",
+          "Mises à jour techniques et corrections diverses.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.7.3",
     date: "23 septembre 2026",
     intro:
