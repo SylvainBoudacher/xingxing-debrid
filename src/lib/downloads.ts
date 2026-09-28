@@ -5,6 +5,7 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import { toast } from "sonner";
 import { openSettingsPanel } from "@/lib/settingsNavigation";
 import { networkErrorMessage } from "@/lib/networkError";
+import { resolveDownloadMeta, type DownloadMeta } from "@/lib/downloadMeta";
 
 export type DownloadStatus = "active" | "done" | "error" | "cancelled";
 
@@ -22,6 +23,7 @@ export interface DownloadItem {
   openable?: boolean;
   /** Ouverture dans l'application au lieu du programme par défaut de l'OS. */
   onOpen?: () => void;
+  meta: DownloadMeta;
 }
 
 interface ProgressEvent {
@@ -191,9 +193,11 @@ export async function startDownload(
   const id = crypto.randomUUID();
   const baseDir = dir ?? (await store.get<string>("download_dir")) ?? "";
 
+  const filename = basename(url);
   items.set(id, {
     id,
-    filename: basename(url),
+    filename,
+    meta: resolveDownloadMeta(filename),
     downloaded: 0,
     total: 0,
     status: "active",
