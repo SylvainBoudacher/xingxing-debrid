@@ -8,6 +8,7 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_store::StoreExt;
 
 mod cbz;
+mod file_open;
 mod player;
 mod profile;
 mod text_scale;
@@ -567,12 +568,6 @@ fn cancel_download(state: tauri::State<'_, DownloadState>, id: String) {
     state.cancelled.lock().unwrap().insert(id);
 }
 
-// Ouvre un fichier local avec l'application par defaut du systeme.
-#[tauri::command]
-fn open_file(path: String) -> Result<(), String> {
-    tauri_plugin_opener::open_path(&path, None::<&str>).map_err(|e| e.to_string())
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -620,7 +615,8 @@ pub fn run() {
             download_to_dir,
             cancel_download,
             move_files,
-            open_file,
+            file_open::open_file,
+            file_open::can_open_file,
             profile::export_profile,
             profile::import_profile,
             profile::export_library,

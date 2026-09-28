@@ -6,13 +6,17 @@ import {
   getBulkDownloadSnapshot,
   getDownloadsSnapshot,
   openDownload,
+  revealDownload,
   subscribeBulkDownload,
   subscribeDownloads,
   type DownloadItem,
 } from "@/lib/downloads";
-import { Check, Download, X } from "lucide-react";
+import { Check, Download, FolderOpen, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useSyncExternalStore } from "react";
+
+const ICON_BUTTON =
+  "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-black/5 dark:hover:bg-white/10 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors";
 
 function formatBytes(n: number): string {
   if (!n) return "0 o";
@@ -25,6 +29,8 @@ function DownloadRow({ item }: { item: DownloadItem }) {
   const pct = item.total ? Math.min(100, (item.downloaded / item.total) * 100) : 0;
   const isActive = item.status === "active";
   const isDone = item.status === "done";
+  // Un type de fichier a risque (executable, script...) ne propose que le dossier.
+  const canOpen = !!item.onOpen || !!item.openable;
 
   const icon = (
     <span
@@ -53,7 +59,9 @@ function DownloadRow({ item }: { item: DownloadItem }) {
             : isDone
               ? item.onOpen
                 ? "Cliquer pour lire"
-                : "Cliquer pour ouvrir"
+                : canOpen
+                  ? "Cliquer pour ouvrir"
+                  : "Cliquer pour ouvrir le dossier"
               : `${item.total ? `${formatBytes(item.downloaded)} / ${formatBytes(item.total)}` : formatBytes(item.downloaded)}${
                   item.speed ? ` · ${formatBytes(item.speed)}/s` : ""
                 }`}
@@ -73,8 +81,14 @@ function DownloadRow({ item }: { item: DownloadItem }) {
       <div className="flex items-center gap-2.5">
         {isDone ? (
           <button
-            onClick={() => openDownload(item.id)}
-            title={item.onOpen ? "Lire dans l'application" : "Ouvrir le fichier"}
+            onClick={() => (canOpen ? openDownload(item.id) : revealDownload(item.id))}
+            title={
+              item.onOpen
+                ? "Lire dans l'application"
+                : canOpen
+                  ? "Ouvrir le fichier"
+                  : "Par sécurité, ce type de fichier ne s'ouvre pas depuis l'application"
+            }
             className="group flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-lg text-left"
           >
             {icon}
@@ -87,9 +101,20 @@ function DownloadRow({ item }: { item: DownloadItem }) {
           </div>
         )}
 
+        {isDone && (
+          <button
+            onClick={() => revealDownload(item.id)}
+            className={ICON_BUTTON}
+            title="Ouvrir le dossier"
+            aria-label="Ouvrir le dossier"
+          >
+            <FolderOpen className="h-3.5 w-3.5" />
+          </button>
+        )}
+
         <button
           onClick={() => (isActive ? cancelDownload(item.id) : dismissDownload(item.id))}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:bg-black/5 dark:hover:bg-white/10 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+          className={ICON_BUTTON}
           aria-label={isActive ? "Annuler" : "Fermer"}
         >
           <X className="h-3.5 w-3.5" />

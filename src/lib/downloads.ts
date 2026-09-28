@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { toast } from "sonner";
 import { openSettingsPanel } from "@/lib/settingsNavigation";
@@ -17,6 +18,8 @@ export interface DownloadItem {
   speed?: number;
   /** Chemin local du fichier, disponible une fois le téléchargement terminé. */
   path?: string;
+  /** Type de fichier sans risque, ouvrable avec le programme par défaut de l'OS. */
+  openable?: boolean;
   /** Ouverture dans l'application au lieu du programme par défaut de l'OS. */
   onOpen?: () => void;
 }
@@ -186,6 +189,7 @@ export async function startDownload(
 
   try {
     const path = await invoke<string>("download_to_dir", { id, url, dir: baseDir, subdir });
+    const openable = await invoke<boolean>("can_open_file", { path });
     timing.delete(id);
     const item = items.get(id);
     if (item) {
@@ -193,6 +197,7 @@ export async function startDownload(
       item.downloaded = item.total || item.downloaded;
       item.speed = undefined;
       item.path = path;
+      item.openable = openable;
       emit();
     }
     return path;
@@ -247,6 +252,16 @@ export async function openDownload(id: string): Promise<void> {
     await invoke("open_file", { path: item.path });
   } catch (err) {
     toast.error(`Ouverture impossible : ${networkErrorMessage(err)}`);
+  }
+}
+
+export async function revealDownload(id: string): Promise<void> {
+  const item = items.get(id);
+  if (!item?.path) return;
+  try {
+    await revealItemInDir(item.path);
+  } catch (err) {
+    toast.error(`Impossible d'ouvrir le dossier : ${networkErrorMessage(err)}`);
   }
 }
 
