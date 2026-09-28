@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AlertCircle, Loader2, X, Zap } from "lucide-react";
+import { ThinkingOrb } from "thinking-orbs";
 import { formatSpeed } from "@/lib/debrid";
 import { isMagnetError, type MagnetEntry } from "@/lib/services/allDebrid";
 
@@ -73,10 +74,10 @@ export function MagnetProgress({
 
   const pct =
     magnet.size > 0 ? Math.min(100, Math.round((magnet.downloaded / magnet.size) * 100)) : 0;
-  const detail =
-    magnet.statusCode === 0
-      ? "en attente"
-      : `${pct}%${magnet.downloadSpeed > 0 ? ` · ${formatSpeed(magnet.downloadSpeed)}` : ""}`;
+  const waiting = magnet.statusCode === 0;
+  const detail = waiting
+    ? "en attente"
+    : `${pct}%${magnet.downloadSpeed > 0 ? ` · ${formatSpeed(magnet.downloadSpeed)}` : ""}`;
 
   return (
     <div className={className}>
@@ -86,7 +87,17 @@ export function MagnetProgress({
         }`}
       >
         <span className="flex min-w-0 items-center gap-1 truncate">
-          <Zap className="h-3 w-3 flex-none" />
+          {waiting ? (
+            <ThinkingOrb
+              state="connecting"
+              size={20}
+              theme={onPoster ? "dark" : "auto"}
+              aria-hidden="true"
+              className="-my-1 flex-none"
+            />
+          ) : (
+            <Zap className="h-3 w-3 flex-none" />
+          )}
           Débridage en cours
         </span>
         <span className="flex flex-none items-center gap-1.5">
