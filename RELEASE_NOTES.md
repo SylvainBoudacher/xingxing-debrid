@@ -1,3 +1,4 @@
-- Découverte : choix rapides des versions par résolution, recherche C411/Nyaa si aucune version
-- Messages d'erreur AllDebrid plus clairs, l'application ne se fige plus sur une connexion bloquée
 - Transitions plus fluides, nouvelles animations de chargement et corrections diverses
+- Nouveau panneau des téléchargements
+- Sécurité renforcée et messages d'erreur AllDebrid plus clairs
+- Découverte : choix rapides des versions par résolution, recherche C411/Nyaa si aucune version

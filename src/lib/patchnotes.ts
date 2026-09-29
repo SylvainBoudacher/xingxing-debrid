@@ -53,7 +53,7 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.7.4",
     date: "28 septembre 2026",
     intro:
-      "La 1.7.4 rend le choix d'une version plus rapide grâce aux choix rapides dans Découverte. Elle apporte aussi des messages d'erreur plus clairs, des transitions plus fluides et de nouvelles animations de chargement.",
+      "La 1.7.4 rend le choix d'une version plus rapide grâce aux choix rapides dans Découverte et apporte un nouveau panneau des téléchargements. Elle renforce aussi la sécurité de l'application et apporte des messages d'erreur plus clairs, des transitions plus fluides et de nouvelles animations de chargement.",
     sections: [
       {
         title: "Découverte",
@@ -65,6 +65,15 @@ export const PATCH_NOTES: PatchNote[] = [
         ],
       },
       {
+        title: "Téléchargements",
+        items: [
+          "Nouveau panneau des téléchargements : une pilule en bas à droite résume la progression (en cours, en attente, pourcentage et vitesse) et ouvre la liste au clic.",
+          "La liste défile et ne déborde plus de la fenêtre, même avec beaucoup d'épisodes.",
+          "La progression d'un téléchargement groupé avance en continu et tient compte des épisodes en attente.",
+          "Cartes repensées : boutons « Ouvrir » et « Dossier » alignés, et l'action s'affiche au survol des croix.",
+        ],
+      },
+      {
         title: "Bibliothèque",
         items: ["Le résumé de statistiques en haut de la page a été retiré pour l'alléger."],
       },
@@ -73,6 +82,14 @@ export const PATCH_NOTES: PatchNote[] = [
         items: [
           "Messages d'erreur plus clairs quand AllDebrid, la connexion ou le disque posent problème (clé invalide, délai dépassé, espace insuffisant...).",
           "Une connexion qui ne répond plus est coupée au lieu de figer l'application.",
+        ],
+      },
+      {
+        title: "Sécurité",
+        items: [
+          "Les fichiers téléchargés à risque (exécutables, scripts...) ne peuvent plus être ouverts directement : seul leur dossier est proposé.",
+          "Meilleure protection contre les archives de manga piégées.",
+          "Renforcement général de la sécurité de l'application.",
         ],
       },
       {
