@@ -1,3 +1,4 @@
+import { DownloadCloseButton } from "@/components/DownloadCloseButton";
 import {
   cancelDownload,
   dismissDownload,
@@ -9,8 +10,8 @@ import { formatBytes } from "@/lib/formatBytes";
 import { Check, CircleAlert, Film, FolderOpen, LoaderCircle, Play, X } from "lucide-react";
 import { motion } from "motion/react";
 
-const ICON_BUTTON =
-  "text-muted-foreground hover:bg-muted hover:text-foreground flex cursor-pointer h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors";
+const ACTION_BUTTON =
+  "flex h-7 cursor-pointer items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors";
 
 function statusLine(item: DownloadItem) {
   switch (item.status) {
@@ -50,9 +51,9 @@ export function DownloadCard({ item }: { item: DownloadItem }) {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 24 }}
       transition={{ type: "spring", stiffness: 400, damping: 34 }}
-      className="bg-background border-border flex items-center gap-3 rounded-2xl border p-3 shadow-lg"
+      className="bg-background border-border relative flex items-start gap-3 rounded-2xl border p-3"
     >
-      <div className="bg-muted h-[84px] w-14 shrink-0 overflow-hidden rounded-lg">
+      <div className="bg-muted h-[72px] w-12 shrink-0 self-end overflow-hidden rounded-lg">
         {meta.posterSrc ? (
           <img src={meta.posterSrc} alt="" className="h-full w-full object-cover" />
         ) : (
@@ -62,12 +63,12 @@ export function DownloadCard({ item }: { item: DownloadItem }) {
         )}
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 pr-7">
         <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
           {status.icon}
           {status.label}
         </div>
-        <div className="text-foreground truncate text-sm font-semibold" title={item.filename}>
+        <div className="text-foreground line-clamp-2 text-sm font-semibold" title={item.filename}>
           {meta.title}
           {meta.year ? (
             <span className="text-muted-foreground font-normal"> ({meta.year})</span>
@@ -103,41 +104,44 @@ export function DownloadCard({ item }: { item: DownloadItem }) {
             </p>
           </>
         )}
-      </div>
-
-      <div className="flex shrink-0 flex-col items-end gap-1.5">
-        <button
-          type="button"
-          onClick={() => (isActive ? cancelDownload(item.id) : dismissDownload(item.id))}
-          className={ICON_BUTTON}
-          aria-label={isActive ? "Annuler" : "Fermer"}
-          title={isActive ? "Annuler" : "Fermer"}
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
         {isDone && (
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => revealDownload(item.id)}
-              className={ICON_BUTTON}
-              aria-label="Ouvrir le dossier"
-              title="Ouvrir le dossier"
-            >
-              <FolderOpen className="h-3.5 w-3.5" />
-            </button>
+          <div className="mt-2.5 flex gap-1.5">
             {canOpen && (
               <button
                 type="button"
                 onClick={() => openDownload(item.id)}
                 title={item.onOpen ? "Lire dans l'application" : "Ouvrir le fichier"}
-                className="bg-primary text-primary-foreground hover:bg-primary/90 flex cursor-pointer items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors"
+                className={`bg-primary text-primary-foreground hover:bg-primary/90 ${ACTION_BUTTON}`}
               >
                 <Play className="h-3.5 w-3.5" />
                 {item.onOpen ? "Lire" : "Ouvrir"}
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => revealDownload(item.id)}
+              title="Ouvrir le dossier"
+              className={`bg-muted text-foreground hover:bg-muted/70 ${ACTION_BUTTON}`}
+            >
+              <FolderOpen className="h-3.5 w-3.5" />
+              Dossier
+            </button>
           </div>
+        )}
+      </div>
+
+      <div className="absolute right-2 top-2">
+        {isActive ? (
+          <DownloadCloseButton
+            label="Annuler le téléchargement"
+            danger
+            onClick={() => cancelDownload(item.id)}
+          />
+        ) : (
+          <DownloadCloseButton
+            label="Retirer de la liste"
+            onClick={() => dismissDownload(item.id)}
+          />
         )}
       </div>
     </motion.div>
