@@ -5,7 +5,8 @@ import { LazyStore } from "@tauri-apps/plugin-store";
 import { toast } from "sonner";
 import { openSettingsPanel } from "@/lib/settingsNavigation";
 import { networkErrorMessage } from "@/lib/networkError";
-import { resolveDownloadMeta, type DownloadMeta } from "@/lib/downloadMeta";
+import { findLibraryEntry, resolveDownloadMeta, type DownloadMeta } from "@/lib/downloadMeta";
+import { seriesSubdir } from "@/lib/seriesDownloadPath";
 
 export type DownloadStatus = "active" | "done" | "error" | "cancelled";
 
@@ -136,6 +137,11 @@ export async function getDownloadBatchSize(): Promise<number> {
   return Math.min(8, Math.max(1, v ?? 1));
 }
 
+// Rangement des épisodes dans "Série/Saison n" (activé par défaut).
+export async function getSeriesFoldersEnabled(): Promise<boolean> {
+  return (await store.get<boolean>("download_series_folders")) ?? true;
+}
+
 let progressBound = false;
 function ensureProgressListener() {
   if (progressBound) return;
@@ -180,8 +186,10 @@ function basename(url: string): string {
  * concurrence côté appelant. La progression est suivie via l'overlay.
  *
  * Retourne le chemin local écrit, ou null si le téléchargement a échoué ou été
- * annulé. `subdir` range le fichier dans un sous-dossier du dossier configuré.
- * `dir` force le dossier racine (par defaut : le dossier de telechargement).
+ * annulé. `subdir` range le fichier dans un sous-dossier du dossier configuré ;
+ * sans lui, un épisode de série est rangé dans "Série/Saison n" si le réglage
+ * est actif. `dir` force le dossier racine (par defaut : le dossier de
+ * telechargement).
  */
 export async function startDownload(
   url: string,
@@ -194,6 +202,11 @@ export async function startDownload(
   const baseDir = dir ?? (await store.get<string>("download_dir")) ?? "";
 
   const filename = basename(url);
+  const target =
+    subdir ??
+    ((await getSeriesFoldersEnabled())
+      ? seriesSubdir(filename, findLibraryEntry(filename))
+      : undefined);
   items.set(id, {
     id,
     filename,
@@ -206,7 +219,7 @@ export async function startDownload(
   emit();
 
   try {
-    const path = await invoke<string>("download_to_dir", { id, url, dir: baseDir, subdir });
+    const path = await invoke<string>("download_to_dir", { id, url, dir: baseDir, subdir: target });
     const openable = await invoke<boolean>("can_open_file", { path });
     timing.delete(id);
     const item = items.get(id);

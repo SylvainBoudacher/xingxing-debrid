@@ -40,7 +40,7 @@ export function parseReleaseScope(name: string): ReleaseScope | null {
   if (SCOPE_COMPLETE_RE.test(flat)) return { kind: "complete" };
   return null;
 }
-const CUT_RE =
+export const CUT_RE =
   /\b((19|20)\d{2}|2160p|1080p|720p|480p|4k|uhd|multi|vostfr|vff|vf2?|truefrench|french|web(-?dl|rip)?|bluray|blu-ray|brrip|bd(-?rip)?|hdtv|hdlight|dvdrip|repack|proper|integrale|complete|saison|season)\b/i;
 const BRACKET_RE = /\[([^\]]+)\]/g;
 

@@ -253,7 +253,8 @@ export function episodeOf(name: string): number | null {
   const m =
     base.match(/\bS\d{1,2}[ ._-]?E(\d{1,3})\b/i) ??
     base.match(/\b(?:E|Ep|Episode)[ ._]?(\d{1,3})\b/i) ??
-    base.match(/[ ._]-[ ._](\d{1,3})(?=[ ._]|$)/);
+    // Numérotation absolue (anime) jusqu'à 4 chiffres, sauf une année isolée.
+    base.match(/[ ._]-[ ._](?!(?:19|20)\d{2}(?:[ ._]|$))(\d{1,4})(?=[ ._]|$)/);
   return m ? parseInt(m[1], 10) : null;
 }
 

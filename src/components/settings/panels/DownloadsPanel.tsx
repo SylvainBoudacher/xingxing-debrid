@@ -3,7 +3,7 @@ import { BookOpen, Download, FolderOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { SettingsPanel } from "../SettingsPanel";
-import { FieldTitle, PanelDivider, Segmented, SettingRow } from "../controls";
+import { FieldTitle, PanelDivider, Segmented, SettingRow, Toggle } from "../controls";
 import { settingsStore as store } from "../store";
 import { MangaMoveDialog } from "../MangaMoveDialog";
 import { loadMangaLibrary } from "@/lib/mangaLibrary";
@@ -20,13 +20,21 @@ export function DownloadsPanel() {
   const [downloadDir, setDownloadDir] = useState("");
   const [batchSize, setBatchSize] = useState("1");
   const [mangaDir, setMangaDir] = useState("");
+  const [seriesFolders, setSeriesFolders] = useState(true);
   const [pendingMoves, setPendingMoves] = useState<PlannedMove[] | null>(null);
 
   useEffect(() => {
     store.get<string>("download_dir").then((v) => setDownloadDir(v ?? ""));
     store.get<number>("download_batch_size").then((v) => setBatchSize(String(v ?? 1)));
     store.get<string>("manga_dir").then((v) => setMangaDir(v ?? ""));
+    store.get<boolean>("download_series_folders").then((v) => setSeriesFolders(v ?? true));
   }, []);
+
+  async function handleSeriesFolders(v: boolean) {
+    setSeriesFolders(v);
+    await store.set("download_series_folders", v);
+    await store.save();
+  }
 
   async function handleBatchSize(v: string) {
     setBatchSize(v);
@@ -65,7 +73,7 @@ export function DownloadsPanel() {
     <SettingsPanel
       icon={Download}
       title="Téléchargement"
-      subtitle="Dossier de destination et fichiers simultanés."
+      subtitle="Dossier de destination, rangement des séries et fichiers simultanés."
     >
       <FieldTitle
         title="Dossier de téléchargement"
@@ -93,6 +101,15 @@ export function DownloadsPanel() {
           <FolderOpen className="h-3.5 w-3.5" />
           Choisir
         </button>
+      </div>
+
+      <div className="mt-3">
+        <SettingRow
+          title="Ranger les séries par dossier"
+          description="Chaque épisode va dans « Nom de la série / Saison 1 ». Les films restent à la racine."
+        >
+          <Toggle checked={seriesFolders} onChange={handleSeriesFolders} />
+        </SettingRow>
       </div>
 
       <PanelDivider />

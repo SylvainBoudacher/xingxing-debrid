@@ -370,6 +370,8 @@ describe("episodeOf", () => {
     expect(episodeOf("Show - E06.mkv")).toBe(6);
     expect(episodeOf("Show - 30 (1080p).mkv")).toBe(30);
     expect(episodeOf("Show.mkv")).toBeNull();
+    expect(episodeOf("One Piece - 1057 (1080p).mkv")).toBe(1057);
+    expect(episodeOf("Dune - 2021 - 1080p.mkv")).toBeNull();
   });
 });
 
