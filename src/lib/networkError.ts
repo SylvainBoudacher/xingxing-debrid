@@ -75,6 +75,21 @@ function classify(service: NetworkService, err: unknown): NetworkError {
   return new NetworkError(service, "offline", undefined, undefined, err);
 }
 
+// Observateur des résultats réseau (succès / échec transitoire), branché par
+// le suivi de santé des services (serviceHealth.ts).
+type NetworkObserver = (service: NetworkService, ok: boolean) => void;
+let observer: NetworkObserver | null = null;
+export function setNetworkObserver(fn: NetworkObserver) {
+  observer = fn;
+}
+
+// Échec qui peut venir du service ou de la connexion. Les refus (clé, quota,
+// ressource introuvable) sont des réponses normales du service.
+export function isTransientFailure(err: NetworkError): boolean {
+  if (err.kind === "http") return (err.status ?? 0) >= 500;
+  return true;
+}
+
 // fetch avec timeout dur (AbortSignal) qui normalise toute erreur réseau ou HTTP
 // en NetworkError. Les services passent par ici plutôt que d'appeler fetch nu.
 export async function fetchWithTimeout(
@@ -87,9 +102,16 @@ export async function fetchWithTimeout(
   try {
     res = await httpFetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
   } catch (err) {
-    throw classify(service, err);
+    const netErr = classify(service, err);
+    if (isTransientFailure(netErr)) observer?.(service, false);
+    throw netErr;
   }
-  if (!res.ok) throw new NetworkError(service, "http", undefined, res.status);
+  if (!res.ok) {
+    const netErr = new NetworkError(service, "http", undefined, res.status);
+    observer?.(service, !isTransientFailure(netErr));
+    throw netErr;
+  }
+  observer?.(service, true);
   return res;
 }
 
@@ -126,6 +148,8 @@ export async function readJson<T>(service: NetworkService, res: Response): Promi
     return JSON.parse(text) as T;
   } catch (err) {
     console.error(`[${service}] réponse non-JSON :`, text.slice(0, 500));
+    // Page HTML à la place du JSON : maintenance ou page d'erreur Cloudflare.
+    observer?.(service, false);
     throw new NetworkError(service, "parse", undefined, res.status, err);
   }
 }

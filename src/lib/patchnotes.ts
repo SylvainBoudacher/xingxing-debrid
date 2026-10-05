@@ -50,6 +50,32 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.7.5",
+    date: "5 octobre 2026",
+    intro:
+      "La 1.7.5 range automatiquement les épisodes de séries dans leur propre dossier, rend les cartes de téléchargement plus fluides et ajoute un écran pour vérifier les mises à jour à la main.",
+    sections: [
+      {
+        title: "Téléchargements",
+        items: [
+          "Les épisodes de séries sont rangés dans « Nom de la série / Saison n » ; les films restent à la racine du dossier de téléchargement.",
+          "Le nom du dossier reprend le titre de la série dans la bibliothèque, pour que toutes ses versions arrivent au même endroit.",
+          "Ce rangement est activé par défaut et peut être désactivé dans Paramètres > Téléchargement.",
+          "La numérotation absolue des animés (ex. « - 1057 ») est mieux reconnue.",
+          "Les cartes se replient en hauteur, sans faire sauter la barre de défilement, et affichent le pourcentage à côté de la barre de progression.",
+        ],
+      },
+      {
+        title: "Mises à jour",
+        items: [
+          "Nouvel écran « Mises à jour » dans Paramètres > Application pour vérifier à la main si une nouvelle version est disponible et l'installer.",
+          "Le même écran est accessible depuis l'Aide, onglet « Mettre à jour ».",
+          "En cas de souci avec la mise à jour automatique, un lien ouvre la page GitHub pour télécharger l'installateur à la main.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.7.4",
     date: "28 septembre 2026",
     intro:

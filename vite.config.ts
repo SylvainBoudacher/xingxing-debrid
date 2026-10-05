@@ -57,6 +57,11 @@ export default defineConfig(async () => ({
         changeOrigin: true,
         rewrite: (p: string) => p.replace(/^\/c411-proxy/, ""),
       },
+      "/c411-status-proxy": {
+        target: "https://status.c411.org",
+        changeOrigin: true,
+        rewrite: (p: string) => p.replace(/^\/c411-status-proxy/, ""),
+      },
     },
   },
 }));

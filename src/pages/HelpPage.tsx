@@ -11,6 +11,8 @@ import { ApiKeysHelpTab } from "@/components/help/ApiKeysHelpTab";
 import { VlcHelpTab } from "@/components/help/VlcHelpTab";
 import { UpdateHelpTab } from "@/components/help/UpdateHelpTab";
 import { ErrorsHelpTab } from "@/components/help/ErrorsHelpTab";
+import { StatusTab } from "@/components/help/StatusTab";
+import { onHelpPanelRequest, takePendingHelpPanel } from "@/lib/helpNavigation";
 import type { UpdateInfo } from "@/lib/updater";
 import { useDnsCheck } from "@/lib/useDnsCheck";
 import { useVlcDetection } from "@/lib/useVlcDetection";
@@ -30,7 +32,9 @@ export function HelpPage({
   onShowPendingUpdate,
   onCheckUpdate,
 }: HelpPageProps) {
-  const [activePanel, setActivePanel] = useState<HelpPanelId>(HELP_NAV_ITEMS[0].id);
+  const [activePanel, setActivePanel] = useState<HelpPanelId>(
+    () => takePendingHelpPanel() ?? HELP_NAV_ITEMS[0].id,
+  );
   const dns = useDnsCheck();
   const vlc = useVlcDetection();
 
@@ -39,6 +43,15 @@ export function HelpPage({
     dns.check();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(
+    () =>
+      onHelpPanelRequest((panel) => {
+        takePendingHelpPanel();
+        setActivePanel(panel);
+      }),
+    [],
+  );
 
   // Escape : retour à l'accueil.
   useEffect(() => {
@@ -57,6 +70,8 @@ export function HelpPage({
         return <JourneyTab />;
       case "keys":
         return <ApiKeysHelpTab />;
+      case "status":
+        return <StatusTab />;
       case "dns":
         return <DnsTab dnsStatus={dns.status} dnsError={dns.error} onCheck={dns.check} />;
       case "vlc":

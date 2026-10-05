@@ -1,4 +1,3 @@
-- Transitions plus fluides, nouvelles animations de chargement et corrections diverses
-- Nouveau panneau des téléchargements
-- Sécurité renforcée et messages d'erreur AllDebrid plus clairs
-- Découverte : choix rapides des versions par résolution, recherche C411/Nyaa si aucune version
+- Les épisodes de séries sont rangés dans "Série/Saison n" (désactivable dans Paramètres > Téléchargement)
+- Cartes de téléchargement plus fluides, avec le pourcentage affiché
+- Nouvel écran "Mises à jour" pour vérifier la version à la main (Paramètres et Aide)

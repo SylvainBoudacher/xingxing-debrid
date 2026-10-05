@@ -109,10 +109,23 @@ fn http_client() -> &'static reqwest::Client {
     })
 }
 
+// Handle global pour signaler les pannes au frontend depuis les helpers d'erreur,
+// qui n'ont pas acces a l'AppHandle.
+static APP_HANDLE: OnceLock<tauri::AppHandle> = OnceLock::new();
+
+// Previent le suivi de sante des services (serviceHealth.ts) qu'un appel a
+// echoue pour une raison qui peut venir du service ou de la connexion.
+fn report_service_error(service: &str) {
+    if let Some(app) = APP_HANDLE.get() {
+        let _ = app.emit("service-error", service);
+    }
+}
+
 // Traduit une erreur reqwest en message francais explicite selon sa nature
 // (timeout, connexion impossible, ...). without_url evite d'exposer la cle API
 // presente dans certaines URL (c411).
 fn net_err(service: &str, e: reqwest::Error) -> String {
+    report_service_error(service);
     let e = e.without_url();
     if e.is_timeout() {
         format!("{} ne répond pas (délai dépassé).", service)
@@ -141,10 +154,13 @@ fn http_err(service: &str, status: reqwest::StatusCode, body: &str) -> String {
             "Trop de requêtes vers {}. Patientez quelques secondes puis réessayez.",
             service
         ),
-        500..=599 => format!(
-            "{} est temporairement indisponible (HTTP {}). Réessayez plus tard.",
-            service, code
-        ),
+        500..=599 => {
+            report_service_error(service);
+            format!(
+                "{} est temporairement indisponible (HTTP {}). Réessayez plus tard.",
+                service, code
+            )
+        }
         _ => format!("{} a renvoyé une erreur (HTTP {}).", service, code),
     }
 }
@@ -579,6 +595,7 @@ pub fn run() {
         .plugin(tauri_plugin_process::init())
         .manage(DownloadState::default())
         .setup(|app| {
+            let _ = APP_HANDLE.set(app.handle().clone());
             // Migration : deplace les cles API de settings.json (clair) vers le trousseau OS
             if let Ok(store) = app.store("settings.json") {
                 let mut migrated = false;

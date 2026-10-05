@@ -1,6 +1,7 @@
 import type { Page } from "@/components/AppMenu";
 import type { PanelId } from "@/components/settings/settingsNav";
 import { DownloadsOverlay } from "@/components/DownloadsOverlay";
+import { ServiceAlert } from "@/components/serviceStatus/ServiceAlert";
 import { subscribeMangaRead } from "@/lib/mangaReadRequest";
 import { kingVariant, randomLegendaryVariant } from "@/components/duckRandom";
 import { spawnVariant } from "@/components/duckShopBridge";
@@ -21,6 +22,8 @@ import { LATEST_VERSION } from "@/lib/version";
 import type { SearchMode } from "@/lib/searchModes";
 import { loadSeriesFolders } from "@/lib/seriesFolders";
 import { onSettingsPanelRequest } from "@/lib/settingsNavigation";
+import { onHelpPanelRequest } from "@/lib/helpNavigation";
+import { initServiceHealth } from "@/lib/serviceHealth";
 import { loadStartupPage } from "@/lib/startupPage";
 import type { MangaItem } from "@/lib/mangaItem";
 import type { TmdbItem } from "@/lib/tmdbItem";
@@ -146,6 +149,8 @@ function App() {
       }),
     [],
   );
+  useEffect(() => onHelpPanelRequest(() => setPage("help")), []);
+  useEffect(() => initServiceHealth(), []);
 
   // Notification de fin de téléchargement d'un tome : la bibliothèque manga
   // s'ouvre sur l'oeuvre et sa section lance le lecteur.
@@ -413,6 +418,8 @@ function App() {
     <>
       <Toaster />
       <DownloadsOverlay />
+      {/* Masqué dans l'Aide : la page de statut affiche déjà le détail (et le label couvrirait ses boutons). */}
+      {effectivePhase === "done" && page !== "setup" && page !== "help" && <ServiceAlert />}
 
       {effectivePhase === "done" && pendingUpdate && (
         <UpdateDialog update={pendingUpdate} onDismiss={() => setPendingUpdate(null)} />

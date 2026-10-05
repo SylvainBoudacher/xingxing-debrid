@@ -1,4 +1,5 @@
 import {
+  Activity,
   CircleAlert,
   Download,
   KeyRound,
@@ -9,7 +10,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type HelpPanelId = "how" | "journey" | "keys" | "dns" | "vlc" | "update" | "errors";
+export type HelpPanelId =
+  "how" | "journey" | "keys" | "status" | "dns" | "vlc" | "update" | "errors";
 
 export interface HelpNavItem {
   id: HelpPanelId;
@@ -47,6 +49,12 @@ export const HELP_GROUPS: { id: string; label: string; items: HelpNavItem[] }[] 
     id: "troubleshoot",
     label: "Dépannage",
     items: [
+      {
+        id: "status",
+        label: "État des services",
+        subtitle: "Savoir d'où vient un problème : votre connexion, C411 ou AllDebrid.",
+        icon: Activity,
+      },
       {
         id: "dns",
         label: "Configurer le DNS",
