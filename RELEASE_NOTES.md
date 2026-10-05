@@ -1,3 +1,4 @@
 - Les épisodes de séries sont rangés dans "Série/Saison n" (désactivable dans Paramètres > Téléchargement)
 - Cartes de téléchargement plus fluides, avec le pourcentage affiché
 - Nouvel écran "Mises à jour" pour vérifier la version à la main (Paramètres et Aide)
+- Un label signale quand C411 ou AllDebrid a un problème, et l'Aide affiche l'état des services

@@ -53,7 +53,7 @@ export const PATCH_NOTES: PatchNote[] = [
     version: "1.7.5",
     date: "5 octobre 2026",
     intro:
-      "La 1.7.5 range automatiquement les épisodes de séries dans leur propre dossier, rend les cartes de téléchargement plus fluides et ajoute un écran pour vérifier les mises à jour à la main.",
+      "La 1.7.5 range automatiquement les épisodes de séries dans leur propre dossier, rend les cartes de téléchargement plus fluides, ajoute un écran pour vérifier les mises à jour à la main et indique clairement d'où vient un problème quand C411 ou AllDebrid ne répond plus.",
     sections: [
       {
         title: "Téléchargements",
@@ -71,6 +71,14 @@ export const PATCH_NOTES: PatchNote[] = [
           "Nouvel écran « Mises à jour » dans Paramètres > Application pour vérifier à la main si une nouvelle version est disponible et l'installer.",
           "Le même écran est accessible depuis l'Aide, onglet « Mettre à jour ».",
           "En cas de souci avec la mise à jour automatique, un lien ouvre la page GitHub pour télécharger l'installateur à la main.",
+        ],
+      },
+      {
+        title: "État des services",
+        items: [
+          "Quand C411 ou AllDebrid rencontre un problème, un label en haut à droite indique le service concerné et la cause : panne du service, accès bloqué par votre fournisseur d'accès, API en erreur ou connexion internet coupée.",
+          "Nouvel onglet « État des services » dans l'Aide : votre connexion, C411 et AllDebrid en un coup d'œil, avec l'historique de la page de statut officielle de C411.",
+          "Un clic sur le label ouvre directement cet onglet ; il disparaît tout seul dès que le service répond à nouveau.",
         ],
       },
     ],
