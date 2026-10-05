@@ -108,7 +108,7 @@ const ALL_SETTINGS_GROUPS: SettingsNavGroup[] = [
       {
         id: "downloads",
         label: "Téléchargement",
-        subtitle: "Dossier de destination et fichiers simultanés.",
+        subtitle: "Dossier de destination, rangement des séries et fichiers simultanés.",
         icon: Download,
       },
       {
