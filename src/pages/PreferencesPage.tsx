@@ -13,7 +13,9 @@ import { PlaybackPanel } from "@/components/settings/panels/PlaybackPanel";
 import { MagnetsPanel } from "@/components/settings/panels/MagnetsPanel";
 import { NyaaPanel } from "@/components/settings/panels/NyaaPanel";
 import { ShortcutsPanel } from "@/components/settings/panels/ShortcutsPanel";
+import { UpdatesPanel } from "@/components/settings/panels/UpdatesPanel";
 import { SummerPanel } from "@/components/settings/panels/SummerPanel";
+import type { UpdateInfo } from "@/lib/updater";
 import { PageHeader } from "@/components/PageHeader";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
@@ -21,8 +23,9 @@ import { useEffect, useState } from "react";
 interface PreferencesPageProps {
   onBack: () => void;
   onNavigate: (page: Page) => void;
-  hasPendingUpdate: boolean;
+  availableUpdate: UpdateInfo | null;
   onShowPendingUpdate: () => void;
+  onCheckUpdate: () => Promise<UpdateInfo | null>;
   summerEnabled: boolean;
   onToggleSummer: (v: boolean) => void;
   summerFps: 30 | 60;
@@ -40,8 +43,9 @@ interface PreferencesPageProps {
 export function PreferencesPage({
   onBack,
   onNavigate,
-  hasPendingUpdate,
+  availableUpdate,
   onShowPendingUpdate,
+  onCheckUpdate,
   summerEnabled,
   onToggleSummer,
   summerFps,
@@ -90,6 +94,14 @@ export function PreferencesPage({
         return <NyaaPanel />;
       case "backup-transfer":
         return <BackupTransferPanel />;
+      case "updates":
+        return (
+          <UpdatesPanel
+            availableUpdate={availableUpdate}
+            onCheck={onCheckUpdate}
+            onShowUpdate={onShowPendingUpdate}
+          />
+        );
       case "summer":
         return (
           <SummerPanel
@@ -122,7 +134,7 @@ export function PreferencesPage({
             currentPage="preferences"
             onNavigate={onNavigate}
             onBack={onBack}
-            hasPendingUpdate={hasPendingUpdate}
+            hasPendingUpdate={availableUpdate !== null}
             onShowPendingUpdate={onShowPendingUpdate}
           />
         }

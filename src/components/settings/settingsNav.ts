@@ -1,6 +1,7 @@
 import {
   ArchiveRestore,
   Download,
+  RefreshCw,
   Keyboard,
   KeyRound,
   Layers,
@@ -26,6 +27,7 @@ export type PanelId =
   | "library"
   | "nyaa"
   | "backup-transfer"
+  | "updates"
   | "summer";
 
 export type PanelAccent = "indigo" | "amber";
@@ -132,6 +134,18 @@ const ALL_SETTINGS_GROUPS: SettingsNavGroup[] = [
         label: "Sauvegarde et transfert",
         subtitle: "Exporter et importer votre profil, votre bibliothèque et votre liste.",
         icon: ArchiveRestore,
+      },
+    ],
+  },
+  {
+    id: "app",
+    label: "Application",
+    items: [
+      {
+        id: "updates",
+        label: "Mises à jour",
+        subtitle: "Vérifier et installer la dernière version de l'application.",
+        icon: RefreshCw,
       },
     ],
   },

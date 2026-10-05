@@ -1,5 +1,6 @@
 import {
   CircleAlert,
+  Download,
   KeyRound,
   Lightbulb,
   MonitorPlay,
@@ -8,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-export type HelpPanelId = "how" | "journey" | "keys" | "dns" | "vlc" | "errors";
+export type HelpPanelId = "how" | "journey" | "keys" | "dns" | "vlc" | "update" | "errors";
 
 export interface HelpNavItem {
   id: HelpPanelId;
@@ -57,6 +58,12 @@ export const HELP_GROUPS: { id: string; label: string; items: HelpNavItem[] }[] 
         label: "Lecteur VLC",
         subtitle: "Vérifier que VLC est installé et trouvé par l'application.",
         icon: MonitorPlay,
+      },
+      {
+        id: "update",
+        label: "Mettre à jour",
+        subtitle: "Vérifier et installer la dernière version de l'application.",
+        icon: Download,
       },
       {
         id: "errors",

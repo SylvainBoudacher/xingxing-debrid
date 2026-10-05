@@ -9,22 +9,26 @@ import { DnsTab } from "@/components/help/DnsTab";
 import { JourneyTab } from "@/components/help/JourneyTab";
 import { ApiKeysHelpTab } from "@/components/help/ApiKeysHelpTab";
 import { VlcHelpTab } from "@/components/help/VlcHelpTab";
+import { UpdateHelpTab } from "@/components/help/UpdateHelpTab";
 import { ErrorsHelpTab } from "@/components/help/ErrorsHelpTab";
+import type { UpdateInfo } from "@/lib/updater";
 import { useDnsCheck } from "@/lib/useDnsCheck";
 import { useVlcDetection } from "@/lib/useVlcDetection";
 
 interface HelpPageProps {
   onBack: () => void;
   onNavigate: (page: Page) => void;
-  hasPendingUpdate: boolean;
+  availableUpdate: UpdateInfo | null;
   onShowPendingUpdate: () => void;
+  onCheckUpdate: () => Promise<UpdateInfo | null>;
 }
 
 export function HelpPage({
   onBack,
   onNavigate,
-  hasPendingUpdate,
+  availableUpdate,
   onShowPendingUpdate,
+  onCheckUpdate,
 }: HelpPageProps) {
   const [activePanel, setActivePanel] = useState<HelpPanelId>(HELP_NAV_ITEMS[0].id);
   const dns = useDnsCheck();
@@ -64,6 +68,14 @@ export function HelpPage({
             onPick={vlc.pick}
           />
         );
+      case "update":
+        return (
+          <UpdateHelpTab
+            availableUpdate={availableUpdate}
+            onCheck={onCheckUpdate}
+            onShowUpdate={onShowPendingUpdate}
+          />
+        );
       case "errors":
         return <ErrorsHelpTab onGoTo={setActivePanel} />;
     }
@@ -83,7 +95,7 @@ export function HelpPage({
             currentPage="help"
             onNavigate={onNavigate}
             onBack={onBack}
-            hasPendingUpdate={hasPendingUpdate}
+            hasPendingUpdate={availableUpdate !== null}
             onShowPendingUpdate={onShowPendingUpdate}
           />
         }

@@ -163,6 +163,12 @@ function App() {
       .catch(() => {});
   }, []);
 
+  async function checkUpdateNow() {
+    const u = await checkForUpdate();
+    setAvailableUpdate(u);
+    return u;
+  }
+
   // Observe le thème pour passer la bonne couleur à SplashTransition
   useEffect(() => {
     const obs = new MutationObserver(() => {
@@ -569,8 +575,9 @@ function App() {
             <PreferencesPage
               onBack={() => setPage("main")}
               onNavigate={handleNavigate}
-              hasPendingUpdate={availableUpdate !== null}
+              availableUpdate={availableUpdate}
               onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+              onCheckUpdate={checkUpdateNow}
               summerEnabled={summerEnabled}
               onToggleSummer={handleToggleSummer}
               summerFps={summerFps}
@@ -635,8 +642,9 @@ function App() {
             <HelpPage
               onBack={() => setPage("main")}
               onNavigate={handleNavigate}
-              hasPendingUpdate={availableUpdate !== null}
+              availableUpdate={availableUpdate}
               onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+              onCheckUpdate={checkUpdateNow}
             />
           </PageView>
         )}
