@@ -7,7 +7,7 @@ import {
   type DownloadItem,
 } from "@/lib/downloads";
 import { formatBytes } from "@/lib/formatBytes";
-import { Check, CircleAlert, Film, FolderOpen, LoaderCircle, Play, X } from "lucide-react";
+import { Check, CircleAlert, Film, FolderOpen, Play, X } from "lucide-react";
 import { motion } from "motion/react";
 
 const ACTION_BUTTON =
@@ -28,10 +28,7 @@ function statusLine(item: DownloadItem) {
     case "cancelled":
       return { icon: <X className="h-3 w-3" />, label: "Téléchargement annulé" };
     default:
-      return {
-        icon: <LoaderCircle className="h-3 w-3 animate-spin" />,
-        label: "Téléchargement en cours",
-      };
+      return null;
   }
 }
 
@@ -45,104 +42,116 @@ export function DownloadCard({ item }: { item: DownloadItem }) {
   const status = statusLine(item);
 
   return (
+    // Animation en hauteur, sans transform : une ligne ne déborde jamais de la
+    // liste, donc aucune barre de défilement parasite pendant les mises à jour.
     <motion.div
-      layout
-      initial={{ opacity: 0, x: 24 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 24 }}
-      transition={{ type: "spring", stiffness: 400, damping: 34 }}
-      className="bg-background border-border relative flex items-start gap-3 rounded-2xl border p-3"
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className="shrink-0 overflow-hidden"
     >
-      <div className="bg-muted h-[72px] w-12 shrink-0 self-end overflow-hidden rounded-lg">
-        {meta.posterSrc ? (
-          <img src={meta.posterSrc} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <div className="text-muted-foreground flex h-full w-full items-center justify-center">
-            <Film className="h-5 w-5" />
-          </div>
-        )}
-      </div>
-
-      <div className="min-w-0 flex-1 pr-7">
-        <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
-          {status.icon}
-          {status.label}
-        </div>
-        <div className="text-foreground line-clamp-2 text-sm font-semibold" title={item.filename}>
-          {meta.title}
-          {meta.year ? (
-            <span className="text-muted-foreground font-normal"> ({meta.year})</span>
-          ) : null}
-        </div>
-        {meta.badges.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {meta.badges.map((b) => (
-              <span
-                key={b}
-                className="bg-muted text-muted-foreground rounded-md px-1.5 py-0.5 text-[10px] font-medium"
-              >
-                {b}
-              </span>
-            ))}
-          </div>
-        )}
-        {isActive && (
-          <>
-            <div className="bg-muted mt-2 h-1 overflow-hidden rounded-full">
-              <motion.div
-                className="bg-primary h-full rounded-full"
-                initial={false}
-                animate={{ width: `${pct}%` }}
-                transition={{ ease: "easeOut", duration: 0.2 }}
-              />
+      <div className="hover:bg-muted/40 flex items-start gap-3 py-3 pl-4 pr-3 transition-colors">
+        <div className="bg-muted h-[72px] w-12 shrink-0 self-end overflow-hidden rounded-lg">
+          {meta.posterSrc ? (
+            <img src={meta.posterSrc} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="text-muted-foreground flex h-full w-full items-center justify-center">
+              <Film className="h-5 w-5" />
             </div>
-            <p className="text-muted-foreground mt-1 truncate text-[10px] tabular-nums">
-              {item.total
-                ? `${formatBytes(item.downloaded)} / ${formatBytes(item.total)}`
-                : formatBytes(item.downloaded)}
-              {item.speed ? ` · ${formatBytes(item.speed)}/s` : ""}
-            </p>
-          </>
-        )}
-        {isDone && (
-          <div className="mt-2.5 flex gap-1.5">
-            {canOpen && (
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          {status && (
+            <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
+              {status.icon}
+              {status.label}
+            </div>
+          )}
+          <div className="text-foreground line-clamp-2 text-sm font-semibold" title={item.filename}>
+            {meta.title}
+            {meta.year ? (
+              <span className="text-muted-foreground font-normal"> ({meta.year})</span>
+            ) : null}
+          </div>
+          {meta.badges.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {meta.badges.map((b) => (
+                <span
+                  key={b}
+                  className="bg-muted text-muted-foreground rounded-md px-1.5 py-0.5 text-[10px] font-medium"
+                >
+                  {b}
+                </span>
+              ))}
+            </div>
+          )}
+          {isActive && (
+            <>
+              <div className="mt-2 flex items-center gap-2">
+                <div className="bg-muted h-1 flex-1 overflow-hidden rounded-full">
+                  <motion.div
+                    className="bg-primary h-full rounded-full"
+                    initial={false}
+                    animate={{ width: `${pct}%` }}
+                    transition={{ ease: "easeOut", duration: 0.2 }}
+                  />
+                </div>
+                {item.total ? (
+                  <span className="text-muted-foreground shrink-0 text-[10px] font-semibold tabular-nums">
+                    {Math.floor(pct)} %
+                  </span>
+                ) : null}
+              </div>
+              <p className="text-muted-foreground mt-1 truncate text-[10px] tabular-nums">
+                {item.total
+                  ? `${formatBytes(item.downloaded)} / ${formatBytes(item.total)}`
+                  : formatBytes(item.downloaded)}
+                {item.speed ? ` · ${formatBytes(item.speed)}/s` : ""}
+              </p>
+            </>
+          )}
+          {isDone && (
+            <div className="mt-2.5 flex gap-1.5">
+              {canOpen && (
+                <button
+                  type="button"
+                  onClick={() => openDownload(item.id)}
+                  title={item.onOpen ? "Lire dans l'application" : "Ouvrir le fichier"}
+                  className={`bg-primary text-primary-foreground hover:bg-primary/90 ${ACTION_BUTTON}`}
+                >
+                  <Play className="h-3.5 w-3.5" />
+                  {item.onOpen ? "Lire" : "Ouvrir"}
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => openDownload(item.id)}
-                title={item.onOpen ? "Lire dans l'application" : "Ouvrir le fichier"}
-                className={`bg-primary text-primary-foreground hover:bg-primary/90 ${ACTION_BUTTON}`}
+                onClick={() => revealDownload(item.id)}
+                title="Ouvrir le dossier"
+                className={`bg-muted text-foreground hover:bg-muted/70 ${ACTION_BUTTON}`}
               >
-                <Play className="h-3.5 w-3.5" />
-                {item.onOpen ? "Lire" : "Ouvrir"}
+                <FolderOpen className="h-3.5 w-3.5" />
+                Dossier
               </button>
-            )}
-            <button
-              type="button"
-              onClick={() => revealDownload(item.id)}
-              title="Ouvrir le dossier"
-              className={`bg-muted text-foreground hover:bg-muted/70 ${ACTION_BUTTON}`}
-            >
-              <FolderOpen className="h-3.5 w-3.5" />
-              Dossier
-            </button>
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
 
-      <div className="absolute right-2 top-2">
-        {isActive ? (
-          <DownloadCloseButton
-            label="Annuler le téléchargement"
-            danger
-            onClick={() => cancelDownload(item.id)}
-          />
-        ) : (
-          <DownloadCloseButton
-            label="Retirer de la liste"
-            onClick={() => dismissDownload(item.id)}
-          />
-        )}
+        <div className="shrink-0">
+          {isActive ? (
+            <DownloadCloseButton
+              label="Annuler le téléchargement"
+              danger
+              onClick={() => cancelDownload(item.id)}
+            />
+          ) : (
+            <DownloadCloseButton
+              label="Retirer de la liste"
+              onClick={() => dismissDownload(item.id)}
+            />
+          )}
+        </div>
       </div>
     </motion.div>
   );

@@ -23,12 +23,10 @@ export function DownloadsBulkCard() {
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, x: 24 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 24 }}
-      transition={{ type: "spring", stiffness: 400, damping: 34 }}
-      className="bg-background border-border rounded-2xl border p-3"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className="py-3 pl-4 pr-3"
     >
       <div className="flex items-center gap-2.5">
         <span className="bg-muted text-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">

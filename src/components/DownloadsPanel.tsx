@@ -1,7 +1,7 @@
 import { DownloadCard } from "@/components/DownloadCard";
 import { DownloadsBulkCard } from "@/components/DownloadsBulkCard";
 import { clearFinishedDownloads, type DownloadItem } from "@/lib/downloads";
-import { X } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
 // Panneau ouvert depuis la pilule : hauteur bornée, en-tête et lot fixés en
@@ -16,6 +16,11 @@ export function DownloadsPanel({
   onClose: () => void;
 }) {
   const hasFinished = downloads.some((d) => d.status !== "active");
+  // Les téléchargements en cours restent en haut, visibles sans défiler.
+  const sorted = [
+    ...downloads.filter((d) => d.status === "active"),
+    ...downloads.filter((d) => d.status !== "active"),
+  ];
 
   return (
     <motion.div
@@ -26,7 +31,7 @@ export function DownloadsPanel({
       style={{ transformOrigin: "bottom right" }}
       className="bg-background border-border flex max-h-[70vh] w-[400px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border shadow-2xl"
     >
-      <div className="border-border flex shrink-0 items-center gap-3 border-b py-2.5 pl-4 pr-2.5">
+      <div className="border-border flex shrink-0 items-center gap-3 border-b py-2.5 pl-4 pr-3">
         <p className="text-foreground flex-1 text-sm font-semibold">Téléchargements</p>
         {hasFinished && (
           <button
@@ -41,28 +46,28 @@ export function DownloadsPanel({
           type="button"
           onClick={onClose}
           className="text-muted-foreground hover:bg-muted hover:text-foreground flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg transition-colors"
-          aria-label="Fermer"
-          title="Fermer"
+          aria-label="Réduire"
+          title="Réduire"
         >
-          <X className="h-4 w-4" />
+          <ChevronDown className="h-4 w-4" />
         </button>
       </div>
 
       <AnimatePresence initial={false}>
         {showBulk && (
-          <div key="bulk" className="shrink-0 px-2 pt-2">
+          <div key="bulk" className="border-border shrink-0 border-b">
             <DownloadsBulkCard />
           </div>
         )}
       </AnimatePresence>
 
-      <motion.div layoutScroll className="flex min-h-0 flex-col gap-2 overflow-y-auto p-2">
+      <div className="divide-border flex min-h-0 flex-col divide-y overflow-y-auto">
         <AnimatePresence initial={false}>
-          {downloads.map((item) => (
+          {sorted.map((item) => (
             <DownloadCard key={item.id} item={item} />
           ))}
         </AnimatePresence>
-      </motion.div>
+      </div>
     </motion.div>
   );
 }
