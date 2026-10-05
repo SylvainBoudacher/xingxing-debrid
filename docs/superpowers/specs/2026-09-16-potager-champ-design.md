@@ -35,18 +35,21 @@ Hors périmètre :
 
 ### 2.2 Gestes
 
-| Outil    | Cible valide                 | Effet                                          | Refus (texte affiché)                                                                   |
-| -------- | ---------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Creuser  | terre libre                  | pose un trou (`hole`)                          | "la case est occupée" (terre), "seulement dans la terre" (herbe)                        |
-| Semer    | trou, graine disponible      | plante `sownAt = now`, `watered = []`          | "creuse d'abord un trou" (terre libre), "il faut un trou" (ailleurs), "plus de graines" |
-| Arroser  | case portant une plante      | ajoute `[now, now + 6 h]` à `watered` (fusion) | "rien à arroser, sème d'abord"                                                          |
-| Sécateur | plante éclose à tige épaisse | cueillette                                     | "rien à couper ici", "tige fragile, cueille-la à la main"                               |
-| Main     | plante éclose à tige fine    | cueillette                                     | "tige trop épaisse, prends le sécateur" ; sur un tas : "prends le râteau"               |
-| Râteau   | tas de feuilles              | retire le tas                                  | "pas de feuilles ici"                                                                   |
-| Tous     | corbeau                      | chasse le corbeau                              | -                                                                                       |
+| Outil    | Cible valide                     | Effet                                          | Refus (texte affiché)                                                                   |
+| -------- | -------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Creuser  | terre libre                      | pose un trou (`hole`)                          | "la case est occupée" (terre), "seulement dans la terre" (herbe)                        |
+| Semer    | trou, graine disponible          | plante `sownAt = now`, `watered = []`          | "creuse d'abord un trou" (terre libre), "il faut un trou" (ailleurs), "plus de graines" |
+| Arroser  | case portant une plante          | ajoute `[now, now + 6 h]` à `watered` (fusion) | "rien à arroser, sème d'abord"                                                          |
+| Sécateur | plante éclose à tige épaisse     | cueillette                                     | "rien à couper ici", "tige fragile, cueille-la à la main"                               |
+| Main     | plante éclose à tige fine ; trou | cueillette ; rebouche le trou                  | "tige trop épaisse, prends le sécateur" ; sur un tas : "prends le râteau"               |
+| Râteau   | tas de feuilles                  | retire le tas                                  | "pas de feuilles ici"                                                                   |
+| Tous     | corbeau                          | chasse le corbeau                              | -                                                                                       |
 
 - Tiges épaisses (sécateur) : tournesol, rose trémière, dahlia, chrysanthème. Tiges fines (main) : les autres.
-- Arroser une plante déjà mouillée prolonge l'effet jusqu'à `now + 6 h`.
+- Arroser une plante déjà mouillée prolonge l'effet jusqu'à `now + 6 h`, sans faire avancer le compteur `watered` (seul l'arrosage d'une plante sèche compte).
+- Le bouton "Presser" du panier demande un second clic ("Confirmer ?", 3 s) : la fleur quitte le panier pour de bon.
+- Survoler une case estompe les plantes des deux rangées devant elle, dans sa colonne, pour laisser voir la cible et son cadre.
+- La sauvegarde de départ contient un cosmos blanc commun déjà semé en `3,2`, qui éclot 5 minutes après la création de la partie : la première éclosion arrive pendant la première session.
 - Avec la Main sur une plante non éclose ou un décor : pas de clic, l'infobulle indique "Maintenir et glisser pour déplacer".
 
 ### 2.3 Cueillette
@@ -74,7 +77,7 @@ Hors périmètre :
 
 - Présents seulement quand le Potager est ouvert et visible. Non enregistrés.
 - Un corbeau se pose toutes les **2 à 5 minutes** (au hasard), **2** au maximum, sur une case libre ou une plante. Il repart seul au bout d'environ **90 s**.
-- Aucun dégât. Le chasser incrémente `crowsChased`.
+- Aucun dégât. Le chasser incrémente `crowsChased` et a 15 % de chances de faire tomber une graine commune (`rollCrowSeed`, toast "Le corbeau a lâché une graine").
 
 ### 2.7 Éclosion
 
@@ -125,7 +128,7 @@ Un composant par fichier, textes français accentués.
 - `FieldView.tsx` : toile, pointeur, mise en page (scène, hotbar en bas, panneau à droite). Survol : `pickAt` puis `describeTile` et `planAction`. Clic : `apply` puis effets. Maintien avec la Main sur un objet déplaçable : glisser, `planMove` sur l'état courant au relâchement.
 - `ToolBar.tsx` : 6 outils, numéro, icône générée, libellé ; touches 1 à 6 et Échap.
 - `TileTooltip.tsx` : titre, lignes, barre, ligne d'action ("Clic : Arroser" en vert, "Semer : creuse d'abord un trou" en rouge), indication de glisser.
-- `SidePanel.tsx` : pile de graines, panier (espèce, couleur, rareté colorée), compteurs corbeaux et tas, météo ("La pluie arrose tout le champ").
+- `SidePanel.tsx` : pile de graines, panier (espèce, couleur, rareté colorée), météo ("La pluie arrose tout le champ"). Les compteurs corbeaux et tas n'y figurent plus : leur avancée se lit dans le détail des nœuds de la Progression.
 - `useCrows.ts` : apparition et départ des corbeaux, pause quand la fenêtre est cachée.
 - `DiscoveryToast.tsx` : contenu du toast de découverte.
 - `labels.ts` : noms français des espèces, couleurs, raretés et outils ("Rose trémière", "Chrysanthème", "Bruyère", "Épique").

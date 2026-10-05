@@ -42,7 +42,9 @@ describe("framing", () => {
 
   it("annonce de combien le champ a grandi", () => {
     expect(framing(VIEWS.garden, fieldRect(["p1"])).scale).toBe(1);
-    expect(framing(VIEWS.garden, fieldRect(ALL)).scale).toBeCloseTo(9 / 5, 5);
+    // 13 x 9 : la largeur (13 / 9) cède la place à la profondeur tassée (1 + 0,8 x 0,7)
+    expect(framing(VIEWS.garden, fieldRect(["p1", "p2"])).scale).toBeCloseTo(13 / 9, 5);
+    expect(framing(VIEWS.garden, fieldRect(ALL)).scale).toBeCloseTo(1.56, 5);
   });
 
   it("garde la hauteur de visée", () => {

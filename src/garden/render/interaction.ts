@@ -4,6 +4,7 @@ import { parseTileKey, type PlotId, type TileKey } from "../core/types";
 import type { Billboards } from "./billboards";
 import { createCrows } from "./crows";
 import { createHighlight, TONES, type HighlightTone } from "./highlight";
+import { hidingTiles } from "./occlusion";
 import { createParticles } from "./particles";
 import { createPicker, type Pickable, type PickResult } from "./picking";
 import { wx, wz } from "./world";
@@ -63,6 +64,14 @@ export function createInteraction(
     // cadre au sol pour une case ou une zone, contour pour un corbeau
     setHighlight(target, tone = "info", area) {
       highlight.set(area ?? (target?.kind === "tile" ? [target.key] : []), tone);
+      billboards.fade(
+        target?.kind === "tile"
+          ? hidingTiles(
+              target.key,
+              billboards.entries().map(([key]) => key),
+            )
+          : [],
+      );
       crows.outline(target?.kind === "crow" ? target.id : null, TONES[tone]);
     },
     burst: particles.burst,

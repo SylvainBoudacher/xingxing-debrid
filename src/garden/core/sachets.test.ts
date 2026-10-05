@@ -63,6 +63,7 @@ describe("openSachet", () => {
   it("une nouveauté remet la jauge de découverte à zéro, une commune fait monter celle de rareté", () => {
     const base: GardenSave = {
       ...withSachets(day(0), ["quotidien"]),
+      tiles: {},
       inventory: { ...createStarterSave().inventory, seeds: [] },
       pity: { dryDiscovery: 9, dryRare: 4 },
     };

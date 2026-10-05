@@ -3,10 +3,12 @@ import { SpriteIcon } from "../SpriteIcon";
 
 export function RecipeList({
   known,
+  ready,
   selected,
   onSelect,
 }: {
   known: RecipeId[];
+  ready: RecipeId[];
   selected: RecipeId;
   onSelect: (id: RecipeId) => void;
 }) {
@@ -27,6 +29,9 @@ export function RecipeList({
             <SpriteIcon sprite={r.icon} cropped className={`h-6 ${open ? "" : "grayscale"}`} />
             <span className="flex-1">{r.name}</span>
             {!open && <small className="text-[10px] text-[#a99a8a]">verrouillée</small>}
+            {open && ready.includes(r.id) && (
+              <small className="text-[10px] text-[#9fd46e]">ingrédients réunis</small>
+            )}
           </button>
         );
       })}

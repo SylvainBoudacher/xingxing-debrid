@@ -16,20 +16,33 @@ describe("plots", () => {
 });
 
 describe("createStarterSave", () => {
-  it("contient une parcelle, 3 graines, 1 sachet et du décor", () => {
+  it("contient une parcelle, 3 graines, 2 sachets et du décor", () => {
     const s = createStarterSave();
     expect(s.version).toBe(1);
     expect(s.plots).toEqual(["p1"]);
     expect(s.inventory.seeds).toHaveLength(3);
-    expect(s.sachets.pending).toEqual(["quotidien"]);
+    expect(s.sachets.pending).toEqual(["quotidien", "quotidien"]);
     expect(s.tiles["0,1"]).toEqual({ kind: "decor", id: "lanterne" });
   });
 
   it("le décor n'est jamais posé sur la terre", () => {
     const s = createStarterSave();
     for (const key of Object.keys(s.tiles) as (keyof typeof s.tiles)[]) {
-      expect(isSoil(s.plots, key)).toBe(false);
+      if (s.tiles[key]?.kind === "decor") expect(isSoil(s.plots, key)).toBe(false);
     }
+  });
+
+  it("une graine commune déjà semée éclot quelques minutes après le début", () => {
+    const now = Date.now();
+    const s = createStarterSave();
+    const plants = Object.entries(s.tiles).filter(([, t]) => t?.kind === "plant");
+    expect(plants).toHaveLength(1);
+    const [key, plant] = plants[0];
+    if (plant?.kind !== "plant") throw new Error("plante attendue");
+    expect(isSoil(s.plots, key as keyof typeof s.tiles)).toBe(true);
+    expect(plant.seed.rarity).toBe("commune");
+    expect(growthOf(plant, now, () => []).stage).toBeLessThan(4);
+    expect(growthOf(plant, now + 10 * 60_000, () => []).stage).toBe(4);
   });
 });
 

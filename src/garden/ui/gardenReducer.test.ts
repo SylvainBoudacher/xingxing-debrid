@@ -118,10 +118,10 @@ describe("sachets", () => {
     expect(next.save!.sachets.pending).toEqual([]);
   });
 
-  it("le tick crédite le sachet du jour", () => {
+  it("le tick crédite deux sachets par jour écoulé", () => {
     const state = withSachets(startOfDay(NOW) - 2 * DAY, []);
     const next = gardenReducer(state, { type: "tick", now: NOW });
-    expect(next.save!.sachets.pending).toHaveLength(2);
+    expect(next.save!.sachets.pending).toHaveLength(4);
   });
 });
 
@@ -164,14 +164,14 @@ describe("progression", () => {
     expect(next.save!.progress.baskets.d4).toEqual({ dahlia: 1 });
   });
 
-  it("le tick crédite deux sachets par jour après Main verte", () => {
+  it("le tick crédite trois sachets par jour après Main verte", () => {
     const base = createStarterSave();
     const state = withProgress({
       ...base,
       progress: { ...base.progress, nodes: { j1: 1 } },
       sachets: { lastDailyAt: startOfDay(NOW) - DAY, pending: [] },
     });
-    expect(gardenReducer(state, { type: "tick", now: NOW }).save!.sachets.pending).toHaveLength(2);
+    expect(gardenReducer(state, { type: "tick", now: NOW }).save!.sachets.pending).toHaveLength(3);
   });
 });
 

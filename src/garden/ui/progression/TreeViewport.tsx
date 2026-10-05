@@ -1,7 +1,12 @@
 import { useRef, type ReactNode } from "react";
 import { RecenterButton } from "../RecenterButton";
+import { RATIO } from "./panZoom";
 import { TreeLegend } from "./TreeLegend";
 import { usePanZoom } from "./usePanZoom";
+
+// L'arbre est mis en page à sa taille dans la fenêtre par défaut puis mis à l'échelle en
+// bloc : paliers et noms de branche gardent leurs proportions en petite fenêtre.
+const REF_W = 860;
 
 export function TreeViewport({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -17,9 +22,9 @@ export function TreeViewport({ children }: { children: ReactNode }) {
         <div
           className="absolute left-1/2 top-1/2"
           style={{
-            width: tree.w,
-            height: tree.h,
-            transform: `translate(-50%, -50%) translate(${view.dx}px, ${view.dy}px) scale(${view.k})`,
+            width: REF_W,
+            height: REF_W / RATIO,
+            transform: `translate(-50%, -50%) translate(${view.dx}px, ${view.dy}px) scale(${(view.k * tree.w) / REF_W})`,
           }}
         >
           {children}

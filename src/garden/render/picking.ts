@@ -2,6 +2,7 @@ import * as THREE from "three";
 import type { Target } from "../core/actions";
 import { isInField } from "../core/plots";
 import { tileKey, type PlotId, type TileKey } from "../core/types";
+import { pickMask } from "./pickMask";
 import { WORLD } from "./world";
 
 export interface PickResult {
@@ -14,18 +15,21 @@ export interface Pickable {
   target: Target;
 }
 
-const alphaCache = new WeakMap<HTMLCanvasElement, Uint8ClampedArray>();
+const PICK_RADIUS = 2;
+const maskCache = new WeakMap<HTMLCanvasElement, Uint8Array>();
 
-// Vrai si le pixel du sprite sous le rayon est opaque : on vise à travers les vides.
+// Vrai si le rayon touche le sprite ou sa marge : on vise à travers les vides.
 function opaqueAt(canvas: HTMLCanvasElement, uv: THREE.Vector2): boolean {
-  let data = alphaCache.get(canvas);
-  if (!data) {
-    data = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data;
-    alphaCache.set(canvas, data);
+  const { width, height } = canvas;
+  let mask = maskCache.get(canvas);
+  if (!mask) {
+    const data = canvas.getContext("2d")!.getImageData(0, 0, width, height).data;
+    mask = pickMask(data, width, height, PICK_RADIUS);
+    maskCache.set(canvas, mask);
   }
-  const px = Math.min(canvas.width - 1, Math.floor(uv.x * canvas.width));
-  const py = Math.min(canvas.height - 1, Math.floor((1 - uv.y) * canvas.height));
-  return data[(py * canvas.width + px) * 4 + 3] > 0;
+  const px = Math.min(width - 1, Math.floor(uv.x * width));
+  const py = Math.min(height - 1, Math.floor((1 - uv.y) * height));
+  return mask[py * width + px] === 1;
 }
 
 export interface GroundProbe {

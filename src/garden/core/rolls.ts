@@ -20,6 +20,13 @@ export function rollPickSeed(flower: Flower, beautiful: boolean, rng: Rng): Seed
 
 export const pressSeedChance = 0.35;
 
+export const crowSeedChance = 0.15;
+
+// Un corbeau chassé lâche parfois la graine qu'il transportait.
+export function rollCrowSeed(rng: Rng): Seed | null {
+  return rng() < crowSeedChance ? rollSeedOfRarity("commune", rng) : null;
+}
+
 export const RARITY_WEIGHT: Record<Rarity, number> = {
   commune: 60,
   rare: 25,

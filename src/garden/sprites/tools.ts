@@ -1,5 +1,16 @@
 import { PAL } from "./palette";
-import { ell, petal, put, rampAt, sphere, stem, type Buf, type DrawFn, type Ramp } from "./raster";
+import {
+  ell,
+  leaf,
+  petal,
+  put,
+  rampAt,
+  sphere,
+  stem,
+  type Buf,
+  type DrawFn,
+  type Ramp,
+} from "./raster";
 
 type Pt = [number, number];
 
@@ -247,5 +258,27 @@ export const TOOL_DRAW = {
     stem(b, k, 17, 28, 27, 38, 1.6, PAL.metal);
     for (let i = 0; i < 4; i++)
       stem(b, k, 18 + i * 3, 29 + i * 3, 21 + i * 3, 26 + i * 3, 0.8, PAL.metal);
+  },
+  semis(b, k) {
+    // sachet de papier entrouvert, bord supérieur déchiré en dents
+    const top: Pt[] = [];
+    for (let i = 0; i <= 6; i++) top.push([4.5 + i * 3.8, 22 - i * 0.6 - (i % 2 ? 1.4 : 0)]);
+    poly(b, k, [...top, [28, 46], [6, 47.5]], (u, v, e) =>
+      shadeEdge(PAL.hay, 0.85 - (u - 4) / 36 - (v - 20) / 70, e),
+    );
+    // étiquette : une pousse sur fond clair
+    ell(b, k, 16.5, 34.5, 7, 7.5, -0.05, (nx, ny, _d, e) =>
+      e ? PAL.cream[0] : rampAt(PAL.cream, 0.85 - nx * 0.15 - ny * 0.1),
+    );
+    stem(b, k, 16.5, 40, 16.5, 32, 1.2, PAL.green);
+    leaf(b, k, 16.5, 34.5, -2.6, 5.5, 3, PAL.green);
+    leaf(b, k, 16.5, 33, -0.5, 5.5, 3, PAL.green);
+    // graines qui sortent du sachet
+    for (const [x, y, a] of [
+      [10.5, 15.5, 0.5],
+      [16.5, 10.5, -0.3],
+      [22.5, 15, 0.2],
+    ] as const)
+      ell(b, k, x, y, 2.2, 3, a, sphere(PAL.brown));
   },
 } satisfies Record<string, DrawFn>;

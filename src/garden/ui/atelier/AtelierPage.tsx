@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { brewStatus } from "../../core/atelier";
+import { brewStatus, missingFor } from "../../core/atelier";
 import type { RecipeId } from "../../core/catalog/recipes";
 import type { GardenSave } from "../../core/types";
 import { knownRecipes } from "../../core/unlocks";
@@ -26,10 +26,11 @@ export function AtelierPage({
   const known = knownRecipes(save);
   const [selected, setSelected] = useState<RecipeId>(known[0] ?? "croissance");
   const status = brewStatus(save, now);
+  const ready = known.filter((id) => !Object.keys(missingFor(save, id)).length);
   return (
     <div className="grid flex-1 grid-cols-[1fr_1.1fr] grid-rows-[1fr_auto] gap-4 overflow-auto p-5">
       <div className="flex flex-col gap-2">
-        <Cauldron status={status} onCollect={onCollect} />
+        <Cauldron status={status} basket={save.inventory.basket} onCollect={onCollect} />
         {import.meta.env.DEV && status && !status.ready && (
           <button onClick={onDevFinish} className={`${DEV_BUTTON} self-center`}>
             Dev : finir le brassage
@@ -38,7 +39,7 @@ export function AtelierPage({
       </div>
       <section className={`${PANEL} overflow-auto`}>
         <h3 className={`${HEADING} mb-2`}>Recettes</h3>
-        <RecipeList known={known} selected={selected} onSelect={setSelected} />
+        <RecipeList known={known} ready={ready} selected={selected} onSelect={setSelected} />
         <RecipeDetail
           save={save}
           recipe={selected}

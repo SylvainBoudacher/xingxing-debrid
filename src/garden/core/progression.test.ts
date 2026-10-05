@@ -134,10 +134,14 @@ describe("claim", () => {
 
   it("ajoute un sachet spécial à la pile", () => {
     const s = ready("j2", withCounter(base(), "watered", 20));
-    expect(claim(s, "j2", NOW, () => 0.5)!.sachets.pending).toEqual(["quotidien", "dore"]);
+    expect(claim(s, "j2", NOW, () => 0.5)!.sachets.pending).toEqual([
+      "quotidien",
+      "quotidien",
+      "dore",
+    ]);
   });
 
-  it("n'écrit rien de plus pour le deuxième sachet du jour", () => {
+  it("n'écrit rien de plus pour le troisième sachet du jour", () => {
     const s = ready("j1", withCounter(base(), "bloomed", 5));
     const out = claim(s, "j1", NOW, () => 0.5)!;
     expect(out.sachets.pending).toEqual(s.sachets.pending);

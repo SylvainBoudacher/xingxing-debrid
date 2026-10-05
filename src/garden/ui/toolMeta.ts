@@ -5,7 +5,7 @@ import type { SpriteRef } from "../sprites/sprite";
 export const TOOL_META: Record<Tool, { label: string; icon: SpriteRef }> = {
   main: { label: "Main", icon: { name: "main" } },
   creuser: { label: "Creuser", icon: { name: "transplantoir" } },
-  semer: { label: "Semer", icon: { name: "graine", color: "cream" } },
+  semer: { label: "Semer", icon: { name: "semis" } },
   arroser: { label: "Arroser", icon: { name: "arrosoir" } },
   secateur: { label: "Sécateur", icon: { name: "secateur" } },
   rateau: { label: "Râteau", icon: { name: "rateau" } },

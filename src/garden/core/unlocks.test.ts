@@ -13,13 +13,13 @@ const withNode = (id: string): GardenSave => {
 };
 
 describe("sachetsPerDay", () => {
-  it("donne un sachet par jour au départ", () => {
-    expect(sachetsPerDay(createStarterSave())).toBe(1);
-    expect(sachetsPerDay(withNode("j2"))).toBe(1);
+  it("donne deux sachets par jour au départ", () => {
+    expect(sachetsPerDay(createStarterSave())).toBe(2);
+    expect(sachetsPerDay(withNode("j2"))).toBe(2);
   });
 
-  it("en donne deux une fois Main verte récupéré", () => {
-    expect(sachetsPerDay(withNode("j1"))).toBe(2);
+  it("en donne trois une fois Main verte récupéré", () => {
+    expect(sachetsPerDay(withNode("j1"))).toBe(3);
   });
 });
 

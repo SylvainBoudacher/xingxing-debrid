@@ -26,6 +26,7 @@ export function PotionPicker({
               key={r.id}
               onClick={() => onSelect(r.id)}
               aria-pressed={on}
+              title={r.effect}
               className={`flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left ${
                 on ? "bg-amber-300/15 ring-1 ring-amber-300/40" : "hover:bg-amber-300/10"
               }`}
@@ -33,7 +34,7 @@ export function PotionPicker({
               <SpriteIcon sprite={r.icon} cropped className="h-5" />
               <span className="flex-1 leading-tight">
                 {r.name}
-                <small className="block text-[10px] text-[#a99a8a]">{r.effect}</small>
+                {on && <small className="block text-[10px] text-[#a99a8a]">{r.effect}</small>}
               </span>
               <b className="text-[#f3dca0]">x{potions[r.id]}</b>
             </button>

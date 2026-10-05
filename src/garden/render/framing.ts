@@ -17,6 +17,7 @@ export const VIEWS: Record<SceneProfile, View> = {
 
 // Cadrage réglé sur le champ de départ ; tout le reste s'en déduit.
 const BASE = { w: 9, h: 5, cx: 0.5, cz: 0.5 };
+const DEPTH_WEIGHT = 0.7;
 
 export interface Framed extends View {
   // de combien le champ a grandi depuis le champ de départ : sert aussi au brouillard
@@ -31,9 +32,9 @@ export function framing(view: View, rect: Rect): Framed {
     view.look[1],
     cz + (view.look[2] - BASE.cz),
   ];
-  // les rangées ajoutées arrivent vers la caméra : elles mangent autant de place
-  // à l'écran que la largeur, d'où un recul proportionnel au plus grand des deux
-  const k = Math.max(rect.w / BASE.w, rect.h / BASE.h);
+  // les rangées ajoutées arrivent vers la caméra et la perspective les tasse : elles
+  // demandent moins de recul que la largeur
+  const k = Math.max(rect.w / BASE.w, 1 + (rect.h / BASE.h - 1) * DEPTH_WEIGHT);
   return {
     ...view,
     scale: k,

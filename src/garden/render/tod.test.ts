@@ -8,7 +8,8 @@ describe("todOf", () => {
     expect(todOf(at(5))).toBe("nuit");
     expect(todOf(at(6))).toBe("matin");
     expect(todOf(at(10))).toBe("midi");
-    expect(todOf(at(17))).toBe("soir");
+    expect(todOf(at(17))).toBe("midi");
+    expect(todOf(at(18))).toBe("soir");
     expect(todOf(at(21))).toBe("nuit");
   });
 });

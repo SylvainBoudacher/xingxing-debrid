@@ -4,7 +4,7 @@ import { growthOf, WATER_MS } from "./growth";
 import { DECOR_LE, flowerName, pickedWord } from "./labels";
 import { fieldRect, isInField, isSoil } from "./plots";
 import { planPotion } from "./potions";
-import { rollPickSeed, type Rng } from "./rolls";
+import { rollCrowSeed, rollPickSeed, type Rng } from "./rolls";
 import { harvestTool } from "./catalog/species";
 import { setTile } from "./tiles";
 import { mergeIntervals } from "./time";
@@ -92,10 +92,19 @@ export function planAction(
     potion = null,
   } = opts;
   if (target.kind === "crow")
-    return yes("Chasser", () => ({
-      save: bump(save, "crowsChased"),
-      effects: [{ kind: "chase", id: target.id }],
-    }));
+    return yes("Chasser", () => {
+      const seed = rollCrowSeed(rng);
+      const chased = bump(save, "crowsChased");
+      if (!seed) return { save: chased, effects: [{ kind: "chase", id: target.id }] };
+      const seeds = [...chased.inventory.seeds, seed];
+      return {
+        save: { ...chased, inventory: { ...chased.inventory, seeds } },
+        effects: [
+          { kind: "chase", id: target.id },
+          { kind: "toast", text: "Le corbeau a lâché une graine" },
+        ],
+      };
+    });
 
   const { key } = target;
   if (!isInField(save.plots, key)) return null;
@@ -129,8 +138,10 @@ export function planAction(
       if (tile?.kind !== "plant") return no("Arroser", "rien à arroser, sème d'abord");
       return yes("Arroser", () => {
         const watered = mergeIntervals([...tile.watered, { start: now, end: now + WATER_MS }]);
+        const next = setTile(save, key, { ...tile, watered });
+        // re-mouiller une plante encore humide prolonge l'effet sans avancer les tâches
         return {
-          save: bump(setTile(save, key, { ...tile, watered }), "watered"),
+          save: growthOf(tile, now, rain).wet ? next : bump(next, "watered"),
           effects: [burst(key, "water")],
         };
       });
@@ -174,6 +185,11 @@ export function planAction(
           };
           return { save: setTile(next, key, undefined), effects: [] };
         });
+      if (!cut && tile?.kind === "hole")
+        return yes("Reboucher le trou", () => ({
+          save: setTile(save, key, undefined),
+          effects: [burst(key, "dirt")],
+        }));
       if (tile?.kind === "leaves")
         return cut ? no("Couper", "rien à couper ici") : no("Ramasser", "prends le râteau");
       const g = tile?.kind === "plant" ? growthOf(tile, now, rain) : null;

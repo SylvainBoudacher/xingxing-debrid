@@ -31,7 +31,7 @@ Hors périmètre :
 - Un sachet par **date locale**. `sachets.lastDailyAt` retient minuit du dernier jour crédité.
 - `creditDaily(save, now)` ajoute un sachet par jour écoulé depuis `lastDailyAt`, **plafond de 7 sachets en attente**. Le surplus est perdu sans message.
 - Le crédit a lieu à l'ouverture de la fenêtre Potager et à chaque tick (une minute). La fenêtre principale n'écrit jamais : elle ne crédite pas.
-- Première partie : la sauvegarde de départ porte déjà un sachet et `lastDailyAt: 0`. Dans ce cas on pose `lastDailyAt` à aujourd'hui sans rien créditer.
+- Première partie : la sauvegarde de départ porte déjà deux sachets et `lastDailyAt: 0`. Dans ce cas on pose `lastDailyAt` à aujourd'hui sans rien créditer.
 - Horloge qui recule : si minuit d'aujourd'hui est antérieur à `lastDailyAt`, on ramène `lastDailyAt` à aujourd'hui sans créditer. Sans ça, une horloge avancée par erreur bloquerait les sachets pendant des jours.
 - Un sachet contient **3 graines**. Le tirage a lieu à l'ouverture.
 
@@ -66,7 +66,7 @@ Dans l'ordre, avec une source de hasard injectée :
 
 Ordre d'appel du hasard, fixé pour les tests : rareté, poids de rareté, nouveauté, poids de promotion, index dans la réserve, variante, choix de la variante.
 
-Ordre de grandeur : légendaire ~2 % par graine, soit une tous les 15 à 18 jours au rythme d'un sachet quotidien.
+Ordre de grandeur : légendaire ~2 % par graine, soit une tous les 15 à 18 jours au rythme d'un sachet quotidien (deux sachets par jour depuis le 2026-09-30, donc deux fois plus vite).
 
 ### 2.4 Variantes
 

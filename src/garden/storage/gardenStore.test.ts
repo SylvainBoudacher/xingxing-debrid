@@ -32,10 +32,13 @@ beforeEach(() => registry.clear());
 
 describe("loadGarden", () => {
   it("crée et écrit une sauvegarde de départ si le fichier est vide", async () => {
+    // la sauvegarde de départ date la première graine : même horloge des deux côtés
+    vi.useFakeTimers({ now: new Date(2026, 9, 1, 12), toFake: ["Date"] });
     const { save, recovered } = await loadGarden();
     expect(recovered).toBe(false);
     expect(save).toEqual(createStarterSave());
     expect(registry.get("garden.json")!.get("save")).toEqual(save);
+    vi.useRealTimers();
   });
 
   it("relit une sauvegarde existante", async () => {

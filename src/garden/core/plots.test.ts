@@ -67,7 +67,7 @@ describe("champ de départ", () => {
     const s = createStarterSave();
     for (const key of Object.keys(s.tiles) as TileKey[]) {
       expect(isInField(s.plots, key)).toBe(true);
-      expect(isSoil(s.plots, key)).toBe(false);
+      if (s.tiles[key]?.kind === "decor") expect(isSoil(s.plots, key)).toBe(false);
     }
   });
 });

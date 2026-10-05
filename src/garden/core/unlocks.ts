@@ -7,7 +7,7 @@ export function sachetsPerDay(save: GardenSave): number {
   const extra = TREE.filter(
     (n) => n.reward.kind === "sachet-quotidien" && save.progress.nodes[n.id],
   ).length;
-  return 1 + extra;
+  return 2 + extra;
 }
 
 export function knownRecipes(save: GardenSave): RecipeId[] {

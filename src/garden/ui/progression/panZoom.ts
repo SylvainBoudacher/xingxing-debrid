@@ -10,7 +10,7 @@ export interface View {
   k: number;
 }
 
-const RATIO = 1000 / 640;
+export const RATIO = 1000 / 640;
 const MIN_K = 0.6;
 const MAX_K = 2;
 // part de l'arbre qui reste toujours visible dans le cadre, en px

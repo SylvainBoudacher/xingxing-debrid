@@ -46,7 +46,7 @@ export function TreeView({
       {LABELS.map(({ branch, x, y }) => (
         <span
           key={branch}
-          className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 font-serif text-[15px] font-bold tracking-wide [text-shadow:0_1px_6px_#000]"
+          className="pointer-events-none absolute -translate-x-1/2 -translate-y-[calc(100%+46px)] whitespace-nowrap font-serif text-[15px] font-bold tracking-wide [text-shadow:0_1px_6px_#000]"
           style={{ left: `${x / 10}%`, top: `${y / 6.4}%`, color: BRANCHES[branch].color }}
         >
           {BRANCHES[branch].name}

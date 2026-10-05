@@ -29,10 +29,23 @@ export interface Billboards {
   lanterns(): Lanterns;
   get(key: TileKey): THREE.Mesh | undefined;
   entries(): [TileKey, THREE.Mesh][];
+  // estompe ces cases (et rend leur opacité aux autres)
+  fade(keys: TileKey[]): void;
   dispose(): void;
 }
 
 export const THIRSTY_LEAN = 0.14;
+const FADED = 0.3;
+
+function setFaded(mesh: THREE.Mesh, faded: boolean) {
+  const mat = mesh.material as THREE.MeshStandardMaterial;
+  if (mat.transparent === faded) return;
+  mat.transparent = faded;
+  mat.opacity = faded ? FADED : 1;
+  // l'alphaTest porte sur l'alpha final : à 0,5 il effacerait tout le sprite estompé
+  mat.alphaTest = faded ? 0.05 : 0.5;
+  mat.depthWrite = !faded;
+}
 
 // Un sprite debout sur le sol, pivot au pied, ombre découpée selon sa silhouette.
 export function makeBillboard(canvas: HTMLCanvasElement, w: number, h: number): THREE.Mesh {
@@ -172,6 +185,9 @@ export function createBillboards(scene: THREE.Scene): Billboards {
     lanterns: () => lanterns,
     get: (key) => placed.get(key),
     entries: () => [...placed.entries()],
+    fade(keys) {
+      for (const [key, mesh] of placed) setFaded(mesh, keys.includes(key));
+    },
     dispose() {
       for (const f of fx.values()) f.dispose();
       fx.clear();

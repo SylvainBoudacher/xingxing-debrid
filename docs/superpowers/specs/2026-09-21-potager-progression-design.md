@@ -107,7 +107,7 @@ Elles restent justes même si un compteur a été raté ou si une sauvegarde anc
 Lit `progress.nodes` et répond aux questions des autres systèmes. Une seule aujourd'hui :
 
 ```ts
-sachetsPerDay(save: GardenSave): number   // 1, ou 2 après le nœud "Main verte"
+sachetsPerDay(save: GardenSave): number   // 2, ou 3 après le nœud "Main verte"
 ```
 
 `creditDaily(save, now, perDay)` prend ce nombre en paramètre au lieu d'importer la progression : `sachets.ts` n'a alors aucune dépendance vers `progression.ts`, qui lui importe `MAX_PENDING`. Pas de cycle.
@@ -137,8 +137,8 @@ Dans les trois cas les deux jauges évoluent comme aujourd'hui, graine par grain
 | id     | branche    | parent | x, y     | titre                 | tâche                                         | récompense             | icône                 |
 | ------ | ---------- | ------ | -------- | --------------------- | --------------------------------------------- | ---------------------- | --------------------- |
 | `root` | champ      | -      | 500, 575 | Le potager s'éveille  | compteur `sown` >= 1                          | 3 graines communes     | `graine` cream        |
-| `j1`   | jardin     | `root` | 330, 470 | Main verte            | compteur `bloomed` >= 5                       | 2e sachet du jour      | `pousse`              |
-| `j2`   | jardin     | `j1`   | 190, 380 | Arrosoir bien rempli  | compteur `watered` >= 20                      | 1 sachet doré          | `arrosoir`            |
+| `j1`   | jardin     | `root` | 330, 470 | Main verte            | compteur `bloomed` >= 5                       | 3e sachet du jour      | `pousse`              |
+| `j2`   | jardin     | `j1`   | 190, 380 | Arrosoir bien rempli  | compteur `watered` >= 20 (plantes sèches)     | 1 sachet doré          | `arrosoir`            |
 | `j3`   | jardin     | `j2`   | 110, 260 | Tas de compost        | compteur `raked` >= 30                        | 4 bottes de paille     | `rateau`              |
 | `j4`   | jardin     | `j2`   | 250, 240 | Belles plantes        | compteur `pickedBeautiful` >= 5               | 3 graines rares        | `bouton` white        |
 | `h1`   | collection | `root` | 420, 400 | Herbier ouvert        | herbier `entrees` >= 5                        | 1 sachet de famille    | `aster` violet        |

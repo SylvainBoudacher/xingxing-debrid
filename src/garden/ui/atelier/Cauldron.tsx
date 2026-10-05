@@ -1,17 +1,25 @@
 import type { BrewStatus } from "../../core/atelier";
 import { recipeById } from "../../core/catalog/recipes";
-import { formatDuration } from "../../core/labels";
+import { formatDuration, ingredientLabel } from "../../core/labels";
+import type { Flower, Rarity } from "../../core/types";
 import { SpriteIcon } from "../SpriteIcon";
 import { CauldronBubbles } from "./CauldronBubbles";
 import { HEADING, PANEL } from "./styles";
 
+const RARITIES: Rarity[] = ["commune", "rare", "epique", "legendaire"];
+
 export function Cauldron({
   status,
+  basket,
   onCollect,
 }: {
   status: BrewStatus | null;
+  basket: Flower[];
   onCollect: () => void;
 }) {
+  const inBasket = RARITIES.map((r) => [r, basket.filter((f) => f.rarity === r).length] as const)
+    .filter(([, n]) => n > 0)
+    .map(([r, n]) => ingredientLabel(r, n));
   const recipe = status && recipeById(status.recipe);
   const progress =
     status && recipe ? Math.min(1, Math.max(0, 1 - status.remaining / recipe.durationMs)) : 0;
@@ -25,7 +33,14 @@ export function Cauldron({
         {status && !status.ready && <CauldronBubbles />}
       </div>
       {!status || !recipe ? (
-        <p className="text-[#a99a8a]">Le chaudron est vide</p>
+        <div className="flex flex-col gap-1">
+          <p className="text-[#a99a8a]">Le chaudron est vide</p>
+          <p className="text-xs text-[#d8cbb6]">
+            {inBasket.length
+              ? `Au panier : ${inBasket.join(", ")}`
+              : "Panier vide : cueille des fleurs au champ"}
+          </p>
+        </div>
       ) : (
         <div className="flex w-full max-w-[260px] flex-col items-center gap-2">
           <div>{recipe.name}</div>

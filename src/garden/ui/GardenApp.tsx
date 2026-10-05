@@ -1,6 +1,6 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useReducer, useRef, useState } from "react";
-import { toast, Toaster } from "sonner";
+import { toast } from "sonner";
 import { isBrowserPreview } from "@/lib/devTauriShim";
 import { brewStatus } from "../core/atelier";
 import { recipeById } from "../core/catalog/recipes";
@@ -11,6 +11,7 @@ import { AtelierPage } from "./atelier/AtelierPage";
 import { withBrewDone } from "./atelier/devAtelier";
 import { DiscoveryToast } from "./DiscoveryToast";
 import { FieldView } from "./FieldView";
+import { GardenToaster } from "./GardenToaster";
 import { gardenReducer, INITIAL_GARDEN } from "./gardenReducer";
 import { GardenTabs, type GardenTab } from "./GardenTabs";
 import { HerbierPage } from "./herbier/HerbierPage";
@@ -108,7 +109,7 @@ export default function GardenApp() {
 
   return (
     <div className="flex h-screen flex-col bg-[#1a1216] text-[#f1e6d2]">
-      <Toaster theme="dark" position="top-center" />
+      <GardenToaster />
       <GardenTabs
         tab={tab}
         onTab={setTab}

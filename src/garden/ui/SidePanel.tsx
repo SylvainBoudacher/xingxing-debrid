@@ -4,6 +4,7 @@ import { flowerName, RARITY_FR } from "../core/labels";
 import type { DecorId, GardenSave, Rarity } from "../core/types";
 import { DecorPicker } from "./DecorPicker";
 import { PotionPicker } from "./PotionPicker";
+import { PressButton } from "./PressButton";
 import { SpriteIcon } from "./SpriteIcon";
 import { RARITY_COLOR } from "./toolMeta";
 
@@ -36,7 +37,6 @@ export function SidePanel({
   onPress: (index: number) => void;
 }) {
   const { seeds, basket } = save.inventory;
-  const counters = save.progress.counters;
   // la rareté réellement semée : celle choisie si elle reste en stock, sinon la plus ancienne
   const selected = seeds.some((s) => s.rarity === seedRarity)
     ? seedRarity
@@ -94,27 +94,14 @@ export function SidePanel({
                   {RARITY_FR[f.rarity]}
                 </small>
               </span>
-              <button
-                onClick={() => onPress(i)}
-                className="rounded-md border border-amber-300/40 px-1.5 py-0.5 text-[10px] text-[#f3dca0] hover:bg-amber-300/15"
-              >
-                Presser
-              </button>
+              <PressButton onPress={() => onPress(i)} />
             </div>
           ))}
         </div>
       </section>
-      <section className={section}>
-        <div className="flex justify-between">
-          <span className="text-[#a99a8a]">Corbeaux chassés</span>
-          <b className="text-[#f3dca0]">{counters.crowsChased ?? 0}</b>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-[#a99a8a]">Tas ramassés</span>
-          <b className="text-[#f3dca0]">{counters.raked ?? 0}</b>
-        </div>
-        {raining && <div className="mt-1 text-[#9fc4e6]">La pluie arrose tout le champ</div>}
-      </section>
+      {raining && (
+        <section className={`${section} text-[#9fc4e6]`}>La pluie arrose tout le champ</section>
+      )}
     </aside>
   );
 }

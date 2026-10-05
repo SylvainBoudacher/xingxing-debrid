@@ -9,7 +9,7 @@ const ITEMS = [
 
 export function TreeLegend() {
   return (
-    <ul className="absolute bottom-3 left-4 flex gap-3 text-[11px] text-[#a99a8a]">
+    <ul className="pointer-events-none absolute bottom-3 left-4 flex flex-col gap-1 text-[11px] text-[#a99a8a]">
       {ITEMS.map(({ label, dot }) => (
         <li key={label} className="flex items-center gap-1.5">
           <i className="block size-2.5 rounded-full" style={dot} />

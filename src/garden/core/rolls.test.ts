@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { CATALOG_ENTRIES, entriesOfRarity } from "./catalog/species";
 import { entryId } from "./discovery";
 import {
+  crowSeedChance,
   pickSeedChance,
   pressSeedChance,
   RARITY_WEIGHT,
+  rollCrowSeed,
   rollPickSeed,
   rollPressSeed,
   rollSachetSeed,
@@ -166,5 +168,15 @@ describe("variantes des graines de cueillette et de pressage", () => {
     // tirage, couleur, variante, choix de la variante
     expect(rollPressSeed(cosmos, seq(0, 0, 0.01, 0.9))?.variant).toBe("lumineuse");
     expect(rollPressSeed(cosmos, seq(0, 0, 0.5))?.variant).toBeUndefined();
+  });
+});
+
+describe("rollCrowSeed", () => {
+  it("donne une graine commune sous la chance de chasse", () => {
+    expect(rollCrowSeed(() => crowSeedChance - 0.01)?.rarity).toBe("commune");
+  });
+
+  it("ne donne rien au-delà", () => {
+    expect(rollCrowSeed(() => crowSeedChance)).toBeNull();
   });
 });

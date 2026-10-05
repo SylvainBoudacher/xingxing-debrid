@@ -54,6 +54,15 @@ describe("creuser", () => {
     expect(refused(plan(s, tile("0,0"), "creuser"))).toBe("seulement dans la terre");
     expect(refused(plan(s, tile("1,1"), "creuser"))).toBe("la case est occupée");
   });
+
+  it("la main rebouche un trou", () => {
+    const s = withTiles({ "1,1": { kind: "hole", dugAt: NOW } });
+    const p = plan(s, tile("1,1"), "main");
+    expect(p?.label).toBe("Reboucher le trou");
+    const out = run(p);
+    expect(out.save.tiles["1,1"]).toBeUndefined();
+    expect(out.effects).toEqual([{ kind: "burst", key: "1,1", particle: "dirt" }]);
+  });
 });
 
 describe("semer", () => {
@@ -89,6 +98,25 @@ describe("arroser", () => {
     const s = withTiles({ "1,1": { ...young, watered: [{ start: NOW - HOUR, end: NOW + HOUR }] } });
     const p = run(plan(s, tile("1,1"), "arroser")).save.tiles["1,1"] as PlantTile;
     expect(p.watered).toEqual([{ start: NOW - HOUR, end: NOW + WATER_MS }]);
+  });
+
+  it("ne compte pas l'arrosage d'une plante encore mouillée", () => {
+    const s = withTiles({ "1,1": { ...young, watered: [{ start: NOW - HOUR, end: NOW + HOUR }] } });
+    expect(run(plan(s, tile("1,1"), "arroser")).save.progress.counters.watered).toBeUndefined();
+  });
+
+  it("ne compte pas l'arrosage d'une plante mouillée par la pluie", () => {
+    const s = withTiles({ "1,1": young });
+    const rain = () => [{ start: NOW - HOUR, end: NOW + HOUR }];
+    const p = planAction(s, tile("1,1"), "arroser", NOW, { rain });
+    expect(run(p).save.progress.counters.watered).toBeUndefined();
+  });
+
+  it("compte de nouveau une fois la plante sèche", () => {
+    const s = withTiles({
+      "1,1": { ...young, watered: [{ start: NOW - 7 * HOUR, end: NOW - HOUR }] },
+    });
+    expect(run(plan(s, tile("1,1"), "arroser")).save.progress.counters.watered).toBe(1);
   });
 
   it("refuse tout ce qui n'est pas une plante", () => {
@@ -190,6 +218,17 @@ describe("corbeau et limites", () => {
       expect(out.effects).toEqual([{ kind: "chase", id: "c1" }]);
     },
   );
+
+  it("un corbeau chassé laisse parfois tomber une graine commune", () => {
+    const s = withTiles({});
+    const out = run(plan(s, { kind: "crow", id: "c1" }, "main", { rng: () => 0 }));
+    expect(out.save.inventory.seeds).toHaveLength(s.inventory.seeds.length + 1);
+    expect(out.save.inventory.seeds[s.inventory.seeds.length].rarity).toBe("commune");
+    expect(out.effects).toEqual([
+      { kind: "chase", id: "c1" },
+      { kind: "toast", text: "Le corbeau a lâché une graine" },
+    ]);
+  });
 
   it("aucune action hors de la grille ni sur une case vide", () => {
     const s = withTiles({ "0,1": { kind: "decor", id: "lanterne" } });
