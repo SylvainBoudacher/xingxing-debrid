@@ -50,6 +50,23 @@ export interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: "1.7.6",
+    date: "14 octobre 2026",
+    intro:
+      "La 1.7.6 permet à l'interface de suivre automatiquement le mode jour/nuit de votre ordinateur.",
+    sections: [
+      {
+        title: "Interface",
+        items: [
+          "Nouveau réglage Thème dans Paramètres > Apparence et fenêtre : Clair, Sombre ou Système.",
+          "En mode Système, l'application passe toute seule en clair ou en sombre en même temps que l'OS, sans redémarrage.",
+          "Le choix Système est aussi proposé dès la configuration initiale.",
+          "La bascule rapide du menu reste disponible et repasse sur un thème fixe.",
+        ],
+      },
+    ],
+  },
+  {
     version: "1.7.5",
     date: "5 octobre 2026",
     intro:
