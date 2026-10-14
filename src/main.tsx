@@ -4,13 +4,13 @@ import ReactDOM from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
 import { queryClient } from "./lib/queryClient";
-import { applyTheme, getTheme } from "./lib/theme";
+import { applyThemePref, getThemePref } from "./lib/theme";
 import { initTextScale } from "./lib/textScale";
 import "./lib/launchTime";
 import "./index.css";
 
-getTheme()
-  .then(applyTheme)
+getThemePref()
+  .then(applyThemePref)
   .catch(() => {});
 initTextScale();
 

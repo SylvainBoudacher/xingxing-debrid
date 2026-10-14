@@ -6,14 +6,13 @@ import {
   Download,
   Loader2,
   FolderOpen,
-  Moon,
   Settings,
   Sparkles,
-  Sun,
   Upload,
   Zap,
 } from "lucide-react";
 import { BackButton } from "@/components/BackButton";
+import { THEME_CHOICES } from "@/components/setup/themeChoices";
 import { SetupIntroSequence } from "@/components/setupIntro/SetupIntroSequence";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -31,7 +30,7 @@ import { item, stagger } from "@/components/setup/motionVariants";
 import { SetupStepper } from "@/components/setup/SetupStepper";
 import { StepKindBadge } from "@/components/setup/StepKindBadge";
 import type { StepId } from "@/components/setup/steps";
-import { applyTheme, type Theme } from "@/lib/theme";
+import { applyThemePref, parseThemePref, type ThemePref } from "@/lib/theme";
 import { networkErrorMessage } from "@/lib/networkError";
 
 const PixelPool = lazy(() =>
@@ -78,7 +77,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   const [vlcSim, setVlcSim] = useState<VlcSim>("none");
   const [downloadDir, setDownloadDir] = useState("");
   const [batchSize, setBatchSize] = useState(2);
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const [theme, setThemeState] = useState<ThemePref>("dark");
   const [summerEnabled, setSummerEnabled] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importPath, setImportPath] = useState<string | null>(null);
@@ -87,7 +86,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   useEffect(() => {
     store.get<string>("download_dir").then((v) => setDownloadDir(v ?? ""));
     store.get<number>("download_batch_size").then((v) => setBatchSize(v ?? 2));
-    store.get<Theme>("theme").then((v) => setThemeState(v === "light" ? "light" : "dark"));
+    store.get("theme").then((v) => setThemeState(parseThemePref(v)));
     store.get<boolean>("summer_pool_enabled").then((v) => setSummerEnabled(v ?? false));
   }, []);
 
@@ -132,7 +131,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
   async function handleStart() {
     setSaving(true);
     try {
-      applyTheme(theme);
+      applyThemePref(theme);
       await store.set("theme", theme);
       await store.set("summer_pool_enabled", summerEnabled);
       await store.save();
@@ -420,24 +419,24 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                     <StepKindBadge kind="config" />
                   </div>
                   <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-2">
-                    Choisissez votre theme
+                    Choisissez votre thème
                   </h1>
                   <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-                    Tout est modifiable a tout moment dans les Parametres. Il y a surement des
-                    choses a decouvrir pour vous dans cette page.
+                    Tout est modifiable à tout moment dans les Paramètres. Il y a sûrement des
+                    choses à découvrir pour vous dans cette page.
                   </p>
                 </div>
               </motion.div>
 
               {/* Light / Dark */}
-              <motion.div variants={item} className="grid grid-cols-2 gap-3">
-                {(["dark", "light"] as const).map((t) => (
+              <motion.div variants={item} className="grid grid-cols-3 gap-3">
+                {THEME_CHOICES.map(({ id: t, label, icon: Icon, tile, iconColor }) => (
                   <button
                     key={t}
                     type="button"
                     onClick={() => {
                       setThemeState(t);
-                      applyTheme(t);
+                      applyThemePref(t);
                     }}
                     className={`flex flex-col items-center gap-3 rounded-2xl px-4 py-5 transition-all ${
                       theme === t
@@ -446,22 +445,12 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                     }`}
                   >
                     <div
-                      className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-                        t === "dark"
-                          ? "bg-zinc-800 ring-1 ring-white/10"
-                          : "bg-zinc-100 ring-1 ring-black/10"
-                      }`}
+                      className={`flex h-12 w-12 items-center justify-center rounded-xl ${tile}`}
                     >
-                      {t === "dark" ? (
-                        <Moon className="h-5 w-5 text-indigo-400" />
-                      ) : (
-                        <Sun className="h-5 w-5 text-amber-500" />
-                      )}
+                      <Icon className={`h-5 w-5 ${iconColor}`} />
                     </div>
                     <div className="text-center">
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                        {t === "dark" ? "Sombre" : "Clair"}
-                      </p>
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">{label}</p>
                     </div>
                     <span
                       className={`flex h-4 w-4 items-center justify-center rounded-full ${
@@ -494,7 +483,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                         </span>
                       </div>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                        Un theme avec un petit quelque chose en plus. A vous de decouvrir.
+                        Un thème avec un petit quelque chose en plus. À vous de découvrir.
                       </p>
                     </div>
                   </div>
@@ -513,7 +502,7 @@ export function SetupPage({ onComplete }: SetupPageProps) {
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
                   Toutes ces options et bien d'autres sont accessibles dans les{" "}
                   <span className="font-semibold text-zinc-700 dark:text-zinc-300">Paramètres</span>
-                  . Il y a surement des choses a decouvrir pour vous dans cette page.
+                  . Il y a sûrement des choses à découvrir pour vous dans cette page.
                 </p>
               </motion.div>
 
