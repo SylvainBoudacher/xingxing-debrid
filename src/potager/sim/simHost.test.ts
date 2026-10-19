@@ -110,7 +110,7 @@ describe("hôte de simulation", () => {
     const bus = memoryBus();
     const main = createSimHost({ role: "main", store: memoryStore(), channel: bus.channel() });
     await main.start();
-    bus.channel().post({ type: "claim", from: "main" });
+    bus.channel().post({ type: "claim", from: "main", id: "x" });
     await vi.advanceTimersByTimeAsync(0);
     expect(main.running).toBe(true);
   });
@@ -151,5 +151,50 @@ describe("hôte de simulation", () => {
     await main.start();
     await vi.advanceTimersByTimeAsync(2000);
     expect(seen[seen.length - 1]).toBe(2000);
+  });
+
+  it("reste arrêté si on l'arrête pendant son démarrage", async () => {
+    const potager = createSimHost({
+      role: "potager",
+      store: memoryStore(),
+      channel: memoryBus().channel(),
+    });
+    const started = potager.start();
+    await potager.stop();
+    await vi.advanceTimersByTimeAsync(3000);
+    await started;
+    expect(potager.running).toBe(false);
+  });
+
+  it("ignore la fermeture tardive d'une ancienne fenêtre Potager", async () => {
+    const store = memoryStore();
+    const bus = memoryBus();
+    const main = createSimHost({ role: "main", store, channel: bus.channel() });
+    await main.start();
+    const first = createSimHost({ role: "potager", store, channel: bus.channel() });
+    const second = createSimHost({ role: "potager", store, channel: bus.channel() });
+    const firstStart = first.start();
+    const secondStart = second.start();
+    await first.stop();
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.all([firstStart, secondStart]);
+    expect(second.running).toBe(true);
+    expect(main.running).toBe(false);
+  });
+
+  it("reprend l'état transmis à la fermeture même si l'écriture n'aboutit pas", async () => {
+    const store = memoryStore();
+    const bus = memoryBus();
+    const main = createSimHost({ role: "main", store, channel: bus.channel() });
+    // page qui se ferme : l'écriture du Potager ne se termine jamais
+    const dying: SaveStore = { load: store.load, write: () => new Promise(() => {}) };
+    const potager = createSimHost({ role: "potager", store: dying, channel: bus.channel() });
+    await main.start();
+    await potager.start();
+    await vi.advanceTimersByTimeAsync(4000);
+    void potager.stop();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(main.running).toBe(true);
+    expect(main.state()?.playTimeMs).toBe(4000);
   });
 });

@@ -1,6 +1,7 @@
-import { parseSave } from "@/garden/core/save";
-import { loadGarden, saveGarden } from "@/garden/storage/gardenStore";
-import { onGardenOpenChange, openGardenWindow } from "@/garden/ui/gardenWindow";
+import { parseSave } from "@/potager/core/save";
+import { getMainHost } from "@/potager/sim/mainHost";
+import { loadPotager } from "@/potager/storage/potagerStore";
+import { onPotagerOpenChange, openPotagerWindow } from "@/potager/ui/potagerWindow";
 import type { Backdrop } from "@/lib/backdropPref";
 import { getSavedDucks, importSavedDucks, parseDucksJson } from "@/lib/savedDucks";
 import { invoke } from "@tauri-apps/api/core";
@@ -34,7 +35,7 @@ export function BackdropPanel({
   const importDucksInputRef = useRef<HTMLInputElement>(null);
   const importGardenInputRef = useRef<HTMLInputElement>(null);
   const [gardenOpen, setGardenOpen] = useState(false);
-  useEffect(() => onGardenOpenChange(setGardenOpen), []);
+  useEffect(() => onPotagerOpenChange(setGardenOpen), []);
   const [draftMaxDucks, setDraftMaxDucks] = useState(String(summerMaxDucks));
   const [prevMaxDucks, setPrevMaxDucks] = useState(summerMaxDucks);
   if (prevMaxDucks !== summerMaxDucks) {
@@ -63,7 +64,8 @@ export function BackdropPanel({
 
   async function handleExportGarden() {
     try {
-      const { save } = await loadGarden();
+      // Potager ouvert : la fenêtre principale est en pause, le disque fait foi
+      const save = gardenOpen ? (await loadPotager()).save : getMainHost().state();
       const path = await invoke<string>("export_json", {
         filename: "c411-potager.json",
         content: JSON.stringify(save, null, 2),
@@ -90,8 +92,8 @@ export function BackdropPanel({
       toast.error("Fichier invalide");
       return;
     }
-    await saveGarden(save);
-    toast.success("Potager importé (visible au prochain affichage du fond)");
+    await getMainHost().replace(save);
+    toast.success("Potager importé");
   }
 
   async function handleImportDucks(e: React.ChangeEvent<HTMLInputElement>) {
@@ -138,7 +140,7 @@ export function BackdropPanel({
           </p>
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={() => void openGardenWindow()}
+              onClick={() => void openPotagerWindow()}
               className="flex items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-xs font-medium text-white hover:bg-amber-400 transition-colors"
             >
               <Sprout className="h-3.5 w-3.5" />

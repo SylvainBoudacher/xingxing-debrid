@@ -1,7 +1,7 @@
 import vlcLogo from "@/assets/vlc.png";
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { GardenButton } from "@/components/GardenButton";
-import { onGardenOpenChange } from "@/garden/ui/gardenWindow";
+import { onPotagerOpenChange } from "@/potager/ui/potagerWindow";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
 import { NyaaSearchFilters } from "@/components/NyaaSearchFilters";
 import { MangaSearchSuggestions } from "@/components/MangaSearchSuggestions";
@@ -263,7 +263,7 @@ export function MainPage({
   const [activeSource, setActiveSource] = useState<"c411" | "nyaa">("c411");
   const [searchFocused, setSearchFocused] = useState(false);
   const [gardenOpen, setGardenOpen] = useState(false);
-  useEffect(() => onGardenOpenChange(setGardenOpen), []);
+  useEffect(() => onPotagerOpenChange(setGardenOpen), []);
   const [nyaaTeam, setNyaaTeam] = useState("");
   const [nyaaQuality, setNyaaQuality] = useState("");
   const [nyaaCodec, setNyaaCodec] = useState("");

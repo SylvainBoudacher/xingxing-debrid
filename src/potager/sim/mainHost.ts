@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { potagerStore } from "../storage/potagerStore";
 import { createChannel } from "./channel";
 import { createSimHost, type SimHost } from "./simHost";
@@ -8,7 +9,13 @@ let host: SimHost | null = null;
 export function getMainHost(): SimHost {
   if (!host) {
     host = createSimHost({ role: "main", store: potagerStore, channel: createChannel() });
-    void host.start();
+    const h = host;
+    void h.start().then(() => {
+      if (h.recovered)
+        toast.error(
+          "Sauvegarde du Potager illisible : une copie a été mise de côté et une nouvelle partie a commencé.",
+        );
+    });
   }
   return host;
 }

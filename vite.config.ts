@@ -24,7 +24,7 @@ export default defineConfig(async () => ({
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     coverage: {
       provider: "v8",
-      include: ["src/lib/**", "src/garden/core/**"],
+      include: ["src/lib/**", "src/potager/core/**"],
       exclude: ["src/lib/queryClient.ts", "src/lib/useAppInit.ts", "src/lib/useDebridActions.ts"],
     },
   },

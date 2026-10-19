@@ -583,8 +583,8 @@ pub fn run() {
             // dans son propre gestionnaire de fermeture).
             if window.label() == "main" {
                 if let tauri::WindowEvent::Destroyed = event {
-                    if let Some(garden) = window.app_handle().get_webview_window("garden") {
-                        let _ = garden.close();
+                    if let Some(potager) = window.app_handle().get_webview_window("potager") {
+                        let _ = potager.close();
                     }
                 }
             }

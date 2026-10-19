@@ -32,7 +32,7 @@ import { ThemeMenuItem } from "@/components/ThemeMenuItem";
 import { LibraryQuickButton } from "@/components/LibraryQuickButton";
 import { toast } from "sonner";
 import { LazyStore } from "@tauri-apps/plugin-store";
-import { openGardenWindow } from "@/garden/ui/gardenWindow";
+import { openPotagerWindow } from "@/potager/ui/potagerWindow";
 import { getApiKey } from "@/lib/apiKeys";
 import { getBackdrop } from "@/lib/backdropPref";
 import { DevConfirmDialog, type DevAction } from "@/components/DevConfirmDialog";
@@ -159,7 +159,7 @@ export function AppMenu({
             </DropdownMenuItem>
           )}
           {gardenEnabled && (
-            <DropdownMenuItem onClick={() => void openGardenWindow()}>
+            <DropdownMenuItem onClick={() => void openPotagerWindow()}>
               <Sprout className="mr-2 h-4 w-4" />
               Potager
             </DropdownMenuItem>

@@ -39,6 +39,10 @@ export function createSimHost(opts: Options): SimHost {
   let lastTick = 0;
   let lastWrite = 0;
   let paused = false;
+  let stopped = false;
+  // fenêtre Potager qui a la main, côté fenêtre principale
+  let owner: string | null = null;
+  const id = Math.random().toString(36).slice(2);
   let off: (() => void) | null = null;
   const subscribers = new Set<(s: PotagerSave) => void>();
 
@@ -79,15 +83,23 @@ export function createSimHost(opts: Options): SimHost {
 
   async function onMessage(msg: HandoffMsg) {
     if (msg.from === role || role !== "main") return;
-    if (msg.type === "claim" && !paused) {
-      paused = true;
-      halt();
-      await write();
-      channel.post({ type: "released", from: role });
-    } else if (msg.type === "closed" && paused) {
+    if (msg.type === "claim") {
+      owner = msg.id;
+      if (!paused) {
+        paused = true;
+        halt();
+        await write();
+      }
+      channel.post({ type: "released", from: role, id });
+    } else if (msg.type === "closed" && paused && msg.id === owner) {
+      owner = null;
       paused = false;
-      await load();
-      run();
+      if (msg.save) {
+        state = msg.save;
+        notify();
+        await write();
+      } else await load();
+      if (!paused && !stopped) run();
     }
   }
 
@@ -100,24 +112,28 @@ export function createSimHost(opts: Options): SimHost {
         stopListening();
         resolve();
       }
-      channel.post({ type: "claim", from: role });
+      channel.post({ type: "claim", from: role, id });
     });
   }
 
   return {
     async start() {
+      stopped = false;
       off = channel.on((m) => void onMessage(m));
       if (role === "potager") await claim();
+      if (stopped) return;
       await load();
-      run();
+      if (!stopped) run();
     },
     async stop() {
+      stopped = true;
       halt();
       off?.();
       off = null;
       if (paused) return;
+      if (role === "potager")
+        channel.post({ type: "closed", from: role, id, save: state ?? undefined });
       await write();
-      if (role === "potager") channel.post({ type: "closed", from: role });
     },
     state: () => state,
     subscribe(cb) {

@@ -63,8 +63,8 @@ const BoatGamePage = lazy(() =>
   import("@/pages/BoatGamePage").then((m) => ({ default: m.BoatGamePage })),
 );
 
-const GardenBackdrop = lazy(() =>
-  import("@/garden/ui/GardenBackdrop").then((m) => ({ default: m.GardenBackdrop })),
+const PotagerBackdrop = lazy(() =>
+  import("@/potager/ui/PotagerBackdrop").then((m) => ({ default: m.PotagerBackdrop })),
 );
 
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
@@ -224,7 +224,7 @@ function App() {
     await saveBackdrop(v);
   }
 
-  // stable : GardenBackdrop l'utilise comme dépendance d'effet
+  // stable : PotagerBackdrop l'utilise comme dépendance d'effet
   const handleWebglError = useCallback(() => {
     toast.error("Le Potager a besoin de WebGL : le fond animé a été désactivé.");
     setBackdrop("aucun");
@@ -420,7 +420,7 @@ function App() {
                 onBoatWarp={() => setPage("boatgame")}
               />
             ) : (
-              <GardenBackdrop active={backdropVisible} onWebglError={handleWebglError} />
+              <PotagerBackdrop active={backdropVisible} onWebglError={handleWebglError} />
             )}
           </Suspense>
         </div>

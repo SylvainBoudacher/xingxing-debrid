@@ -16,6 +16,7 @@ export interface CameraRig {
   mode(): CameraMode;
   setMode(m: CameraMode): void;
   follow(p: { x: number; z: number }): void;
+  reset(state: CameraState): void;
   pan(dx: number, dz: number): void;
   update(dt: number): void;
   pose(): { position: [number, number, number]; look: [number, number, number] };
@@ -45,6 +46,11 @@ export function createCameraRig(
     },
     follow(p) {
       goal = limit(p.x, p.z);
+    },
+    reset(state) {
+      ({ x, z } = limit(state.x, state.z));
+      goal = { x, z };
+      mode = state.mode;
     },
     pan(dx, dz) {
       if (mode !== "free") return;

@@ -30,4 +30,13 @@ describe("caméra", () => {
     const { position, look } = createCameraRig({ x: 0, z: 0, mode: "free" }, bounds, flat).pose();
     expect(position[1] - look[1]).toBeCloseTo(DISTANCE * Math.sin((TILT_DEG * Math.PI) / 180), 6);
   });
+
+  it("se recale sur une vue mémorisée, bornée", () => {
+    const rig = createCameraRig({ x: 0, z: 0, mode: "follow" }, bounds, flat);
+    rig.reset({ x: 5, z: -2, mode: "free" });
+    expect(rig.target()).toEqual({ x: 5, z: -2 });
+    expect(rig.mode()).toBe("free");
+    rig.reset({ x: 1000, z: 0, mode: "free" });
+    expect(rig.target().x).toBe(24 - 6);
+  });
 });
