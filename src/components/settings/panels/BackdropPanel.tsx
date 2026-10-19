@@ -1,6 +1,4 @@
-import { parseSave } from "@/potager/core/save";
-import { getMainHost } from "@/potager/sim/mainHost";
-import { loadPotager } from "@/potager/storage/potagerStore";
+import { exportPotager, importPotager } from "@/potager/storage/potagerTransfer";
 import { onPotagerOpenChange, openPotagerWindow } from "@/potager/ui/potagerWindow";
 import type { Backdrop } from "@/lib/backdropPref";
 import { getSavedDucks, importSavedDucks, parseDucksJson } from "@/lib/savedDucks";
@@ -69,12 +67,7 @@ export function BackdropPanel({
 
   async function handleExportGarden() {
     try {
-      // Potager ouvert : la fenêtre principale est en pause, le disque fait foi
-      const save = gardenOpen ? (await loadPotager()).save : getMainHost().state();
-      const path = await invoke<string>("export_json", {
-        filename: "c411-potager.json",
-        content: JSON.stringify(save, null, 2),
-      });
+      const path = await exportPotager(gardenOpen);
       toast.success(`Potager exporté : ${path}`);
     } catch (e) {
       toast.error(`Export impossible : ${e}`);
@@ -89,15 +82,10 @@ export function BackdropPanel({
       toast.error("Ferme la fenêtre Potager avant d'importer.");
       return;
     }
-    const save = await file
-      .text()
-      .then((text) => parseSave(JSON.parse(text)))
-      .catch(() => null);
-    if (!save) {
+    if (!(await importPotager(await file.text()))) {
       toast.error("Fichier invalide");
       return;
     }
-    await getMainHost().replace(save);
     toast.success("Potager importé");
   }
 
