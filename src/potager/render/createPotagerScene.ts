@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { groundHeight, MAP } from "../core/catalog/map";
-import type { PotagerSave } from "../core/types";
+import { createAvatarMotion, type AvatarMotion } from "../core/avatarMotion";
+import type { BuildingId, Point, PotagerSave } from "../core/types";
+import { isWalkable, type Walkable } from "../core/walk";
 import { createCameraRig, FOV, FOV_NARROW, type CameraRig } from "./cameraRig";
 import { createParticles } from "./particles";
 import { createPost } from "./post";
@@ -13,7 +15,9 @@ export type SceneMode = "potager" | "backdrop";
 export interface PotagerScene {
   sync(save: PotagerSave): void;
   rig: CameraRig;
-  setAvatar(p: { x: number; z: number }): void;
+  avatar: AvatarMotion;
+  walkable: Walkable;
+  pick(clientX: number, clientY: number): Point | null;
   start(): void;
   stop(): void;
   renderOnce(): void;
@@ -23,6 +27,7 @@ export interface PotagerScene {
 
 const SUN_OFFSET = new THREE.Vector3(-12, 18, 9);
 const LIGHTING_EVERY_MS = 60_000;
+const STEP_FRAME_S = 0.18;
 
 export function createPotagerScene(
   canvas: HTMLCanvasElement,
@@ -57,8 +62,12 @@ export function createPotagerScene(
 
   const terrain = buildTerrain();
   scene.add(terrain.group, buildDecor());
-  const avatar = buildAvatar();
-  scene.add(avatar.mesh);
+  const sprite = buildAvatar();
+  scene.add(sprite.mesh);
+  let buildings: readonly BuildingId[] = init.buildings;
+  const walkable: Walkable = (x, z) => isWalkable(x, z, buildings);
+  const avatar = createAvatarMotion(init.avatar, walkable);
+  const raycaster = new THREE.Raycaster();
   const particles = createParticles(scene);
 
   let placed: { group: THREE.Group; lanterns: Lantern[] } | null = null;
@@ -81,6 +90,9 @@ export function createPotagerScene(
   const rig = createCameraRig(init.camera, MAP.bounds, groundHeight);
 
   function sync(save: PotagerSave) {
+    buildings = save.buildings;
+    // dans la fenêtre Potager, la scène fait foi pour l'avatar
+    if (mode === "backdrop") avatar.teleport(save.avatar);
     const key = `${save.buildings.join()}|${save.parcels.join()}`;
     if (key === placedKey) return;
     placedKey = key;
@@ -105,10 +117,17 @@ export function createPotagerScene(
   }
 
   let t = 0;
+  let walkT = 0;
   function frame(dt: number) {
     t += dt;
-    if (rig.mode() === "follow")
-      rig.follow({ x: avatar.mesh.position.x, z: avatar.mesh.position.z });
+    const p = avatar.update(dt);
+    sprite.mesh.position.set(p.x, groundHeight(p.x, p.z), p.z);
+    sprite.mesh.scale.x = p.facing;
+    walkT = p.moving ? walkT + dt : 0;
+    const map = sprite.frames[Math.floor(walkT / STEP_FRAME_S) % 2];
+    const mat = sprite.mesh.material as THREE.MeshLambertMaterial;
+    if (mat.map !== map) mat.map = map;
+    if (rig.mode() === "follow") rig.follow(p);
     rig.update(dt);
     const { position, look } = rig.pose();
     camera.position.set(...position);
@@ -147,8 +166,20 @@ export function createPotagerScene(
   return {
     sync,
     rig,
-    setAvatar(p) {
-      avatar.mesh.position.set(p.x, groundHeight(p.x, p.z), p.z);
+    avatar,
+    walkable,
+    pick(clientX, clientY) {
+      const r = canvas.getBoundingClientRect();
+      raycaster.setFromCamera(
+        new THREE.Vector2(
+          ((clientX - r.left) / r.width) * 2 - 1,
+          -((clientY - r.top) / r.height) * 2 + 1,
+        ),
+        camera,
+      );
+      const targets = placed ? [terrain.group, placed.group] : [terrain.group];
+      const hit = raycaster.intersectObjects(targets, true)[0];
+      return hit ? { x: hit.point.x, z: hit.point.z } : null;
     },
     start() {
       if (raf) return;

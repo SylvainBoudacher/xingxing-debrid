@@ -49,7 +49,7 @@ export function PotagerBackdrop({
         setReady(true);
       }
       scene.sync(save);
-      const key = `${save.camera.x},${save.camera.z}`;
+      const key = `${save.camera.x},${save.camera.z},${save.avatar.x},${save.avatar.z}`;
       if (key !== camera) {
         camera = key;
         scene.rig.reset(fixed(save.camera));
