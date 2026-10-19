@@ -2,11 +2,10 @@ import * as THREE from "three";
 
 export const PPU = 16;
 
-// Park-Miller : un village identique à chaque lancement pour une même graine
-export function createRng(seed: number): () => number {
-  let s = Math.max(1, Math.floor(seed) % 2147483647);
-  return () => (s = (s * 16807) % 2147483647) / 2147483647;
-}
+// un village identique à chaque lancement pour une même graine
+import { seededRng as createRng } from "../core/seeds";
+
+export { createRng };
 
 export const pick = <T>(rng: () => number, a: readonly T[]): T => a[Math.floor(rng() * a.length)];
 export const range = (rng: () => number, a: number, b: number) => a + rng() * (b - a);

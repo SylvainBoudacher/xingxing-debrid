@@ -1,4 +1,5 @@
 import { MAP } from "./catalog/map";
+import { parseGarden, starterGarden } from "./saveGarden";
 import {
   BUILDING_IDS,
   type BuildingId,
@@ -15,6 +16,7 @@ export function createStarterSave(): PotagerSave {
     avatar: { ...MAP.spawn },
     buildings: ["etal", "cabane"],
     parcels: ["p0"],
+    ...starterGarden(["p0"]),
   };
 }
 
@@ -46,5 +48,6 @@ export function parseSave(raw: unknown): PotagerSave | null {
     avatar: parsePoint(raw.avatar),
     buildings: [...buildings],
     parcels: [...parcels],
+    ...parseGarden(raw, parcels),
   };
 }

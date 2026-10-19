@@ -88,6 +88,9 @@ export const MAP = {
     { x: -7.8, z: -1.6 },
     { x: -8.4, z: -0.9 },
   ],
+  // abri de jardin (râtelier et coffre) et puits : toujours présents
+  abri: { x: -1.8, z: -2.7, w: 1.8, d: 1.6 },
+  puits: { x: 18.5, z: -0.5, r: 0.8 },
   spawn: { x: -2, z: 1.2 },
   spawnView: { x: 0, z: -0.6 },
   trees: [
@@ -114,6 +117,8 @@ export const MAP = {
   buildings: BuildingSlot[];
   parcels: ParcelSlot[];
   barrels: Point[];
+  abri: { x: number; z: number; w: number; d: number };
+  puits: { x: number; z: number; r: number };
   spawn: Point;
   spawnView: { x: number; z: number };
   trees: TreeSpot[];

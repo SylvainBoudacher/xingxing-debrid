@@ -40,4 +40,9 @@ describe("zones praticables", () => {
     const inside = nearestWalkable({ x: -5.3, z: -2.7 }, w);
     expect(inside && w(inside.x, inside.z)).toBe(true);
   });
+
+  it("bloque l'abri et le puits", () => {
+    expect(isWalkable(MAP.abri.x, MAP.abri.z, b)).toBe(false);
+    expect(isWalkable(MAP.puits.x, MAP.puits.z, b)).toBe(false);
+  });
 });

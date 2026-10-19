@@ -58,4 +58,32 @@ describe("disposition du village", () => {
     expect(groundHeight(0, 0)).toBe(0);
     expect(groundHeight(0, -8)).toBe(2.2);
   });
+
+  it("place l'abri et le puits dans les bornes, sans chevauchement", () => {
+    const { abri, puits } = MAP;
+    const extra = [
+      {
+        id: "abri",
+        rect: {
+          x0: abri.x - abri.w / 2,
+          x1: abri.x + abri.w / 2,
+          z0: abri.z - abri.d / 2,
+          z1: abri.z + abri.d / 2,
+        },
+      },
+      {
+        id: "puits",
+        rect: {
+          x0: puits.x - puits.r,
+          x1: puits.x + puits.r,
+          z0: puits.z - puits.r,
+          z1: puits.z + puits.r,
+        },
+      },
+    ];
+    for (const e of extra) {
+      expect(inside(e.rect, MAP.bounds), e.id).toBe(true);
+      for (const f of footprints) expect(overlap(e.rect, f.rect), `${e.id}/${f.id}`).toBe(false);
+    }
+  });
 });

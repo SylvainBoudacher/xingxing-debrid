@@ -30,6 +30,13 @@ export function isWalkable(x: number, z: number, buildings: readonly BuildingId[
       Math.abs(z - b.z) < b.d / 2 + BUILDING_PAD
     )
       return false;
+  const { abri, puits } = MAP;
+  if (
+    Math.abs(x - abri.x) < abri.w / 2 + BUILDING_PAD &&
+    Math.abs(z - abri.z) < abri.d / 2 + BUILDING_PAD
+  )
+    return false;
+  if (near(puits, x, z, puits.r + BUILDING_PAD)) return false;
   if (MAP.barrels.some((p) => near(p, x, z, BARREL_R))) return false;
   return !MAP.trees.some((t) => near(t, x, z, TRUNK_R));
 }
