@@ -1,10 +1,11 @@
+import { MAP } from "./catalog/map";
 import { BUILDING_IDS, type BuildingId, type CameraState, type PotagerSave } from "./types";
 
 export function createStarterSave(): PotagerSave {
   return {
     version: 1,
     playTimeMs: 0,
-    camera: { x: 0, z: -0.6, mode: "follow" },
+    camera: { ...MAP.spawnView, mode: "follow" },
     buildings: ["etal", "cabane"],
     parcels: ["p0"],
   };
