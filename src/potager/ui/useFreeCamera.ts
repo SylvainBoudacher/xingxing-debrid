@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { FOV, TILT_DEG, DISTANCE, type CameraRig } from "../render/cameraRig";
+import { DISTANCE, fovFor, TILT_DEG, type CameraRig } from "../render/cameraRig";
 
 const SPEED = 8;
 const EDGE = 24;
@@ -11,8 +11,11 @@ export function useFreeCamera(rig: CameraRig | null, canvas: HTMLCanvasElement |
     let drag: { x: number; y: number } | null = null;
     let pointer: { x: number; y: number } | null = null;
     // unités de sol par pixel d'écran, au centre de la vue
-    const unitsPerPx = () =>
-      (2 * DISTANCE * Math.tan(((FOV / 2) * Math.PI) / 180)) / Math.max(1, canvas.clientHeight);
+    const unitsPerPx = () => {
+      const h = Math.max(1, canvas.clientHeight);
+      const fov = fovFor(canvas.clientWidth / h);
+      return (2 * DISTANCE * Math.tan(((fov / 2) * Math.PI) / 180)) / h;
+    };
     const foreshortening = 1 / Math.sin((TILT_DEG * Math.PI) / 180);
 
     const onDown = (e: PointerEvent) => {

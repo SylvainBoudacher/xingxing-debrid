@@ -3,7 +3,7 @@ import { groundHeight, MAP } from "../core/catalog/map";
 import { createAvatarMotion, type AvatarMotion } from "../core/avatarMotion";
 import type { BuildingId, Point, PotagerSave } from "../core/types";
 import { isWalkable, type Walkable } from "../core/walk";
-import { createCameraRig, FOV, FOV_NARROW, type CameraRig } from "./cameraRig";
+import { createCameraRig, FOV, fovFor, type CameraRig } from "./cameraRig";
 import { createParticles } from "./particles";
 import { createPost } from "./post";
 import { buildTerrain } from "./terrain";
@@ -117,8 +117,10 @@ export function createPotagerScene(
     renderer.setSize(w, h, false);
     post.setSize(w, h);
     camera.aspect = w / h;
-    camera.fov = camera.aspect < 1.3 ? FOV_NARROW : FOV;
+    camera.fov = fovFor(camera.aspect);
     camera.updateProjectionMatrix();
+    // setSize efface le tampon : sans boucle en cours, rien ne redessinerait l'image
+    if (!raf) frame(0);
   }
 
   // les arbres devant l'avatar s'estompent pour le laisser voir
@@ -219,6 +221,9 @@ export function createPotagerScene(
       cancelAnimationFrame(raf);
       raf = 0;
       disposeTree(scene);
+      // hors de l'arbre : la frame d'avatar inactive et la shadow map
+      sprite.frames.forEach((f) => f.dispose());
+      sun.shadow.dispose();
       post.dispose();
       renderer.dispose();
     },

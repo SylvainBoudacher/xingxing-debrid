@@ -30,7 +30,8 @@ export function createSimHost(opts: Options): SimHost {
   const { role, store, channel } = opts;
   const now = opts.now ?? Date.now;
   const tickMs = opts.tickMs ?? 1000;
-  const saveEveryMs = opts.saveEveryMs ?? 10_000;
+  // court : Cmd+Q et la relance après mise à jour ne laissent pas sauvegarder
+  const saveEveryMs = opts.saveEveryMs ?? 3_000;
   const claimTimeoutMs = opts.claimTimeoutMs ?? 2000;
 
   let state: PotagerSave | null = null;

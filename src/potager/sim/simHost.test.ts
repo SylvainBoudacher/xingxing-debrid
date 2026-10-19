@@ -51,13 +51,13 @@ describe("hôte de simulation", () => {
     expect(main.state()?.playTimeMs).toBe(3000);
   });
 
-  it("écrit au plus toutes les 10 secondes", async () => {
+  it("écrit au plus toutes les 3 secondes", async () => {
     const store = memoryStore();
     const main = createSimHost({ role: "main", store, channel: memoryBus().channel() });
     await main.start();
-    await vi.advanceTimersByTimeAsync(5000);
+    await vi.advanceTimersByTimeAsync(2000);
     expect(store.writes).toBe(0);
-    await vi.advanceTimersByTimeAsync(6000);
+    await vi.advanceTimersByTimeAsync(1500);
     expect(store.writes).toBe(1);
   });
 
@@ -67,12 +67,12 @@ describe("hôte de simulation", () => {
     const main = createSimHost({ role: "main", store, channel: bus.channel() });
     const potager = createSimHost({ role: "potager", store, channel: bus.channel() });
     await main.start();
-    await vi.advanceTimersByTimeAsync(3000);
+    await vi.advanceTimersByTimeAsync(2000);
     await potager.start();
     expect(main.running).toBe(false);
     expect(potager.running).toBe(true);
     expect(store.writes).toBe(1);
-    expect(potager.state()?.playTimeMs).toBe(3000);
+    expect(potager.state()?.playTimeMs).toBe(2000);
   });
 
   it("reprend l'état du Potager sans compter la pause", async () => {

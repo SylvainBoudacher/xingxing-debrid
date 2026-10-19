@@ -39,11 +39,30 @@ export function onPotagerOpenChange(cb: (open: boolean) => void): () => void {
   let disposed = false;
   const channel = createChannel();
   let owner: string | null = null;
+  // fenêtre fermée sans avoir rendu la main (par exemple sans WebGL, donc sans simulation)
+  let unlistenDestroyed: (() => void) | null = null;
+  const watchDestroyed = (w: WebviewWindow | null) => {
+    if (!w || unlistenDestroyed) return;
+    let fired = false;
+    unlistenDestroyed = () => {};
+    void w
+      .once("tauri://destroyed", () => {
+        fired = true;
+        unlistenDestroyed = null;
+        owner = null;
+        if (!disposed) cb(false);
+      })
+      .then((u) => {
+        if (disposed) u();
+        else if (!fired) unlistenDestroyed = u;
+      });
+  };
   const off = channel.on((m) => {
     if (m.from !== "potager") return;
     if (m.type === "claim") {
       owner = m.id;
       cb(true);
+      if (!isBrowserPreview) void WebviewWindow.getByLabel(POTAGER_LABEL).then(watchDestroyed);
     }
     if (m.type === "closed" && m.id === owner) {
       owner = null;
@@ -53,9 +72,15 @@ export function onPotagerOpenChange(cb: (open: boolean) => void): () => void {
   // un Potager déjà ouvert répond par une nouvelle réclamation
   channel.post({ type: "query", from: "main", id: "watch" });
   if (isBrowserPreview) queueMicrotask(() => !disposed && cb(!!previewTab && !previewTab.closed));
-  else void WebviewWindow.getByLabel(POTAGER_LABEL).then((w) => !disposed && cb(!!w));
+  else
+    void WebviewWindow.getByLabel(POTAGER_LABEL).then((w) => {
+      if (disposed) return;
+      cb(!!w);
+      watchDestroyed(w);
+    });
   return () => {
     disposed = true;
     off();
+    unlistenDestroyed?.();
   };
 }

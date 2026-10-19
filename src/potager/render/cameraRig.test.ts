@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCameraRig, DISTANCE, TILT_DEG } from "./cameraRig";
+import { createCameraRig, DISTANCE, FOV, FOV_NARROW, fovFor, TILT_DEG } from "./cameraRig";
 
 const bounds = { x0: -24, x1: 24, z0: -14, z1: 8 };
 const flat = () => 0;
@@ -38,5 +38,10 @@ describe("caméra", () => {
     expect(rig.mode()).toBe("free");
     rig.reset({ x: 1000, z: 0, mode: "free" });
     expect(rig.target().x).toBe(24 - 6);
+  });
+
+  it("élargit le champ dans une fenêtre étroite", () => {
+    expect(fovFor(16 / 9)).toBe(FOV);
+    expect(fovFor(1.2)).toBe(FOV_NARROW);
   });
 });

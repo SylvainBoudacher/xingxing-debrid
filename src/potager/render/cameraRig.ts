@@ -6,6 +6,9 @@ export const DISTANCE = 27;
 export const FOV = 24;
 export const FOV_NARROW = 34;
 
+// champ vertical élargi quand la fenêtre est étroite
+export const fovFor = (aspect: number) => (aspect < 1.3 ? FOV_NARROW : FOV);
+
 // marge : la cible ne s'approche pas assez du bord pour montrer le vide au-delà de la carte
 const MARGIN_X = 6;
 const MARGIN_Z = 4;
