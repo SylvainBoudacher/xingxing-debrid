@@ -105,6 +105,7 @@ export async function probeC411Api(): Promise<{ result: ApiProbe; durationMs?: n
     await searchTorrents(
       { name: "a", page: 1, perPage: 1, sortBy: "publishedAt", sortOrder: "desc" },
       key,
+      PROBE_TIMEOUT_MS,
     );
     return { result: "ok", durationMs: Math.round(performance.now() - start) };
   } catch (err) {

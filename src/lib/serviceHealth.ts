@@ -17,8 +17,8 @@ import {
 } from "@/lib/serviceProbes";
 
 // Suivi de santé de C411 et AllDebrid. Passif : chaque appel réseau réel
-// alimente le store. Les sondes ne partent qu'après un échec (puis toutes les
-// CHECK_INTERVAL_MS tant que le service est en panne) ou depuis la page de statut.
+// alimente le store. Les sondes partent au lancement, après un échec (puis toutes
+// les CHECK_INTERVAL_MS tant que le service est en panne) ou depuis la page de statut.
 
 export interface ServiceHealth {
   status: "unknown" | "ok" | "down";
@@ -204,4 +204,7 @@ export function initServiceHealth() {
   void listen<string>("service-error", (e) => {
     if (isMonitored(e.payload)) report(e.payload, false);
   });
+  // Une panne déjà en cours doit s'afficher dès l'ouverture, sans attendre
+  // qu'un appel réel échoue (jusqu'à 20 s de timeout).
+  void checkAllServices();
 }
