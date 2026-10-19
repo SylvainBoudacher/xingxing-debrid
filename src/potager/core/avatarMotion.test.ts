@@ -91,4 +91,15 @@ describe("mouvement de l'avatar", () => {
     m.unstick();
     expect(m.pose()).toMatchObject({ x: 0.3, z: 0 });
   });
+
+  it("retient la direction du dernier déplacement", () => {
+    const m = createAvatarMotion(origin, open);
+    expect(m.pose().dir).toEqual({ x: 0, z: 1 });
+    m.setInput(-1, 0);
+    m.update(0.1);
+    expect(m.pose().dir).toEqual({ x: -1, z: 0 });
+    m.setInput(0, 0);
+    m.update(0.1);
+    expect(m.pose().dir).toEqual({ x: -1, z: 0 });
+  });
 });

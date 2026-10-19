@@ -10,6 +10,8 @@ export interface AvatarPose {
   moving: boolean;
   // -1 : tourné vers la gauche
   facing: 1 | -1;
+  // direction unitaire du dernier déplacement (vers la caméra au départ)
+  dir: Point;
 }
 
 export interface AvatarMotion {
@@ -30,6 +32,7 @@ export function createAvatarMotion(
   const place = (p: Point) => nearestWalkable(p, walkable, 3) ?? { ...MAP.spawn };
   let { x, z } = place(start);
   let facing: 1 | -1 = 1;
+  let dir: Point = { x: 0, z: 1 };
   let moving = false;
   let input = { x: 0, z: 0 };
   let path: Point[] = [];
@@ -37,7 +40,7 @@ export function createAvatarMotion(
   const face = (dx: number) => {
     if (dx) facing = dx < 0 ? -1 : 1;
   };
-  const pose = (): AvatarPose => ({ x, z, moving, facing });
+  const pose = (): AvatarPose => ({ x, z, moving, facing, dir });
 
   return {
     pose,
@@ -83,6 +86,10 @@ export function createAvatarMotion(
         }
       }
       moving = x !== x0 || z !== z0;
+      if (moving) {
+        const len = Math.hypot(x - x0, z - z0);
+        dir = { x: (x - x0) / len, z: (z - z0) / len };
+      }
       return pose();
     },
   };
