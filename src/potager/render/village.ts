@@ -1,5 +1,11 @@
 import * as THREE from "three";
-import { groundHeight, MAP, type BuildingSlot, type Rect } from "../core/catalog/map";
+import {
+  groundHeight,
+  MAP,
+  type BuildingSlot,
+  type Rect,
+  type TreeSpot,
+} from "../core/catalog/map";
 import type { PotagerSave } from "../core/types";
 import { avatarFrames } from "../textures/avatar";
 import { cabaneTextures, etalTextures, signTex } from "../textures/buildings";
@@ -199,14 +205,20 @@ function blocked(x: number, z: number) {
 }
 
 // Décor fixe : arbres, buissons, touffes, tonneaux et caisses de l'étal.
-export function buildDecor(): THREE.Group {
+export function buildDecor(): {
+  group: THREE.Group;
+  trees: { spot: TreeSpot; mesh: THREE.Mesh }[];
+} {
   const group = new THREE.Group();
   const treeTexs = [0, 1, 2, 3].map(treeTex);
-  for (const t of MAP.trees) {
-    const m = spriteMesh(treeTexs[t.palette], t.size * 0.75, t.size);
-    m.position.set(t.x, t.y, t.z);
-    group.add(m);
-  }
+  const trees = MAP.trees.map((spot) => {
+    const mesh = spriteMesh(treeTexs[spot.palette], spot.size * 0.75, spot.size);
+    // seuil bas : l'arbre reste visible quand il s'estompe devant l'avatar
+    (mesh.material as THREE.MeshLambertMaterial).alphaTest = 0.1;
+    mesh.position.set(spot.x, spot.y, spot.z);
+    group.add(mesh);
+    return { spot, mesh };
+  });
   const bushTexs = [0, 2].map(bushTex);
   for (const [x, z, p] of BUSHES) {
     const m = spriteMesh(bushTexs[p === 0 ? 0 : 1], 2, 1.25);
@@ -254,7 +266,7 @@ export function buildDecor(): THREE.Group {
     b.position.set(p.x, 0.42, p.z);
     group.add(b);
   }
-  return group;
+  return { group, trees };
 }
 
 export function buildAvatar() {

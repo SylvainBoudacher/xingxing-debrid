@@ -7,6 +7,7 @@ import { createCameraRig, FOV, FOV_NARROW, type CameraRig } from "./cameraRig";
 import { createParticles } from "./particles";
 import { createPost } from "./post";
 import { buildTerrain } from "./terrain";
+import { hidesAvatar } from "./occlusion";
 import { lightingAt } from "./tod";
 import { buildAvatar, buildDecor, buildPlaced, type Lantern } from "./village";
 
@@ -28,6 +29,8 @@ export interface PotagerScene {
 const SUN_OFFSET = new THREE.Vector3(-12, 18, 9);
 const LIGHTING_EVERY_MS = 60_000;
 const STEP_FRAME_S = 0.18;
+const TREE_FADED = 0.45;
+const TREE_FADE_PER_S = 4;
 
 export function createPotagerScene(
   canvas: HTMLCanvasElement,
@@ -61,7 +64,8 @@ export function createPotagerScene(
   scene.add(hemi, sun, sun.target);
 
   const terrain = buildTerrain();
-  scene.add(terrain.group, buildDecor());
+  const decor = buildDecor();
+  scene.add(terrain.group, decor.group);
   const sprite = buildAvatar();
   scene.add(sprite.mesh);
   let buildings: readonly BuildingId[] = init.buildings;
@@ -117,17 +121,33 @@ export function createPotagerScene(
     camera.updateProjectionMatrix();
   }
 
+  // les arbres devant l'avatar s'estompent pour le laisser voir
+  function fadeTrees(p: Point, py: number, dt: number) {
+    const step = TREE_FADE_PER_S * dt;
+    for (const { spot, mesh } of decor.trees) {
+      const mat = mesh.material as THREE.MeshLambertMaterial;
+      const goal = hidesAvatar(spot, p, py) ? TREE_FADED : 1;
+      mat.opacity =
+        goal < mat.opacity
+          ? Math.max(goal, mat.opacity - step)
+          : Math.min(goal, mat.opacity + step);
+      mat.transparent = mat.opacity < 1;
+    }
+  }
+
   let t = 0;
   let walkT = 0;
   function frame(dt: number) {
     t += dt;
     const p = avatar.update(dt);
-    sprite.mesh.position.set(p.x, groundHeight(p.x, p.z), p.z);
+    const py = groundHeight(p.x, p.z);
+    sprite.mesh.position.set(p.x, py, p.z);
     sprite.mesh.scale.x = p.facing;
     walkT = p.moving ? walkT + dt : 0;
     const map = sprite.frames[Math.floor(walkT / STEP_FRAME_S) % 2];
     const mat = sprite.mesh.material as THREE.MeshLambertMaterial;
     if (mat.map !== map) mat.map = map;
+    fadeTrees(p, py, dt);
     if (rig.mode() === "follow") rig.follow(p);
     rig.update(dt);
     const { position, look } = rig.pose();
