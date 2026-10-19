@@ -26,6 +26,12 @@ describe("zones praticables", () => {
     expect(isWalkable(-10.2, -3, b)).toBe(true);
   });
 
+  it("n'entre dans l'escalier que par le pied ou le haut", () => {
+    expect(isWalkable(-11.2, -3, b)).toBe(false);
+    expect(isWalkable(-9.3, -3, b)).toBe(false);
+    expect(isWalkable(-11.2, -1, b)).toBe(true);
+  });
+
   it("trouve le point praticable le plus proche", () => {
     const p = nearestWalkable({ x: 0, z: 5 }, w);
     expect(p).not.toBeNull();

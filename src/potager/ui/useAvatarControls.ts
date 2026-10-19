@@ -35,7 +35,13 @@ export function useAvatarControls(
       }
       scene.avatar.setInput(dx, dz);
     };
+    const release = () => {
+      held.clear();
+      scene.avatar.setInput(0, 0);
+    };
     const onKeyDown = (e: KeyboardEvent) => {
+      // macOS n'envoie pas de keyup pour une touche relâchée pendant que Cmd est tenu
+      if (e.key === "Meta") return release();
       if (!(e.code in KEYS) || e.metaKey || e.ctrlKey || e.altKey) return;
       e.preventDefault();
       if (held.has(e.code)) return;
@@ -46,10 +52,6 @@ export function useAvatarControls(
     const onKeyUp = (e: KeyboardEvent) => {
       if (!held.delete(e.code)) return;
       apply();
-    };
-    const release = () => {
-      held.clear();
-      scene.avatar.setInput(0, 0);
     };
     const onVisibility = () => document.hidden && release();
 

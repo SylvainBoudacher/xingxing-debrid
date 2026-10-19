@@ -13,10 +13,10 @@ const within = (v: number, [a, b]: [number, number]) => v >= a && v <= b;
 const near = (p: Point, x: number, z: number, r: number) => Math.hypot(p.x - x, p.z - z) < r;
 
 function onGround(x: number, z: number) {
-  if (
-    MAP.stairs.some((s) => x >= s.x0 + 0.2 && x <= s.x1 - 0.2 && within(z, [-4.7, s.zFoot + 0.3]))
-  )
-    return true;
+  // les flancs de l'escalier sont fermés : on n'y entre que par le pied ou le haut
+  for (const s of MAP.stairs)
+    if (x >= s.x0 - 0.2 && x <= s.x1 + 0.2 && within(z, [-4.7, s.zFoot]))
+      return x >= s.x0 + 0.2 && x <= s.x1 - 0.2;
   if (!within(x, [MAP.bounds.x0 + 0.5, MAP.bounds.x1 - 0.5])) return false;
   return within(z, MIDDLE_Z) || within(z, PLATEAU_Z);
 }
