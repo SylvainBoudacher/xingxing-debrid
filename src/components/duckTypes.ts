@@ -30,7 +30,10 @@ export type Accessory =
   | "cape"
   | "feather"
   | "laurel"
-  | "coincoin";
+  | "coincoin"
+  | "daisy"
+  | "sunflower"
+  | "cactusflower";
 
 export type Pattern =
   | "spots"
@@ -45,7 +48,9 @@ export type Pattern =
   | "scales"
   | "ember"
   | "neon"
-  | "mallard";
+  | "mallard"
+  | "seeds"
+  | "cactus";
 
 export type Effect =
   | "glow"
@@ -65,7 +70,10 @@ export type Effect =
   | "peacock"
   | "phoenix"
   | "croupier"
-  | "birthday";
+  | "birthday"
+  | "daisy"
+  | "sunflower"
+  | "cactus";
 
 export interface Variant {
   body: string;

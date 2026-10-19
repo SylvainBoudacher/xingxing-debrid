@@ -13,14 +13,14 @@ const FORBIDDEN = /[/\\:*?"<>|\x00-\x1f]/g;
  * Les caracteres interdits deviennent des tirets, les espaces et points de
  * bordure sont retires (Windows les refuse en fin de nom).
  */
-export function sanitizeFolderName(title: string): string {
+export function sanitizeFolderName(title: string, fallback = "Manga"): string {
   const cleaned = title
     .replace(FORBIDDEN, "-")
     .replace(/^[\s.]+/, "")
     .replace(/[\s.]+$/, "")
     .slice(0, 100)
     .replace(/[\s.]+$/, "");
-  return cleaned === "" ? "Manga" : cleaned;
+  return cleaned === "" ? fallback : cleaned;
 }
 
 /**

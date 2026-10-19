@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MetalBadge } from "metal-fx";
 import { AnimatePresence, motion } from "motion/react";
 import { BookOpen, ChevronLeft, ChevronRight, Compass, Library, X } from "lucide-react";
 import { MANGA_WELCOME_STEPS } from "@/components/mangaWelcomeSteps";
@@ -50,8 +51,9 @@ export function MangaWelcomeModal({ onClose }: { onClose: () => void }) {
               <BookOpen className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" />
             </div>
             <div>
-              <p className="text-sm font-semibold text-zinc-900 dark:text-white">
-                Nouveau : Mangas
+              <p className="flex items-center gap-2 text-sm font-semibold text-zinc-900 dark:text-white">
+                Mangas
+                <MetalBadge>Nouveau</MetalBadge>
               </p>
               <p className="text-[11px] text-zinc-500">Version 1.6.0</p>
             </div>

@@ -40,7 +40,7 @@ export const SETUP_STEPS: SetupStep[] = [
     id: "downloads",
     label: "Téléchargement",
     kind: "config",
-    blurb: "Choisir le dossier de destination et le nombre de fichiers simultanes.",
+    blurb: "Choisir le dossier de destination et le nombre de fichiers simultanés.",
   },
   {
     id: "theme",
@@ -52,7 +52,7 @@ export const SETUP_STEPS: SetupStep[] = [
 
 export const STEP_KINDS: Record<StepKind, { label: string; className: string }> = {
   read: {
-    label: "A lire",
+    label: "À lire",
     className: "bg-zinc-500/12 text-zinc-600 dark:text-zinc-300 ring-zinc-500/20",
   },
   check: {

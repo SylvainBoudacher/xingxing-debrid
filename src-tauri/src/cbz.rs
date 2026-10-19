@@ -122,15 +122,37 @@ fn read_page(path: &str, index: usize) -> Result<Vec<u8>, CbzError> {
         index,
         count: pages.len(),
     })?;
-    let mut entry = archive.by_name(name).map_err(|e| CbzError::ReadFailed {
+    let entry = archive.by_name(name).map_err(|e| CbzError::ReadFailed {
         message: e.to_string(),
     })?;
-    let mut buf = Vec::with_capacity(entry.size() as usize);
-    entry
+    let declared = entry.size();
+    read_capped(entry, declared, MAX_PAGE_BYTES)
+}
+
+// Plafond d'une page decompressee. Une page de scan pese quelques Mo ; au-dela,
+// l'archive est corrompue ou piegee (zip bomb) et lire sans limite saturerait la
+// memoire jusqu'au plantage.
+const MAX_PAGE_BYTES: u64 = 64 * 1024 * 1024;
+
+// La taille annoncee par l'archive n'est pas fiable : elle ne sert qu'a
+// pre-allouer une fois verifiee, et la lecture elle-meme est bornee.
+fn read_capped(reader: impl Read, declared: u64, max: u64) -> Result<Vec<u8>, CbzError> {
+    let too_large = || CbzError::ReadFailed {
+        message: "page trop volumineuse, archive probablement corrompue".to_string(),
+    };
+    if declared > max {
+        return Err(too_large());
+    }
+    let mut buf = Vec::with_capacity(declared as usize);
+    reader
+        .take(max + 1)
         .read_to_end(&mut buf)
         .map_err(|e| CbzError::ReadFailed {
             message: e.to_string(),
         })?;
+    if buf.len() as u64 > max {
+        return Err(too_large());
+    }
     Ok(buf)
 }
 
@@ -316,6 +338,24 @@ mod tests {
         ));
 
         std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn capped_read_returns_small_pages() {
+        assert_eq!(read_capped(&b"page"[..], 4, 10).unwrap(), b"page");
+    }
+
+    #[test]
+    fn capped_read_rejects_oversized_declared_size() {
+        let err = read_capped(&b"page"[..], 11, 10).unwrap_err();
+        assert!(matches!(err, CbzError::ReadFailed { .. }));
+    }
+
+    // Zip bomb : taille annoncee minuscule, contenu decompresse enorme.
+    #[test]
+    fn capped_read_stops_at_the_limit() {
+        let err = read_capped(&[0u8; 64][..], 4, 10).unwrap_err();
+        assert!(matches!(err, CbzError::ReadFailed { .. }));
     }
 
     #[test]

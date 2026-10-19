@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { KeyRound, Loader2, Upload, X } from "lucide-react";
 import { importProfile } from "@/lib/profileBackup";
+import { networkErrorMessage } from "@/lib/networkError";
 
 function basename(path: string): string {
   return path.split(/[/\\]/).pop() ?? path;
@@ -28,7 +29,7 @@ export function ImportProfileModal({
       await importProfile(passphrase, path);
       onImported();
     } catch (e) {
-      setError(String(e));
+      setError(networkErrorMessage(e));
       setBusy(false);
     }
   }

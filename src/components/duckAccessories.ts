@@ -1,4 +1,5 @@
 import { fillEll, tri } from "./duckDraw";
+import { drawFlowerAccessory } from "./duckFlowerAccessories";
 import type { Variant } from "./duckTypes";
 
 // Draw the variant's head/face accessory onto an already-rendered duck.
@@ -428,6 +429,8 @@ export function drawAccessory(c: CanvasRenderingContext2D, v: Variant) {
     drawCoinCoinOutfit(c);
   } else if (v.acc === "laurel") {
     drawLaurelAndBeard(c);
+  } else {
+    drawFlowerAccessory(c, v);
   }
 }
 

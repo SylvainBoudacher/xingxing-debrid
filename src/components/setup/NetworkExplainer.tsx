@@ -38,10 +38,10 @@ export function NetworkExplainer({ open, onToggle }: { open: boolean; onToggle: 
                   Le DNS, c'est l'annuaire d'internet
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                  Vous tapez un nom de site, le DNS renvoie l'adresse de la machine qui l'heberge.
-                  Par defaut, c'est l'annuaire de votre operateur qui repond. S'il refuse de
-                  repondre pour c411.org, le site parait hors ligne alors qu'il fonctionne. La
-                  solution est de demander a un autre annuaire.
+                  Vous tapez un nom de site, le DNS renvoie l'adresse de la machine qui l'héberge.
+                  Par défaut, c'est l'annuaire de votre opérateur qui répond. S'il refuse de
+                  répondre pour c411.org, le site paraît hors ligne alors qu'il fonctionne. La
+                  solution est de demander à un autre annuaire.
                 </p>
               </div>
             </div>
@@ -55,7 +55,7 @@ export function NetworkExplainer({ open, onToggle }: { open: boolean; onToggle: 
             <div className="flex items-center gap-2 mb-2">
               <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">
-                Changer de DNS n'a rien de risque
+                Changer de DNS n'a rien de risqué
               </p>
             </div>
             <ul className="space-y-1.5">

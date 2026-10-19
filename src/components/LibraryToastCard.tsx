@@ -68,7 +68,7 @@ export function LibraryToastCard({
         <button
           type="button"
           onClick={onOpen}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 flex shrink-0 items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 flex shrink-0 cursor-pointer items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold transition-colors"
         >
           Voir
           <ArrowRight className="h-3.5 w-3.5" />

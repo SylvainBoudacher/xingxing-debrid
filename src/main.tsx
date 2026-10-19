@@ -8,7 +8,7 @@ import { isBrowserPreview } from "./lib/devTauriShim";
 import { getMainHost } from "./potager/sim/mainHost";
 import { isPotagerWindow } from "./potager/ui/potagerWindow";
 import { queryClient } from "./lib/queryClient";
-import { applyTheme, getTheme } from "./lib/theme";
+import { applyThemePref, getThemePref } from "./lib/theme";
 import { initTextScale } from "./lib/textScale";
 import "./lib/launchTime";
 import "./index.css";
@@ -25,8 +25,8 @@ if (isPotagerWindow()) {
     </React.StrictMode>,
   );
 } else {
-  getTheme()
-    .then(applyTheme)
+  getThemePref()
+    .then(applyThemePref)
     .catch(() => {});
   initTextScale();
   // le temps de jeu du Potager avance tant que l'app est ouverte, quel que soit le fond

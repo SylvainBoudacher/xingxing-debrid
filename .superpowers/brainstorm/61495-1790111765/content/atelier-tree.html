@@ -1,0 +1,123 @@
+<h2>Arbre : placement des 5 nouveaux nœuds</h2>
+<p class="subtitle">
+  Nœuds existants en couleur de branche, nouveaux nœuds cerclés de blanc avec leur récompense.
+  Positions indicatives, ajustées dans l'aperçu à l'implémentation.
+</p>
+<div style="background: #1a1216; border-radius: 12px; padding: 10px">
+  <svg
+    viewBox="0 0 1000 640"
+    style="width: 100%; height: auto; font-family: system-ui; font-size: 15px"
+  >
+    <g stroke-width="4" fill="none" opacity=".55">
+      <path d="M500 575 L330 470" stroke="#8fcf5a" />
+      <path d="M330 470 L190 380" stroke="#8fcf5a" />
+      <path d="M190 380 L110 260" stroke="#8fcf5a" />
+      <path d="M190 380 L250 240" stroke="#8fcf5a" />
+      <path d="M500 575 L420 400" stroke="#b58ae6" />
+      <path d="M420 400 L380 280" stroke="#b58ae6" />
+      <path d="M380 280 L330 150" stroke="#b58ae6" />
+      <path d="M380 280 L450 170" stroke="#b58ae6" />
+      <path d="M500 575 L580 400" stroke="#f0a050" />
+      <path d="M580 400 L620 280" stroke="#f0a050" />
+      <path d="M580 400 L520 250" stroke="#f0a050" />
+      <path d="M620 280 L640 150" stroke="#f0a050" />
+      <path d="M500 575 L690 470" stroke="#d9b46a" />
+      <path d="M690 470 L800 370" stroke="#d9b46a" />
+      <path d="M690 470 L900 290" stroke="#d9b46a" />
+      <path d="M900 290 L860 150" stroke="#d9b46a" />
+    </g>
+    <g stroke-width="4" fill="none" stroke-dasharray="8 6">
+      <path d="M330 470 L290 340" stroke="#8fcf5a" />
+      <path d="M250 240 L215 120" stroke="#8fcf5a" />
+      <path d="M330 150 L300 60" stroke="#b58ae6" />
+      <path d="M450 170 L430 65" stroke="#b58ae6" />
+      <path d="M430 65 L545 95" stroke="#b58ae6" />
+    </g>
+    <g fill="#f1e6d2" text-anchor="middle">
+      <circle cx="500" cy="575" r="16" fill="#d9b46a" />
+      <text x="500" y="610">root</text>
+      <circle cx="330" cy="470" r="16" fill="#8fcf5a" />
+      <text x="330" y="505">j1 Main verte</text>
+      <circle cx="190" cy="380" r="16" fill="#8fcf5a" />
+      <text x="190" y="415">j2</text>
+      <circle cx="110" cy="260" r="16" fill="#8fcf5a" />
+      <text x="110" y="295">j3</text>
+      <circle cx="250" cy="240" r="16" fill="#8fcf5a" />
+      <text x="250" y="275">j4 Belles plantes</text>
+      <circle cx="420" cy="400" r="16" fill="#b58ae6" />
+      <text x="420" y="435">h1</text>
+      <circle cx="380" cy="280" r="16" fill="#b58ae6" />
+      <text x="380" y="315">h2</text>
+      <circle cx="330" cy="150" r="16" fill="#b58ae6" />
+      <text x="330" y="185">h3 Première famille</text>
+      <circle cx="450" cy="170" r="16" fill="#b58ae6" />
+      <text x="470" y="205">h4 Fleur givrée</text>
+      <circle cx="580" cy="400" r="16" fill="#f0a050" />
+      <text x="580" y="435">d1</text>
+      <circle cx="620" cy="280" r="16" fill="#f0a050" />
+      <text x="620" y="315">d2</text>
+      <circle cx="520" cy="250" r="16" fill="#f0a050" />
+      <text x="520" y="285">d3</text>
+      <circle cx="640" cy="150" r="16" fill="#f0a050" />
+      <text x="640" y="185">d4</text>
+      <circle cx="690" cy="470" r="16" fill="#d9b46a" />
+      <text x="690" y="505">c1</text>
+      <circle cx="800" cy="370" r="16" fill="#d9b46a" />
+      <text x="800" y="405">c2</text>
+      <circle cx="900" cy="290" r="16" fill="#d9b46a" />
+      <text x="900" y="325">c3</text>
+      <circle cx="860" cy="150" r="16" fill="#d9b46a" />
+      <text x="860" y="185">c4</text>
+    </g>
+    <g text-anchor="middle" font-weight="600">
+      <circle cx="290" cy="340" r="18" fill="#8fcf5a" stroke="#fff" stroke-width="3" />
+      <text x="290" y="376" fill="#f3dca0">a1 Le chaudron</text>
+      <circle cx="215" cy="120" r="18" fill="#8fcf5a" stroke="#fff" stroke-width="3" />
+      <text x="215" y="156" fill="#f3dca0">a2 Teinturier</text>
+      <circle cx="300" cy="60" r="18" fill="#b58ae6" stroke="#fff" stroke-width="3" />
+      <text x="300" y="96" fill="#f3dca0">a3 Seconde vue</text>
+      <circle cx="430" cy="65" r="18" fill="#b58ae6" stroke="#fff" stroke-width="3" />
+      <text x="430" y="101" fill="#f3dca0">a4 Premier givre</text>
+      <circle cx="545" cy="95" r="18" fill="#b58ae6" stroke="#fff" stroke-width="3" />
+      <text x="560" y="131" fill="#f3dca0">a5 Poussières d'étoiles</text>
+    </g>
+  </svg>
+</div>
+<table style="margin-top: 14px; border-collapse: collapse; font-size: 14px; width: 100%">
+  <tr style="text-align: left">
+    <th>Nœud</th>
+    <th>Branche, parent</th>
+    <th>Tâche</th>
+    <th>Récompense</th>
+  </tr>
+  <tr>
+    <td>a1 Le chaudron</td>
+    <td>Jardinage, j1</td>
+    <td>Presser 3 fleurs</td>
+    <td>Atelier + croissance + rosée</td>
+  </tr>
+  <tr>
+    <td>a2 Teinturier</td>
+    <td>Jardinage, j4</td>
+    <td>Récupérer 3 brassages</td>
+    <td>Teinture</td>
+  </tr>
+  <tr>
+    <td>a3 Seconde vue</td>
+    <td>Collection, h3</td>
+    <td>Utiliser 5 préparations</td>
+    <td>Clairvoyance</td>
+  </tr>
+  <tr>
+    <td>a4 Premier givre</td>
+    <td>Collection, h4</td>
+    <td>Récupérer 5 brassages</td>
+    <td>Poudre de givre</td>
+  </tr>
+  <tr>
+    <td>a5 Poussières d'étoiles</td>
+    <td>Collection, a4</td>
+    <td>Utiliser 15 préparations</td>
+    <td>Poudres d'or et de lune</td>
+  </tr>
+</table>

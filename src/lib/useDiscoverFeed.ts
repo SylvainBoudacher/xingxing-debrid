@@ -1,4 +1,4 @@
-import { NetworkError } from "@/lib/networkError";
+import { NetworkError, networkErrorMessage } from "@/lib/networkError";
 import { queryClient } from "@/lib/queryClient";
 import {
   ANIMATION_GENRE_ID,
@@ -320,7 +320,7 @@ export function useDiscoverFeed(
       if (err instanceof NetworkError && err.service === "TMDB" && err.status === 401) {
         setTmdbKeyInvalid(true);
       } else {
-        setMoviesError(String(err));
+        setMoviesError(networkErrorMessage(err));
       }
     } finally {
       if (seq === fetchSeqRef.current) setLoadingMovies(false);

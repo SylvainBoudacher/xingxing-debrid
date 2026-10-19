@@ -1,8 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { toast } from "sonner";
 import { openSettingsPanel } from "@/lib/settingsNavigation";
+import { networkErrorMessage } from "@/lib/networkError";
+import { findLibraryEntry, resolveDownloadMeta, type DownloadMeta } from "@/lib/downloadMeta";
+import { seriesSubdir } from "@/lib/seriesDownloadPath";
 
 export type DownloadStatus = "active" | "done" | "error" | "cancelled";
 
@@ -16,8 +20,11 @@ export interface DownloadItem {
   speed?: number;
   /** Chemin local du fichier, disponible une fois le téléchargement terminé. */
   path?: string;
+  /** Type de fichier sans risque, ouvrable avec le programme par défaut de l'OS. */
+  openable?: boolean;
   /** Ouverture dans l'application au lieu du programme par défaut de l'OS. */
   onOpen?: () => void;
+  meta: DownloadMeta;
 }
 
 interface ProgressEvent {
@@ -40,6 +47,20 @@ let snapshot: DownloadItem[] = [];
 function emit() {
   snapshot = [...items.values()];
   listeners.forEach((l) => l());
+}
+
+// La progression arrive ~10 fois par seconde et par téléchargement : on la
+// regroupe en un seul rendu par intervalle, quel que soit le nombre de
+// téléchargements en parallèle (chaque rendu remesure les lignes animées).
+const PROGRESS_RENDER_MS = 100;
+let progressTimer: ReturnType<typeof setTimeout> | null = null;
+
+function emitProgress() {
+  if (progressTimer) return;
+  progressTimer = setTimeout(() => {
+    progressTimer = null;
+    emit();
+  }, PROGRESS_RENDER_MS);
 }
 
 export function subscribeDownloads(cb: () => void): () => void {
@@ -116,6 +137,11 @@ export async function getDownloadBatchSize(): Promise<number> {
   return Math.min(8, Math.max(1, v ?? 1));
 }
 
+// Rangement des épisodes dans "Série/Saison n" (activé par défaut).
+export async function getSeriesFoldersEnabled(): Promise<boolean> {
+  return (await store.get<boolean>("download_series_folders")) ?? true;
+}
+
 let progressBound = false;
 function ensureProgressListener() {
   if (progressBound) return;
@@ -139,7 +165,7 @@ function ensureProgressListener() {
 
     item.downloaded = e.payload.downloaded;
     item.total = e.payload.total;
-    emit();
+    emitProgress();
   });
 }
 
@@ -160,8 +186,10 @@ function basename(url: string): string {
  * concurrence côté appelant. La progression est suivie via l'overlay.
  *
  * Retourne le chemin local écrit, ou null si le téléchargement a échoué ou été
- * annulé. `subdir` range le fichier dans un sous-dossier du dossier configuré.
- * `dir` force le dossier racine (par defaut : le dossier de telechargement).
+ * annulé. `subdir` range le fichier dans un sous-dossier du dossier configuré ;
+ * sans lui, un épisode de série est rangé dans "Série/Saison n" si le réglage
+ * est actif. `dir` force le dossier racine (par defaut : le dossier de
+ * telechargement).
  */
 export async function startDownload(
   url: string,
@@ -173,9 +201,16 @@ export async function startDownload(
   const id = crypto.randomUUID();
   const baseDir = dir ?? (await store.get<string>("download_dir")) ?? "";
 
+  const filename = basename(url);
+  const target =
+    subdir ??
+    ((await getSeriesFoldersEnabled())
+      ? seriesSubdir(filename, findLibraryEntry(filename))
+      : undefined);
   items.set(id, {
     id,
-    filename: basename(url),
+    filename,
+    meta: resolveDownloadMeta(filename),
     downloaded: 0,
     total: 0,
     status: "active",
@@ -184,7 +219,8 @@ export async function startDownload(
   emit();
 
   try {
-    const path = await invoke<string>("download_to_dir", { id, url, dir: baseDir, subdir });
+    const path = await invoke<string>("download_to_dir", { id, url, dir: baseDir, subdir: target });
+    const openable = await invoke<boolean>("can_open_file", { path });
     timing.delete(id);
     const item = items.get(id);
     if (item) {
@@ -192,6 +228,7 @@ export async function startDownload(
       item.downloaded = item.total || item.downloaded;
       item.speed = undefined;
       item.path = path;
+      item.openable = openable;
       emit();
     }
     return path;
@@ -200,7 +237,7 @@ export async function startDownload(
     const item = items.get(id);
     if (!item) return null;
     item.speed = undefined;
-    const message = String(err);
+    const message = networkErrorMessage(err);
     if (message === "cancelled") {
       item.status = "cancelled";
     } else {
@@ -245,7 +282,17 @@ export async function openDownload(id: string): Promise<void> {
   try {
     await invoke("open_file", { path: item.path });
   } catch (err) {
-    toast.error(`Ouverture impossible : ${err}`);
+    toast.error(`Ouverture impossible : ${networkErrorMessage(err)}`);
+  }
+}
+
+export async function revealDownload(id: string): Promise<void> {
+  const item = items.get(id);
+  if (!item?.path) return;
+  try {
+    await revealItemInDir(item.path);
+  } catch (err) {
+    toast.error(`Impossible d'ouvrir le dossier : ${networkErrorMessage(err)}`);
   }
 }
 

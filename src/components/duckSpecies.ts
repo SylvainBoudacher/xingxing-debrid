@@ -6,11 +6,12 @@ import {
   randOf,
   type Rarity,
 } from "./duckRandom";
+import { cactusVariant, margueriteVariant, tournesolVariant } from "./duckFlowers";
 import type { Variant } from "./duckTypes";
 
 // The Canardex catalog: every look randomVariant() can produce, collapsed into
 // a "species" (body color and accessory color are cosmetic and don't split a
-// species). 42 entries total. speciesOf() maps a concrete Variant back to its
+// species). 45 entries total. speciesOf() maps a concrete Variant back to its
 // species id, mirroring the priority order of getRarity().
 
 export interface DuckSpecies {
@@ -205,6 +206,9 @@ export const SPECIES: DuckSpecies[] = [
   ),
   // mythic
   sp("roi", "Le Roi des Canards", "mythic", kingVariant(), 1),
+  sp("marguerite", "Canard Marguerite", "mythic", margueriteVariant(), 1),
+  sp("tournesol", "Canard Tournesol", "mythic", tournesolVariant(), 1),
+  sp("cactus", "Canard Cactus", "mythic", cactusVariant(), 1),
   // new commons
   sp("mustache", "Canard Moustachu", "common", { body: YELLOW, beak: BEAK, acc: "mustache" }),
   // new uncommons
@@ -307,6 +311,9 @@ const ACC_SPECIES = new Set([
 
 export function speciesOf(v: Variant): string {
   if (v.effect === "royal") return "roi";
+  if (v.effect === "daisy") return "marguerite";
+  if (v.effect === "sunflower") return "tournesol";
+  if (v.effect === "cactus") return "cactus";
   if (v.pattern === "rainbow") return "arcenciel";
   if (v.pattern === "gold") return "dore";
   if (v.pattern === "galaxy") return "galaxie";

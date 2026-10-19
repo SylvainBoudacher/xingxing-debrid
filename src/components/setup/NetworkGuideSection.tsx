@@ -38,7 +38,7 @@ export function NetworkGuideSection({
         <div className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 ring-1 ring-black/6 dark:ring-white/6 px-5 py-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Suivez les etapes dans l'ordre. Comptez deux minutes.
+              Suivez les étapes dans l'ordre. Comptez deux minutes.
             </p>
             <OsTabs os={os} onChange={setOs} />
           </div>

@@ -1,6 +1,8 @@
 import { Loader2, Search, X } from "lucide-react";
-import { motion } from "motion/react";
+import { BorderBeam } from "border-beam";
+import { motion, useReducedMotion } from "motion/react";
 import type { FormEvent } from "react";
+import { useAppTheme } from "@/lib/useAppTheme";
 
 interface DiscoverSearchBarProps {
   /** Masquée (repliée) sur les onglets curatifs Ma liste / Pour vous */
@@ -24,6 +26,8 @@ export function DiscoverSearchBar({
   onClear,
   onSubmit,
 }: DiscoverSearchBarProps) {
+  const theme = useAppTheme();
+  const reducedMotion = useReducedMotion();
   return (
     <motion.form
       initial={false}
@@ -41,36 +45,46 @@ export function DiscoverSearchBar({
       onSubmit={onSubmit}
       className={`mx-auto max-w-2xl ${visible ? "" : "pointer-events-none"}`}
     >
-      <div className="relative flex items-center gap-3 rounded-full bg-white/90 dark:bg-zinc-800/80 px-5 py-3.5 shadow-[0_8px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)]">
-        <span className="relative h-5 w-5 shrink-0">
-          <Search
-            className={`absolute inset-0 h-5 w-5 text-zinc-500 dark:text-zinc-400 transition-opacity duration-200 ${
-              loading ? "opacity-0 delay-150" : "opacity-100"
-            }`}
+      <BorderBeam
+        size="line"
+        theme={theme}
+        active={loading && !reducedMotion}
+        className="rounded-full shadow-[0_8px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.7)]"
+      >
+        <div
+          className="relative flex items-center gap-3 rounded-full bg-white/90 dark:bg-zinc-800/80 px-5 py-3.5"
+          aria-busy={loading}
+        >
+          <span className="relative h-5 w-5 shrink-0">
+            <Search
+              className={`absolute inset-0 h-5 w-5 text-zinc-500 dark:text-zinc-400 transition-opacity duration-200 ${
+                loading ? "opacity-0 delay-150" : "opacity-100"
+              }`}
+            />
+            <Loader2
+              className={`absolute inset-0 h-5 w-5 text-zinc-500 dark:text-zinc-400 animate-spin transition-opacity duration-200 ${
+                loading ? "opacity-100 delay-150" : "opacity-0"
+              }`}
+            />
+          </span>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => onQueryChange(e.target.value)}
+            placeholder={placeholder}
+            className="flex-1 bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-500 outline-none text-base pr-8"
           />
-          <Loader2
-            className={`absolute inset-0 h-5 w-5 text-zinc-500 dark:text-zinc-400 animate-spin transition-opacity duration-200 ${
-              loading ? "opacity-100 delay-150" : "opacity-0"
-            }`}
-          />
-        </span>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => onQueryChange(e.target.value)}
-          placeholder={placeholder}
-          className="flex-1 bg-transparent text-zinc-900 dark:text-white placeholder:text-zinc-500 outline-none text-base pr-8"
-        />
-        {showClear && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200/90 dark:bg-zinc-700/80 hover:bg-zinc-300 dark:hover:bg-zinc-600/80 transition-colors"
-          >
-            <X className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
-          </button>
-        )}
-      </div>
+          {showClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-zinc-200/90 dark:bg-zinc-700/80 hover:bg-zinc-300 dark:hover:bg-zinc-600/80 transition-colors"
+            >
+              <X className="h-4 w-4 text-zinc-600 dark:text-zinc-300" />
+            </button>
+          )}
+        </div>
+      </BorderBeam>
     </motion.form>
   );
 }

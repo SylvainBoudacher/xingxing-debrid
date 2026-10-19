@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { SettingsPanel } from "../SettingsPanel";
 import { Segmented, SettingRow, Toggle } from "../controls";
+import { networkErrorMessage } from "@/lib/networkError";
 
 export interface BackdropPanelProps {
   backdrop: Backdrop;
@@ -20,6 +21,8 @@ export interface BackdropPanelProps {
   onSetSummerMaxDucks: (v: number) => void;
   idleAutoHide: boolean;
   onSetIdleAutoHide: (v: boolean) => void;
+  poolBackdropExit: boolean;
+  onSetPoolBackdropExit: (v: boolean) => void;
 }
 
 export function BackdropPanel({
@@ -31,6 +34,8 @@ export function BackdropPanel({
   onSetSummerMaxDucks,
   idleAutoHide,
   onSetIdleAutoHide,
+  poolBackdropExit,
+  onSetPoolBackdropExit,
 }: BackdropPanelProps) {
   const importDucksInputRef = useRef<HTMLInputElement>(null);
   const importGardenInputRef = useRef<HTMLInputElement>(null);
@@ -58,7 +63,7 @@ export function BackdropPanel({
       });
       toast.success(`Canards exportés : ${path}`);
     } catch (e) {
-      toast.error(`Export impossible : ${e}`);
+      toast.error(`Export impossible : ${networkErrorMessage(e)}`);
     }
   }
 
@@ -178,6 +183,17 @@ export function BackdropPanel({
             description="Cache l'interface après 30 s d'inactivité. Un mouvement de souris la restaure."
           >
             <Toggle checked={idleAutoHide} onChange={onSetIdleAutoHide} />
+          </SettingRow>
+        </div>
+      )}
+
+      {backdrop === "mare" && (
+        <div className="mt-3">
+          <SettingRow
+            title="Quitter la page Découverte en cliquant sur l'eau"
+            description="Un clic sur la piscine, en dehors du contenu, ramène à l'accueil."
+          >
+            <Toggle checked={poolBackdropExit} onChange={onSetPoolBackdropExit} />
           </SettingRow>
         </div>
       )}

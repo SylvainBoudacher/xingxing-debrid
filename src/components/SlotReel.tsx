@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { motion } from "motion/react";
 import { SYMBOLS, type SlotSymbol } from "@/game/slots";
 import { randOf } from "./duckRandom";
+import { PX, pixelFrame } from "./slotPixel";
 import { SlotSymbolIcon } from "./slotSymbols";
 
 // Un rouleau. La fenêtre montre trois symboles; seule la ligne du milieu paie.
@@ -12,6 +13,8 @@ import { SlotSymbolIcon } from "./slotSymbols";
 
 const CELL = 56;
 const LOOPS = 5;
+const SHADE = "rgba(42,10,20,0.32)";
+const SHADE_SOFT = "rgba(42,10,20,0.14)";
 
 export function SlotReel({
   symbol,
@@ -41,8 +44,8 @@ export function SlotReel({
 
   return (
     <div
-      className="relative overflow-hidden rounded-lg bg-[#0D0205] ring-1 ring-amber-400/20 shadow-inner"
-      style={{ height: CELL * 3, width: CELL }}
+      className="relative overflow-hidden"
+      style={{ ...pixelFrame(PX.ivory, PX.outline), height: CELL * 3, width: CELL }}
     >
       <motion.div
         key={spin}
@@ -52,19 +55,26 @@ export function SlotReel({
       >
         {strip.map((s, i) => (
           <div key={i} className="flex items-center justify-center" style={{ height: CELL }}>
-            <SlotSymbolIcon symbol={s} size={38} />
+            <SlotSymbolIcon symbol={s} size={48} />
           </div>
         ))}
       </motion.div>
-      {/* éclair quand le rouleau se verrouille */}
+      {/* ombre en bandes dures en haut et en bas: le rouleau est un tambour */}
+      <span
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: `linear-gradient(${SHADE} 0 6px, ${SHADE_SOFT} 6px 15px, transparent 15px calc(100% - 15px), ${SHADE_SOFT} calc(100% - 15px) calc(100% - 6px), ${SHADE} calc(100% - 6px))`,
+        }}
+      />
+      {/* éclair d'une image quand le rouleau se verrouille */}
       {spin > 0 && (
         <span
           key={`flash-${spin}`}
           className="pointer-events-none absolute inset-0 bg-white"
-          style={{ opacity: 0, animation: `slot-lock 0.4s ${duration}s forwards` }}
+          style={{ opacity: 0, animation: `slot-lock 0.16s steps(1) ${duration}s` }}
         />
       )}
-      <style>{`@keyframes slot-lock { 0% { opacity: 0.4 } 100% { opacity: 0 } }`}</style>
+      <style>{`@keyframes slot-lock { 0% { opacity: 0.7 } 100% { opacity: 0 } }`}</style>
     </div>
   );
 }

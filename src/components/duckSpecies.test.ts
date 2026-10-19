@@ -7,9 +7,18 @@ const BY_ID = new Map(SPECIES.map((s) => [s.id, s]));
 const BEAK = "#F5811F";
 
 describe("speciesOf", () => {
-  it("catalog has 42 unique species", () => {
-    expect(SPECIES.length).toBe(42);
-    expect(BY_ID.size).toBe(42);
+  it("catalog has 45 unique species", () => {
+    expect(SPECIES.length).toBe(45);
+    expect(BY_ID.size).toBe(45);
+  });
+
+  it("catalogs the three flower ducks as fixed-body mythics", () => {
+    for (const id of ["marguerite", "tournesol", "cactus"]) {
+      const s = BY_ID.get(id)!;
+      expect(s.rarity).toBe("mythic");
+      expect(s.maxColors).toBe(1);
+      expect(speciesOf(s.preview)).toBe(id);
+    }
   });
 
   it("every generated variant maps to a cataloged species of the same rarity", () => {

@@ -11,6 +11,7 @@ import {
 import { SettingsPanel } from "../SettingsPanel";
 import { FieldTitle, PanelDivider, Segmented, ViewOptionCard } from "../controls";
 import { settingsStore as store } from "../store";
+import { ReleasesViewSection } from "./ReleasesViewSection";
 
 const EXAMPLE = "Apple.Cider.Vinegar.S01E01.MULTi.1080p.WEB.H265-CHiLL.mkv";
 
@@ -125,6 +126,10 @@ export function DisplayPanel() {
           </div>
         ))}
       </div>
+
+      <PanelDivider />
+
+      <ReleasesViewSection />
     </SettingsPanel>
   );
 }

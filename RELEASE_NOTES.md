@@ -1,4 +1,2 @@
-- Refonte de la page des œuvres côté manga, comme pour les séries
-- Boutons de menu et de retour toujours au même endroit
-- Retouche du bandeau « Reprendre » de la bibliothèque
-- Mise à jour des dépendances : application plus légère et plus performante
+- Nouveau réglage Thème : Clair, Sombre ou Système (Paramètres > Apparence et fenêtre)
+- En mode Système, l'interface suit automatiquement le jour/nuit de l'ordinateur

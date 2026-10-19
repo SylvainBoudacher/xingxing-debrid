@@ -40,10 +40,11 @@ export const c411Keys = {
 export async function searchTorrents(
   p: C411SearchParams,
   apiKey: string,
+  timeoutMs?: number,
 ): Promise<C411SearchResponse> {
   const sub = p.subcategory ? `&subcategory=${p.subcategory}` : "";
   const url = `${BASE}/api/torrents?page=${p.page}&perPage=${p.perPage}&sortBy=${p.sortBy}&sortOrder=${p.sortOrder}${sub}&name=${encodeURIComponent(p.name)}&apikey=${apiKey}`;
-  const res = await fetchWithTimeout("C411", url);
+  const res = await fetchWithTimeout("C411", url, {}, timeoutMs);
   return readJson<C411SearchResponse>("C411", res);
 }
 

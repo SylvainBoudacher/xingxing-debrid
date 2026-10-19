@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { exportProfile, PASSPHRASE_MIN_LENGTH } from "@/lib/profileBackup";
 import { FieldTitle, SectionHeading } from "../controls";
+import { networkErrorMessage } from "@/lib/networkError";
 
 export function ProfileBackupSection() {
   const [passphrase, setPassphrase] = useState("");
@@ -25,7 +26,7 @@ export function ProfileBackupSection() {
         setConfirm("");
       }
     } catch (e) {
-      toast.error(`Export impossible : ${e}`);
+      toast.error(`Export impossible : ${networkErrorMessage(e)}`);
     } finally {
       setBusy(false);
     }

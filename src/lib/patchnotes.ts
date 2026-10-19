@@ -1,3 +1,4 @@
+import newCanardV173Img from "@/assets/patchnote/v1.7.3/newCanard.webp";
 import newPageSerieV170Img from "@/assets/patchnote/v1.7.0/newPageSerie.webp";
 import recoV170Img from "@/assets/patchnote/v1.7.0/reco.webp";
 import reprendreV170Img from "@/assets/patchnote/v1.7.0/reprendre.webp";
@@ -48,6 +49,145 @@ export interface PatchNote {
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.7.6",
+    date: "14 octobre 2026",
+    intro:
+      "La 1.7.6 permet à l'interface de suivre automatiquement le mode jour/nuit de votre ordinateur.",
+    sections: [
+      {
+        title: "Interface",
+        items: [
+          "Nouveau réglage Thème dans Paramètres > Apparence et fenêtre : Clair, Sombre ou Système.",
+          "En mode Système, l'application passe toute seule en clair ou en sombre en même temps que l'OS, sans redémarrage.",
+          "Le choix Système est aussi proposé dès la configuration initiale.",
+          "La bascule rapide du menu reste disponible et repasse sur un thème fixe.",
+        ],
+      },
+    ],
+  },
+  {
+    version: "1.7.5",
+    date: "5 octobre 2026",
+    intro:
+      "La 1.7.5 range automatiquement les épisodes de séries dans leur propre dossier, rend les cartes de téléchargement plus fluides, ajoute un écran pour vérifier les mises à jour à la main et indique clairement d'où vient un problème quand C411 ou AllDebrid ne répond plus.",
+    sections: [
+      {
+        title: "Téléchargements",
+        items: [
+          "Les épisodes de séries sont rangés dans « Nom de la série / Saison n » ; les films restent à la racine du dossier de téléchargement.",
+          "Le nom du dossier reprend le titre de la série dans la bibliothèque, pour que toutes ses versions arrivent au même endroit.",
+          "Ce rangement est activé par défaut et peut être désactivé dans Paramètres > Téléchargement.",
+          "La numérotation absolue des animés (ex. « - 1057 ») est mieux reconnue.",
+          "Les cartes se replient en hauteur, sans faire sauter la barre de défilement, et affichent le pourcentage à côté de la barre de progression.",
+        ],
+      },
+      {
+        title: "Mises à jour",
+        items: [
+          "Nouvel écran « Mises à jour » dans Paramètres > Application pour vérifier à la main si une nouvelle version est disponible et l'installer.",
+          "Le même écran est accessible depuis l'Aide, onglet « Mettre à jour ».",
+          "En cas de souci avec la mise à jour automatique, un lien ouvre la page GitHub pour télécharger l'installateur à la main.",
+        ],
+      },
+      {
+        title: "État des services",
+        items: [
+          "Quand C411 ou AllDebrid rencontre un problème, un label en haut à droite indique le service concerné et la cause : panne du service, accès bloqué par votre fournisseur d'accès, API en erreur ou connexion internet coupée.",
+          "Nouvel onglet « État des services » dans l'Aide : votre connexion, C411 et AllDebrid en un coup d'œil, avec l'historique de la page de statut officielle de C411.",
+          "Un clic sur le label ouvre directement cet onglet ; il disparaît tout seul dès que le service répond à nouveau.",
+        ],
+      },
+    ],
+  },
+  {
+    version: "1.7.4",
+    date: "28 septembre 2026",
+    intro:
+      "La 1.7.4 rend le choix d'une version plus rapide grâce aux choix rapides dans Découverte et apporte un nouveau panneau des téléchargements. Elle renforce aussi la sécurité de l'application et apporte des messages d'erreur plus clairs, des transitions plus fluides et de nouvelles animations de chargement.",
+    sections: [
+      {
+        title: "Découverte",
+        items: [
+          "Nouveaux choix rapides sur la fiche d'un titre : les versions disponibles sont résumées par résolution, avec leur disponibilité et leur langue.",
+          "Les choix rapides peuvent être masqués dans les paramètres « Affichage ».",
+          "Aucune version trouvée ? La fiche propose de lancer directement la recherche sur C411 ou Nyaa.",
+          "La barre de recherche s'illumine pendant la recherche.",
+        ],
+      },
+      {
+        title: "Téléchargements",
+        items: [
+          "Nouveau panneau des téléchargements : une pilule en bas à droite résume la progression (en cours, en attente, pourcentage et vitesse) et ouvre la liste au clic.",
+          "La liste défile et ne déborde plus de la fenêtre, même avec beaucoup d'épisodes.",
+          "La progression d'un téléchargement groupé avance en continu et tient compte des épisodes en attente.",
+          "Cartes repensées : boutons « Ouvrir » et « Dossier » alignés, et l'action s'affiche au survol des croix.",
+        ],
+      },
+      {
+        title: "Bibliothèque",
+        items: ["Le résumé de statistiques en haut de la page a été retiré pour l'alléger."],
+      },
+      {
+        title: "AllDebrid",
+        items: [
+          "Messages d'erreur plus clairs quand AllDebrid, la connexion ou le disque posent problème (clé invalide, délai dépassé, espace insuffisant...).",
+          "Une connexion qui ne répond plus est coupée au lieu de figer l'application.",
+        ],
+      },
+      {
+        title: "Sécurité",
+        items: [
+          "Les fichiers téléchargés à risque (exécutables, scripts...) ne peuvent plus être ouverts directement : seul leur dossier est proposé.",
+          "Meilleure protection contre les archives de manga piégées.",
+          "Renforcement général de la sécurité de l'application.",
+        ],
+      },
+      {
+        title: "Interface",
+        items: [
+          "Transitions plus douces entre les pages.",
+          "Nouvelles animations de chargement dans l'onglet Mangas, pendant un débridage et au lancement d'un épisode dans VLC.",
+          "Mises à jour techniques et corrections diverses.",
+        ],
+      },
+    ],
+  },
+  {
+    version: "1.7.3",
+    date: "23 septembre 2026",
+    intro:
+      "La 1.7.3 accueille 3 nouveaux canards ! Elle apporte aussi une nouvelle page d'aide, des jaquettes redimensionnables dans la bibliothèque et plusieurs corrections. La suite des canards est en cours de création pour la prochaine saison !",
+    introImage: {
+      src: newCanardV173Img,
+      caption: "Les 3 nouveaux canards",
+    },
+    sections: [
+      {
+        title: "Canards",
+        items: [
+          "Ajout de 3 nouveaux canards à collectionner !",
+          "La suite de l'aventure des canards est en cours de création pour la prochaine saison.",
+          "Mise à jour du bandit manchot des canards.",
+          "Nouveau paramètre pour quitter la page découverte en cliquant sur l'arrière-plan pendant la piscine (dans les paramètres « Summer et canard »).",
+        ],
+      },
+      {
+        title: "Bibliothèque",
+        items: [
+          "Possibilité de changer la taille des jaquettes.",
+          "Correction d'un bug d'affichage de texte possible.",
+          "Bandeau « Reprendre » : une animation accompagne désormais le passage en première position quand on clique sur la 2e ou 3e carte.",
+          "Bandeau « Reprendre » : correction de l'ombre au survol.",
+          "Correction d'un problème possible sur le bouton de reprise des mangas.",
+        ],
+      },
+      {
+        title: "Interface",
+        items: ["Nouvelle page d'aide.", "Amélioration de la lisibilité de la page Paramètres."],
+      },
+    ],
+  },
   {
     version: "1.7.2",
     date: "14 septembre 2026",
@@ -1389,5 +1529,3 @@ export const PATCH_NOTES: PatchNote[] = [
     ],
   },
 ];
-
-export const LATEST_VERSION = PATCH_NOTES[0].version;

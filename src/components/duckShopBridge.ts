@@ -71,6 +71,16 @@ export function emitDucksReserved(ids: string[]) {
   reservedCb?.(ids);
 }
 
+// Clic gauche sur l'eau libre (ni canard ni objet de la piscine) : la page
+// Découverte s'en sert pour revenir à l'accueil si le paramètre est activé.
+let waterClickCb: ((target: EventTarget | null) => void) | null = null;
+export function onWaterClick(cb: ((target: EventTarget | null) => void) | null) {
+  waterClickCb = cb;
+}
+export function emitWaterClick(target: EventTarget | null) {
+  waterClickCb?.(target);
+}
+
 // PixelPool registers its spawn function on mount. Specs requested before the
 // pool exists (saved ducks loaded at startup) are queued and flushed here.
 export function registerInjector(cb: ((spec: DuckSpec) => void) | null) {

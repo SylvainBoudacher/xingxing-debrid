@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { toast } from "sonner";
 import { getLikes, parseLikesJson, saveLikes } from "@/lib/likes";
 import { FieldTitle, SectionHeading } from "../controls";
+import { networkErrorMessage } from "@/lib/networkError";
 
 export function DiscoverListSection() {
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -17,7 +18,7 @@ export function DiscoverListSection() {
       });
       toast.success(`Liste exportée : ${path}`);
     } catch (e) {
-      toast.error(`Export impossible : ${e}`);
+      toast.error(`Export impossible : ${networkErrorMessage(e)}`);
     }
   }
 

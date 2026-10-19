@@ -1,0 +1,620 @@
+<h2>Direction artistique : quel rendu rétro ?</h2>
+<p class="subtitle">
+  Même scène (192×112 pixels logiques, tuiles 16×16, agrandie sans lissage), trois traitements. Les
+  contrôles changent l'heure et la météo sur les trois en même temps. Clique sur la carte que tu
+  préfères.
+</p>
+
+<div class="section" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center">
+  <span class="label">Heure</span>
+  <button class="mock-button tod" data-tod="auto">Auto (heure réelle)</button>
+  <button class="mock-button tod" data-tod="matin">Matin brumeux</button>
+  <button class="mock-button tod" data-tod="midi">Midi</button>
+  <button class="mock-button tod" data-tod="soir">Soir orangé</button>
+  <button class="mock-button tod" data-tod="nuit">Nuit</button>
+  <span class="label" style="margin-left: 1rem">Météo</span>
+  <button class="mock-button" id="rainBtn">Pluie : non</button>
+</div>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image"><canvas data-style="a" width="192" height="112"></canvas></div>
+    <div class="card-body">
+      <h3>A. Chaleureux 16-bit</h3>
+      <p>
+        Palette libre (~40 couleurs), contours colorés brun foncé, ombrage en 3 tons. Esprit Stardew
+        / SNES.
+      </p>
+    </div>
+  </div>
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image"><canvas data-style="b" width="192" height="112"></canvas></div>
+    <div class="card-body">
+      <h3>B. Console 16 couleurs</h3>
+      <p>
+        Palette stricte de 16 couleurs (Sweetie 16), contours sombres, 2 tons. Plus graphique, plus
+        "console fantaisie".
+      </p>
+    </div>
+  </div>
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image"><canvas data-style="c" width="192" height="112"></canvas></div>
+    <div class="card-body">
+      <h3>C. Doux sans contour</h3>
+      <p>
+        Palette pastel automnale, pas de trait noir : les formes sont bordées par leur propre teinte
+        sombre. Plus calme, plus "aquarelle pixel".
+      </p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top: 1rem">
+  À observer : lisibilité des couleurs de fleurs (collection), vent dans les herbes et les fleurs,
+  feuilles qui tombent, lanternes la nuit, lumière en paliers (volontairement non lissée).
+</p>
+
+<style>
+  .card-image canvas {
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+    display: block;
+  }
+  .tod.active,
+  #rainBtn.active {
+    outline: 2px solid currentColor;
+  }
+</style>
+
+<script>
+  (() => {
+    const T = 16,
+      W = 192,
+      H = 112;
+
+    const SPR = {
+      sprout: [
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "....oo...oo.....",
+        "...okko.okko....",
+        "...oklLoLlko....",
+        "....oLLlLLo.....",
+        ".....ooLoo......",
+        ".......L........",
+      ],
+      bud: [
+        "................",
+        "................",
+        "................",
+        "................",
+        "......ooo.......",
+        ".....opqpo......",
+        ".....oPpPo......",
+        ".....okPko......",
+        "......oko.......",
+        ".......L........",
+        "..oo...L...oo...",
+        ".okko..L..okko..",
+        ".oklLo.L.oLlko..",
+        "..oLLloLolLLo...",
+        "...ooLLLLLoo....",
+        ".......L........",
+      ],
+      flower: [
+        "................",
+        "......oooo......",
+        "....oopqqpoo....",
+        "...opqpqqpqpo...",
+        "..opqqpPPpqqpo..",
+        "..oqpPoCCoPpqo..",
+        "..opPoCccCoPpo..",
+        "..oqpoCcCCoPqo..",
+        "..opqPoCCoPqpo..",
+        "...opPPooPPpo...",
+        "....oopqqpoo....",
+        "......oLoo......",
+        "..ooo..L..ooo...",
+        ".okllo.L.ollko..",
+        "..oLLLoLoLLLo...",
+        "....ooLLLoo.....",
+      ],
+      pumpkin: [
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        ".......oo.......",
+        "......oLLo......",
+        "...oooooLoooo...",
+        "..oQRQoQRoQRQo..",
+        ".oQRRQoQRoQRRQo.",
+        ".oQRRQoQRoQRRQo.",
+        ".oOQRQoQQoQRQOo.",
+        ".oOQQQoQQoQQQOo.",
+        "..oOQOoOQoOQOo..",
+        "...oooooooooo...",
+        "................",
+      ],
+      hay: [
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "................",
+        "..oooooooooooo..",
+        ".ojhjjhjjhjjhjo.",
+        ".ohjhhjhhjhhjho.",
+        ".oWWWWWWWWWWWWo.",
+        ".ojhjjhjjhjjhjo.",
+        ".ohHhhHhhHhhHho.",
+        ".oHhHHhHHhHHhHo.",
+        ".oHHHHHHHHHHHHo.",
+        "..oooooooooooo..",
+        "................",
+      ],
+      fence: [
+        "................",
+        "................",
+        "................",
+        "................",
+        "..oo........oo..",
+        ".owvo......owvo.",
+        ".owvo......owvo.",
+        "oooooooooooooooo",
+        "wvvvvwvvvvwvvvvw",
+        "WWWWWWWWWWWWWWWW",
+        "oooooooooooooooo",
+        ".owvo......owvo.",
+        "oooooooooooooooo",
+        "wvvvwvvvvvwvvvvw",
+        "WWWWWWWWWWWWWWWW",
+        ".oWo........oWo.",
+      ],
+      lantern: [
+        "................",
+        "................",
+        ".......oo.......",
+        "......oMMo......",
+        ".....oMMMMo.....",
+        ".....oYyyYo.....",
+        ".....oyYYyo.....",
+        ".....oYyyYo.....",
+        ".....oMMMMo.....",
+        "......oWWo......",
+        "......oWo.......",
+        "......oWo.......",
+        "......oWo.......",
+        "......oWo.......",
+        "......oWWo......",
+        ".....oWWWWo.....",
+      ],
+    };
+    // outline color used by style C, per sprite
+    const DARK_KEY = {
+      sprout: "L",
+      bud: "L",
+      flower: "P",
+      pumpkin: "O",
+      hay: "H",
+      fence: "W",
+      lantern: "M",
+    };
+
+    const S16 = [
+      "#1a1c2c",
+      "#5d275d",
+      "#b13e53",
+      "#ef7d57",
+      "#ffcd75",
+      "#a7f070",
+      "#38b764",
+      "#257179",
+      "#29366f",
+      "#3b5dc9",
+      "#41a6f6",
+      "#73eff7",
+      "#f4f4f4",
+      "#94b0c2",
+      "#566c86",
+      "#333c57",
+    ];
+
+    const STYLES = {
+      a: {
+        o: "#3b2027",
+        L: "#3e6b2f",
+        l: "#5f9a3a",
+        k: "#9cc75a",
+        C: "#6b3a1e",
+        c: "#d19a35",
+        W: "#5a3a22",
+        w: "#8a5a34",
+        v: "#b88350",
+        O: "#9a3b12",
+        Q: "#d9661c",
+        R: "#f39a3a",
+        H: "#8f6b2a",
+        h: "#c89c45",
+        j: "#ecd07a",
+        M: "#3d3b4a",
+        Y: "#f6c343",
+        y: "#fff1a8",
+        grass: ["#4f7d31", "#6a9a3c", "#8cbf4e"],
+        soil: ["#4a2e22", "#6e4630", "#86573a"],
+        wet: ["#33201a", "#4c3024"],
+        stone: ["#6e6a72", "#a9a4a8"],
+        petals: {
+          rouge: ["#8e1f2f", "#d0413e", "#f08070"],
+          violet: ["#4e2a78", "#8150b8", "#b98ae0"],
+          jaune: ["#a86a10", "#e8b020", "#ffe070"],
+          blanc: ["#8a8aa0", "#d8d8e0", "#ffffff"],
+          rose: ["#9a3060", "#e0689a", "#ffb0cc"],
+          orange: ["#a0400c", "#e87424", "#ffb060"],
+        },
+        leaves: ["#b8401c", "#e08a2a", "#f2c14a", "#8f2a1a"],
+      },
+      b: {
+        o: S16[0],
+        L: S16[7],
+        l: S16[6],
+        k: S16[5],
+        C: S16[1],
+        c: S16[4],
+        W: S16[15],
+        w: S16[14],
+        v: S16[14],
+        O: S16[2],
+        Q: S16[3],
+        R: S16[4],
+        H: S16[3],
+        h: S16[4],
+        j: S16[4],
+        M: S16[15],
+        Y: S16[4],
+        y: S16[12],
+        grass: [S16[7], S16[6], S16[5]],
+        soil: [S16[15], S16[14], S16[14]],
+        wet: [S16[0], S16[15]],
+        stone: [S16[14], S16[13]],
+        petals: {
+          rouge: [S16[1], S16[2], S16[3]],
+          violet: [S16[8], S16[9], S16[10]],
+          jaune: [S16[3], S16[4], S16[4]],
+          blanc: [S16[13], S16[12], S16[12]],
+          rose: [S16[1], S16[2], S16[12]],
+          orange: [S16[2], S16[3], S16[4]],
+        },
+        leaves: [S16[2], S16[3], S16[4], S16[1]],
+      },
+      c: {
+        o: null,
+        L: "#6f8f5a",
+        l: "#93b27a",
+        k: "#c3d9a0",
+        C: "#9a6f4e",
+        c: "#e0b87a",
+        W: "#9b7a60",
+        w: "#bf9e80",
+        v: "#dcc2a4",
+        O: "#c2744a",
+        Q: "#e39a68",
+        R: "#f5c095",
+        H: "#bfa06a",
+        h: "#dcc28c",
+        j: "#f1e0b2",
+        M: "#7c7888",
+        Y: "#f3d27e",
+        y: "#fff4cf",
+        grass: ["#8fae72", "#a3c083", "#bdd49c"],
+        soil: ["#8c6a55", "#a8846b", "#b99680"],
+        wet: ["#6c4f40", "#836252"],
+        stone: ["#b3aeb3", "#d6d2d4"],
+        petals: {
+          rouge: ["#b35a62", "#de8a8a", "#f5b9b3"],
+          violet: ["#7f6aa6", "#a893cc", "#d0c2ea"],
+          jaune: ["#c9a24e", "#ecc873", "#fae6a8"],
+          blanc: ["#b9b7c6", "#e8e6ee", "#ffffff"],
+          rose: ["#c27794", "#e8a4bd", "#f8d1de"],
+          orange: ["#c47e4e", "#eba878", "#f9d0ac"],
+        },
+        leaves: ["#d08a5a", "#e8b070", "#f0d08a", "#b8705a"],
+      },
+    };
+
+    // deterministic hash for tile noise
+    const hash = (x, y, s = 0) => {
+      let h = (x * 374761393 + y * 668265263 + s * 2147483647) | 0;
+      h = (h ^ (h >>> 13)) * 1274126177;
+      return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+    };
+
+    // scene: soil plot + plants + decor
+    const soil = new Set();
+    for (let x = 2; x <= 7; x++) for (let y = 2; y <= 4; y++) soil.add(x + "," + y);
+    for (let x = 3; x <= 7; x++) soil.add(x + ",6");
+    const wetTiles = new Set(["2,2", "3,2", "4,3", "5,3", "6,6", "7,6"]);
+    const plants = [
+      [2, 2, "flower", "rouge"],
+      [3, 2, "flower", "violet"],
+      [4, 2, "bud", "jaune"],
+      [5, 2, "sprout"],
+      [6, 2, "flower", "blanc"],
+      [7, 2, "flower", "orange"],
+      [2, 3, "bud", "rose"],
+      [3, 3, "flower", "jaune"],
+      [5, 3, "flower", "rose"],
+      [6, 3, "sprout"],
+      [7, 3, "bud", "violet"],
+      [2, 4, "sprout"],
+      [3, 4, "flower", "orange"],
+      [4, 4, "flower", "rouge"],
+      [6, 4, "flower", "violet"],
+      [7, 4, "flower", "jaune"],
+      [3, 6, "flower", "blanc"],
+      [4, 6, "bud", "orange"],
+      [5, 6, "flower", "rose"],
+      [7, 6, "sprout"],
+    ];
+    const decor = [
+      [10, 2, "pumpkin"],
+      [11, 3, "pumpkin"],
+      [10, 4, "hay"],
+      [0, 5, "pumpkin"],
+      [8, 1, "lantern"],
+      [1, 2, "lantern"],
+    ];
+    const stones = [
+      [9, 1],
+      [9, 2],
+      [9, 3],
+      [9, 4],
+      [9, 5],
+      [9, 6],
+    ];
+
+    function colorOf(st, ch, name, petal) {
+      if (ch === "o") return st.o ?? st[DARK_KEY[name]] ?? (petal ? petal[0] : st.L);
+      if (petal && (ch === "P" || ch === "p" || ch === "q")) return petal["Ppq".indexOf(ch)];
+      return st[ch];
+    }
+
+    function drawSprite(g, st, name, px, py, petalName, sway) {
+      const rows = SPR[name];
+      const petal = petalName ? st.petals[petalName] : null;
+      for (let r = 0; r < rows.length; r++) {
+        const off = r < rows.length - 5 ? sway : 0;
+        const row = rows[r];
+        for (let c = 0; c < row.length; c++) {
+          const ch = row[c];
+          if (ch === ".") continue;
+          g.fillStyle = colorOf(st, ch, name, petal);
+          g.fillRect(px + c + off, py + r - (rows.length - T), 1, 1);
+        }
+      }
+    }
+
+    let tod = "auto",
+      rain = false;
+    const LIGHT = {
+      matin: { mul: "#c9d4e6", mist: 0.28 },
+      midi: { mul: null, mist: 0 },
+      soir: { mul: "#f0a878", mist: 0, sky: "rgba(255,140,60,0.18)" },
+      nuit: { mul: "#3a3f78", mist: 0, night: true },
+    };
+    function currentTod() {
+      if (tod !== "auto") return tod;
+      const h = new Date().getHours();
+      if (h >= 6 && h < 10) return "matin";
+      if (h >= 10 && h < 17) return "midi";
+      if (h >= 17 && h < 21) return "soir";
+      return "nuit";
+    }
+
+    const leaves = Array.from({ length: 10 }, (_, i) => ({
+      x: hash(i, 1) * W,
+      y: hash(i, 2) * H,
+      v: 0.15 + hash(i, 3) * 0.2,
+      k: i % 4,
+      p: hash(i, 4) * 6,
+    }));
+    const drops = Array.from({ length: 70 }, (_, i) => ({
+      x: hash(i, 7) * W,
+      y: hash(i, 8) * H,
+      v: 2.2 + hash(i, 9),
+    }));
+
+    function render(g, st, t) {
+      const L = LIGHT[currentTod()];
+      // ground
+      for (let ty = 0; ty < 7; ty++)
+        for (let tx = 0; tx < 12; tx++) {
+          const key = tx + "," + ty,
+            ox = tx * T,
+            oy = ty * T;
+          if (soil.has(key)) {
+            const wet = rain || wetTiles.has(key);
+            const pal = wet ? [st.wet[0], st.wet[1], st.wet[1]] : st.soil;
+            g.fillStyle = pal[1];
+            g.fillRect(ox, oy, T, T);
+            g.fillStyle = pal[0];
+            for (let y = 3; y < T; y += 5) g.fillRect(ox + 1, oy + y, T - 2, 1);
+            for (let i = 0; i < 6; i++) {
+              g.fillStyle = pal[2];
+              g.fillRect(
+                ox + ((hash(tx, ty, i) * 14) | 0) + 1,
+                oy + ((hash(ty, tx, i) * 14) | 0) + 1,
+                1,
+                1,
+              );
+            }
+          } else {
+            g.fillStyle = st.grass[1];
+            g.fillRect(ox, oy, T, T);
+            for (let i = 0; i < 10; i++) {
+              g.fillStyle = hash(tx, ty, i + 50) > 0.5 ? st.grass[0] : st.grass[2];
+              g.fillRect(
+                ox + ((hash(tx, ty, i) * 16) | 0),
+                oy + ((hash(ty, tx, i) * 16) | 0),
+                1,
+                1,
+              );
+            }
+            // swaying tufts
+            for (let i = 0; i < 2; i++) {
+              const gx = ox + 2 + ((hash(tx, ty, i + 90) * 11) | 0),
+                gy = oy + 5 + ((hash(tx, ty, i + 91) * 9) | 0);
+              const s = Math.sin(t / 700 + gx * 0.15) > 0.3 ? 1 : 0;
+              g.fillStyle = st.grass[0];
+              g.fillRect(gx, gy + 2, 1, 1);
+              g.fillRect(gx + 2, gy + 2, 1, 1);
+              g.fillRect(gx + 1, gy + 1, 1, 2);
+              g.fillStyle = st.grass[2];
+              g.fillRect(gx + 1 + s, gy, 1, 1);
+            }
+          }
+        }
+      for (const [x, y] of stones) {
+        g.fillStyle = st.stone[0];
+        g.fillRect(x * T + 3, y * T + 4, 6, 4);
+        g.fillRect(x * T + 8, y * T + 10, 5, 3);
+        g.fillStyle = st.stone[1];
+        g.fillRect(x * T + 4, y * T + 4, 4, 2);
+        g.fillRect(x * T + 9, y * T + 10, 3, 1);
+      }
+      // fence along top
+      for (let x = 0; x < 12; x++) drawSprite(g, st, "fence", x * T, 0, null, 0);
+
+      // depth-sorted objects
+      const objs = [
+        ...plants.map(([x, y, n, p]) => ({ x, y, n, p })),
+        ...decor.map(([x, y, n]) => ({ x, y, n })),
+      ].sort((a, b) => a.y - b.y);
+      for (const o of objs) {
+        const sway =
+          o.n === "flower" || o.n === "bud" || o.n === "sprout"
+            ? Math.sin(t / 900 + o.x * 0.8 + o.y) > 0.55
+              ? 1
+              : 0
+            : 0;
+        drawSprite(g, st, o.n, o.x * T, o.y * T, o.p, sway);
+      }
+
+      // falling leaves
+      for (const l of leaves) {
+        const y = ((l.y + t * l.v * 0.02) % (H + 10)) - 5;
+        const x = (l.x + t * 0.006 + Math.sin(t / 600 + l.p) * 4) % W;
+        g.fillStyle = st.leaves[l.k];
+        g.fillRect(x | 0, y | 0, 2, 1);
+        if (Math.sin(t / 300 + l.p) > 0) g.fillRect((x | 0) + 1, (y | 0) + 1, 1, 1);
+      }
+
+      // lighting
+      if (L.mul) {
+        g.globalCompositeOperation = "multiply";
+        g.fillStyle = L.mul;
+        g.fillRect(0, 0, W, H);
+        g.globalCompositeOperation = "source-over";
+      }
+      if (rain) {
+        g.globalCompositeOperation = "multiply";
+        g.fillStyle = "#b8c0cc";
+        g.fillRect(0, 0, W, H);
+        g.globalCompositeOperation = "source-over";
+      }
+      if (L.sky) {
+        for (let i = 0; i < 4; i++) {
+          g.fillStyle = L.sky;
+          g.fillRect(0, 0, W, 12 + i * 10);
+        }
+      }
+      if (L.night) {
+        g.globalCompositeOperation = "lighter";
+        for (const [x, y, n] of decor) {
+          if (n !== "lantern") continue;
+          const cx = x * T + 8,
+            cy = y * T + 6;
+          const flick = Math.sin(t / 180 + x) > 0.8 ? 1 : 0;
+          [
+            [26 + flick, 0.07],
+            [18, 0.09],
+            [10, 0.13],
+          ].forEach(([r, a]) => {
+            g.fillStyle = `rgba(255,190,90,${a})`;
+            g.beginPath();
+            g.arc(cx, cy, r, 0, Math.PI * 2);
+            g.fill();
+          });
+        }
+        g.globalCompositeOperation = "source-over";
+      }
+      if (L.mist) {
+        for (let i = 0; i < 3; i++) {
+          const y = 30 + i * 28,
+            x = ((t * 0.004 * (i + 1)) % (W + 80)) - 80;
+          g.fillStyle = `rgba(235,240,250,${L.mist / (i + 1.5)})`;
+          g.fillRect(x, y, 90, 6);
+          g.fillRect(x + 20, y - 3, 50, 3);
+          g.fillRect(x - 60, y + 4, 70, 4);
+        }
+      }
+      if (rain) {
+        g.fillStyle = "rgba(200,215,240,0.55)";
+        for (const d of drops) {
+          const y = (d.y + t * d.v * 0.06) % H,
+            x = (d.x - t * 0.02) % W;
+          g.fillRect(((x + W) % W) | 0, y | 0, 1, 3);
+        }
+      }
+    }
+
+    const canvases = [...document.querySelectorAll("canvas[data-style]")].map((cv) => {
+      const g = cv.getContext("2d");
+      g.imageSmoothingEnabled = false;
+      return { g, st: STYLES[cv.dataset.style] };
+    });
+
+    let last = 0;
+    function frame(t) {
+      if (t - last > 66) {
+        last = t;
+        for (const { g, st } of canvases) {
+          g.clearRect(0, 0, W, H);
+          render(g, st, t);
+        }
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+
+    const todBtns = document.querySelectorAll(".tod");
+    const markTod = () =>
+      todBtns.forEach((b) => b.classList.toggle("active", b.dataset.tod === tod));
+    todBtns.forEach((b) =>
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        tod = b.dataset.tod;
+        markTod();
+      }),
+    );
+    markTod();
+    const rb = document.getElementById("rainBtn");
+    rb.addEventListener("click", (e) => {
+      e.stopPropagation();
+      rain = !rain;
+      rb.textContent = "Pluie : " + (rain ? "oui" : "non");
+      rb.classList.toggle("active", rain);
+    });
+  })();
+</script>

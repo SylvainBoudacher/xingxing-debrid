@@ -32,11 +32,11 @@ export function MangaTitleActions({
         <motion.button
           whileTap={{ scale: 0.96 }}
           onClick={onContinue}
-          className="flex h-9 flex-none items-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+          className="flex h-9 min-w-0 max-w-full items-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
         >
-          <BookOpen className="h-4 w-4" />
+          <BookOpen className="h-4 w-4 flex-none" />
           {started ? "Continuer" : "Commencer"}
-          <span className="text-xs font-medium opacity-70">{volumeLabel(next)}</span>
+          <span className="truncate text-xs font-medium opacity-70">{volumeLabel(next)}</span>
         </motion.button>
       )}
       {missingDownloads > 0 && (

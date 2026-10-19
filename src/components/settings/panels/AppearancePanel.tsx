@@ -6,6 +6,7 @@ import type { WindowLaunchMode } from "@/lib/useAppInit";
 import { SettingsPanel } from "../SettingsPanel";
 import { FieldTitle, PanelDivider, ViewOptionCard } from "../controls";
 import { settingsStore as store } from "../store";
+import { ThemeSection } from "./ThemeSection";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
 export function AppearancePanel() {
@@ -85,8 +86,12 @@ export function AppearancePanel() {
     <SettingsPanel
       icon={Monitor}
       title="Apparence et fenêtre"
-      subtitle="Taille de la fenêtre et page d'ouverture au lancement."
+      subtitle="Thème, taille de la fenêtre et page d'ouverture au lancement."
     >
+      <ThemeSection />
+
+      <PanelDivider />
+
       <FieldTitle title="Page d'ouverture" hint="La page affichée quand l'application démarre." />
 
       <div className="grid gap-3 sm:grid-cols-3">

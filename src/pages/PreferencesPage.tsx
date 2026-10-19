@@ -15,6 +15,8 @@ import { NyaaPanel } from "@/components/settings/panels/NyaaPanel";
 import { ShortcutsPanel } from "@/components/settings/panels/ShortcutsPanel";
 import type { Backdrop } from "@/lib/backdropPref";
 import { BackdropPanel } from "@/components/settings/panels/BackdropPanel";
+import { UpdatesPanel } from "@/components/settings/panels/UpdatesPanel";
+import type { UpdateInfo } from "@/lib/updater";
 import { PageHeader } from "@/components/PageHeader";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
@@ -22,8 +24,9 @@ import { useEffect, useState } from "react";
 interface PreferencesPageProps {
   onBack: () => void;
   onNavigate: (page: Page) => void;
-  hasPendingUpdate: boolean;
+  availableUpdate: UpdateInfo | null;
   onShowPendingUpdate: () => void;
+  onCheckUpdate: () => Promise<UpdateInfo | null>;
   backdrop: Backdrop;
   onSetBackdrop: (v: Backdrop) => void;
   summerFps: 30 | 60;
@@ -32,6 +35,8 @@ interface PreferencesPageProps {
   onSetSummerMaxDucks: (v: number) => void;
   idleAutoHide: boolean;
   onSetIdleAutoHide: (v: boolean) => void;
+  poolBackdropExit: boolean;
+  onSetPoolBackdropExit: (v: boolean) => void;
   onKeysSaved: (keys: Partial<ApiKeys>) => void;
   initialPanel?: PanelId;
 }
@@ -39,8 +44,9 @@ interface PreferencesPageProps {
 export function PreferencesPage({
   onBack,
   onNavigate,
-  hasPendingUpdate,
+  availableUpdate,
   onShowPendingUpdate,
+  onCheckUpdate,
   backdrop,
   onSetBackdrop,
   summerFps,
@@ -49,6 +55,8 @@ export function PreferencesPage({
   onSetSummerMaxDucks,
   idleAutoHide,
   onSetIdleAutoHide,
+  poolBackdropExit,
+  onSetPoolBackdropExit,
   onKeysSaved,
   initialPanel,
 }: PreferencesPageProps) {
@@ -87,6 +95,14 @@ export function PreferencesPage({
         return <NyaaPanel />;
       case "backup-transfer":
         return <BackupTransferPanel />;
+      case "updates":
+        return (
+          <UpdatesPanel
+            availableUpdate={availableUpdate}
+            onCheck={onCheckUpdate}
+            onShowUpdate={onShowPendingUpdate}
+          />
+        );
       case "summer":
         return (
           <BackdropPanel
@@ -98,6 +114,8 @@ export function PreferencesPage({
             onSetSummerMaxDucks={onSetSummerMaxDucks}
             idleAutoHide={idleAutoHide}
             onSetIdleAutoHide={onSetIdleAutoHide}
+            poolBackdropExit={poolBackdropExit}
+            onSetPoolBackdropExit={onSetPoolBackdropExit}
           />
         );
     }
@@ -117,7 +135,7 @@ export function PreferencesPage({
             currentPage="preferences"
             onNavigate={onNavigate}
             onBack={onBack}
-            hasPendingUpdate={hasPendingUpdate}
+            hasPendingUpdate={availableUpdate !== null}
             onShowPendingUpdate={onShowPendingUpdate}
           />
         }

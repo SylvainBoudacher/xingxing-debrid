@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getRarity, randomVariant } from "./duckRandom";
+import { FLOWER_VARIANTS } from "./duckFlowers";
 import type { Accessory, Pattern, Effect } from "./duckTypes";
 
 // Accessories that render with v.accColor (mirrors COLORED_ACC in duckRandom.ts)
@@ -30,6 +31,8 @@ const VALID_PATTERNS = new Set<Pattern>([
   "zombie",
   "metal",
   "abyss",
+  "seeds",
+  "cactus",
 ]);
 const VALID_EFFECTS = new Set<Effect>([
   "glow",
@@ -44,6 +47,9 @@ const VALID_EFFECTS = new Set<Effect>([
   "fire",
   "frost",
   "nova",
+  "daisy",
+  "sunflower",
+  "cactus",
 ]);
 const HEX_RE = /^#[0-9a-fA-F]{3,8}$/;
 
@@ -146,6 +152,24 @@ describe("reward effects rarity", () => {
     expect(getRarity({ body: "#5E0E20", beak: BEAK, acc: "bowtie", effect: "croupier" })).toBe(
       "mythic",
     );
+  });
+
+  it("ranks the three flower ducks as mythic", () => {
+    for (const v of FLOWER_VARIANTS) expect(getRarity(v())).toBe("mythic");
+  });
+
+  it("rolls each flower duck about as often as the king (0.5%)", () => {
+    const N = 40000;
+    const counts = new Map<string, number>();
+    for (let i = 0; i < N; i++) {
+      const e = randomVariant().effect;
+      if (e === "royal" || e === "daisy" || e === "sunflower" || e === "cactus")
+        counts.set(e, (counts.get(e) ?? 0) + 1);
+    }
+    for (const e of ["royal", "daisy", "sunflower", "cactus"]) {
+      expect((counts.get(e) ?? 0) / N).toBeGreaterThan(0.0025);
+      expect((counts.get(e) ?? 0) / N).toBeLessThan(0.0085);
+    }
   });
 
   it("keeps Zeus alone in the god tier", () => {

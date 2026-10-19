@@ -1,0 +1,984 @@
+<h2>Styles en 48×48</h2>
+<p class="subtitle">
+  Même moteur, mêmes fleurs, même champ. Seuls changent la palette, les contours et la façon
+  d'ombrer. Les boutons d'heure et de pluie s'appliquent à toutes les scènes. Clique sur le style
+  que tu préfères (tu peux aussi en combiner deux).
+</p>
+
+<div class="section" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center">
+  <span class="label">Heure</span>
+  <button class="mock-button tod" data-tod="auto">Auto (heure réelle)</button>
+  <button class="mock-button tod" data-tod="matin">Matin brumeux</button>
+  <button class="mock-button tod" data-tod="midi">Midi</button>
+  <button class="mock-button tod" data-tod="soir">Soir orangé</button>
+  <button class="mock-button tod" data-tod="nuit">Nuit</button>
+  <span class="label" style="margin-left: 1rem">Météo</span>
+  <button class="mock-button" id="rainBtn">Pluie : non</button>
+</div>
+
+<div class="cards" style="grid-template-columns: 1fr">
+  <div class="card" data-choice="chaleureux" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>A. Chaleureux</h3>
+      <p>
+        La version d'avant : contours colorés (teinte sombre de l'objet), 4 tons, couleurs franches.
+        Lisible et chaleureux.
+      </p>
+    </div>
+    <div class="card-image stack" data-style="chaleureux"></div>
+  </div>
+  <div class="card" data-choice="encre" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>B. Encre</h3>
+      <p>
+        Contour noir net, couleurs plus saturées, ombres plus tranchées. Esprit cartoon / jeu
+        Nintendo : les silhouettes ressortent le plus.
+      </p>
+    </div>
+    <div class="card-image stack" data-style="encre"></div>
+  </div>
+  <div class="card" data-choice="pastel" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>C. Pastel doux</h3>
+      <p>
+        Aucun contour, couleurs éclaircies vers la crème, contrastes faibles. Le plus apaisant, un
+        peu moins lisible de loin.
+      </p>
+    </div>
+    <div class="card-image stack" data-style="pastel"></div>
+  </div>
+  <div class="card" data-choice="crepuscule" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>D. Crépuscule</h3>
+      <p>
+        Ombres qui tirent vers le violet, lumières vers le jaune, tramage (dithering) entre les
+        tons, sol plus sombre. Ambiance cinématique, façon Eastward.
+      </p>
+    </div>
+    <div class="card-image stack" data-style="crepuscule"></div>
+  </div>
+  <div class="card" data-choice="gravure" onclick="toggleSelect(this)">
+    <div class="card-body">
+      <h3>E. Herbier ancien</h3>
+      <p>
+        Couleurs désaturées et patinées, contours brun sépia, tramage léger. Comme une planche
+        botanique ancienne, en accord avec l'Herbier.
+      </p>
+    </div>
+    <div class="card-image stack" data-style="gravure"></div>
+  </div>
+</div>
+
+<style>
+  .card-image.stack {
+    aspect-ratio: auto;
+    justify-content: flex-start;
+  }
+  .stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    background: #1b1418;
+    overflow-x: auto;
+  }
+  .stack canvas {
+    image-rendering: pixelated;
+    display: block;
+  }
+  .names {
+    display: flex;
+  }
+  .names span {
+    width: 96px;
+    text-align: center;
+    font-size: 11px;
+    color: #e8dccb;
+    mix-blend-mode: difference;
+  }
+  .stack .lbl {
+    font-size: 11px;
+    color: #b8a898;
+    mix-blend-mode: difference;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .tod.active,
+  #rainBtn.active {
+    outline: 2px solid currentColor;
+  }
+</style>
+
+<script>
+  (() => {
+    const TAU = Math.PI * 2;
+    const BASE = {
+      green: ["#243d26", "#3e6b2f", "#5f9a3a", "#9cc75a"],
+      darkLeaf: ["#1a3020", "#2c4f2e", "#437438", "#66994a"],
+      yellow: ["#8a4a0c", "#d98e14", "#f5c52a", "#fff08a"],
+      brown: ["#2e180c", "#5e3418", "#87501f", "#b07a34"],
+      pink: ["#7a2350", "#c24a86", "#ec84b4", "#ffc4de"],
+      white: ["#6c6a84", "#b4b4c8", "#e6e6ef", "#ffffff"],
+      violet: ["#3a2366", "#6a44a8", "#9a76d6", "#c9b0f2"],
+      red: ["#5e1024", "#a8243a", "#dc4a4a", "#f79080"],
+      orange: ["#6e2a0c", "#b8521c", "#e8862e", "#ffc070"],
+      bronze: ["#5a2a14", "#9a4a1e", "#cf7a34", "#f0b060"],
+      lilac: ["#5a3a7a", "#9270b8", "#c0a4e0", "#eadcfa"],
+      heather: ["#4a1a4a", "#8a3480", "#c05ab0", "#e89ad8"],
+      cream: ["#8a8a70", "#c8c6a8", "#ecebd4", "#ffffff"],
+      wood: ["#3a2418", "#6a4428", "#9a6a40", "#c69a64"],
+      metal: ["#23222c", "#3d3b4a", "#5d5a6c", "#8a879a"],
+      hay: ["#6e4e1c", "#a8802e", "#d2b050", "#f0dc8a"],
+      glow: ["#c8801c", "#f6c343", "#ffe38a", "#fffbe0"],
+      grass: ["#2f5226", "#447230", "#578c38", "#7fb44a"],
+      soil: ["#2e1c14", "#4e3222", "#654230", "#7e5a42"],
+      wet: ["#1e120e", "#342218", "#452e22", "#583c2e"],
+      fall: ["#b8401c", "#e08a2a", "#f2c14a", "#8f2a1a"],
+    };
+
+    const hsl = (hex) => {
+      let [r, g, b] = hexRgb(hex).map((v) => v / 255);
+      const mx = Math.max(r, g, b),
+        mn = Math.min(r, g, b),
+        l = (mx + mn) / 2;
+      if (mx === mn) return [0, 0, l];
+      const d = mx - mn,
+        s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+      const h =
+        mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return [h / 6, s, l];
+    };
+    const fromHsl = (h, s, l) => {
+      const f = (n) => {
+        const k = (n + h * 12) % 12,
+          a = s * Math.min(l, 1 - l);
+        return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))))
+          .toString(16)
+          .padStart(2, "0");
+      };
+      return "#" + f(0) + f(8) + f(4);
+    };
+    const sat = (hex, m) => {
+      const [h, s, l] = hsl(hex);
+      return fromHsl(h, Math.min(1, s * m), l);
+    };
+
+    const STYLES = {
+      chaleureux: { ramp: (r) => r, outline: "#140a14", outlineMix: 0.65, bg: "#1b1418" },
+      encre: {
+        ramp: (r) => [
+          mix(sat(r[0], 1.2), "#000000", 0.2),
+          sat(r[1], 1.25),
+          sat(r[2], 1.2),
+          sat(r[3], 1.1),
+        ],
+        outline: "#0a0710",
+        outlineMix: 1,
+        bg: "#141016",
+      },
+      pastel: {
+        ramp: (r) => [
+          mix(r[0], "#f3e4d0", 0.32),
+          mix(r[1], "#f3e4d0", 0.34),
+          mix(r[2], "#f7ecdc", 0.34),
+          mix(r[3], "#fff8ee", 0.3),
+        ],
+        outline: null,
+        bg: "#e9dccb",
+      },
+      crepuscule: {
+        ramp: (r) => [
+          mix(r[0], "#241a48", 0.45),
+          mix(r[1], "#4a3266", 0.18),
+          r[2],
+          mix(r[3], "#ffe6a0", 0.3),
+        ],
+        outline: "#120a24",
+        outlineMix: 0.75,
+        dither: true,
+        bg: "#120e1e",
+        ground: (r) => [
+          mix(r[0], "#120c28", 0.5),
+          mix(r[1], "#241a48", 0.3),
+          mix(r[2], "#241a48", 0.15),
+          r[3],
+        ],
+      },
+      gravure: {
+        ramp: (r) => r.map((c, i) => mix(sat(c, 0.55), "#e8d8b0", [0.05, 0.12, 0.18, 0.22][i])),
+        outline: "#3a2414",
+        outlineMix: 0.8,
+        dither: true,
+        bg: "#d9c7a0",
+      },
+    };
+    let STYLE = STYLES.chaleureux;
+    let PAL = BASE;
+    const CUR = { x: 0, y: 0 };
+    const styledPal = (st) =>
+      Object.fromEntries(
+        Object.entries(BASE).map(([k, r]) => [
+          k,
+          (st.ground && ["grass", "soil", "wet"].includes(k) ? st.ground : st.ramp)(r),
+        ]),
+      );
+
+    const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const mix = (a, b, t) => {
+      const A = hexRgb(a),
+        B = hexRgb(b);
+      return (
+        "#" +
+        A.map((v, i) =>
+          Math.round(v + (B[i] - v) * t)
+            .toString(16)
+            .padStart(2, "0"),
+        ).join("")
+      );
+    };
+    const hash = (x, y, s = 0) => {
+      let h = (x * 374761393 + y * 668265263 + s * 1442695041) | 0;
+      h = Math.imul(h ^ (h >>> 13), 1274126177);
+      return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+    };
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const R = (ramp, t) => {
+      const f = t * 4;
+      let i = Math.floor(f);
+      if (STYLE.dither && f - i > 0.7 && (CUR.x + CUR.y) % 2 === 0) i++;
+      return ramp[clamp(i, 0, 3)];
+    };
+
+    // ---- raster on a sprite buffer, geometry in 32x48 units scaled by k ----
+    const buf = (w, h) => ({ w, h, c: new Array(w * h).fill(null) });
+    const put = (b, x, y, col) => {
+      if (col && x >= 0 && y >= 0 && x < b.w && y < b.h) b.c[y * b.w + x] = col;
+    };
+    const get = (b, x, y) => (x < 0 || y < 0 || x >= b.w || y >= b.h ? null : b.c[y * b.w + x]);
+
+    function ell(b, k, cx, cy, rx, ry, rot, shade) {
+      const cos = Math.cos(rot),
+        sin = Math.sin(rot),
+        m = Math.max(rx, ry);
+      const small = Math.min(rx, ry) * k;
+      const edgeT = small < 1.6 ? 2 : 1 - 1.1 / small;
+      for (let py = Math.floor((cy - m) * k); py <= Math.ceil((cy + m) * k); py++)
+        for (let px = Math.floor((cx - m) * k); px <= Math.ceil((cx + m) * k); px++) {
+          const ux = (px + 0.5) / k - cx,
+            uy = (py + 0.5) / k - cy;
+          const lx = ux * cos + uy * sin,
+            ly = -ux * sin + uy * cos;
+          const nx = lx / rx,
+            ny = ly / ry,
+            d = nx * nx + ny * ny;
+          if (d > 1) continue;
+          CUR.x = px;
+          CUR.y = py;
+          put(b, px, py, shade(nx, ny, d, Math.sqrt(d) > edgeT, px, py, ux, uy));
+        }
+    }
+    const sphere =
+      (ramp, bias = 0) =>
+      (nx, ny, d, edge, px, py, ux, uy) => {
+        const r = Math.hypot(ux, uy) || 1;
+        const lit = -((ux / r) * 0.6 + (uy / r) * 0.8) * Math.sqrt(d);
+        return R(ramp, 0.5 + 0.45 * lit + bias - (edge ? 0.3 : 0));
+      };
+    function petal(b, k, cx, cy, ang, len, wid, ramp, o = {}) {
+      const x = cx + (Math.cos(ang) * len) / 2,
+        y = cy + (Math.sin(ang) * len) / 2;
+      const face = -(Math.cos(ang) * 0.6 + Math.sin(ang) * 0.8) * 0.15;
+      ell(b, k, x, y, len / 2, wid / 2, ang, (nx, ny, d, edge) => {
+        const along = (nx + 1) / 2,
+          across = Math.abs(ny);
+        if (o.notch && along > 0.86 && across < 0.24) return null;
+        if (o.base && along < 0.28) return R(o.base, 0.55 + along);
+        let t = 0.25 + 0.7 * along - 0.25 * across + face + (o.bias || 0);
+        if (edge) t -= 0.35;
+        return R(ramp, t);
+      });
+    }
+    function leaf(b, k, cx, cy, ang, len, wid, ramp) {
+      const x = cx + (Math.cos(ang) * len) / 2,
+        y = cy + (Math.sin(ang) * len) / 2;
+      ell(b, k, x, y, len / 2, wid / 2, ang, (nx, ny, d, edge) => {
+        const along = (nx + 1) / 2;
+        if (Math.abs(ny) < 0.13 && along > 0.08 && along < 0.85) return ramp[0];
+        let t = 0.35 + 0.35 * along + (ny < 0 ? 0.2 : -0.1);
+        if (edge) t -= 0.3;
+        return R(ramp, t);
+      });
+    }
+    function stem(b, k, x0, y0, x1, y1, w, ramp, bend = 0) {
+      const pw = Math.max(1, Math.round(w * k));
+      const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * k * 1.6) + 1;
+      const mx = (x0 + x1) / 2 + bend,
+        my = (y0 + y1) / 2;
+      for (let i = 0; i <= n; i++) {
+        const s = i / n,
+          a = (1 - s) * (1 - s),
+          c = 2 * s * (1 - s),
+          e = s * s;
+        const x = a * x0 + c * mx + e * x1,
+          y = a * y0 + c * my + e * y1;
+        const px = Math.round(x * k - pw / 2),
+          py = Math.round(y * k);
+        for (let j = 0; j < pw; j++) put(b, px + j, py, j === 0 && pw > 1 ? ramp[2] : ramp[1]);
+      }
+    }
+    function outline(b) {
+      if (!STYLE.outline) return;
+      const out = b.c.slice();
+      for (let y = 0; y < b.h; y++)
+        for (let x = 0; x < b.w; x++) {
+          if (b.c[y * b.w + x]) continue;
+          const n = get(b, x - 1, y) || get(b, x + 1, y) || get(b, x, y - 1) || get(b, x, y + 1);
+          if (n) out[y * b.w + x] = mix(n, STYLE.outline, STYLE.outlineMix);
+        }
+      b.c = out;
+    }
+    function toCanvas(b) {
+      const cv = document.createElement("canvas");
+      cv.width = b.w;
+      cv.height = b.h;
+      const g = cv.getContext("2d"),
+        img = g.createImageData(b.w, b.h);
+      b.c.forEach((col, i) => {
+        if (!col) return;
+        const [r, gg, bb] = hexRgb(col);
+        img.data.set([r, gg, bb, 255], i * 4);
+      });
+      g.putImageData(img, 0, 0);
+      return cv;
+    }
+
+    // ---- species (32 wide, 48 tall units, ground at y=47) ----
+    const SPECIES = {
+      tournesol(b, k, C) {
+        stem(b, k, 16, 47, 16, 13, 2.2, PAL.green, 1.5);
+        leaf(b, k, 16, 38, Math.PI * 0.95, 10, 6, PAL.green);
+        leaf(b, k, 17, 31, -0.15, 9, 5.5, PAL.green);
+        leaf(b, k, 16, 23, Math.PI * 1.08, 7, 4.5, PAL.green);
+        for (let j = 0; j < 20; j++) petal(b, k, 16, 12, (j / 20) * TAU + 0.1, 8.5, 3, C);
+        ell(b, k, 16, 12, 5.6, 5.6, 0, (nx, ny, d, edge, px, py) => {
+          if (d > 0.78) return PAL.brown[0];
+          const lit = -(nx * 0.6 + ny * 0.8);
+          return PAL.brown[(lit > 0.3 ? 1 : 0) + ((px + py) % 2)];
+        });
+      },
+      dahlia(b, k, C) {
+        stem(b, k, 16, 47, 16, 20, 1.6, PAL.green);
+        leaf(b, k, 16, 38, Math.PI * 0.92, 8, 5, PAL.darkLeaf);
+        leaf(b, k, 16, 34, -0.2, 8, 5, PAL.darkLeaf);
+        leaf(b, k, 16, 27, Math.PI * 1.1, 6, 3.6, PAL.darkLeaf);
+        const cx = 16,
+          cy = 15;
+        for (let r = 7.4; r > 0.4; r -= 2) {
+          const n = Math.max(1, Math.round((TAU * r) / 2.3));
+          for (let j = 0; j < n; j++) {
+            const a = (j / n) * TAU + r;
+            const x = cx + Math.cos(a) * r,
+              y = cy + Math.sin(a) * r * 0.92;
+            const lit = -((x - cx) * 0.6 + (y - cy) * 0.8) / 8;
+            ell(b, k, x, y, 1.8, 1.5, a, (nx, ny, d, edge) =>
+              R(C, 0.45 + 0.4 * lit + (d > 0.4 ? 0.18 : -0.22) - (edge ? 0.3 : 0)),
+            );
+          }
+        }
+      },
+      cosmos(b, k, C) {
+        stem(b, k, 16, 47, 17, 16, 1.1, PAL.green, -2.5);
+        for (let y = 42; y > 22; y -= 5) {
+          const dir = y % 10 ? 1 : -1;
+          stem(b, k, 16, y, 16 + dir * 7, y - 5, 0.8, PAL.green, dir);
+          stem(b, k, 16 + dir * 3, y - 1, 16 + dir * 4, y - 6, 0.7, PAL.green);
+        }
+        for (let j = 0; j < 8; j++)
+          petal(b, k, 17, 13, (j / 8) * TAU + 0.2, 8.2, 4.8, C, { notch: true });
+        ell(b, k, 17, 13, 2.4, 2.4, 0, (nx, ny, d, edge, px, py) =>
+          (px * 3 + py) % 4 === 0
+            ? PAL.yellow[0]
+            : sphere(PAL.yellow)(nx, ny, d, edge, px, py, nx, ny),
+        );
+      },
+      aster(b, k, C) {
+        const heads = [
+          [9, 25],
+          [23, 21],
+          [15, 13],
+        ];
+        for (const [x, y] of heads) stem(b, k, 16, 47, x, y, 1, PAL.green, (x - 16) * 0.2);
+        [
+          [16, 40, 3.6],
+          [16, 34, -0.5],
+          [13, 30, 3.8],
+          [20, 28, -0.7],
+        ].forEach(([x, y, a]) => leaf(b, k, x, y, a, 6, 2, PAL.green));
+        for (const [x, y] of heads) {
+          for (let j = 0; j < 22; j++) petal(b, k, x, y, (j / 22) * TAU, 5.2, 1.4, C);
+          ell(b, k, x, y, 1.9, 1.9, 0, sphere(PAL.yellow, 0.1));
+        }
+      },
+      bruyere(b, k, C) {
+        ell(b, k, 16, 42, 12.5, 6, 0, (nx, ny, d, edge, px, py) =>
+          R(PAL.darkLeaf, 0.4 - ny * 0.35 + (hash(px, py) - 0.5) * 0.5 - (edge ? 0.3 : 0)),
+        );
+        const tops = [
+          [5, 31],
+          [9, 27],
+          [13, 24],
+          [17, 22],
+          [21, 25],
+          [25, 28],
+          [28, 33],
+        ];
+        for (const [tx, ty] of tops) {
+          const x0 = 16 + (tx - 16) * 0.4,
+            y0 = 42;
+          stem(b, k, x0, y0, tx, ty, 0.8, PAL.brown);
+          for (let s = 0.05; s < 0.95; s += 0.1) {
+            const x = x0 + (tx - x0) * s,
+              y = y0 + (ty - y0) * s;
+            const side = Math.round(s * 10) % 2 ? 0.9 : -0.9;
+            ell(b, k, x + side, y, 1.2, 1.3, 0, sphere(C, 0.05));
+          }
+        }
+      },
+      colchique(b, k, C) {
+        const fl = [
+          [10, 36, -0.25],
+          [21, 33, 0.2],
+          [15.5, 30, 0],
+        ];
+        for (const [x, y, lean] of fl) {
+          stem(b, k, x - lean * 4, 47, x, y, 1.3, PAL.cream);
+          const up = -Math.PI / 2;
+          petal(b, k, x, y, up + lean - 0.32, 9, 4.2, C, { base: PAL.cream, bias: -0.1 });
+          petal(b, k, x, y, up + lean + 0.32, 9, 4.2, C, { base: PAL.cream, bias: -0.1 });
+          petal(b, k, x, y, up + lean, 10, 4, C, { base: PAL.cream, bias: 0.1 });
+        }
+      },
+      chrysantheme(b, k, C) {
+        [
+          [16, 45, -2.5],
+          [16, 45, -0.6],
+          [15, 44, -1.6],
+          [17, 44, 3.6],
+          [16, 44, -2.1],
+        ].forEach(([x, y, a]) => leaf(b, k, x, y, a, 9, 5, PAL.darkLeaf));
+        const heads = [
+          [9, 31, 4.6],
+          [23, 30, 4.6],
+          [16, 23, 5.4],
+        ];
+        for (const [x, y] of heads) stem(b, k, 16, 42, x, y, 1.1, PAL.green);
+        for (const [x, y, r] of heads) {
+          for (let j = 0; j < 16; j++)
+            petal(b, k, x, y, (j / 16) * TAU, r, 1.9, C, { bias: -0.15 });
+          for (let j = 0; j < 9; j++)
+            petal(b, k, x, y + 0.5, Math.PI + (j / 8) * Math.PI, r * 0.7, 1.8, C, { bias: 0.05 });
+          ell(b, k, x, y - 0.5, r * 0.42, r * 0.36, 0, sphere(C, 0.2));
+        }
+      },
+      rosetremiere(b, k, C) {
+        ell(b, k, 9, 42, 5.5, 4.2, 0.3, sphere(PAL.green, -0.05));
+        ell(b, k, 23, 41, 5.2, 4, -0.3, sphere(PAL.green));
+        stem(b, k, 16, 47, 16, 2, 1.6, PAL.green, 0.8);
+        ell(b, k, 16, 3, 1.6, 1.8, 0, sphere(PAL.green, 0.1));
+        ell(b, k, 15.6, 6.5, 2, 2.2, 0, sphere(C, -0.1));
+        [
+          [16, 11, 3.6],
+          [15, 19, 4],
+          [17.2, 27, 4.3],
+          [15.8, 35, 4.3],
+        ].forEach(([x, y, r]) => {
+          for (let j = 0; j < 5; j++)
+            petal(b, k, x, y, (j / 5) * TAU - 1.2, r, r * 0.95, C, { bias: 0.1 });
+          ell(b, k, x, y, r * 0.3, r * 0.3, 0, () => C[0]);
+          put(b, Math.round(x * k), Math.round(y * k), PAL.yellow[2]);
+        });
+      },
+    };
+
+    const STAGES = {
+      graine(b, k, C) {
+        ell(b, k, 16, 46.5, 5, 1.6, 0, sphere(PAL.soil, 0.2));
+        stem(b, k, 21, 47, 21, 37, 1, PAL.wood);
+        for (let y = 34; y < 39; y++)
+          for (let x = 18; x < 25; x++)
+            for (let py = Math.floor(y * k); py < Math.floor((y + 1) * k); py++)
+              for (let px = Math.floor(x * k); px < Math.floor((x + 1) * k); px++)
+                put(b, px, py, y === 34 ? C[3] : x === 18 ? C[1] : C[2]);
+      },
+      pousse(b, k) {
+        stem(b, k, 16, 47, 16, 42, 1.1, PAL.green);
+        leaf(b, k, 16, 42, -Math.PI * 0.85, 5.5, 3.2, PAL.green);
+        leaf(b, k, 16, 42, -Math.PI * 0.15, 5.5, 3.2, PAL.green);
+      },
+      jeune(b, k) {
+        stem(b, k, 16, 47, 16, 32, 1.3, PAL.green, 0.8);
+        leaf(b, k, 16, 43, Math.PI * 0.9, 7, 4, PAL.green);
+        leaf(b, k, 16, 40, -0.15, 7, 4, PAL.green);
+        leaf(b, k, 16, 36, Math.PI * 1.15, 5.5, 3.2, PAL.green);
+        leaf(b, k, 16, 33, -0.5, 5, 3, PAL.green);
+      },
+      bouton(b, k, C) {
+        stem(b, k, 16, 47, 16, 21, 1.4, PAL.green, 1);
+        leaf(b, k, 16, 40, Math.PI * 0.9, 8, 4.5, PAL.green);
+        leaf(b, k, 16, 34, -0.2, 7, 4, PAL.green);
+        leaf(b, k, 16, 28, Math.PI * 1.1, 5.5, 3.2, PAL.green);
+        ell(b, k, 16, 19, 2.8, 3.8, 0, (nx, ny, d, edge, px, py, ux, uy) =>
+          ny < -0.25
+            ? sphere(C, 0.05)(nx, ny, d, edge, px, py, ux, uy)
+            : sphere(PAL.green)(nx, ny, d, edge, px, py, ux, uy),
+        );
+        leaf(b, k, 16, 21, -Math.PI * 0.62, 3.5, 1.4, PAL.green);
+        leaf(b, k, 16, 21, -Math.PI * 0.38, 3.5, 1.4, PAL.green);
+      },
+    };
+
+    const DECOR = {
+      citrouille(b, k) {
+        stem(b, k, 16, 34, 17.5, 30, 1.8, PAL.brown, 0.8);
+        [
+          [7, 4.5],
+          [25, 4.5],
+          [11, 5.5],
+          [21, 5.5],
+          [16, 6],
+        ].forEach(([x, rx]) =>
+          ell(b, k, x, 40, rx, 6.8, 0, (nx, ny, d, edge, px, py, ux, uy) => {
+            const gx = (x + ux - 16) / 11,
+              gy = (40 + uy - 40) / 7;
+            const lit = -(gx * 0.6 + gy * 0.8);
+            return R(PAL.orange, 0.5 + 0.35 * lit - Math.abs(nx) * 0.25 - (edge ? 0.3 : 0));
+          }),
+        );
+        leaf(b, k, 17, 33, -0.3, 6, 3.4, PAL.green);
+      },
+      paille(b, k) {
+        for (let py = Math.floor(31 * k); py < Math.floor(47 * k); py++)
+          for (let px = Math.floor(3 * k); px < Math.floor(29 * k); px++) {
+            const u = px / k,
+              v = py / k;
+            const top = v < 35;
+            let t =
+              (top ? 0.75 : 0.45) +
+              (hash(Math.floor(px / 3), py) - 0.5) * 0.45 -
+              (v > 44 ? 0.25 : 0);
+            if (Math.abs(u - 10) < 0.8 || Math.abs(u - 22) < 0.8) {
+              put(b, px, py, top ? PAL.wood[2] : PAL.wood[1]);
+              continue;
+            }
+            put(b, px, py, R(PAL.hay, t));
+          }
+      },
+      lanterne(b, k) {
+        stem(b, k, 11, 47, 11, 22, 2, PAL.wood);
+        stem(b, k, 11, 23, 23, 23, 1.2, PAL.wood);
+        stem(b, k, 21, 23, 21, 25, 0.6, PAL.metal);
+        ell(b, k, 21, 26.5, 3, 1.5, 0, sphere(PAL.metal, 0.1));
+        for (let py = Math.floor(27.5 * k); py < Math.floor(34 * k); py++)
+          for (let px = Math.floor(18.5 * k); px < Math.floor(23.5 * k); px++) {
+            const u = px / k;
+            const frame = u < 19.3 || u > 22.7;
+            put(
+              b,
+              px,
+              py,
+              frame
+                ? PAL.metal[1]
+                : R(PAL.glow, 0.95 - Math.abs(u - 21) * 0.25 - (py / k - 30) * 0.06),
+            );
+          }
+        ell(b, k, 21, 34.5, 2.8, 1, 0, sphere(PAL.metal));
+      },
+      cloture(b, k) {
+        stem(b, k, -1, 33, 33, 33, 2, PAL.wood);
+        stem(b, k, -1, 40, 33, 40, 2, PAL.wood);
+        stem(b, k, 5, 47, 5, 29, 2.6, PAL.wood);
+        stem(b, k, 27, 47, 27, 29, 2.6, PAL.wood);
+        ell(b, k, 5.3, 29, 1.3, 1, 0, () => PAL.wood[3]);
+        ell(b, k, 27.3, 29, 1.3, 1, 0, () => PAL.wood[3]);
+      },
+    };
+
+    function makeSprite(draw, S, C) {
+      const k = S / 32,
+        b = buf(S, Math.round(S * 1.5));
+      draw(b, k, C);
+      outline(b);
+      return toCanvas(b);
+    }
+
+    function groundTile(S, kind, tx, ty) {
+      const b = buf(S, S),
+        k = S / 32;
+      const pal = PAL[kind];
+      for (let y = 0; y < S; y++)
+        for (let x = 0; x < S; x++) {
+          if (kind === "grass") {
+            const n = hash(
+              Math.floor((x + tx * S) / (3 * k)),
+              Math.floor((y + ty * S) / (3 * k)),
+              3,
+            );
+            put(b, x, y, n > 0.55 ? pal[2] : pal[1]);
+          } else {
+            const v = (y / k) % 8;
+            let t = v < 1.2 ? 0.05 : v < 2.4 ? 0.7 : 0.4;
+            t += (hash(x + tx * 97, y + ty * 57) - 0.5) * 0.25;
+            put(b, x, y, R(pal, t));
+          }
+        }
+      if (kind === "grass") {
+        const n = Math.round(22 * k * k);
+        for (let i = 0; i < n; i++) {
+          const x = Math.floor(hash(tx, ty, i) * S),
+            y = Math.floor(hash(ty, tx, i + 400) * S);
+          const h = 2 + Math.floor(hash(i, tx, ty) * 3 * k);
+          put(b, x, y + 1, pal[0]);
+          for (let j = 0; j < h; j++)
+            put(b, x + (j === h - 1 && i % 2 ? 1 : 0), y - j, j > h / 2 ? pal[3] : pal[2]);
+        }
+        for (let i = 0; i < 2; i++)
+          if (hash(tx, ty, i + 900) > 0.55) {
+            const x = Math.floor(hash(tx, ty, i + 901) * (S - 4)),
+              y = Math.floor(hash(tx, ty, i + 902) * (S - 4));
+            const c = PAL.fall[i + (tx % 2)];
+            put(b, x, y, c);
+            put(b, x + 1, y, c);
+            put(b, x + 1, y + 1, c);
+            put(b, x + 2, y + 1, mix(c, "#000000", 0.3));
+          }
+      } else {
+        for (let i = 0; i < 6 * k; i++) {
+          const x = Math.floor(hash(tx, ty, i + 50) * S),
+            y = Math.floor(hash(ty, tx, i + 60) * S);
+          put(b, x, y, pal[3]);
+          put(b, x, y + 1, pal[0]);
+        }
+      }
+      return toCanvas(b);
+    }
+
+    // ---- scenes ----
+    const F = (sp, c) => ({ sp, c });
+    const scene = {
+      cols: 8,
+      rows: 4,
+      soil: [
+        [1, 1],
+        [2, 1],
+        [3, 1],
+        [4, 1],
+        [5, 1],
+        [1, 2],
+        [2, 2],
+        [3, 2],
+        [4, 2],
+        [5, 2],
+        [1, 3],
+        [2, 3],
+        [3, 3],
+        [4, 3],
+        [5, 3],
+      ],
+      wet: ["1,1", "2,1", "3,2", "4,2"],
+      items: [
+        [1, 1, F("tournesol", "yellow")],
+        [2, 1, F("rosetremiere", "pink")],
+        [3, 1, F("dahlia", "red")],
+        [4, 1, F("cosmos", "white")],
+        [5, 1, F("aster", "violet")],
+        [1, 2, F("bruyere", "heather")],
+        [2, 2, F("chrysantheme", "bronze")],
+        [3, 2, F("colchique", "lilac")],
+        [4, 2, F("bouton", "orange")],
+        [5, 2, F("pousse")],
+        [1, 3, F("cosmos", "pink")],
+        [2, 3, F("aster", "white")],
+        [3, 3, F("jeune")],
+        [4, 3, F("dahlia", "orange")],
+        [5, 3, F("graine", "violet")],
+        [6, 1, F("citrouille")],
+        [7, 2, F("citrouille")],
+        [6, 2, F("paille")],
+        [7, 1, F("lanterne")],
+        [0, 2, F("lanterne")],
+        [0, 3, F("citrouille")],
+      ],
+    };
+    const LINEUP = [
+      ["tournesol", "yellow", "Tournesol"],
+      ["rosetremiere", "pink", "Rose trémière"],
+      ["dahlia", "red", "Dahlia"],
+      ["cosmos", "pink", "Cosmos"],
+      ["aster", "violet", "Aster"],
+      ["chrysantheme", "bronze", "Chrysanthème"],
+      ["bruyere", "heather", "Bruyère"],
+      ["colchique", "lilac", "Colchique"],
+    ];
+    const STAGE_ROW = [
+      ["graine", "Graine"],
+      ["pousse", "Pousse"],
+      ["jeune", "Jeune plant"],
+      ["bouton", "Bouton"],
+      ["dahlia", "Fleur"],
+    ];
+
+    const drawFn = (name) => SPECIES[name] || STAGES[name] || DECOR[name];
+    const SWAY = new Set([...Object.keys(SPECIES), "pousse", "jeune", "bouton"]);
+
+    let tod = "auto",
+      rain = false;
+    const currentTod = () => {
+      if (tod !== "auto") return tod;
+      const h = new Date().getHours();
+      return h >= 6 && h < 10
+        ? "matin"
+        : h < 17 && h >= 10
+          ? "midi"
+          : h >= 17 && h < 21
+            ? "soir"
+            : "nuit";
+    };
+    const LIGHT = {
+      matin: { mul: "#c9d4e6", mist: 0.28 },
+      midi: {},
+      soir: { mul: "#f0a878", sky: "rgba(255,140,60,0.16)" },
+      nuit: { mul: "#3a3f78", night: true },
+    };
+
+    const views = [];
+
+    function buildView(host, S, scale) {
+      const cache = new Map();
+      const spr = (name, c) => {
+        const key = name + c;
+        if (!cache.has(key)) cache.set(key, makeSprite(drawFn(name), S, c ? PAL[c] : PAL.green));
+        return cache.get(key);
+      };
+      const mk = (cols, rowsTiles, label) => {
+        if (label) {
+          const l = document.createElement("div");
+          l.className = "lbl";
+          l.textContent = label;
+          host.appendChild(l);
+        }
+        const cv = document.createElement("canvas");
+        cv.width = cols * S;
+        cv.height = Math.round(rowsTiles * S);
+        cv.style.width = cols * 96 + "px";
+        cv.style.height = rowsTiles * 96 + "px";
+        host.appendChild(cv);
+        const g = cv.getContext("2d");
+        g.imageSmoothingEnabled = false;
+        return g;
+      };
+      const names = (list) => {
+        const d = document.createElement("div");
+        d.className = "names";
+        list.forEach((n) => {
+          const s = document.createElement("span");
+          s.textContent = n;
+          d.appendChild(s);
+        });
+        host.appendChild(d);
+      };
+
+      // lineup + stages: static-ish rows standing on a soil strip
+      const rowView = (entries, label) => {
+        const g = mk(entries.length, 1.75, label);
+        const soilT = groundTile(S, "soil", 3, 3);
+        return {
+          g,
+          entries: entries.map(([n, c], i) => ({ x: i, cv: spr(n, c), sway: SWAY.has(n) })),
+          soilT,
+          h: 1.75,
+        };
+      };
+      const lineup = rowView(
+        LINEUP.map(([n, c]) => [n, c]),
+        "Espèces en fleur",
+      );
+      names(LINEUP.map((l) => l[2]));
+
+      const sg = mk(scene.cols, scene.rows, "Le champ");
+      const ground = document.createElement("canvas");
+      ground.width = scene.cols * S;
+      ground.height = scene.rows * S;
+      const gg = ground.getContext("2d");
+      const soilSet = new Set(scene.soil.map((p) => p.join(",")));
+      for (let ty = 0; ty < scene.rows; ty++)
+        for (let tx = 0; tx < scene.cols; tx++) {
+          const key = tx + "," + ty;
+          const kind = soilSet.has(key) ? (scene.wet.includes(key) ? "wet" : "soil") : "grass";
+          gg.drawImage(groundTile(S, kind, tx, ty), tx * S, ty * S);
+        }
+      const wetGround = document.createElement("canvas");
+      wetGround.width = ground.width;
+      wetGround.height = ground.height;
+      const wg = wetGround.getContext("2d");
+      wg.drawImage(ground, 0, 0);
+      for (const [tx, ty] of scene.soil) wg.drawImage(groundTile(S, "wet", tx, ty), tx * S, ty * S);
+      const fence = spr("cloture");
+      const items = scene.items
+        .map(([x, y, f]) => ({
+          x,
+          y,
+          cv: spr(f.sp, f.c),
+          sway: SWAY.has(f.sp),
+          lantern: f.sp === "lanterne",
+        }))
+        .sort((a, b) => a.y - b.y);
+
+      views.push({ S, lineup, st: STYLE, pal: PAL, sg, ground, wetGround, fence, items });
+    }
+
+    function blit(g, cv, dx, dy, S, sway, t, phase) {
+      if (!sway) {
+        g.drawImage(cv, dx, dy);
+        return;
+      }
+      const s = Math.sin(t / 1100 + phase);
+      for (let y = 0; y < cv.height; y++) {
+        const off = Math.round(s * 1.6 * (S / 32) * Math.pow(1 - y / cv.height, 1.6));
+        g.drawImage(cv, 0, y, cv.width, 1, dx + off, dy + y, cv.width, 1);
+      }
+    }
+
+    function applyLight(g, w, h, t, S, lamps) {
+      const L = LIGHT[currentTod()];
+      const k = S / 32;
+      if (L.mul) {
+        g.globalCompositeOperation = "multiply";
+        g.fillStyle = L.mul;
+        g.fillRect(0, 0, w, h);
+      }
+      if (rain) {
+        g.globalCompositeOperation = "multiply";
+        g.fillStyle = "#b8c0cc";
+        g.fillRect(0, 0, w, h);
+      }
+      g.globalCompositeOperation = "source-over";
+      if (L.sky)
+        for (let i = 0; i < 4; i++) {
+          g.fillStyle = L.sky;
+          g.fillRect(0, 0, w, (10 + i * 10) * k);
+        }
+      if (L.night) {
+        g.globalCompositeOperation = "lighter";
+        for (const [x, y] of lamps) {
+          const f = Math.sin(t / 170 + x) > 0.85 ? 2 * k : 0;
+          [
+            [40, 0.06],
+            [28, 0.08],
+            [16, 0.12],
+          ].forEach(([r, a]) => {
+            g.fillStyle = `rgba(255,190,90,${a})`;
+            g.beginPath();
+            g.arc(Math.round(x), Math.round(y), r * k + f, 0, Math.PI * 2);
+            g.fill();
+          });
+        }
+        g.globalCompositeOperation = "source-over";
+      }
+      if (L.mist)
+        for (let i = 0; i < 3; i++) {
+          const y = (26 + i * 34) * k,
+            x = ((t * 0.006 * (i + 1) * k) % (w + 160 * k)) - 160 * k;
+          g.fillStyle = `rgba(235,240,250,${L.mist / (i + 1.5)})`;
+          g.fillRect(x, y, 150 * k, 8 * k);
+          g.fillRect(x + 30 * k, y - 4 * k, 80 * k, 4 * k);
+          g.fillRect(x - 90 * k, y + 5 * k, 110 * k, 5 * k);
+        }
+      if (rain) {
+        g.fillStyle = "rgba(200,215,240,0.5)";
+        for (let i = 0; i < 90; i++) {
+          const y = (hash(i, 8) * h + t * (0.12 + hash(i, 9) * 0.05) * k) % h;
+          const x = (((hash(i, 7) * w - t * 0.04 * k) % w) + w) % w;
+          g.fillRect(Math.round(x), Math.round(y), Math.max(1, Math.round(k)), Math.round(4 * k));
+        }
+      }
+    }
+
+    function drawRow(rv, S, t) {
+      const { g, entries, soilT } = rv;
+      const w = g.canvas.width,
+        h = g.canvas.height;
+      g.fillStyle = STYLE.bg;
+      g.fillRect(0, 0, w, h);
+      for (let i = 0; i < entries.length; i++)
+        g.drawImage(soilT, 0, 0, S, S * 0.25, i * S, h - S * 0.25, S, S * 0.25);
+      for (const e of entries)
+        blit(g, e.cv, e.x * S, h - S * 0.25 - S * 1.5 + S * 0.08, S, e.sway, t, e.x * 1.3);
+    }
+
+    function drawScene(v, t) {
+      const { S, sg, items } = v;
+      const w = sg.canvas.width,
+        h = sg.canvas.height;
+      sg.drawImage(rain ? v.wetGround : v.ground, 0, 0);
+      for (let x = 0; x < 8; x++) sg.drawImage(v.fence, x * S, -S * 1.05);
+      const lamps = [];
+      for (const it of items) {
+        const dx = it.x * S,
+          dy = it.y * S - S * 0.5;
+        blit(sg, it.cv, dx, dy, S, it.sway, t, it.x * 1.7 + it.y);
+        if (it.lantern) lamps.push([dx + 21 * (S / 32), dy + 30 * (S / 32)]);
+      }
+      const k = S / 32;
+      for (let i = 0; i < 12; i++) {
+        const y = ((hash(i, 2) * h + t * (0.02 + hash(i, 3) * 0.02) * k) % (h + 20)) - 10;
+        const x = (((hash(i, 1) * w + t * 0.01 * k + Math.sin(t / 600 + i) * 6 * k) % w) + w) % w;
+        sg.fillStyle = PAL.fall[i % 4];
+        const s = Math.max(1, Math.round(k * 1.5));
+        sg.fillRect(Math.round(x), Math.round(y), s * 2, s);
+        if (Math.sin(t / 300 + i) > 0) sg.fillRect(Math.round(x) + s, Math.round(y) + s, s, s);
+      }
+      applyLight(sg, w, h, t, S, lamps);
+    }
+
+    document.querySelectorAll(".stack").forEach((host) => {
+      STYLE = STYLES[host.dataset.style];
+      PAL = styledPal(STYLE);
+      host.style.background = STYLE.bg;
+      buildView(host, 48, 2);
+    });
+
+    let last = 0;
+    (function frame(t) {
+      if (t - last > 70) {
+        last = t;
+        for (const v of views) {
+          STYLE = v.st;
+          PAL = v.pal;
+          drawRow(v.lineup, v.S, t);
+          drawScene(v, t);
+        }
+      }
+      requestAnimationFrame(frame);
+    })(0);
+
+    const todBtns = document.querySelectorAll(".tod");
+    const markTod = () =>
+      todBtns.forEach((b) => b.classList.toggle("active", b.dataset.tod === tod));
+    todBtns.forEach((b) =>
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        tod = b.dataset.tod;
+        markTod();
+      }),
+    );
+    markTod();
+    const rb = document.getElementById("rainBtn");
+    rb.addEventListener("click", (e) => {
+      e.stopPropagation();
+      rain = !rain;
+      rb.textContent = "Pluie : " + (rain ? "oui" : "non");
+      rb.classList.toggle("active", rain);
+    });
+  })();
+</script>

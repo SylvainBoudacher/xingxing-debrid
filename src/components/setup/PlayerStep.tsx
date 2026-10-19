@@ -1,56 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { ArrowRight, Download } from "lucide-react";
 import vlcLogo from "@/assets/vlc.png";
-import { detectVlc } from "@/lib/player";
-import { settingsStore } from "@/components/settings/store";
+import { useVlcDetection, VLC_DOWNLOAD_URL, type VlcSim } from "@/lib/useVlcDetection";
 import { VlcStatus } from "./VlcStatus";
 import { StepKindBadge } from "./StepKindBadge";
 import { item, stagger } from "./motionVariants";
 
-const VLC_DOWNLOAD_URL = "https://images.videolan.org/vlc/index.fr.html";
-
-// Simulation dev : force le resultat de la detection tant qu'elle est active.
-export type VlcSim = "none" | "ok" | "fail";
-const SIM_PATH = "[DEV] /Applications/VLC.app";
+export type { VlcSim };
 
 export function PlayerStep({ onNext, sim = "none" }: { onNext: () => void; sim?: VlcSim }) {
-  const [detected, setDetected] = useState<string | null>(null);
-  const [checking, setChecking] = useState(true);
-
-  const detect = useCallback(async () => {
-    if (import.meta.env.DEV && sim !== "none") return sim === "ok" ? SIM_PATH : null;
-    return detectVlc();
-  }, [sim]);
-
-  useEffect(() => {
-    detect().then((path) => {
-      setDetected(path);
-      setChecking(false);
-    });
-  }, [detect]);
-
-  async function check() {
-    setChecking(true);
-    setDetected(await detect());
-    setChecking(false);
-  }
-
-  async function pickVlc() {
-    const isMac = navigator.userAgent.includes("Mac");
-    const picked = await openDialog({
-      multiple: false,
-      filters: isMac
-        ? [{ name: "Application", extensions: ["app"] }]
-        : [{ name: "Exécutable", extensions: ["exe"] }],
-    });
-    if (typeof picked !== "string") return;
-    await settingsStore.set("vlc_path", picked);
-    await settingsStore.save();
-    await check();
-  }
+  const { detected, checking, check, pick } = useVlcDetection(sim);
 
   return (
     <motion.div
@@ -85,7 +45,7 @@ export function PlayerStep({ onNext, sim = "none" }: { onNext: () => void; sim?:
           checking={checking}
           detected={detected}
           onCheck={check}
-          onPick={pickVlc}
+          onPick={pick}
           onDownload={() => openUrl(VLC_DOWNLOAD_URL)}
         />
       </motion.div>

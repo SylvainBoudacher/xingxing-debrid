@@ -30,8 +30,8 @@ export function SettingsPanel({
 }) {
   const a = ACCENTS[accent];
   return (
-    <section className="rounded-2xl bg-white dark:bg-[#0b0c13] ring-1 ring-black/6 dark:ring-white/6 overflow-hidden">
-      <div className="flex items-center gap-3 border-b border-black/6 dark:border-white/6 bg-black/[0.02] dark:bg-white/[0.02] px-6 py-4">
+    <section className="rounded-2xl bg-white dark:bg-zinc-900/80 ring-1 ring-black/6 dark:ring-white/12 overflow-hidden">
+      <div className="flex items-center gap-3 border-b border-black/6 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] px-6 py-4">
         <div
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 overflow-hidden ${a.box}`}
         >
@@ -45,7 +45,7 @@ export function SettingsPanel({
           <h2 className="text-base font-semibold text-zinc-900 dark:text-white tracking-tight">
             {title}
           </h2>
-          <p className="text-xs text-zinc-500">{subtitle}</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p>
         </div>
       </div>
 

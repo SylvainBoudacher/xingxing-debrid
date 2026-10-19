@@ -13,6 +13,7 @@ import {
   type MangaSource,
 } from "@/lib/useMangaFeed";
 import { Loader2 } from "lucide-react";
+import { ThinkingOrb } from "thinking-orbs";
 import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -104,7 +105,7 @@ export function DiscoverMangaSection({
 
       {feed.loading ? (
         <div className="flex justify-center py-24 text-zinc-400">
-          <Loader2 className="h-7 w-7 animate-spin" />
+          <ThinkingOrb state="searching" size={64} aria-label="Chargement des mangas…" />
         </div>
       ) : feed.error ? (
         <NetworkErrorState

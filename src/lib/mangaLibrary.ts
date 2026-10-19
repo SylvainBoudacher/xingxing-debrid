@@ -70,7 +70,14 @@ export interface MangaEntry {
 let cache: MangaEntry[] | null = null;
 
 export async function loadMangaLibrary(): Promise<MangaEntry[]> {
-  cache = (await store.get<MangaEntry[]>(STORE_KEY)) ?? [];
+  const entries = (await store.get<MangaEntry[]>(STORE_KEY)) ?? [];
+  // Rattrape les tomes enregistres avant une amelioration du parseur.
+  cache = entries.map((entry) => ({
+    ...entry,
+    volumes: entry.volumes.map((v) =>
+      v.number === null ? { ...v, number: volumeFromFileName(v.fileName) } : v,
+    ),
+  }));
   return cache;
 }
 

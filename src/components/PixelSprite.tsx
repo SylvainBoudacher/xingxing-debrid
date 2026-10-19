@@ -1,32 +1,36 @@
-import { SPRITE_COLORS } from "@/components/gardenButtonSprites";
+import type { CSSProperties } from "react";
+import type { PixelPaths } from "./slotPixelArt";
 
+// Dessin pixel-art en SVG: une grille de w x h pixels affichée à `scale` px par
+// pixel, sans lissage.
 export function PixelSprite({
-  rows,
+  paths,
+  w,
+  h,
   scale,
-  className,
+  label,
+  style,
 }: {
-  rows: string[];
+  paths: PixelPaths;
+  w: number;
+  h: number;
   scale: number;
-  className?: string;
+  label?: string;
+  style?: CSSProperties;
 }) {
-  const w = rows[0].length;
-  const h = rows.length;
   return (
     <svg
-      aria-hidden
       width={w * scale}
       height={h * scale}
       viewBox={`0 0 ${w} ${h}`}
       shapeRendering="crispEdges"
-      className={className}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+      style={style}
     >
-      {rows.flatMap((row, y) =>
-        [...row].map((ch, x) =>
-          ch === "." ? null : (
-            <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill={SPRITE_COLORS[ch]} />
-          ),
-        ),
-      )}
+      {paths.map((p) => (
+        <path key={p.fill} d={p.d} fill={p.fill} />
+      ))}
     </svg>
   );
 }

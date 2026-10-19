@@ -5,7 +5,8 @@ import { episodeLabel, toggleFile, type LibraryEntry } from "@/lib/library";
 import { fileDisplayName, isItemWatched, subjectTitle, subjectTmdb } from "@/lib/libraryTitle";
 import { setResume, type ResumeTarget } from "@/lib/resumeWatch";
 import { useTmdbDetail, useTmdbSeasons } from "@/lib/useTitleTmdb";
-import { Info, Loader2, Play } from "lucide-react";
+import { Info, Play } from "lucide-react";
+import { ThinkingOrb } from "thinking-orbs";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
 import { createPortal } from "react-dom";
@@ -192,7 +193,7 @@ export function LibraryResumeCard({
             }`}
           >
             {busy ? (
-              <Loader2 className="h-[1.375rem] w-[1.375rem] animate-spin" />
+              <ThinkingOrb state="working" size={20} theme="dark" aria-label="Déblocage du lien…" />
             ) : (
               <Play className="ml-0.5 h-[1.375rem] w-[1.375rem] fill-current" />
             )}

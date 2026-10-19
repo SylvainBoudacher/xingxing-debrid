@@ -75,7 +75,7 @@ function Node({
         {title}
       </p>
       {subtitle && (
-        <p className="text-[9px] leading-tight text-zinc-500 dark:text-zinc-500">{subtitle}</p>
+        <p className="text-[9px] leading-tight text-zinc-500 dark:text-zinc-400">{subtitle}</p>
       )}
     </div>
   );
@@ -101,7 +101,7 @@ export function DnsFlow({ live }: { live?: "ok" | "fail" }) {
   return (
     <div className="mx-auto w-full" style={{ maxWidth: STAGE.width }}>
       <div
-        className="relative w-full overflow-hidden rounded-2xl bg-white/70 ring-1 ring-black/8 dark:bg-zinc-950/70 dark:ring-white/10"
+        className="relative w-full overflow-hidden rounded-2xl bg-white dark:bg-zinc-950/50"
         style={{ height: STAGE.height }}
       >
         {/* Cablage : trait plein avant le DNS, pointille apres tant que ca ne repond pas */}

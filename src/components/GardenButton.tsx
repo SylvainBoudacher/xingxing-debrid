@@ -1,5 +1,5 @@
 import { ARROW, PUMPKIN, SPROUT } from "@/components/gardenButtonSprites";
-import { PixelSprite } from "@/components/PixelSprite";
+import { GardenButtonSprite } from "@/components/GardenButtonSprite";
 import { openPotagerWindow } from "@/potager/ui/potagerWindow";
 
 // Panneau de bois pixel qui ouvre la fenêtre Potager.
@@ -11,13 +11,17 @@ export function GardenButton() {
       aria-label="Ouvrir mon potager"
       className="garden-sign group relative cursor-pointer"
     >
-      <PixelSprite rows={SPROUT} scale={3} className="garden-sign-sprout absolute -top-[14px]" />
+      <GardenButtonSprite
+        rows={SPROUT}
+        scale={3}
+        className="garden-sign-sprout absolute -top-[14px]"
+      />
       <span className="garden-sign-plank relative flex items-center gap-3 px-5 py-2.5">
         <span className="garden-sign-nail left-1.5 top-1.5" />
         <span className="garden-sign-nail right-1.5 top-1.5" />
         <span className="garden-sign-nail left-1.5 bottom-1.5" />
         <span className="garden-sign-nail right-1.5 bottom-1.5" />
-        <PixelSprite
+        <GardenButtonSprite
           rows={PUMPKIN}
           scale={3}
           className="transition-transform duration-150 group-hover:-rotate-6"
@@ -30,7 +34,7 @@ export function GardenButton() {
             Mon potager
           </span>
         </span>
-        <PixelSprite rows={ARROW} scale={3} className="garden-sign-arrow" />
+        <GardenButtonSprite rows={ARROW} scale={3} className="garden-sign-arrow" />
       </span>
     </button>
   );

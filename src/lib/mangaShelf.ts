@@ -84,7 +84,9 @@ export function isLostVolume(volume: MangaVolume): boolean {
 }
 
 export function volumeLabel(volume: MangaVolume): string {
-  return volume.number !== null ? `Tome ${volume.number}` : volume.fileName;
+  return volume.number !== null
+    ? `Tome ${volume.number}`
+    : volume.fileName.slice(volume.fileName.lastIndexOf("/") + 1);
 }
 
 export function shelfCounts(slots: ShelfSlot[]): ShelfCounts {

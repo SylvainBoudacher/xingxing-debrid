@@ -1,3 +1,4 @@
+import { FLOWER_VARIANTS } from "./duckFlowers";
 import type { Accessory, Effect, Pattern, Variant } from "./duckTypes";
 
 // Procedural duck skins: instead of picking from a fixed catalog, each spawn
@@ -226,7 +227,10 @@ export function getRarity(v: Variant): Rarity {
     v.effect === "nova" ||
     v.effect === "peacock" ||
     v.effect === "phoenix" ||
-    v.effect === "croupier"
+    v.effect === "croupier" ||
+    v.effect === "daisy" ||
+    v.effect === "sunflower" ||
+    v.effect === "cactus"
   )
     return "mythic";
   if (
@@ -253,17 +257,19 @@ export function randomVariant(): Variant {
   let v: Variant;
   if (roll < 0.005)
     v = kingVariant(); // 0.5% ultra-legendary king
-  else if (roll < 0.035)
+  else if (roll < 0.02)
+    v = FLOWER_VARIANTS[((roll - 0.005) / 0.005) | 0](); // 0.5% each flower duck
+  else if (roll < 0.05)
     v = randOf(LEGENDARY)(); // ~3% legendary
-  else if (roll < 0.125)
+  else if (roll < 0.14)
     v = randOf(RARE)(); // ~9% rare
-  else if (roll < 0.405) {
+  else if (roll < 0.42) {
     // ~28% uncommon: simple pattern or a fancier accessory
     v =
       Math.random() < 0.4
         ? { body: bodyColor(), beak: ORANGE_BEAK, acc: "none", pattern: randOf(SIMPLE_PATTERNS) }
         : withAcc(randOf(UNCOMMON_ACC));
-  } else v = withAcc(randOf(COMMON_ACC)); // ~60% common
+  } else v = withAcc(randOf(COMMON_ACC)); // ~58% common
   if (Math.random() < SHINY_RATE) v.shiny = true;
   return v;
 }

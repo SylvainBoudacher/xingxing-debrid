@@ -22,6 +22,7 @@ import { type ViewMode, resolveAllViewModes } from "@/lib/viewMode";
 export type WindowLaunchMode = "small" | "large" | "maximized" | "custom";
 
 const TMDB_STALE_MS = 10 * 60_000;
+const PREFETCH_WAIT_MS = 4_000;
 const MEDIA: TmdbMediaType[] = ["movie", "tv"];
 const store = new LazyStore("settings.json", { defaults: {}, autoSave: false });
 
@@ -99,6 +100,8 @@ const DEFAULT_PREFS: AppPrefs = {
  *     · Prefetch TMDB page 1 des 4 sources (mieux notés, tendances, populaires,
  *       sorties) × films/séries + animations
  *     · Prefetch magnets AllDebrid
+ *     Attente plafonnée à PREFETCH_WAIT_MS : au-delà, le splash se ferme et
+ *     les requêtes finissent en tâche de fond.
  *
  *   Phase 2 — fire-and-forget (remplit le cache pendant que le splash
  *   tourne encore, sans rallonger le délai minimum) :
@@ -238,7 +241,13 @@ export function useAppInit(): AppInitResult {
       }
 
       if (prefetchPage1.length > 0) {
-        await Promise.allSettled(prefetchPage1);
+        // Attente plafonnée : un service qui ne répond pas (DNS du FAI, réseau
+        // lent) ne doit pas retenir le splash jusqu'à son timeout, retry compris.
+        // Les requêtes continuent en fond et la page reprend celles en cours.
+        await Promise.race([
+          Promise.allSettled(prefetchPage1),
+          new Promise((resolve) => setTimeout(resolve, PREFETCH_WAIT_MS)),
+        ]);
       }
 
       if (cancelled) return;

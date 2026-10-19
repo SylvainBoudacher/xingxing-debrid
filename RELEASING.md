@@ -4,10 +4,11 @@ The app uses Tauri auto-update (`tauri-plugin-updater`). Users receive updates a
 
 ## Process
 
-1. Bump the version in all three files (same number):
+1. Bump the version in all four files (same number):
    - `src-tauri/tauri.conf.json` -> `"version": "1.2.0"`
    - `package.json` -> `"version": "1.2.0"`
    - `src-tauri/Cargo.toml` -> `version = "1.2.0"`
+   - `src/lib/version.ts` -> `LATEST_VERSION = "1.2.0"` (aussi la première entrée de `src/lib/patchnotes.ts`, vérifié par `patchnotes.test.ts`)
 
 2. Write the release notes in `RELEASE_NOTES.md` (displayed in the in-app update modal):
 
@@ -44,6 +45,8 @@ The app uses Tauri auto-update (`tauri-plugin-updater`). Users receive updates a
 5. Installed apps detect the new version via
    `https://github.com/SylvainBoudacher/xingxing-debrid/releases/latest/download/latest.json`
    and prompt the user to update.
+
+The tag push is always done manually by the user, never by an agent. Agent work is done when the release commit is ready and the push command has been handed over. The release is finished when `release.yml` is green and `latest.json` contains the notes.
 
 ## How it works
 

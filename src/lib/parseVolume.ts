@@ -29,7 +29,7 @@ function flatten(name: string): string {
 
 const COMPLETE_RE = /\b(?:collection[ _]?)?(?:integrale?|intégrale?|complete?|complet)\b/i;
 
-const SINGLE_RE = /\b(?:t|tome|vol|volume|v)\s*[.:-]?\s*(\d{1,3})\b/i;
+const SINGLE_RE = /\b(?:t|tome|vol|volume|v)\s*[.:#-]?\s*(\d{1,3})\b/i;
 
 const FORMAT_RE = /\b(cbz|cbr|epub|pdf)\b/i;
 

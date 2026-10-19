@@ -10,6 +10,7 @@ import { tmdbKeys, recommendations as tmdbRecommendations } from "@/lib/services
 import { cachedTmdb } from "@/lib/tmdbCache";
 import { mapTmdb, type TmdbItem } from "@/lib/tmdbItem";
 import { useState } from "react";
+import { networkErrorMessage } from "@/lib/networkError";
 
 // Recommandations "Pour vous" : graines = likes + bibliotheque, un appel
 // /recommendations par graine (mis en cache TanStack), puis scoring croise.
@@ -45,7 +46,7 @@ export function useRecommendations(tmdbKey: string | null | undefined, likes: Li
       setRecos(scored.map((s) => mapTmdb(s.result, s.mediaType)));
       setBecause(new Map(scored.map((s) => [`${s.mediaType}-${s.result.id}`, s.becauseOf])));
     } catch (err) {
-      setError(String(err));
+      setError(networkErrorMessage(err));
     } finally {
       setLoading(false);
     }

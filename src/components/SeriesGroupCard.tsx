@@ -27,7 +27,8 @@ import { setResume } from "@/lib/resumeWatch";
 interface SeriesGroupCardProps {
   group: SeriesGroup;
   onChange: (entry: LibraryEntry) => void;
-  onRemove: (infoHash: string) => void;
+  // Reçoit toutes les entrées de la série d'un coup (une seule annulation).
+  onRemove: (infoHashes: string[]) => void;
   // Ouvre la fiche plein écran de la série.
   onOpen: (tmdbId: number) => void;
   debrid: DebridControls;
@@ -67,7 +68,7 @@ export const SeriesGroupCard = memo(function SeriesGroupCard({
   }
 
   function handleDeleteAll() {
-    for (const e of group.entries) onRemove(e.infoHash);
+    onRemove(group.entries.map((e) => e.infoHash));
   }
 
   return (
