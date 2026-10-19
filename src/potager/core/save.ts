@@ -1,11 +1,18 @@
 import { MAP } from "./catalog/map";
-import { BUILDING_IDS, type BuildingId, type CameraState, type PotagerSave } from "./types";
+import {
+  BUILDING_IDS,
+  type BuildingId,
+  type CameraState,
+  type Point,
+  type PotagerSave,
+} from "./types";
 
 export function createStarterSave(): PotagerSave {
   return {
     version: 1,
     playTimeMs: 0,
     camera: { ...MAP.spawnView, mode: "follow" },
+    avatar: { ...MAP.spawn },
     buildings: ["etal", "cabane"],
     parcels: ["p0"],
   };
@@ -21,6 +28,10 @@ function parseCamera(v: unknown): CameraState | null {
   return { x: v.x, z: v.z, mode: v.mode };
 }
 
+// absente des sauvegardes d'avant le déplacement : point de départ
+const parsePoint = (v: unknown): Point =>
+  isObject(v) && isNumber(v.x) && isNumber(v.z) ? { x: v.x, z: v.z } : { ...MAP.spawn };
+
 export function parseSave(raw: unknown): PotagerSave | null {
   if (!isObject(raw) || raw.version !== 1 || !isNumber(raw.playTimeMs)) return null;
   const camera = parseCamera(raw.camera);
@@ -32,6 +43,7 @@ export function parseSave(raw: unknown): PotagerSave | null {
     version: 1,
     playTimeMs: raw.playTimeMs,
     camera,
+    avatar: parsePoint(raw.avatar),
     buildings: [...buildings],
     parcels: [...parcels],
   };

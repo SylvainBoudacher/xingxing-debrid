@@ -1,4 +1,4 @@
-import type { BuildingId, ParcelId } from "../types";
+import type { BuildingId, ParcelId, Point } from "../types";
 
 export interface Rect {
   x0: number;
@@ -83,6 +83,11 @@ export const MAP = {
     { id: "p2", rect: { x0: -22, x1: -17, z0: -1.2, z1: 1.4 }, y: MIDDLE },
     { id: "p3", rect: { x0: 2, x1: 9, z0: -10, z1: -6.5 }, y: PLATEAU },
   ],
+  // tonneaux devant l'étal
+  barrels: [
+    { x: -7.8, z: -1.6 },
+    { x: -8.4, z: -0.9 },
+  ],
   spawn: { x: -2, z: 1.2 },
   spawnView: { x: 0, z: -0.6 },
   trees: [
@@ -108,7 +113,8 @@ export const MAP = {
   water: { y: number; zFrom: number };
   buildings: BuildingSlot[];
   parcels: ParcelSlot[];
-  spawn: { x: number; z: number };
+  barrels: Point[];
+  spawn: Point;
   spawnView: { x: number; z: number };
   trees: TreeSpot[];
 };
@@ -116,7 +122,13 @@ export const MAP = {
 const contains = (r: Rect, x: number, z: number) =>
   x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 
+// pied de l'escalier côté terrasse du milieu, haut contre la falaise (z = -4)
+const CLIFF_Z = -4;
+
 export function groundHeight(x: number, z: number): number {
+  for (const s of MAP.stairs)
+    if (x >= s.x0 && x <= s.x1 && z >= CLIFF_Z && z <= s.zFoot)
+      return s.from + ((s.zFoot - z) / (s.zFoot - CLIFF_Z)) * (s.to - s.from);
   let h = -Infinity;
   for (const t of MAP.terraces) if (contains(t.rect, x, z)) h = Math.max(h, t.top);
   return h === -Infinity ? MAP.water.y : h;

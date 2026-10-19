@@ -50,4 +50,12 @@ describe("disposition du village", () => {
   it("cadre la partie de départ sur la vue de départ", () => {
     expect(createStarterSave().camera).toEqual({ ...MAP.spawnView, mode: "follow" });
   });
+
+  it("fait monter l'escalier du milieu au plateau", () => {
+    expect(groundHeight(-10.2, -1.5)).toBe(0);
+    expect(groundHeight(-10.2, -4)).toBe(2.2);
+    expect(groundHeight(-10.2, -2.75)).toBeCloseTo(1.1);
+    expect(groundHeight(0, 0)).toBe(0);
+    expect(groundHeight(0, -8)).toBe(2.2);
+  });
 });

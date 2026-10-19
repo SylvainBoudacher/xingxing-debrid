@@ -231,7 +231,6 @@ export function buildDecor(): THREE.Group {
     placed++;
   }
 
-  const etal = MAP.buildings.find((b) => b.id === "etal")!;
   const barrelTex = canvasTex(32, 16, (g, r) => {
     for (let x = 0; x < 32; x++)
       dot(
@@ -245,17 +244,14 @@ export function buildDecor(): THREE.Group {
     dot(g, 0, 3, "#4a4a50", 32, 1);
     dot(g, 0, 12, "#4a4a50", 32, 1);
   });
-  for (const [dx, dz] of [
-    [-2.5, 1.1],
-    [-3.1, 1.8],
-  ]) {
+  for (const p of MAP.barrels) {
     const b = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.85, 14), [
       lambert(barrelTex),
       lambert(null, { color: "#7a5030" }),
       lambert(null),
     ]);
     b.castShadow = b.receiveShadow = true;
-    b.position.set(etal.x + dx, 0.42, etal.z + dz);
+    b.position.set(p.x, 0.42, p.z);
     group.add(b);
   }
   return group;

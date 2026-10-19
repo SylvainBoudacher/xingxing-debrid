@@ -5,6 +5,11 @@ export type BuildingId = (typeof BUILDING_IDS)[number];
 
 export type ParcelId = string;
 
+export interface Point {
+  x: number;
+  z: number;
+}
+
 export type CameraMode = "follow" | "free";
 
 // x, z : point visé au sol
@@ -18,6 +23,7 @@ export interface PotagerSave {
   version: 1;
   playTimeMs: number;
   camera: CameraState;
+  avatar: Point;
   buildings: BuildingId[];
   parcels: ParcelId[];
 }

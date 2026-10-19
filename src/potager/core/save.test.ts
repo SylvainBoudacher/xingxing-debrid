@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { MAP } from "./catalog/map";
 import { createStarterSave, parseSave } from "./save";
 
 describe("sauvegarde du Potager", () => {
@@ -28,5 +29,29 @@ describe("sauvegarde du Potager", () => {
 
   it("ignore les champs inconnus", () => {
     expect(parseSave({ ...createStarterSave(), extra: 1 })).not.toHaveProperty("extra");
+  });
+
+  it("place l'avatar au point de départ", () => {
+    expect(createStarterSave().avatar).toEqual(MAP.spawn);
+  });
+
+  it("relit la position de l'avatar", () => {
+    expect(parseSave({ ...createStarterSave(), avatar: { x: 3, z: 1 } })?.avatar).toEqual({
+      x: 3,
+      z: 1,
+    });
+  });
+
+  it("accepte une ancienne sauvegarde sans avatar", () => {
+    const { avatar: _, ...old } = createStarterSave();
+    const s = parseSave(old);
+    expect(s).not.toBeNull();
+    expect(s?.avatar).toEqual(MAP.spawn);
+  });
+
+  it("remplace une position d'avatar mal typée par le point de départ", () => {
+    expect(parseSave({ ...createStarterSave(), avatar: { x: "a", z: 0 } })?.avatar).toEqual(
+      MAP.spawn,
+    );
   });
 });
