@@ -108,6 +108,32 @@ describe("actions", () => {
     expect(r.events.some((e) => e.kind === "graine")).toBe(false);
   });
 
+  it("range une belle fleur comme ordinaire faute de place", () => {
+    let s = equipped();
+    s = act(act(s, cell), cell);
+    s = advanceGarden(s, 3_600_000);
+    const c = s.cells[first.key];
+    if (c.kind !== "plante") throw new Error();
+    const other: Slot = {
+      kind: "flowers",
+      species: "tournesol",
+      color: "orange",
+      quality: "belle",
+      count: 5,
+    };
+    const plain: Slot = {
+      kind: "flowers",
+      species: c.seed.species,
+      color: c.seed.color,
+      quality: "ordinaire",
+      count: 3,
+    };
+    const full = { ...s, inventory: [plain, other, other, other, other, other] };
+    const r = applyAction(full, cell, "cueillir", { grade: "parfait" }, 0, never);
+    expect(r.save.inventory[0]).toMatchObject({ quality: "ordinaire", count: 4 });
+    expect(r.save.cells[first.key]).toEqual({ kind: "herbe" });
+  });
+
   it("ne fait rien si la case a changé pendant le mini-jeu", () => {
     const s = equipped();
     const r = applyAction(s, cell, "semer", { grade: "parfait" }, 0, never);

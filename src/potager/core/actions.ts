@@ -35,9 +35,7 @@ export function findTarget(save: PotagerSave, pose: Point & { dir: Point }): Tar
 export function standPoint(t: Target): Point {
   if (t.kind === "abri") return { x: MAP.abri.x, z: MAP.abri.z + MAP.abri.d / 2 + 0.6 };
   if (t.kind === "puits") return { x: MAP.puits.x, z: MAP.puits.z + MAP.puits.r + 0.6 };
-  const c = Object.values(MAP.parcels)
-    .flatMap((p) => parcelCells(p.id))
-    .find((x) => x.key === t.key);
+  const c = MAP.parcels.flatMap((p) => parcelCells(p.id)).find((x) => x.key === t.key);
   return c ? { x: c.center.x, z: c.center.z + 0.9 } : { ...MAP.spawn };
 }
 
@@ -132,11 +130,11 @@ export function applyAction(
 
   if (gesture === "cueillir" && c.kind === "plante") {
     const quality = grade === "parfait" ? "belle" : "ordinaire";
-    let inventory = addFlower(save.inventory, {
-      species: c.seed.species,
-      color: c.seed.color,
-      quality,
-    });
+    const flower = { species: c.seed.species, color: c.seed.color };
+    // une belle fleur sans place se range comme ordinaire plutôt que de rester sur la case
+    let inventory =
+      addFlower(save.inventory, { ...flower, quality }) ??
+      addFlower(save.inventory, { ...flower, quality: "ordinaire" });
     if (!inventory) return unchanged;
     const events: ActionEvent[] = [];
     // pas de tirage sans place : aucune graine n'est trouvée puis perdue
