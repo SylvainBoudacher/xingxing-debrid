@@ -1,0 +1,1380 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Potager HD-2D</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,700&family=Pixelify+Sans:wght@500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #1a1410;
+        font-family: "Cormorant Garamond", Georgia, serif;
+      }
+      canvas {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+      .hud {
+        position: fixed;
+        pointer-events: none;
+        color: #f6ecd2;
+        text-shadow: 0 2px 3px rgba(0, 0, 0, 0.7);
+      }
+      #banner {
+        top: 22px;
+        left: 0;
+        padding: 10px 70px 12px 34px;
+        font:
+          italic 700 40px "Cormorant Garamond",
+          serif;
+        color: #f2e2b0;
+        background: linear-gradient(
+          90deg,
+          rgba(20, 14, 10, 0.85),
+          rgba(20, 14, 10, 0.55) 80%,
+          rgba(20, 14, 10, 0)
+        );
+        border-top: 2px solid #b8975a;
+        border-bottom: 2px solid #b8975a;
+        clip-path: polygon(0 0, 92% 0, 100% 50%, 92% 100%, 0 100%);
+      }
+      #goal {
+        top: 26px;
+        right: 32px;
+        text-align: right;
+        font-weight: 700;
+      }
+      #goal .lv {
+        font-size: 30px;
+      }
+      #goal .t {
+        font-size: 22px;
+      }
+      #goal .bar {
+        width: 260px;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.18);
+        margin: 6px 0 6px auto;
+      }
+      #goal .bar i {
+        display: block;
+        height: 100%;
+        background: linear-gradient(90deg, #6fa8d8, #bfe0ff);
+        width: 30%;
+      }
+      #goal .sub {
+        font-size: 18px;
+        font-weight: 600;
+      }
+      #goal .sub b {
+        font-size: 22px;
+        margin-left: 16px;
+      }
+      #po {
+        top: 112px;
+        left: 34px;
+        font-size: 26px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .coin {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 30%, #fff3b0, #e8b830 55%, #9a6a10);
+        box-shadow: 0 0 8px rgba(255, 200, 80, 0.6);
+      }
+      #staff {
+        right: 32px;
+        top: 170px;
+        width: 260px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      #staff .row {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 12px;
+        margin-bottom: 4px;
+        background: linear-gradient(270deg, rgba(20, 14, 10, 0.7), rgba(20, 14, 10, 0));
+        border-right: 2px solid #b8975a;
+      }
+      #staff .row.off {
+        opacity: 0.5;
+        border-right-color: #6a5a40;
+      }
+      #staff .st {
+        font-size: 15px;
+        color: #d8c8a0;
+      }
+      #hint {
+        bottom: 26px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 22px;
+        font-weight: 600;
+      }
+      .float {
+        position: fixed;
+        pointer-events: none;
+        font:
+          500 22px "Pixelify Sans",
+          monospace;
+        color: #ffe9a0;
+        text-shadow:
+          0 0 6px rgba(255, 190, 60, 0.9),
+          0 2px 0 #5a3a10;
+        transform: translate(-50%, -50%);
+        transition:
+          transform 1.2s ease-out,
+          opacity 1.2s ease-in;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="banner" class="hud">Le Potager</div>
+    <div id="goal" class="hud">
+      <div class="lv">Niv. 3</div>
+      <div class="t">Faire fleurir le potager</div>
+      <div class="bar"><i id="goalBar"></i></div>
+      <div class="sub">Récolter 10 fleurs. <b id="goalVal">3/10</b></div>
+    </div>
+    <div id="po" class="hud"><span class="coin"></span><span id="poVal">128</span> PO</div>
+    <div id="staff" class="hud">
+      <div class="row">
+        <span>Arroseur <span class="st">niv. 1</span></span
+        ><span class="st" id="staffState">Arrose</span>
+      </div>
+      <div class="row off"><span>Jardinier</span><span class="st">250 PO</span></div>
+      <div class="row off"><span>Cueilleur</span><span class="st">Verrouillé</span></div>
+    </div>
+    <div id="hint" class="hud">Clique une fleur épanouie pour la cueillir</div>
+
+    <script type="importmap">
+      { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+
+      await document.fonts.load('500 8px "Pixelify Sans"').catch(() => {});
+
+      // ---------- aléatoire déterministe ----------
+      let seed = 12345;
+      const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+      const pick = (a) => a[Math.floor(rnd() * a.length)];
+      const R = (a, b) => a + rnd() * (b - a);
+
+      // ---------- textures pixel art ----------
+      const PPU = 16;
+      function canvasTex(w, h, draw, repeat = false) {
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        const g = c.getContext("2d");
+        draw(g, w, h);
+        const t = new THREE.CanvasTexture(c);
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.magFilter = THREE.NearestFilter;
+        t.minFilter = THREE.NearestFilter;
+        t.generateMipmaps = false;
+        if (repeat) t.wrapS = t.wrapT = THREE.RepeatWrapping;
+        return t;
+      }
+      const dot = (g, x, y, c, w = 1, h = 1) => {
+        g.fillStyle = c;
+        g.fillRect(x, y, w, h);
+      };
+
+      function outline(g, w, h, dark = [40, 26, 18]) {
+        const img = g.getImageData(0, 0, w, h),
+          d = img.data,
+          out = new Uint8ClampedArray(d);
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++) {
+            const i = (y * w + x) * 4;
+            if (d[i + 3] > 0) continue;
+            for (const [dx, dy] of [
+              [1, 0],
+              [-1, 0],
+              [0, 1],
+              [0, -1],
+            ]) {
+              const nx = x + dx,
+                ny = y + dy;
+              if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+              const j = (ny * w + nx) * 4;
+              if (d[j + 3] > 0) {
+                out[i] = d[j] * 0.35 + dark[0] * 0.4;
+                out[i + 1] = d[j + 1] * 0.3 + dark[1] * 0.4;
+                out[i + 2] = d[j + 2] * 0.3 + dark[2] * 0.4;
+                out[i + 3] = 255;
+                break;
+              }
+            }
+          }
+        img.data.set(out);
+        g.putImageData(img, 0, 0);
+      }
+
+      const GRASS = ["#5e8a30", "#6a9636", "#76a23c", "#527c2a", "#82ac44"];
+      function grassTop(w, h) {
+        return canvasTex(w, h, (g) => {
+          for (let y = 0; y < h; y++)
+            for (let x = 0; x < w; x++) {
+              const n = Math.sin(x * 0.07 + Math.sin(y * 0.05) * 2) + Math.sin(y * 0.09 + x * 0.02);
+              const r = rnd();
+              dot(
+                g,
+                x,
+                y,
+                n > 0.6
+                  ? r < 0.5
+                    ? GRASS[2]
+                    : GRASS[4]
+                  : n < -0.8
+                    ? r < 0.6
+                      ? GRASS[3]
+                      : GRASS[0]
+                    : r < 0.55
+                      ? GRASS[1]
+                      : r < 0.8
+                        ? GRASS[0]
+                        : GRASS[2],
+              );
+            }
+          for (let i = 0; i < (w * h) / 22; i++) {
+            const x = Math.floor(R(0, w)),
+              y = Math.floor(R(0, h));
+            dot(g, x, y, "#9cc458");
+            dot(g, x, y + 1, "#486e24");
+          }
+        });
+      }
+      function cliffFace(w, h) {
+        return canvasTex(w, h, (g) => {
+          const cols = ["#6b4a2c", "#5a3c22", "#7a5634", "#4a3018", "#664428"];
+          for (let x = 0; x < w; x++) {
+            let y = 0;
+            while (y < h) {
+              const len = Math.floor(R(2, 9));
+              dot(g, x, y, pick(cols), 1, len);
+              y += len;
+            }
+          }
+          for (let i = 0; i < w / 3; i++) {
+            const x = Math.floor(R(0, w)),
+              y = Math.floor(R(6, h));
+            dot(g, x, y, "#8a6a44", Math.floor(R(2, 5)), 1);
+            dot(g, x, y + 1, "#3a2410", Math.floor(R(2, 5)), 1);
+          }
+          for (let y = h - 6; y < h; y++) {
+            g.fillStyle = `rgba(20,10,0,${(y - h + 7) * 0.07})`;
+            g.fillRect(0, y, w, 1);
+          }
+          let len = 4;
+          for (let x = 0; x < w; x++) {
+            len = Math.max(2, Math.min(9, len + Math.floor(R(-2, 3))));
+            for (let y = 0; y < len; y++)
+              dot(
+                g,
+                x,
+                y,
+                y === 0
+                  ? "#9cc458"
+                  : y === len - 1
+                    ? "#3e6020"
+                    : y < 2
+                      ? GRASS[2]
+                      : pick([GRASS[0], GRASS[1], GRASS[3]]),
+              );
+          }
+        });
+      }
+      function stoneTex(w, h) {
+        return canvasTex(w, h, (g) => {
+          dot(g, 0, 0, "#8a8478", w, h);
+          for (let y = 0; y < h; y += 5) {
+            const off = (y / 5) % 2 ? 4 : 0;
+            for (let x = -off; x < w; x += 8) {
+              dot(g, x + 1, y + 1, pick(["#a8a090", "#9a9284", "#b4ac9a"]), 6, 3);
+              dot(g, x + 1, y + 1, "#c8c0ac", 6, 1);
+            }
+            dot(g, 0, y, "#5a5448", w, 1);
+          }
+        });
+      }
+      function soilTex(w, h) {
+        return canvasTex(w, h, (g) => {
+          for (let y = 0; y < h; y++) {
+            const ph = y % 16;
+            const base =
+              ph < 3
+                ? "#4a2c18"
+                : ph < 5
+                  ? "#5e3a20"
+                  : ph < 11
+                    ? "#7a4e2c"
+                    : ph < 13
+                      ? "#8c5c34"
+                      : "#6a4426";
+            for (let x = 0; x < w; x++)
+              dot(g, x, y, rnd() < 0.12 ? pick(["#5a3820", "#946438", "#3e2412"]) : base);
+          }
+        });
+      }
+      function pathTex(
+        w,
+        h,
+        palette = ["#9a7448", "#8a6640", "#a88054", "#7e5a38"],
+        edge = "#5e4228",
+      ) {
+        return canvasTex(w, h, (g) => {
+          const m = [];
+          for (let y = 0; y < h; y++)
+            for (let x = 0; x < w; x++) {
+              const ex = Math.min(x, w - 1 - x),
+                ey = Math.min(y, h - 1 - y);
+              const v =
+                Math.min(ex, ey) +
+                Math.sin(x * 0.4 + y * 0.13) * 1.6 +
+                Math.sin(y * 0.5 - x * 0.2) * 1.4 +
+                R(-0.8, 0.8);
+              m[y * w + x] = v > 2.5;
+            }
+          for (let y = 0; y < h; y++)
+            for (let x = 0; x < w; x++) {
+              if (!m[y * w + x]) continue;
+              const border =
+                !m[y * w + x + 1] ||
+                !m[y * w + x - 1] ||
+                !m[(y + 1) * w + x] ||
+                !m[(y - 1) * w + x];
+              dot(g, x, y, border ? edge : rnd() < 0.08 ? "#c49c6c" : pick(palette));
+            }
+        });
+      }
+
+      // ---------- rendu ----------
+      const renderer = new THREE.WebGLRenderer({ antialias: false });
+      renderer.setPixelRatio(1);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      document.body.prepend(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color("#c8b48a");
+      scene.fog = new THREE.Fog("#c9b892", 30, 62);
+
+      const camera = new THREE.PerspectiveCamera(24, 16 / 9, 1, 120);
+      const LOOK = new THREE.Vector3(0, 0.4, -0.6);
+      const TILT = THREE.MathUtils.degToRad(33),
+        DIST = 27;
+      camera.position.set(LOOK.x, LOOK.y + Math.sin(TILT) * DIST, LOOK.z + Math.cos(TILT) * DIST);
+      camera.lookAt(LOOK);
+
+      scene.add(new THREE.HemisphereLight("#b8c8e8", "#5a4430", 1.1));
+      const sun = new THREE.DirectionalLight("#ffd8a0", 2.6);
+      sun.position.set(-12, 18, 9);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(4096, 4096);
+      Object.assign(sun.shadow.camera, {
+        left: -22,
+        right: 22,
+        top: 22,
+        bottom: -22,
+        near: 1,
+        far: 70,
+      });
+      sun.shadow.bias = -0.0004;
+      sun.shadow.normalBias = 0.03;
+      sun.shadow.radius = 2;
+      scene.add(sun);
+
+      const lambert = (map, extra = {}) => new THREE.MeshLambertMaterial({ map, ...extra });
+
+      function block(x0, x1, y0, y1, z0, z1, top = "grass") {
+        const w = x1 - x0,
+          h = y1 - y0,
+          d = z1 - z0;
+        const T =
+          top === "stone"
+            ? stoneTex(Math.round(w * PPU), Math.round(d * PPU))
+            : grassTop(Math.round(w * PPU), Math.round(d * PPU));
+        const side =
+          top === "stone"
+            ? (a, b) => stoneTex(Math.round(a * PPU), Math.round(b * PPU))
+            : (a, b) => cliffFace(Math.round(a * PPU), Math.round(b * PPU));
+        const mats = [
+          lambert(side(d, h)),
+          lambert(side(d, h)),
+          lambert(T),
+          lambert(null, { color: "#2a1a10" }),
+          lambert(side(w, h)),
+          lambert(side(w, h)),
+        ];
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats);
+        m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+        m.castShadow = m.receiveShadow = true;
+        scene.add(m);
+        return m;
+      }
+      function decal(tex, x0, x1, z0, z1, y = 0.012, extra = {}) {
+        const m = new THREE.Mesh(
+          new THREE.PlaneGeometry(x1 - x0, z1 - z0),
+          lambert(tex, {
+            transparent: true,
+            alphaTest: 0.5,
+            polygonOffset: true,
+            polygonOffsetFactor: -2,
+            ...extra,
+          }),
+        );
+        m.rotation.x = -Math.PI / 2;
+        m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2);
+        m.receiveShadow = true;
+        scene.add(m);
+        return m;
+      }
+
+      // terrain en terrasses
+      block(-22, 22, -3, 0, -4, 4.6);
+      block(-22, 22, -3, 2.2, -24, -4);
+      block(-22, 22, -7, -3, 4.6, 8.5);
+      const water = new THREE.Mesh(
+        new THREE.PlaneGeometry(60, 20),
+        new THREE.MeshLambertMaterial({ color: "#2e5a64" }),
+      );
+      water.rotation.x = -Math.PI / 2;
+      water.position.set(0, -3.4, 17);
+      scene.add(water);
+      const shimmerTex = canvasTex(
+        64,
+        64,
+        (g) => {
+          for (let i = 0; i < 40; i++)
+            dot(
+              g,
+              Math.floor(R(0, 60)),
+              Math.floor(R(0, 64)),
+              pick(["rgba(190,230,240,0.7)", "rgba(140,200,215,0.6)"]),
+              Math.floor(R(2, 6)),
+              1,
+            );
+        },
+        true,
+      );
+      shimmerTex.repeat.set(10, 4);
+      const shimmer = new THREE.Mesh(
+        new THREE.PlaneGeometry(60, 20),
+        new THREE.MeshBasicMaterial({ map: shimmerTex, transparent: true, depthWrite: false }),
+      );
+      shimmer.rotation.x = -Math.PI / 2;
+      shimmer.position.set(0, -3.38, 17);
+      scene.add(shimmer);
+
+      // chemins
+      decal(pathTex(28 * PPU, 22), -14, 14, 2.1, 3.5);
+      decal(pathTex(20, 4 * PPU), -5.4, -4.15, -1.5, 2.4);
+      decal(pathTex(16 * PPU, 20), -10, 6, -7.4, -6.1, 2.212);
+
+      // escalier de pierre vers le plateau
+      for (let k = 1; k <= 5; k++) block(-11, -9.4, 0, k * 0.44, -4, -4 + (6 - k) * 0.5, "stone");
+
+      // ---------- sprites ----------
+      function spriteMesh(tex, w, h, opts = {}) {
+        const geo = new THREE.PlaneGeometry(w, h);
+        geo.translate(0, h / 2, 0);
+        const m = new THREE.Mesh(
+          geo,
+          new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide }),
+        );
+        m.castShadow = opts.cast !== false;
+        m.receiveShadow = true;
+        return m;
+      }
+      function treeTex(palette) {
+        return canvasTex(48, 64, (g) => {
+          dot(g, 21, 38, "#6a4426", 6, 26);
+          dot(g, 21, 38, "#8a5c34", 2, 26);
+          dot(g, 25, 38, "#4a2c18", 2, 26);
+          dot(g, 18, 60, "#5a3820", 12, 4);
+          const blobs = [
+            [24, 22, 15],
+            [14, 30, 10],
+            [34, 29, 11],
+            [24, 12, 10],
+            [20, 34, 9],
+            [30, 36, 8],
+          ];
+          for (let y = 0; y < 48; y++)
+            for (let x = 0; x < 48; x++) {
+              let inside = false,
+                shade = 0;
+              for (const [cx, cy, r] of blobs) {
+                const dx = x - cx,
+                  dy = y - cy,
+                  dd = dx * dx + dy * dy;
+                if (dd < r * r) {
+                  inside = true;
+                  shade = Math.max(shade, (-dx - dy) / r);
+                }
+              }
+              if (!inside) continue;
+              const k = shade + R(-0.35, 0.35);
+              dot(
+                g,
+                x,
+                y,
+                k > 0.55 ? palette[3] : k > 0.1 ? palette[2] : k > -0.4 ? palette[1] : palette[0],
+              );
+            }
+          outline(g, 48, 64);
+        });
+      }
+      const treePalettes = [
+        ["#8a2a18", "#c04424", "#e0702e", "#f6a848"],
+        ["#9a4a14", "#d07a20", "#eaa230", "#f8d060"],
+        ["#2e5a24", "#447a2c", "#5e9a34", "#8cc04a"],
+        ["#7a2a2a", "#a83a2a", "#d0583a", "#ee8a50"],
+      ];
+      const treeTexs = treePalettes.map(treeTex);
+      function bushTex(p) {
+        return canvasTex(32, 20, (g) => {
+          for (let y = 0; y < 20; y++)
+            for (let x = 0; x < 32; x++) {
+              const blobs = [
+                [9, 12, 8],
+                [18, 9, 9],
+                [25, 13, 7],
+              ];
+              let shade = -9;
+              for (const [cx, cy, r] of blobs) {
+                const dx = x - cx,
+                  dy = y - cy;
+                if (dx * dx + dy * dy < r * r) shade = Math.max(shade, (-dx - dy) / r);
+              }
+              if (shade === -9) continue;
+              const k = shade + R(-0.3, 0.3);
+              dot(g, x, y, k > 0.5 ? p[3] : k > 0 ? p[2] : k > -0.5 ? p[1] : p[0]);
+            }
+          outline(g, 32, 20);
+        });
+      }
+      const bushT = [bushTex(treePalettes[2]), bushTex(treePalettes[0])];
+      const tuftTex = canvasTex(8, 8, (g) => {
+        [
+          [1, 3],
+          [3, 1],
+          [4, 2],
+          [6, 3],
+          [2, 2],
+        ].forEach(([x, top]) => {
+          for (let y = top; y < 8; y++)
+            dot(g, x, y, y === top ? "#a6cc5c" : y > 5 ? "#3e6020" : "#6a9a36");
+        });
+      });
+      const tuftTex2 = canvasTex(8, 8, (g) => {
+        [
+          [1, 4],
+          [2, 2],
+          [4, 1],
+          [5, 3],
+          [6, 4],
+        ].forEach(([x, top]) => {
+          for (let y = top; y < 8; y++)
+            dot(g, x, y, y === top ? "#d8c070" : y > 5 ? "#6a6020" : "#a89a44");
+        });
+      });
+
+      function place(m, x, y, z) {
+        m.position.set(x, y, z);
+        scene.add(m);
+        return m;
+      }
+      [
+        [-15, -6.5, 0, 4.2],
+        [-7.5, -9, 1, 4.8],
+        [-1.5, -8, 3, 4.2],
+        [4.5, -10, 0, 5.2],
+        [10, -7, 1, 4.4],
+        [15.5, -9.5, 3, 5],
+        [-12, -13, 2, 5.4],
+        [1.5, -14, 1, 5.6],
+        [8, -15, 0, 5.8],
+        [-4, -16, 3, 5.4],
+      ].forEach(([x, z, p, s]) => place(spriteMesh(treeTexs[p], s * 0.75, s), x, 2.2, z));
+      [
+        [-13, -3.4],
+        [-8, -3.3],
+        [8.5, -3.2],
+        [12.5, -3.4],
+        [-12.5, 3.8],
+        [10.5, 4.0],
+        [-1.6, -3.3],
+      ].forEach(([x, z], i) => place(spriteMesh(bushT[i % 3 === 2 ? 1 : 0], 2, 1.25), x, 0, z));
+      for (let i = 0; i < 260; i++) {
+        const x = R(-16, 16),
+          z = R(-4, 4.4);
+        if (x > 0.4 && x < 7.6 && z > -2 && z < 1.9) continue;
+        if (x > -7.4 && x < -3.1 && z < -1.2) continue;
+        if (z > 2 && z < 3.6) continue;
+        place(spriteMesh(rnd() < 0.8 ? tuftTex : tuftTex2, 0.5, 0.5, { cast: false }), x, 0, z);
+      }
+      for (let i = 0; i < 120; i++)
+        place(
+          spriteMesh(rnd() < 0.7 ? tuftTex : tuftTex2, 0.5, 0.5, { cast: false }),
+          R(-16, 16),
+          2.2,
+          R(-12, -4.3),
+        );
+
+      // barrière du plateau
+      const woodMat = new THREE.MeshLambertMaterial({ color: "#7a5434" });
+      for (let x = -8.5; x <= 16; x += 1.6) {
+        const p = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.9, 0.14), woodMat);
+        p.castShadow = true;
+        place(p, x, 2.65, -4.35);
+      }
+      [2.55, 2.9].forEach((y) => {
+        const r = new THREE.Mesh(new THREE.BoxGeometry(24.6, 0.09, 0.08), woodMat);
+        r.castShadow = true;
+        place(r, 3.8, y, -4.35);
+      });
+
+      // ---------- boutique du fleuriste ----------
+      const shopFront = canvasTex(56, 40, (g) => {
+        dot(g, 0, 0, "#e6d8b8", 56, 40);
+        for (let i = 0; i < 70; i++)
+          dot(g, Math.floor(R(0, 55)), Math.floor(R(8, 30)), pick(["#d4c4a0", "#f0e4c8"]), 2, 1);
+        for (let y = 30; y < 40; y += 3)
+          for (let x = (y % 2) * 3 - 3; x < 56; x += 6) {
+            dot(g, x, y, "#9a5a3a", 5, 2);
+            dot(g, x, y, "#b4704a", 5, 1);
+          }
+        for (let x = 0; x < 56; x++) {
+          dot(g, x, 0, x % 8 < 4 ? "#3a8a6a" : "#f2ecd8", 1, 5);
+        }
+        for (let x = 0; x < 56; x += 4) {
+          dot(g, x, 5, "#3a8a6a", 4, 1);
+          dot(g, x + 1, 6, "#3a8a6a", 2, 1);
+        }
+        dot(g, 32, 12, "#4a2c18", 14, 28);
+        dot(g, 33, 13, "#7a4a28", 12, 27);
+        for (let x = 35; x < 45; x += 3) dot(g, x, 14, "#5a3820", 1, 25);
+        dot(g, 42, 26, "#e8c050", 2, 2);
+        dot(g, 7, 13, "#4a2c18", 18, 14);
+        dot(g, 8, 14, "#6ab0c0", 16, 12);
+        dot(g, 8, 14, "#a8dce4", 16, 2);
+        dot(g, 15, 14, "#4a2c18", 2, 12);
+        dot(g, 8, 19, "#4a2c18", 16, 1);
+        dot(g, 7, 27, "#6a4426", 18, 2);
+        [
+          ["#e0503e", 9],
+          ["#f2c03a", 13],
+          ["#d65a9a", 17],
+          ["#8a6ad8", 21],
+        ].forEach(([c, x]) => {
+          dot(g, x, 25, c, 2, 2);
+          dot(g, x, 27, "#4f7a2e", 1, 1);
+        });
+      });
+      const shopSide = canvasTex(40, 40, (g) => {
+        dot(g, 0, 0, "#d8c8a4", 40, 40);
+        for (let i = 0; i < 50; i++)
+          dot(g, Math.floor(R(0, 39)), Math.floor(R(0, 30)), pick(["#c8b890", "#e4d6b4"]), 2, 1);
+        for (let y = 30; y < 40; y += 3)
+          for (let x = (y % 2) * 3 - 3; x < 40; x += 6) {
+            dot(g, x, y, "#8a4e32", 5, 2);
+          }
+        dot(g, 0, 0, "#6a4426", 2, 40);
+        dot(g, 38, 0, "#6a4426", 2, 40);
+      });
+      const roofTex = canvasTex(64, 40, (g) => {
+        for (let y = 0; y < 40; y += 5) {
+          const off = (y / 5) % 2 ? 3 : 0;
+          for (let x = -off; x < 64; x += 6) {
+            const c = pick(["#c8642e", "#b8562a", "#d47436", "#a84a24"]);
+            dot(g, x, y, c, 6, 5);
+            dot(g, x, y, "#e8945a", 5, 1);
+            dot(g, x + 5, y, "#7a3018", 1, 5);
+          }
+          dot(g, 0, y + 4, "#6a2a14", 64, 1);
+        }
+      });
+      const shop = new THREE.Group();
+      const W = 3.6,
+        D = 2.6,
+        H = 2.4;
+      const walls = new THREE.Mesh(new THREE.BoxGeometry(W, H, D), [
+        lambert(shopSide),
+        lambert(shopSide),
+        lambert(null, { color: "#6a4426" }),
+        lambert(null),
+        lambert(shopFront),
+        lambert(shopSide),
+      ]);
+      walls.position.y = H / 2;
+      walls.castShadow = walls.receiveShadow = true;
+      shop.add(walls);
+      const rise = 1.3,
+        half = D / 2 + 0.25,
+        slope = Math.hypot(half, rise),
+        ang = Math.atan2(rise, half);
+      [1, -1].forEach((s) => {
+        const r = new THREE.Mesh(new THREE.BoxGeometry(W + 0.5, 0.12, slope), lambert(roofTex));
+        r.position.set(0, H + rise / 2, (s * half) / 2);
+        r.rotation.x = s * ang;
+        r.castShadow = r.receiveShadow = true;
+        shop.add(r);
+      });
+      const gable = new THREE.Shape();
+      gable.moveTo(-D / 2, 0);
+      gable.lineTo(D / 2, 0);
+      gable.lineTo(0, rise);
+      gable.closePath();
+      [-1, 1].forEach((s) => {
+        const gm = new THREE.Mesh(
+          new THREE.ShapeGeometry(gable),
+          new THREE.MeshLambertMaterial({ color: "#cdb890", side: THREE.DoubleSide }),
+        );
+        gm.rotation.y = Math.PI / 2;
+        gm.position.set((s * W) / 2, H, 0);
+        shop.add(gm);
+      });
+      const chimney = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 1.4, 0.5),
+        lambert(stoneTex(8, 22)),
+      );
+      chimney.position.set(-1, H + 1.1, -0.4);
+      chimney.castShadow = true;
+      shop.add(chimney);
+      const signTex = canvasTex(28, 18, (g) => {
+        dot(g, 1, 1, "#e8dcc0", 26, 16);
+        g.fillStyle = "#4a2c18";
+        g.font = '500 8px "Pixelify Sans"';
+        g.textAlign = "center";
+        g.fillText("Fleurs", 14, 12);
+        outline(g, 28, 18);
+      });
+      const sign = spriteMesh(signTex, 1.5, 1, { cast: true });
+      sign.position.set(-0.9, 1.75, D / 2 + 0.15);
+      shop.add(sign);
+      shop.position.set(-5.3, 0, -2.7);
+      scene.add(shop);
+      const lantern = new THREE.PointLight("#ffb860", 3, 4, 1.6);
+      lantern.position.set(-3.6, 1.8, -1.2);
+      scene.add(lantern);
+      const glowTex = canvasTex(32, 32, (g) => {
+        const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+        gr.addColorStop(0, "rgba(255,230,170,1)");
+        gr.addColorStop(0.3, "rgba(255,200,110,0.5)");
+        gr.addColorStop(1, "rgba(255,180,80,0)");
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 32, 32);
+      });
+      glowTex.magFilter = glowTex.minFilter = THREE.LinearFilter;
+      const glow = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: glowTex,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        }),
+      );
+      glow.scale.set(0.55, 0.55, 1);
+      glow.material.opacity = 0.7;
+      glow.position.copy(lantern.position);
+      scene.add(glow);
+
+      // tonneaux et caisses
+      const barrelTex = canvasTex(32, 16, (g) => {
+        for (let x = 0; x < 32; x++)
+          dot(g, x, 0, x % 4 === 0 ? "#5a3820" : pick(["#9a6a3a", "#a87444", "#8c5e32"]), 1, 16);
+        dot(g, 0, 3, "#4a4a50", 32, 1);
+        dot(g, 0, 12, "#4a4a50", 32, 1);
+      });
+      [
+        [-7.8, -1.6],
+        [-8.4, -0.9],
+      ].forEach(([x, z]) => {
+        const b = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.85, 14), [
+          lambert(barrelTex),
+          lambert(null, { color: "#7a5030" }),
+          lambert(null),
+        ]);
+        b.castShadow = b.receiveShadow = true;
+        place(b, x, 0.42, z);
+      });
+      const crateTex = canvasTex(12, 8, (g) => {
+        dot(g, 0, 0, "#9a6a3a", 12, 8);
+        dot(g, 0, 0, "#6a4426", 12, 1);
+        dot(g, 0, 4, "#6a4426", 12, 1);
+        dot(g, 0, 7, "#6a4426", 12, 1);
+      });
+
+      // ---------- fleurs ----------
+      function flowerTex(type, color, stage) {
+        return canvasTex(16, 20, (g) => {
+          const stem = "#3e7a2a",
+            leaf = "#5e9e34",
+            leafHi = "#86c048";
+          if (stage === 0) return;
+          if (stage === 1) {
+            dot(g, 7, 16, stem, 1, 4);
+            dot(g, 5, 16, leaf, 2, 1);
+            dot(g, 9, 15, leaf, 2, 1);
+            dot(g, 4, 15, leafHi, 1, 1);
+            dot(g, 10, 14, leafHi, 1, 1);
+            outline(g, 16, 20);
+            return;
+          }
+          const top = stage === 2 ? 11 : type === "tournesol" ? 4 : 7;
+          dot(g, 7, top, stem, 1, 20 - top);
+          dot(g, 4, 15, leaf, 3, 1);
+          dot(g, 3, 14, leafHi, 2, 1);
+          dot(g, 8, 13, leaf, 3, 1);
+          dot(g, 10, 12, leafHi, 2, 1);
+          if (stage === 2) {
+            dot(g, 6, top - 3, color, 3, 3);
+            dot(g, 6, top - 1, stem, 3, 1);
+            dot(g, 7, top - 3, "#ffffff", 1, 1);
+            outline(g, 16, 20);
+            return;
+          }
+          const cx = 7,
+            cy = top - 2;
+          const dark = new THREE.Color(color).multiplyScalar(0.7).getStyle();
+          if (type === "marguerite" || type === "tournesol" || type === "cosmos") {
+            const r = type === "tournesol" ? 5 : 4;
+            for (let y = -r; y <= r; y++)
+              for (let x = -r; x <= r; x++) {
+                const d = x * x + y * y;
+                if (d > r * r + 1) continue;
+                const ang = Math.atan2(y, x),
+                  petal =
+                    Math.cos(ang * (type === "cosmos" ? 8 : 12)) >
+                    (type === "cosmos" ? -0.2 : -0.5);
+                if (!petal && d > 4) continue;
+                dot(g, cx + x, cy + y, y > 1 ? dark : color);
+              }
+            const cr = type === "tournesol" ? 2 : 1;
+            for (let y = -cr; y <= cr; y++)
+              for (let x = -cr; x <= cr; x++)
+                if (x * x + y * y <= cr * cr + 0.5)
+                  dot(g, cx + x, cy + y, type === "tournesol" ? "#5a3216" : "#f2c43a");
+            if (type !== "tournesol") dot(g, cx, cy, "#d89a20");
+          } else if (type === "tulipe") {
+            dot(g, 5, cy - 2, color, 5, 4);
+            dot(g, 5, cy - 3, color, 1, 1);
+            dot(g, 7, cy - 3, color, 1, 1);
+            dot(g, 9, cy - 3, color, 1, 1);
+            dot(g, 5, cy + 1, dark, 5, 1);
+            dot(g, 6, cy - 2, "#ffffff", 1, 2);
+          } else {
+            for (let y = -3; y <= 3; y++)
+              for (let x = -3; x <= 3; x++) {
+                if (x * x + y * y > 10) continue;
+                dot(g, cx + x, cy + y, (x + y) % 2 === 0 ? color : dark);
+              }
+            dot(g, cx - 1, cy - 2, "#ffffff");
+          }
+          outline(g, 16, 20);
+        });
+      }
+      const texCache = new Map();
+      const flowerTexC = (t, c, s) => {
+        const k = `${t}|${c}|${s}`;
+        if (!texCache.has(k)) texCache.set(k, flowerTex(t, c, s));
+        return texCache.get(k);
+      };
+
+      const PLOT = { x0: 0.6, x1: 7.4, z0: -1.9, z1: 1.7 };
+      const soil = new THREE.Mesh(
+        new THREE.BoxGeometry(PLOT.x1 - PLOT.x0, 0.16, PLOT.z1 - PLOT.z0),
+        [
+          lambert(null, { color: "#4a2c18" }),
+          lambert(null, { color: "#4a2c18" }),
+          lambert(
+            soilTex(Math.round((PLOT.x1 - PLOT.x0) * PPU), Math.round((PLOT.z1 - PLOT.z0) * PPU)),
+          ),
+          lambert(null),
+          lambert(null, { color: "#5a3820" }),
+          lambert(null, { color: "#4a2c18" }),
+        ],
+      );
+      soil.position.set((PLOT.x0 + PLOT.x1) / 2, 0.08, (PLOT.z0 + PLOT.z1) / 2);
+      soil.receiveShadow = true;
+      scene.add(soil);
+      [
+        [PLOT.x0 - 0.06, PLOT.x1 + 0.06, PLOT.z1 + 0.06, PLOT.z1 + 0.06],
+        [PLOT.x0 - 0.06, PLOT.x1 + 0.06, PLOT.z0 - 0.06, PLOT.z0 - 0.06],
+      ].forEach(([a, b, z]) => {
+        const plank = new THREE.Mesh(new THREE.BoxGeometry(b - a, 0.22, 0.12), woodMat);
+        plank.castShadow = true;
+        place(plank, (a + b) / 2, 0.11, z);
+      });
+      [PLOT.x0 - 0.06, PLOT.x1 + 0.06].forEach((x) => {
+        const plank = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, 0.22, PLOT.z1 - PLOT.z0 + 0.24),
+          woodMat,
+        );
+        plank.castShadow = true;
+        place(plank, x, 0.11, (PLOT.z0 + PLOT.z1) / 2);
+      });
+
+      const wetTex = canvasTex(16, 10, (g) => {
+        for (let y = 0; y < 10; y++)
+          for (let x = 0; x < 16; x++) {
+            const d = ((x - 7.5) / 7.5) ** 2 + ((y - 4.5) / 4.5) ** 2;
+            if (d < 1 - rnd() * 0.25) dot(g, x, y, "#2a1608");
+          }
+      });
+      const types = ["marguerite", "tulipe", "dahlia", "tournesol", "cosmos"];
+      const colorsBy = {
+        marguerite: ["#ffffff", "#f6d24a"],
+        tulipe: ["#e0403a", "#f6d24a", "#9a6ae0"],
+        dahlia: ["#d6447a", "#f29a3a", "#9a2a4a"],
+        tournesol: ["#f6c43a"],
+        cosmos: ["#f08ac0", "#ffffff", "#e0503e"],
+      };
+      const spots = [];
+      const targets = [];
+      for (let r = 0; r < 3; r++)
+        for (let c = 0; c < 6; c++) {
+          const x = PLOT.x0 + 0.65 + c * 1.1,
+            z = PLOT.z0 + 0.6 + r * 1.2;
+          const type = types[(r * 6 + c * 2 + r) % types.length];
+          const color = colorsBy[type][(c + r) % colorsBy[type].length];
+          const wet = decal(wetTex, x - 0.5, x + 0.5, z - 0.3, z + 0.3, 0.17, { opacity: 0 });
+          wet.material.alphaTest = 0;
+          const m = spriteMesh(flowerTexC(type, color, 3), 1, 1.25);
+          place(m, x, 0.16, z);
+          const spot = {
+            x,
+            z,
+            type,
+            color,
+            stage: [3, 3, 2, 3, 1, 3, 3, 0, 3, 2, 3, 3, 3, 1, 3, 3, 2, 3][r * 6 + c],
+            t: R(0, 5),
+            wet: 0,
+            m,
+            wetDecal: wet,
+            pop: 0,
+            phase: R(0, 6),
+          };
+          m.userData.spot = spot;
+          targets.push(m);
+          spots.push(spot);
+          refresh(spot);
+        }
+      function refresh(s) {
+        s.m.material.map = flowerTexC(s.type, s.color, s.stage);
+        s.m.material.needsUpdate = true;
+        s.m.visible = s.stage > 0;
+      }
+
+      // caisses de fleurs devant la boutique
+      [
+        [-6.6, -0.9],
+        [-5.8, -0.8],
+      ].forEach(([x, z], i) => {
+        const cr = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.4, 0.5), lambert(crateTex));
+        cr.castShadow = cr.receiveShadow = true;
+        place(cr, x, 0.2, z);
+        for (let k = 0; k < 3; k++)
+          place(
+            spriteMesh(
+              flowerTexC(pick(types), pick(["#e0503e", "#f2c03a", "#d65a9a", "#ffffff"]), 3),
+              0.55,
+              0.7,
+            ),
+            x - 0.2 + k * 0.2,
+            0.3,
+            z + 0.05,
+          );
+      });
+
+      // parcelle à acheter
+      decal(
+        pathTex(4 * PPU, 3.6 * PPU, ["#a88a60", "#9a7c54", "#b49468"], "#7a6040"),
+        9,
+        13,
+        -1.9,
+        1.7,
+        0.012,
+        { opacity: 0.75 },
+      );
+      const lockTex = canvasTex(30, 26, (g) => {
+        dot(g, 13, 14, "#6a4426", 4, 12);
+        dot(g, 1, 2, "#a87444", 28, 13);
+        dot(g, 1, 2, "#c89060", 28, 1);
+        g.fillStyle = "#3a2010";
+        g.font = '500 8px "Pixelify Sans"';
+        g.textAlign = "center";
+        g.fillText("50 PO", 15, 12);
+        outline(g, 30, 26);
+      });
+      const lockSign = place(spriteMesh(lockTex, 1.8, 1.56), 10.2, 0, 0.6);
+
+      // ---------- l'arroseur (sprite) ----------
+      const PAL = {
+        o: "#2e1c12",
+        h: "#e8c060",
+        H: "#b88e3a",
+        r: "#c8402e",
+        y: "#7a4a24",
+        s: "#f4c8a0",
+        S: "#d49a78",
+        e: "#1e120a",
+        b: "#3a6ab0",
+        B: "#28487e",
+        p: "#6a4a30",
+        P: "#4a3020",
+        k: "#3a2418",
+        c: "#4a9ab0",
+        C: "#2a6a80",
+      };
+      const BODY = [
+        "................",
+        "......oooo......",
+        ".....ohhhho.....",
+        ".....ohhhho.....",
+        "....orrrrrro....",
+        "..oohhhhhhhhoo..",
+        "..oHHHHHHHHHHo..",
+        "...oyysssssso...",
+        "...oyyssssseo...",
+        "...oyysssssso...",
+        "....oSSSSSSo....",
+        "....obbbbbbo....",
+        "...oBbbbbbbbo...",
+        "...oBbbbbbbssoo.",
+        "...oBbbbbbbocCco",
+        "....oBbbbbboocco",
+        "....oppppppo.oo.",
+        "....oPppppPo....",
+      ];
+      const LEGS_A = [
+        "....oppoppo.....",
+        "....opo.opo.....",
+        "....opo.opo.....",
+        "....opo.opo.....",
+        "...okko.okko....",
+        "...oooo.oooo....",
+      ];
+      const LEGS_B = [
+        "....oppppppo....",
+        "...opo....opo...",
+        "..opo......opo..",
+        "..opo......opo..",
+        ".okko......okko.",
+        ".oooo......oooo.",
+      ];
+      const charTex = (legs) =>
+        canvasTex(16, 24, (g) => {
+          [...BODY, ...legs].forEach((row, y) =>
+            [...row].forEach((ch, x) => {
+              if (PAL[ch]) dot(g, x, y, PAL[ch]);
+            }),
+          );
+        });
+      const frames = [charTex(LEGS_A), charTex(LEGS_B)];
+      const gardener = spriteMesh(frames[0], 1.2, 1.8);
+      place(gardener, -2, 0, 1.2);
+
+      // ---------- particules ----------
+      const dropTex = canvasTex(2, 3, (g) => {
+        dot(g, 0, 0, "#c8ecff", 2, 1);
+        dot(g, 0, 1, "#7cc4ec", 2, 2);
+      });
+      const drops = Array.from({ length: 30 }, () => {
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: dropTex }));
+        s.scale.set(0.09, 0.14, 1);
+        s.visible = false;
+        scene.add(s);
+        return { s, v: new THREE.Vector3(), life: 0 };
+      });
+      const moteGeo = new THREE.BufferGeometry();
+      const motePos = new Float32Array(90 * 3);
+      for (let i = 0; i < 90; i++) motePos.set([R(-14, 14), R(0.2, 5), R(-8, 5)], i * 3);
+      moteGeo.setAttribute("position", new THREE.BufferAttribute(motePos, 3));
+      const motes = new THREE.Points(
+        moteGeo,
+        new THREE.PointsMaterial({
+          map: glowTex,
+          size: 0.22,
+          transparent: true,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          color: "#ffe2a8",
+        }),
+      );
+      scene.add(motes);
+      const leafTexs = ["#e0702e", "#c8462a", "#f0a63c"].map((c) =>
+        canvasTex(4, 3, (g) => {
+          dot(g, 1, 0, c, 2, 1);
+          dot(g, 0, 1, c, 4, 1);
+          dot(g, 1, 2, c, 1, 1);
+        }),
+      );
+      const leaves = Array.from({ length: 26 }, (_, i) => {
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: leafTexs[i % 3] }));
+        s.scale.set(0.22, 0.17, 1);
+        scene.add(s);
+        const o = {
+          s,
+          reset(first) {
+            s.position.set(R(-14, 14), first ? R(0, 8) : R(7, 9), R(-9, 4));
+            o.sp = R(0.4, 0.8);
+            o.ph = R(0, 6);
+          },
+        };
+        o.reset(true);
+        return o;
+      });
+
+      // ---------- post-process : flou de bascule, bloom, vignette ----------
+      const rtMain = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+      const rtA = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType });
+      const rtB = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType });
+      const quadVS =
+        "varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }";
+      const blurMat = new THREE.ShaderMaterial({
+        uniforms: { tex: { value: null }, dir: { value: new THREE.Vector2() } },
+        vertexShader: quadVS,
+        fragmentShader: `uniform sampler2D tex; uniform vec2 dir; varying vec2 vUv;
+    void main() {
+      vec3 c = texture2D(tex, vUv).rgb * 0.227;
+      c += (texture2D(tex, vUv + dir * 1.385).rgb + texture2D(tex, vUv - dir * 1.385).rgb) * 0.316;
+      c += (texture2D(tex, vUv + dir * 3.231).rgb + texture2D(tex, vUv - dir * 3.231).rgb) * 0.070;
+      gl_FragColor = vec4(c, 1.0);
+    }`,
+      });
+      const finalMat = new THREE.ShaderMaterial({
+        uniforms: { tSharp: { value: rtMain.texture }, tBlur: { value: rtB.texture } },
+        vertexShader: quadVS,
+        fragmentShader: `uniform sampler2D tSharp; uniform sampler2D tBlur; varying vec2 vUv;
+    void main() {
+      vec3 s = texture2D(tSharp, vUv).rgb;
+      vec3 b = texture2D(tBlur, vUv).rgb;
+      float f = smoothstep(0.1, 0.42, abs(vUv.y - 0.44));
+      vec3 col = mix(s, b, f);
+      col += max(b - vec3(0.5), 0.0) * 1.1;
+      col = col * vec3(1.06, 1.0, 0.9) + vec3(0.0, 0.012, 0.035) * (1.0 - col);
+      float v = smoothstep(0.32, 0.95, length((vUv - 0.5) * vec2(1.0, 1.3)));
+      col *= 1.0 - v * 0.65;
+      gl_FragColor = vec4(col, 1.0);
+      #include <colorspace_fragment>
+    }`,
+      });
+      const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
+      const postScene = new THREE.Scene();
+      postScene.add(quad);
+      const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      function pass(mat, target) {
+        quad.material = mat;
+        renderer.setRenderTarget(target);
+        renderer.render(postScene, postCam);
+      }
+
+      function resize() {
+        const dpr = Math.min(devicePixelRatio, 1.5);
+        const w = Math.round(innerWidth * dpr),
+          h = Math.round(innerHeight * dpr);
+        renderer.setSize(w, h, false);
+        rtMain.setSize(w, h);
+        rtA.setSize(Math.ceil(w / 4), Math.ceil(h / 4));
+        rtB.setSize(Math.ceil(w / 4), Math.ceil(h / 4));
+        camera.aspect = w / h;
+        camera.fov = camera.aspect < 1.3 ? 34 : 24;
+        camera.updateProjectionMatrix();
+      }
+      addEventListener("resize", resize);
+      resize();
+
+      // ---------- jeu ----------
+      let po = 128,
+        harvested = 3;
+      const poVal = document.getElementById("poVal"),
+        goalVal = document.getElementById("goalVal"),
+        goalBar = document.getElementById("goalBar"),
+        staffState = document.getElementById("staffState");
+      const GROW = 7;
+      let task = null,
+        waterT = 0,
+        frameT = 0,
+        frame = 0,
+        facing = 1;
+
+      function harvest(s) {
+        if (s.stage !== 3 || s.pop) return;
+        s.pop = 0.0001;
+        const gain = 8 + Math.floor(Math.random() * 10);
+        const p = new THREE.Vector3(s.x, 1.4, s.z).project(camera);
+        const el = document.createElement("div");
+        el.className = "float";
+        el.textContent = `+${gain} PO`;
+        el.style.left = `${(p.x * 0.5 + 0.5) * innerWidth}px`;
+        el.style.top = `${(-p.y * 0.5 + 0.5) * innerHeight}px`;
+        document.body.appendChild(el);
+        requestAnimationFrame(() => {
+          el.style.transform = "translate(-50%, -170%)";
+          el.style.opacity = "0";
+        });
+        setTimeout(() => el.remove(), 1300);
+        po += gain;
+        harvested = Math.min(10, harvested + 1);
+        poVal.textContent = po;
+        goalVal.textContent = `${harvested}/10`;
+        goalBar.style.width = `${harvested * 10}%`;
+      }
+      const ray = new THREE.Raycaster(),
+        ptr = new THREE.Vector2();
+      function hit(e) {
+        ptr.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+        ray.setFromCamera(ptr, camera);
+        return (
+          ray
+            .intersectObjects(targets, false)
+            .map((h) => h.object.userData.spot)
+            .find((s) => s.stage === 3) || null
+        );
+      }
+      renderer.domElement.addEventListener("pointermove", (e) => {
+        renderer.domElement.style.cursor = hit(e) ? "pointer" : "default";
+      });
+      renderer.domElement.addEventListener("click", (e) => {
+        const s = hit(e);
+        if (s) harvest(s);
+      });
+
+      const clock = new THREE.Clock();
+      function tick() {
+        const dt = Math.min(clock.getDelta(), 0.05),
+          t = clock.elapsedTime;
+
+        for (const s of spots) {
+          s.wet = Math.max(0, s.wet - dt / 25);
+          s.wetDecal.material.opacity = Math.min(0.75, s.wet);
+          if (s.pop) {
+            s.pop += dt * 3.2;
+            const k = s.pop < 0.25 ? 1 + s.pop * 1.2 : Math.max(0, 1.3 - (s.pop - 0.25) * 2.4);
+            s.m.scale.set(k, k, 1);
+            if (k <= 0) {
+              s.pop = 0;
+              s.stage = 0;
+              s.t = 0;
+              s.m.scale.set(1, 1, 1);
+              refresh(s);
+            }
+          } else if (s.stage < 3) {
+            s.t += dt * (1 + s.wet * 1.5);
+            if (s.t > GROW) {
+              s.t = 0;
+              s.stage++;
+              refresh(s);
+              s.m.scale.set(1, 0.6, 1);
+            }
+          }
+          if (!s.pop && s.m.scale.y < 1) s.m.scale.y = Math.min(1, s.m.scale.y + dt * 3);
+          s.m.rotation.z = Math.sin(t * 1.5 + s.phase) * 0.04;
+        }
+
+        if (!task) {
+          const dry = spots.filter((s) => s.wet < 0.2 && s.stage > 0 && s.stage < 3);
+          const pool = dry.length ? dry : spots.filter((s) => s.wet < 0.3);
+          task = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+          waterT = 0;
+        }
+        if (task) {
+          const tx = task.x - 0.75,
+            tz = task.z + 0.3;
+          const dx = tx - gardener.position.x,
+            dz = tz - gardener.position.z,
+            dist = Math.hypot(dx, dz);
+          if (dist > 0.05) {
+            const step = Math.min(dist, dt * 1.9);
+            gardener.position.x += (dx / dist) * step;
+            gardener.position.z += (dz / dist) * step;
+            if (Math.abs(dx) > 0.05) facing = Math.sign(dx);
+            frameT += dt;
+            if (frameT > 0.16) {
+              frameT = 0;
+              frame ^= 1;
+              gardener.material.map = frames[frame];
+            }
+            gardener.position.y = frame ? 0.04 : 0;
+            staffState.textContent = "Va vers une plante";
+          } else {
+            facing = 1;
+            gardener.material.map = frames[0];
+            gardener.position.y = 0;
+            waterT += dt;
+            if (waterT > 0.3) {
+              for (const d of drops) {
+                if (d.life > 0) continue;
+                d.life = R(0.35, 0.6);
+                d.s.visible = true;
+                d.s.position.set(gardener.position.x + 0.62, 0.95, gardener.position.z + 0.02);
+                d.v.set(R(0.6, 1.3), R(0.2, 0.9), R(-0.2, 0.2));
+                if (Math.random() < 0.65) break;
+              }
+            }
+            task.wet = Math.min(1, task.wet + dt * 0.5);
+            staffState.textContent = "Arrose";
+            if (waterT > 2.2) task = null;
+          }
+          gardener.scale.x = facing;
+        }
+
+        for (const d of drops) {
+          if (d.life <= 0) continue;
+          d.life -= dt;
+          d.v.y -= 9 * dt;
+          d.s.position.addScaledVector(d.v, dt);
+          if (d.life <= 0 || d.s.position.y < 0.2) {
+            d.life = 0;
+            d.s.visible = false;
+          }
+        }
+        for (let i = 0; i < 90; i++) {
+          motePos[i * 3 + 1] += dt * 0.12;
+          motePos[i * 3] += Math.sin(t * 0.5 + i) * dt * 0.1;
+          if (motePos[i * 3 + 1] > 5.5) motePos[i * 3 + 1] = 0.2;
+        }
+        moteGeo.attributes.position.needsUpdate = true;
+        for (const l of leaves) {
+          l.s.position.y -= l.sp * dt;
+          l.s.position.x += Math.sin(t * 1.3 + l.ph) * dt * 0.7 + dt * 0.3;
+          l.s.material.rotation = Math.sin(t * 2 + l.ph) * 1.5;
+          if (l.s.position.y < 0.05) l.reset(false);
+        }
+        shimmerTex.offset.x = t * 0.01;
+        shimmerTex.offset.y = Math.sin(t * 0.4) * 0.02;
+        lantern.intensity = 3 + Math.sin(t * 7) * 0.4 + Math.sin(t * 13) * 0.3;
+        lockSign.rotation.z = Math.sin(t * 2) * 0.02;
+
+        renderer.setRenderTarget(rtMain);
+        renderer.render(scene, camera);
+        blurMat.uniforms.tex.value = rtMain.texture;
+        blurMat.uniforms.dir.value.set(1 / rtA.width, 0);
+        pass(blurMat, rtA);
+        blurMat.uniforms.tex.value = rtA.texture;
+        blurMat.uniforms.dir.value.set(0, 1 / rtA.height);
+        pass(blurMat, rtB);
+        pass(finalMat, null);
+        requestAnimationFrame(tick);
+      }
+      tick();
+    </script>
+  </body>
+</html>
