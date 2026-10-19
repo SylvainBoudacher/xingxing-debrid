@@ -3,23 +3,11 @@ import { FOV, TILT_DEG, DISTANCE, type CameraRig } from "../render/cameraRig";
 
 const SPEED = 8;
 const EDGE = 24;
-const KEYS: Record<string, [number, number]> = {
-  ArrowUp: [0, -1],
-  ArrowDown: [0, 1],
-  ArrowLeft: [-1, 0],
-  ArrowRight: [1, 0],
-  // positions physiques : ZQSD sur un clavier AZERTY
-  KeyW: [0, -1],
-  KeyS: [0, 1],
-  KeyA: [-1, 0],
-  KeyD: [1, 0],
-};
 
-// Mode libre : glisser, bords d'écran, flèches et ZQSD. Sans effet en mode suivi.
+// Mode libre : glisser et bords d'écran. Sans effet en mode suivi.
 export function useFreeCamera(rig: CameraRig | null, canvas: HTMLCanvasElement | null) {
   useEffect(() => {
     if (!rig || !canvas) return;
-    const held = new Set<string>();
     let drag: { x: number; y: number } | null = null;
     let pointer: { x: number; y: number } | null = null;
     // unités de sol par pixel d'écran, au centre de la vue
@@ -41,15 +29,7 @@ export function useFreeCamera(rig: CameraRig | null, canvas: HTMLCanvasElement |
     };
     const onUp = () => (drag = null);
     const onLeave = () => (pointer = null);
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.code in KEYS)) return;
-      if (e.type === "keydown") held.add(e.code);
-      else held.delete(e.code);
-    };
-    const onBlur = () => {
-      held.clear();
-      pointer = null;
-    };
+    const onBlur = () => (pointer = null);
 
     let raf = 0;
     let last = performance.now();
@@ -60,10 +40,6 @@ export function useFreeCamera(rig: CameraRig | null, canvas: HTMLCanvasElement |
       if (rig.mode() !== "free") return;
       let dx = 0,
         dz = 0;
-      for (const code of held) {
-        dx += KEYS[code][0];
-        dz += KEYS[code][1];
-      }
       if (pointer && !drag) {
         if (pointer.x < EDGE) dx -= 1;
         if (pointer.x > innerWidth - EDGE) dx += 1;
@@ -78,8 +54,6 @@ export function useFreeCamera(rig: CameraRig | null, canvas: HTMLCanvasElement |
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     document.addEventListener("pointerleave", onLeave);
-    window.addEventListener("keydown", onKey);
-    window.addEventListener("keyup", onKey);
     window.addEventListener("blur", onBlur);
     return () => {
       cancelAnimationFrame(raf);
@@ -87,8 +61,6 @@ export function useFreeCamera(rig: CameraRig | null, canvas: HTMLCanvasElement |
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       document.removeEventListener("pointerleave", onLeave);
-      window.removeEventListener("keydown", onKey);
-      window.removeEventListener("keyup", onKey);
       window.removeEventListener("blur", onBlur);
     };
   }, [rig, canvas]);

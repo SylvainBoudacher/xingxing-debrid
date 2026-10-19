@@ -73,7 +73,7 @@ src/potager/
     backdropMode.ts     run / pause / frozen
     PotagerApp.tsx      fenêtre Potager
     PotagerHud.tsx      bandeau "Le Potager" + bascule de caméra
-    useFreeCamera.ts    glisser, bords d'écran, flèches / ZQSD en mode libre
+    useFreeCamera.ts    glisser, bords d'écran en mode libre
     PotagerBackdrop.tsx fond passif
     PotagerFrozen.tsx   message du fond figé
 ```

@@ -1,21 +1,21 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { isBrowserPreview } from "@/lib/devTauriShim";
 import type { CameraMode, PotagerSave } from "../core/types";
-import type { CameraRig } from "../render/cameraRig";
-import { createPotagerScene } from "../render/createPotagerScene";
+import { createPotagerScene, type PotagerScene } from "../render/createPotagerScene";
 import { hasWebgl } from "../render/webgl";
 import { createChannel } from "../sim/channel";
 import { createSimHost } from "../sim/simHost";
 import { potagerStore } from "../storage/potagerStore";
 import { PotagerHud } from "./PotagerHud";
 import { PotagerToaster } from "./PotagerToaster";
+import { useAvatarControls } from "./useAvatarControls";
 import { useFreeCamera } from "./useFreeCamera";
 
 const FONT_URL =
   "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,700&display=swap";
-const CAMERA_SAVE_MS = 2000;
+const VIEW_SAVE_MS = 2000;
 
 function loadFont() {
   if (document.querySelector(`link[href="${FONT_URL}"]`)) return;
@@ -25,16 +25,19 @@ function loadFont() {
   document.head.appendChild(link);
 }
 
-const withCamera =
-  (rig: CameraRig) =>
-  (s: PotagerSave): PotagerSave => ({
-    ...s,
-    camera: { ...rig.target(), mode: rig.mode() },
-  });
+const withView =
+  (scene: PotagerScene) =>
+  (s: PotagerSave): PotagerSave => {
+    const { x, z } = scene.avatar.pose();
+    return { ...s, camera: { ...scene.rig.target(), mode: scene.rig.mode() }, avatar: { x, z } };
+  };
+
+const moved = (a: { x: number; z: number }, b: { x: number; z: number }) =>
+  Math.hypot(a.x - b.x, a.z - b.z) >= 0.01;
 
 export default function PotagerApp() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [rig, setRig] = useState<CameraRig | null>(null);
+  const [scene, setScene] = useState<PotagerScene | null>(null);
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
   const [mode, setMode] = useState<CameraMode>("follow");
   const [webglOk] = useState(hasWebgl);
@@ -66,24 +69,27 @@ export default function PotagerApp() {
           return;
         }
         scene.start();
-        setRig(scene.rig);
+        setScene(scene);
         setCanvas(canvasRef.current);
         setMode(scene.rig.mode());
         const unsubscribe = host.subscribe((s) => scene.sync(s));
-        let saved = scene.rig.target();
+        let savedCamera = scene.rig.target();
+        let savedAvatar = scene.avatar.pose();
         const id = setInterval(() => {
-          const t = scene.rig.target();
-          if (Math.hypot(t.x - saved.x, t.z - saved.z) < 0.01) return;
-          saved = t;
-          host.update(withCamera(scene.rig));
-        }, CAMERA_SAVE_MS);
+          const camera = scene.rig.target(),
+            avatar = scene.avatar.pose();
+          if (!moved(camera, savedCamera) && !moved(avatar, savedAvatar)) return;
+          savedCamera = camera;
+          savedAvatar = avatar;
+          host.update(withView(scene));
+        }, VIEW_SAVE_MS);
         const onResize = () => scene.resize();
         window.addEventListener("resize", onResize);
         cleanup = () => {
           clearInterval(id);
           unsubscribe();
           window.removeEventListener("resize", onResize);
-          host.update(withCamera(scene.rig));
+          host.update(withView(scene));
           scene.dispose();
         };
       },
@@ -109,14 +115,22 @@ export default function PotagerApp() {
     };
   }, [webglOk]);
 
-  useFreeCamera(rig, canvas);
+  const applyMode = useCallback(
+    (next: CameraMode) => {
+      if (!scene) return;
+      scene.rig.setMode(next);
+      setMode(next);
+      hostRef.current?.update(withView(scene));
+    },
+    [scene],
+  );
+  const follow = useCallback(() => applyMode("follow"), [applyMode]);
+
+  useFreeCamera(scene?.rig ?? null, canvas);
+  useAvatarControls(scene, canvas, follow);
 
   function toggleMode() {
-    if (!rig) return;
-    const next = rig.mode() === "follow" ? "free" : "follow";
-    rig.setMode(next);
-    setMode(next);
-    hostRef.current?.update(withCamera(rig));
+    if (scene) applyMode(scene.rig.mode() === "follow" ? "free" : "follow");
   }
 
   return (
@@ -129,7 +143,7 @@ export default function PotagerApp() {
       ) : webglOk ? (
         <>
           <canvas ref={canvasRef} className="block h-full w-full" />
-          {rig && <PotagerHud mode={mode} onToggleMode={toggleMode} />}
+          {scene && <PotagerHud mode={mode} onToggleMode={toggleMode} />}
         </>
       ) : (
         <div className="flex h-full items-center justify-center p-6 text-center text-sm text-[#f1e6d2]">
