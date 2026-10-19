@@ -61,36 +61,36 @@ export default function PotagerApp() {
           toast.error(
             "Sauvegarde du Potager illisible : une copie a été mise de côté et une nouvelle partie a commencé.",
           );
-        let scene: ReturnType<typeof createPotagerScene>;
+        let created: PotagerScene;
         try {
-          scene = createPotagerScene(canvasRef.current, "potager", save);
+          created = createPotagerScene(canvasRef.current, "potager", save);
         } catch {
           setFailed(true);
           return;
         }
-        scene.start();
-        setScene(scene);
+        created.start();
+        setScene(created);
         setCanvas(canvasRef.current);
-        setMode(scene.rig.mode());
-        const unsubscribe = host.subscribe((s) => scene.sync(s));
-        let savedCamera = scene.rig.target();
-        let savedAvatar = scene.avatar.pose();
+        setMode(created.rig.mode());
+        const unsubscribe = host.subscribe((s) => created.sync(s));
+        let savedCamera = created.rig.target();
+        let savedAvatar = created.avatar.pose();
         const id = setInterval(() => {
-          const camera = scene.rig.target(),
-            avatar = scene.avatar.pose();
+          const camera = created.rig.target(),
+            avatar = created.avatar.pose();
           if (!moved(camera, savedCamera) && !moved(avatar, savedAvatar)) return;
           savedCamera = camera;
           savedAvatar = avatar;
-          host.update(withView(scene));
+          host.update(withView(created));
         }, VIEW_SAVE_MS);
-        const onResize = () => scene.resize();
+        const onResize = () => created.resize();
         window.addEventListener("resize", onResize);
         cleanup = () => {
           clearInterval(id);
           unsubscribe();
           window.removeEventListener("resize", onResize);
-          host.update(withView(scene));
-          scene.dispose();
+          host.update(withView(created));
+          created.dispose();
         };
       },
       () => alive && setFailed(true),

@@ -17,6 +17,8 @@ export interface AvatarMotion {
   setInput(dx: number, dz: number): void;
   walkTo(path: Point[]): void;
   teleport(p: Point): void;
+  // replace l'avatar si le sol sous lui est devenu bloqué (bâtiment acheté dessus)
+  unstick(): void;
   update(dt: number): AvatarPose;
 }
 
@@ -50,6 +52,9 @@ export function createAvatarMotion(
     teleport(p) {
       ({ x, z } = place(p));
       path = [];
+    },
+    unstick() {
+      if (!walkable(x, z)) ({ x, z } = place({ x, z }));
     },
     update(dt) {
       const x0 = x,

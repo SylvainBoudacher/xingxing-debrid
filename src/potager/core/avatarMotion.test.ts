@@ -77,4 +77,18 @@ describe("mouvement de l'avatar", () => {
     const p = m.update(0);
     expect(Number.isFinite(p.x) && Number.isFinite(p.z)).toBe(true);
   });
+
+  it("se dégage quand le sol sous lui devient bloqué", () => {
+    let blocked = false;
+    const m = createAvatarMotion(origin, (x) => !blocked || x < -0.5);
+    blocked = true;
+    m.unstick();
+    expect(m.pose().x).toBeLessThan(-0.5);
+  });
+
+  it("ne bouge pas s'il n'est pas coincé", () => {
+    const m = createAvatarMotion({ x: 0.3, z: 0 }, open);
+    m.unstick();
+    expect(m.pose()).toMatchObject({ x: 0.3, z: 0 });
+  });
 });

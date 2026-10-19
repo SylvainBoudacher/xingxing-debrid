@@ -41,25 +41,70 @@ const octile = (a: number, b: number) => {
   return Math.max(dx, dz) + (Math.SQRT2 - 1) * Math.min(dx, dz);
 };
 
+// tas binaire minimal sur f ; les entrées périmées sont ignorées à la sortie
+function createHeap() {
+  const items: [number, number][] = [];
+  return {
+    get size() {
+      return items.length;
+    },
+    push(node: number, f: number) {
+      items.push([node, f]);
+      let i = items.length - 1;
+      while (i > 0) {
+        const p = (i - 1) >> 1;
+        if (items[p][1] <= items[i][1]) break;
+        [items[p], items[i]] = [items[i], items[p]];
+        i = p;
+      }
+    },
+    pop(): [number, number] {
+      const top = items[0];
+      const last = items.pop()!;
+      if (items.length) {
+        items[0] = last;
+        let i = 0;
+        for (;;) {
+          const l = 2 * i + 1,
+            r = l + 1;
+          let m = i;
+          if (l < items.length && items[l][1] < items[m][1]) m = l;
+          if (r < items.length && items[r][1] < items[m][1]) m = r;
+          if (m === i) break;
+          [items[m], items[i]] = [items[i], items[m]];
+          i = m;
+        }
+      }
+      return top;
+    },
+  };
+}
+
 function astar(start: number, goal: number, walkable: Walkable): number[] | null {
-  const open = new Map<number, number>([[start, octile(start, goal)]]);
-  const g = new Map<number, number>([[start, 0]]);
-  const came = new Map<number, number>();
-  const closed = new Set<number>();
-  const free = (i: number, j: number) =>
-    i >= 0 && j >= 0 && i < COLS && j < ROWS && walkable(x0 + i * CELL, z0 + j * CELL);
+  const open = createHeap();
+  open.push(start, octile(start, goal));
+  const g = new Float64Array(COLS * ROWS).fill(Infinity);
+  g[start] = 0;
+  const came = new Int32Array(COLS * ROWS).fill(-1);
+  const closed = new Uint8Array(COLS * ROWS);
+  // 0 : inconnu, 1 : praticable, 2 : bloqué
+  const cache = new Uint8Array(COLS * ROWS);
+  const free = (i: number, j: number) => {
+    if (i < 0 || j < 0 || i >= COLS || j >= ROWS) return false;
+    const n = j * COLS + i;
+    if (!cache[n]) cache[n] = walkable(x0 + i * CELL, z0 + j * CELL) ? 1 : 2;
+    return cache[n] === 1;
+  };
 
   while (open.size) {
-    let cur = -1,
-      curF = Infinity;
-    for (const [n, f] of open) if (f < curF) [cur, curF] = [n, f];
+    const [cur] = open.pop();
+    if (closed[cur]) continue;
     if (cur === goal) {
       const path = [cur];
-      while (came.has(path[0])) path.unshift(came.get(path[0])!);
+      while (came[path[0]] !== -1) path.unshift(came[path[0]]);
       return path;
     }
-    open.delete(cur);
-    closed.add(cur);
+    closed[cur] = 1;
     const ci = cur % COLS,
       cj = Math.floor(cur / COLS);
     for (let dj = -1; dj <= 1; dj++)
@@ -71,12 +116,12 @@ function astar(start: number, goal: number, walkable: Walkable): number[] | null
         // pas de coin coupé
         if (di && dj && (!free(ci + di, cj) || !free(ci, cj + dj))) continue;
         const n = j * COLS + i;
-        if (closed.has(n)) continue;
-        const cost = g.get(cur)! + (di && dj ? Math.SQRT2 : 1) * CELL;
-        if (cost >= (g.get(n) ?? Infinity)) continue;
-        g.set(n, cost);
-        came.set(n, cur);
-        open.set(n, cost + octile(n, goal));
+        if (closed[n]) continue;
+        const cost = g[cur] + (di && dj ? Math.SQRT2 : 1) * CELL;
+        if (cost >= g[n]) continue;
+        g[n] = cost;
+        came[n] = cur;
+        open.push(n, cost + octile(n, goal));
       }
   }
   return null;

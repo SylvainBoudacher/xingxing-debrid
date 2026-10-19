@@ -93,6 +93,7 @@ export function createPotagerScene(
     buildings = save.buildings;
     // dans la fenêtre Potager, la scène fait foi pour l'avatar
     if (mode === "backdrop") avatar.teleport(save.avatar);
+    else avatar.unstick();
     const key = `${save.buildings.join()}|${save.parcels.join()}`;
     if (key === placedKey) return;
     placedKey = key;
