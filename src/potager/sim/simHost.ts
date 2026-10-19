@@ -1,4 +1,4 @@
-import { advancePlayTime } from "../core/clock";
+import { stepSim } from "../core/clock";
 import type { PotagerSave } from "../core/types";
 import type { SaveStore } from "../storage/potagerStore";
 import type { Channel, HandoffMsg, HostRole } from "./channel";
@@ -58,7 +58,7 @@ export function createSimHost(opts: Options): SimHost {
   function tick() {
     if (!state) return;
     const t = now();
-    state = advancePlayTime(state, t - lastTick);
+    state = stepSim(state, t - lastTick);
     lastTick = t;
     notify();
     if (t - lastWrite >= saveEveryMs) void write();
