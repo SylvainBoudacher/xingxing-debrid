@@ -2,34 +2,37 @@ import { canvasTex, dot, pick, range } from "./pixel";
 
 const GRASS = ["#5e8a30", "#6a9636", "#76a23c", "#527c2a", "#82ac44"];
 
+const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+const GRASS_RGB = GRASS.map(rgb);
+
+// Les terrasses font plus de 1000 pixels de large : on écrit l'image d'un bloc.
 export function grassTop(w: number, h: number, seed?: number) {
   return canvasTex(
     w,
     h,
     (g, rng) => {
+      const img = g.createImageData(w, h);
       for (let y = 0; y < h; y++)
         for (let x = 0; x < w; x++) {
           const n = Math.sin(x * 0.07 + Math.sin(y * 0.05) * 2) + Math.sin(y * 0.09 + x * 0.02);
           const r = rng();
-          dot(
-            g,
-            x,
-            y,
+          const k =
             n > 0.6
               ? r < 0.5
-                ? GRASS[2]
-                : GRASS[4]
+                ? 2
+                : 4
               : n < -0.8
                 ? r < 0.6
-                  ? GRASS[3]
-                  : GRASS[0]
+                  ? 3
+                  : 0
                 : r < 0.55
-                  ? GRASS[1]
+                  ? 1
                   : r < 0.8
-                    ? GRASS[0]
-                    : GRASS[2],
-          );
+                    ? 0
+                    : 2;
+          img.data.set([...GRASS_RGB[k], 255], (y * w + x) * 4);
         }
+      g.putImageData(img, 0, 0);
       for (let i = 0; i < (w * h) / 22; i++) {
         const x = Math.floor(range(rng, 0, w)),
           y = Math.floor(range(rng, 0, h));
