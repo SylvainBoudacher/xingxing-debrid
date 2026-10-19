@@ -122,6 +122,9 @@ function installShim() {
       }
     }
 
+    // localStorage ne contient jamais de JSON illisible : rien à mettre de côté
+    if (cmd === "backup_corrupt_store") return false;
+
     if (cmd === "get_api_key") {
       const name = args.name as string;
       return localStorage.getItem(`devkey:${name}`) ?? DEV_KEY_ENV[name] ?? null;

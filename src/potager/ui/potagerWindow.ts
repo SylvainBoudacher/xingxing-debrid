@@ -50,6 +50,8 @@ export function onPotagerOpenChange(cb: (open: boolean) => void): () => void {
       cb(false);
     }
   });
+  // un Potager déjà ouvert répond par une nouvelle réclamation
+  channel.post({ type: "query", from: "main", id: "watch" });
   if (isBrowserPreview) queueMicrotask(() => !disposed && cb(!!previewTab && !previewTab.closed));
   else void WebviewWindow.getByLabel(POTAGER_LABEL).then((w) => !disposed && cb(!!w));
   return () => {

@@ -197,4 +197,23 @@ describe("hôte de simulation", () => {
     expect(main.running).toBe(true);
     expect(main.state()?.playTimeMs).toBe(4000);
   });
+
+  it("retrouve le Potager ouvert après un rechargement de la fenêtre principale", async () => {
+    const store = memoryStore();
+    const bus = memoryBus();
+    const before = createSimHost({ role: "main", store, channel: bus.channel() });
+    const potager = createSimHost({ role: "potager", store, channel: bus.channel() });
+    await before.start();
+    await potager.start();
+    await before.stop();
+    const reloaded = createSimHost({ role: "main", store, channel: bus.channel() });
+    await reloaded.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reloaded.running).toBe(false);
+    await vi.advanceTimersByTimeAsync(3000);
+    await potager.stop();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(reloaded.running).toBe(true);
+    expect(reloaded.state()?.playTimeMs).toBe(3000);
+  });
 });

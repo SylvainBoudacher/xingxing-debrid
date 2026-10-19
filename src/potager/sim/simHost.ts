@@ -82,7 +82,11 @@ export function createSimHost(opts: Options): SimHost {
   }
 
   async function onMessage(msg: HandoffMsg) {
-    if (msg.from === role || role !== "main") return;
+    if (msg.from === role) return;
+    if (role === "potager") {
+      if (msg.type === "query" && timer) channel.post({ type: "claim", from: role, id });
+      return;
+    }
     if (msg.type === "claim") {
       owner = msg.id;
       if (!paused) {
@@ -120,10 +124,11 @@ export function createSimHost(opts: Options): SimHost {
     async start() {
       stopped = false;
       off = channel.on((m) => void onMessage(m));
+      if (role === "main") channel.post({ type: "query", from: role, id });
       if (role === "potager") await claim();
       if (stopped) return;
       await load();
-      if (!stopped) run();
+      if (!stopped && !paused) run();
     },
     async stop() {
       stopped = true;

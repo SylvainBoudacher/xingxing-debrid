@@ -1,9 +1,11 @@
+import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { createStarterSave, parseSave } from "../core/save";
 import type { PotagerSave } from "../core/types";
 
 const KEY = "save";
-const store = new LazyStore("potager.json", { defaults: {}, autoSave: false });
+const FILE = "potager.json";
+const store = new LazyStore(FILE, { defaults: {}, autoSave: false });
 
 const pad = (n: number) => String(n).padStart(2, "0");
 function stamp(d = new Date()): string {
@@ -16,8 +18,16 @@ export async function savePotager(save: PotagerSave): Promise<void> {
 }
 
 export async function loadPotager(): Promise<{ save: PotagerSave; recovered: boolean }> {
-  // relit le disque : l'autre fenêtre a pu écrire depuis le dernier chargement
-  await store.reload();
+  // relit le disque : l'autre fenêtre a pu écrire depuis le dernier chargement.
+  // Le plugin échoue si le fichier manque ou n'est pas du JSON : le second cas est mis de côté.
+  try {
+    await store.reload();
+  } catch {
+    const corrupt = await invoke<boolean>("backup_corrupt_store", { name: FILE });
+    const save = createStarterSave();
+    await savePotager(save);
+    return { save, recovered: corrupt };
+  }
   const raw = await store.get<unknown>(KEY);
   if (raw == null) {
     const save = createStarterSave();

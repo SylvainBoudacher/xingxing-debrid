@@ -10,12 +10,15 @@ export function getMainHost(): SimHost {
   if (!host) {
     host = createSimHost({ role: "main", store: potagerStore, channel: createChannel() });
     const h = host;
-    void h.start().then(() => {
-      if (h.recovered)
-        toast.error(
-          "Sauvegarde du Potager illisible : une copie a été mise de côté et une nouvelle partie a commencé.",
-        );
-    });
+    h.start().then(
+      () => {
+        if (h.recovered)
+          toast.error(
+            "Sauvegarde du Potager illisible : une copie a été mise de côté et une nouvelle partie a commencé.",
+          );
+      },
+      () => toast.error("Le Potager n'a pas pu être chargé."),
+    );
   }
   return host;
 }

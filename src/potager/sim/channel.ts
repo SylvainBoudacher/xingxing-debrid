@@ -6,7 +6,8 @@ export type HostRole = "main" | "potager";
 
 // `id` distingue deux fenêtres Potager successives (ou le double montage de React)
 export interface HandoffMsg {
-  type: "claim" | "released" | "closed";
+  // "query" : fenêtre principale (re)chargée qui demande si un Potager est ouvert
+  type: "claim" | "released" | "closed" | "query";
   from: HostRole;
   id: string;
   // "closed" : état final du Potager, une page qui se ferme peut ne jamais finir d'écrire

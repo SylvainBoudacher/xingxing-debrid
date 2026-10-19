@@ -32,7 +32,8 @@ if (isPotagerWindow()) {
   // le temps de jeu du Potager avance tant que l'app est ouverte, quel que soit le fond
   const host = getMainHost();
   if (isBrowserPreview) window.addEventListener("pagehide", () => void host.stop());
-  else void getCurrentWindow().onCloseRequested(() => host.stop());
+  // onCloseRequested détruit la fenêtre après le gestionnaire : une sauvegarde ratée ne doit pas la bloquer
+  else void getCurrentWindow().onCloseRequested(() => host.stop().catch(() => {}));
   root.render(
     <React.StrictMode>
       <QueryClientProvider client={queryClient}>

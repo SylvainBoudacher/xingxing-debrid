@@ -302,6 +302,28 @@ fn alldebrid_error_message(code: &str) -> String {
     }
 }
 
+// Met de cote un fichier de store illisible (JSON invalide) avant qu'une partie neuve l'ecrase.
+// Renvoie false si le fichier n'existe pas.
+#[tauri::command]
+fn backup_corrupt_store(app: tauri::AppHandle, name: String) -> Result<bool, String> {
+    use tauri::Manager;
+    if name.contains(['/', '\\']) || name.contains("..") {
+        return Err("nom de fichier invalide".into());
+    }
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    let path = dir.join(&name);
+    if !path.exists() {
+        return Ok(false);
+    }
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(|e| e.to_string())?
+        .as_secs();
+    let stem = name.trim_end_matches(".json");
+    std::fs::rename(&path, dir.join(format!("{stem}.corrupt-{stamp}.json"))).map_err(|e| e.to_string())?;
+    Ok(true)
+}
+
 #[tauri::command]
 fn export_json(app: tauri::AppHandle, filename: String, content: String) -> Result<String, String> {
     use tauri::Manager;
@@ -591,6 +613,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             get_api_key,
+            backup_corrupt_store,
             set_api_key,
             upload_torrent_to_debrid,
             upload_magnet_to_debrid,
