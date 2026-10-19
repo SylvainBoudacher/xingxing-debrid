@@ -4,6 +4,9 @@ import { createAvatarMotion, type AvatarMotion } from "../core/avatarMotion";
 import type { BuildingId, Point, PotagerSave } from "../core/types";
 import { isWalkable, type Walkable } from "../core/walk";
 import { createCameraRig, FOV, fovFor, type CameraRig } from "./cameraRig";
+import { createBloom } from "./bloom";
+import { buildGarden, disposeGarden, type GardenView } from "./garden";
+import { gardenKey } from "./gardenKey";
 import { createParticles } from "./particles";
 import { createPost } from "./post";
 import { buildTerrain } from "./terrain";
@@ -19,6 +22,10 @@ export interface PotagerScene {
   avatar: AvatarMotion;
   walkable: Walkable;
   pick(clientX: number, clientY: number): Point | null;
+  // coordonnées écran (CSS) d'un point au sol
+  project(p: Point): { x: number; y: number; visible: boolean };
+  // appelé quand une éclosion pas encore vue vient d'être montrée au joueur
+  onBloomSeen(cb: (cellKey: string) => void): () => void;
   start(): void;
   stop(): void;
   renderOnce(): void;
@@ -73,6 +80,12 @@ export function createPotagerScene(
   const avatar = createAvatarMotion(init.avatar, walkable);
   const raycaster = new THREE.Raycaster();
   const particles = createParticles(scene);
+  const bloom = createBloom(scene);
+  let garden: GardenView | null = null;
+  let gKey = "";
+  let lastSave = init;
+  const bloomListeners = new Set<(cellKey: string) => void>();
+  const blooming = new Set<string>();
 
   let placed: { group: THREE.Group; lanterns: Lantern[] } | null = null;
   let placedKey = "";
@@ -98,6 +111,21 @@ export function createPotagerScene(
     // dans la fenêtre Potager, la scène fait foi pour l'avatar
     if (mode === "backdrop") avatar.teleport(save.avatar);
     else avatar.unstick();
+    lastSave = save;
+    for (const k of blooming) {
+      const c = save.cells[k];
+      if (c?.kind !== "plante" || c.seen) blooming.delete(k);
+    }
+    const k = gardenKey(save);
+    if (k !== gKey) {
+      gKey = k;
+      if (garden) {
+        scene.remove(garden.group);
+        disposeGarden(garden);
+      }
+      garden = buildGarden(save);
+      scene.add(garden.group);
+    }
     const key = `${save.buildings.join()}|${save.parcels.join()}`;
     if (key === placedKey) return;
     placedKey = key;
@@ -137,6 +165,30 @@ export function createPotagerScene(
     }
   }
 
+  // une éclosion pas encore vue se joue dès que sa case est à l'écran
+  function showBlooms() {
+    if (!garden) return;
+    for (const [key, mesh] of garden.flowers) {
+      const c = lastSave.cells[key];
+      if (c?.kind !== "plante" || c.seen || blooming.has(key)) continue;
+      if (!project({ x: mesh.position.x, z: mesh.position.z }).visible) continue;
+      blooming.add(key);
+      bloom.play(mesh);
+      bloomListeners.forEach((cb) => cb(key));
+    }
+  }
+
+  const projected = new THREE.Vector3();
+  function project(p: Point) {
+    projected.set(p.x, groundHeight(p.x, p.z), p.z).project(camera);
+    const r = canvas.getBoundingClientRect();
+    return {
+      x: r.left + ((projected.x + 1) / 2) * r.width,
+      y: r.top + ((1 - projected.y) / 2) * r.height,
+      visible: Math.abs(projected.x) < 0.95 && Math.abs(projected.y) < 0.95 && projected.z < 1,
+    };
+  }
+
   let t = 0;
   let walkT = 0;
   function frame(dt: number) {
@@ -150,6 +202,8 @@ export function createPotagerScene(
     const mat = sprite.mesh.material as THREE.MeshLambertMaterial;
     if (mat.map !== map) mat.map = map;
     fadeTrees(p, py, dt);
+    if (mode === "potager") showBlooms();
+    bloom.update(dt);
     if (rig.mode() === "follow") rig.follow(p);
     rig.update(dt);
     const { position, look } = rig.pose();
@@ -191,6 +245,11 @@ export function createPotagerScene(
     rig,
     avatar,
     walkable,
+    project,
+    onBloomSeen(cb) {
+      bloomListeners.add(cb);
+      return () => bloomListeners.delete(cb);
+    },
     pick(clientX, clientY) {
       const r = canvas.getBoundingClientRect();
       raycaster.setFromCamera(
@@ -220,6 +279,11 @@ export function createPotagerScene(
     dispose() {
       cancelAnimationFrame(raf);
       raf = 0;
+      if (garden) {
+        scene.remove(garden.group);
+        disposeGarden(garden);
+      }
+      bloom.dispose();
       disposeTree(scene);
       // hors de l'arbre : la frame d'avatar inactive et la shadow map
       sprite.frames.forEach((f) => f.dispose());

@@ -10,6 +10,7 @@ import type { PotagerSave } from "../core/types";
 import { avatarFrames } from "../textures/avatar";
 import { cabaneTextures, etalTextures, signTex } from "../textures/buildings";
 import { bushTex, glowTex, treeTex, tuftTex } from "../textures/nature";
+import { abriTex, puitsTex } from "../textures/props";
 import { createRng, PPU, canvasTex, dot } from "../textures/pixel";
 import { PATH_GHOST, pathTex, soilTex, stoneTex } from "../textures/terrain";
 import { decal } from "./terrain";
@@ -200,7 +201,19 @@ function blocked(x: number, z: number) {
     MAP.buildings.some((b) => near(slotRect(b), x, z, 0.6)) ||
     MAP.paths.some((p) => near(p.rect, x, z, 0.1)) ||
     MAP.stairs.some((s) => near({ x0: s.x0, x1: s.x1, z0: -4, z1: s.zFoot }, x, z, 0.3)) ||
-    Math.abs(z - -4) < 0.3
+    Math.abs(z - -4) < 0.3 ||
+    near(
+      {
+        x0: MAP.abri.x - MAP.abri.w / 2,
+        x1: MAP.abri.x + MAP.abri.w / 2,
+        z0: MAP.abri.z - MAP.abri.d / 2,
+        z1: MAP.abri.z + MAP.abri.d / 2,
+      },
+      x,
+      z,
+      0.4,
+    ) ||
+    Math.hypot(x - MAP.puits.x, z - MAP.puits.z) < MAP.puits.r + 0.4
   );
 }
 
@@ -219,6 +232,15 @@ export function buildDecor(): {
     group.add(mesh);
     return { spot, mesh };
   });
+  const abri = spriteMesh(abriTex(), 2.2, 2.08);
+  abri.position.set(
+    MAP.abri.x,
+    groundHeight(MAP.abri.x, MAP.abri.z),
+    MAP.abri.z + MAP.abri.d / 2 - 0.2,
+  );
+  const puits = spriteMesh(puitsTex(), 1.7, 2.06);
+  puits.position.set(MAP.puits.x, groundHeight(MAP.puits.x, MAP.puits.z), MAP.puits.z + 0.2);
+  group.add(abri, puits);
   const bushTexs = [0, 2].map(bushTex);
   for (const [x, z, p] of BUSHES) {
     const m = spriteMesh(bushTexs[p === 0 ? 0 : 1], 2, 1.25);
