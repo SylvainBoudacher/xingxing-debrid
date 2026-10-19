@@ -221,6 +221,8 @@ function blocked(x: number, z: number) {
 export function buildDecor(): {
   group: THREE.Group;
   trees: { spot: TreeSpot; mesh: THREE.Mesh }[];
+  // abri et puits : cliquables
+  props: THREE.Mesh[];
 } {
   const group = new THREE.Group();
   const treeTexs = [0, 1, 2, 3].map(treeTex);
@@ -288,7 +290,7 @@ export function buildDecor(): {
     b.position.set(p.x, 0.42, p.z);
     group.add(b);
   }
-  return { group, trees };
+  return { group, trees, props: [abri, puits] };
 }
 
 export function buildAvatar() {

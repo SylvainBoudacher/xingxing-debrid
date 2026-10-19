@@ -21,6 +21,7 @@ export function usePotagerSession(
   const [mode, setMode] = useState<CameraMode>("follow");
   const [failed, setFailed] = useState(false);
   const hostRef = useRef<SimHost | null>(null);
+  const [liveHost, setLiveHost] = useState<SimHost | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -46,6 +47,7 @@ export function usePotagerSession(
         }
         created.start();
         setScene(created);
+        setLiveHost(host);
         setCanvas(canvasRef.current);
         setMode(created.rig.mode());
         const unsubscribe = host.subscribe((s) => created.sync(s));
@@ -101,5 +103,5 @@ export function usePotagerSession(
     [scene],
   );
 
-  return { scene, canvas, mode, failed, applyMode };
+  return { scene, canvas, mode, failed, applyMode, host: liveHost };
 }

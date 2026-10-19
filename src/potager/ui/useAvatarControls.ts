@@ -1,5 +1,6 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { findPath } from "../core/path";
+import type { Point } from "../core/types";
 import type { PotagerScene } from "../render/createPotagerScene";
 
 const CLICK_PX = 5;
@@ -15,12 +16,31 @@ const KEYS: Record<string, [number, number]> = {
   KeyD: [1, 0],
 };
 
+export interface AvatarControlOptions {
+  // mini-jeu ou panneau ouvert : l'avatar ne bouge plus
+  locked: boolean;
+  // un clic sur un élément du jardin est pris en charge ailleurs (renvoie vrai)
+  interceptClick?: (p: Point) => boolean;
+  // le joueur reprend la main au clavier
+  onManualMove?: () => void;
+}
+
 // Clavier : marche directe. Clic (sans glisser) sur le sol : l'avatar s'y rend.
 export function useAvatarControls(
   scene: PotagerScene | null,
   canvas: HTMLCanvasElement | null,
   onFollow: () => void,
+  options: AvatarControlOptions,
 ) {
+  const opts = useRef(options);
+  useEffect(() => {
+    opts.current = options;
+  });
+
+  useEffect(() => {
+    if (options.locked) scene?.avatar.setInput(0, 0);
+  }, [options.locked, scene]);
+
   useEffect(() => {
     if (!scene || !canvas) return;
     const held = new Set<string>();
@@ -46,11 +66,13 @@ export function useAvatarControls(
       e.preventDefault();
       if (held.has(e.code)) return;
       held.add(e.code);
+      if (opts.current.locked) return;
       if (scene.rig.mode() === "free") onFollow();
+      opts.current.onManualMove?.();
       apply();
     };
     const onKeyUp = (e: KeyboardEvent) => {
-      if (!held.delete(e.code)) return;
+      if (!held.delete(e.code) || opts.current.locked) return;
       apply();
     };
     const onVisibility = () => document.hidden && release();
@@ -62,9 +84,10 @@ export function useAvatarControls(
       if (!down || e.button !== 0) return;
       const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
       down = null;
-      if (moved >= CLICK_PX) return;
+      if (moved >= CLICK_PX || opts.current.locked) return;
       const target = scene.pick(e.clientX, e.clientY);
-      if (!target) return;
+      if (!target || opts.current.interceptClick?.(target)) return;
+      opts.current.onManualMove?.();
       const path = findPath(scene.avatar.pose(), target, scene.walkable);
       if (path) scene.avatar.walkTo(path);
     };

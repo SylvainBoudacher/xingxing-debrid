@@ -259,7 +259,7 @@ export function createPotagerScene(
         ),
         camera,
       );
-      const targets = placed ? [terrain.group, placed.group] : [terrain.group];
+      const targets = [terrain.group, ...decor.props, ...(placed ? [placed.group] : [])];
       const hit = raycaster.intersectObjects(targets, true)[0];
       return hit ? { x: hit.point.x, z: hit.point.z } : null;
     },
