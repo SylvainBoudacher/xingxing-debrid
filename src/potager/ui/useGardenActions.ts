@@ -217,10 +217,10 @@ export function useGardenActions(
 
   // déplacement entre le sac et l'abri ; refusé (sac plein) : message
   const transfer = useCallback(
-    (fn: (s: PotagerSave) => PotagerSave | null) => {
+    (fn: (s: PotagerSave) => PotagerSave | null, full = "Ton sac est plein") => {
       const s = host?.state();
       if (!host || !s) return;
-      if (!fn(s)) return say("Ton sac est plein");
+      if (!fn(s)) return say(full);
       host.update((cur) => fn(cur) ?? cur);
     },
     [host, say],
@@ -232,7 +232,7 @@ export function useGardenActions(
     bubble: bubble?.text ?? null,
     abriOpen,
     closeAbri: () => setAbriOpen(false),
-    deposit: (i: number) => transfer((s) => deposit(s, i)),
+    deposit: (i: number) => transfer((s) => deposit(s, i), "Le coffre est plein"),
     withdrawTool: (id: ToolId) => {
       // l'outil repris arrive dans la première case libre : il passe en main
       const free = host?.state()?.inventory.indexOf(null) ?? -1;

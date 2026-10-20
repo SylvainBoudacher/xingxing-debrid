@@ -12,7 +12,7 @@ import {
 } from "./inventory";
 import { createStarterSave } from "./save";
 import { rollSeed, seededRng } from "./seeds";
-import type { Slot } from "./types";
+import type { FlowerStack, Slot } from "./types";
 
 const rng = seededRng(7);
 const common = () => rollSeed("commune", rng);
@@ -65,7 +65,7 @@ describe("inventaire", () => {
   it("range un outil au râtelier", () => {
     const s = withdrawTool(createStarterSave(), "beche")!;
     const i = s.inventory.findIndex((x) => x?.kind === "tool");
-    const back = deposit(s, i);
+    const back = deposit(s, i)!;
     expect(back.inventory[i]).toBeNull();
     expect(back.rack.map((t) => t.id)).toContain("beche");
   });
@@ -73,7 +73,7 @@ describe("inventaire", () => {
   it("fusionne des graines déposées avec la pile du coffre", () => {
     let s = createStarterSave();
     s = { ...s, chest: [{ kind: "seeds", rarity: "commune", seeds: [common(), common()] }] };
-    s = deposit(s, 0);
+    s = deposit(s, 0)!;
     expect(s.inventory[0]).toBeNull();
     expect(s.chest).toHaveLength(1);
     expect(s.chest[0].kind === "seeds" && s.chest[0].seeds).toHaveLength(7);
@@ -123,5 +123,47 @@ describe("inventaire", () => {
       expect(view).not.toContain(`"${seed.color}"`);
     }
     expect(slotView(pile)).toMatchObject({ label: "Rare", count: 2 });
+  });
+});
+
+describe("coffre limité", () => {
+  const SPECIES = [
+    "tournesol",
+    "rosetremiere",
+    "dahlia",
+    "cosmos",
+    "aster",
+    "chrysantheme",
+    "bruyere",
+    "colchique",
+    "anemone",
+    "sedum",
+    "amarante",
+    "vergedor",
+    "heliopsis",
+    "lanternelune",
+  ] as const;
+  const pile = (i: number): FlowerStack => ({
+    kind: "flowers",
+    species: SPECIES[i],
+    color: "red",
+    quality: "belle",
+    count: 1,
+  });
+  const over = () => ({
+    ...createStarterSave(),
+    chest: SPECIES.map((_, i) => pile(i)),
+  });
+  it("retire d'un coffre au-dessus de la capacité, refuse une nouvelle pile, fusionne", () => {
+    const save = over();
+    expect(withdrawStack(save, 0)).not.toBeNull();
+    const inventory = [...save.inventory];
+    inventory[0] = { ...pile(0), color: "blue" };
+    expect(deposit({ ...save, inventory }, 0)).toBeNull();
+    inventory[0] = pile(3);
+    expect(deposit({ ...save, inventory }, 0)).not.toBeNull();
+  });
+  it("outil de niveau 2 : libellé", () => {
+    expect(slotView({ kind: "tool", tool: { id: "beche", level: 2 } }).label).toBe("Bêche niv. 2");
   });
 });

@@ -1,6 +1,7 @@
 import { colorName } from "./catalog/colors";
 import { RARITY_LABEL } from "./catalog/rarity";
 import { speciesOf } from "./catalog/species";
+import { CHEST_SIZES } from "./economy/catalog";
 import type { ChestStack, FlowerStack, PotagerSave, Rarity, Seed, Slot, ToolId } from "./types";
 
 export const STACK = 5;
@@ -79,8 +80,9 @@ export const waterLeft = (inv: Inv) => {
   return s?.kind === "tool" ? (s.tool.water ?? 0) : 0;
 };
 
-// outil vers le râtelier ; graines et fleurs fusionnées dans le coffre (piles sans limite)
-export function deposit(save: PotagerSave, slotIndex: number): PotagerSave {
+// outil vers le râtelier ; graines et fleurs fusionnées dans le coffre (piles sans limite),
+// null si une nouvelle pile dépasse la capacité du coffre
+export function deposit(save: PotagerSave, slotIndex: number): PotagerSave | null {
   const s = save.inventory[slotIndex];
   if (!s) return save;
   const inventory = [...save.inventory];
@@ -90,8 +92,10 @@ export function deposit(save: PotagerSave, slotIndex: number): PotagerSave {
   const i = chest.findIndex((c) =>
     s.kind === "seeds" ? c.kind === "seeds" && c.rarity === s.rarity : sameFlower(c, s),
   );
-  if (i < 0) chest.push(s);
-  else {
+  if (i < 0) {
+    if (chest.length >= CHEST_SIZES[save.chestLevel]) return null;
+    chest.push(s);
+  } else {
     const c = chest[i];
     chest[i] =
       c.kind === "seeds" && s.kind === "seeds"
@@ -141,7 +145,12 @@ export interface SlotView {
 // Ce que l'interface affiche : une graine ne montre que sa rareté.
 export function slotView(s: Slot | ChestStack): SlotView {
   if (s.kind === "tool")
-    return { kind: "tool", label: TOOL_LABEL[s.tool.id], count: 1, water: s.tool.water };
+    return {
+      kind: "tool",
+      label: s.tool.level === 2 ? `${TOOL_LABEL[s.tool.id]} niv. 2` : TOOL_LABEL[s.tool.id],
+      count: 1,
+      water: s.tool.water,
+    };
   if (s.kind === "seeds")
     return {
       kind: "seeds",
