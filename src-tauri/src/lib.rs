@@ -640,17 +640,6 @@ pub fn run() {
             }
             Ok(())
         })
-        .on_window_event(|window, event| {
-            // Fermer la fenetre principale ferme aussi le Potager (qui sauvegarde
-            // dans son propre gestionnaire de fermeture).
-            if window.label() == "main" {
-                if let tauri::WindowEvent::Destroyed = event {
-                    if let Some(potager) = window.app_handle().get_webview_window("potager") {
-                        let _ = potager.close();
-                    }
-                }
-            }
-        })
         .invoke_handler(tauri::generate_handler![
             get_api_key,
             backup_corrupt_store,

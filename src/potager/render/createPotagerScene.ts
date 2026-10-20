@@ -3,7 +3,7 @@ import { groundHeight, MAP } from "../core/catalog/map";
 import { createAvatarMotion, type AvatarMotion } from "../core/avatarMotion";
 import type { BuildingId, Point, PotagerSave } from "../core/types";
 import { isWalkable, type Walkable } from "../core/walk";
-import { createCameraRig, FOV, fovFor, type CameraRig } from "./cameraRig";
+import { createCameraRig, DISTANCE, FOV, fovFor, type CameraRig } from "./cameraRig";
 import type { Target } from "../core/actions";
 import { createBloom } from "./bloom";
 import { buildGarden, disposeGarden, type GardenView } from "./garden";
@@ -21,6 +21,8 @@ export type SceneMode = "potager" | "backdrop";
 
 export interface PotagerScene {
   sync(save: PotagerSave): void;
+  // fond -> jeu : ombres fines, 60 i/s, éclosions ; jeu -> fond : l'inverse
+  setMode(mode: SceneMode): void;
   rig: CameraRig;
   avatar: AvatarMotion;
   walkable: Walkable;
@@ -43,26 +45,32 @@ const LIGHTING_EVERY_MS = 60_000;
 const STEP_FRAME_S = 0.18;
 const TREE_FADED = 0.45;
 const TREE_FADE_PER_S = 4;
+const FOG_NEAR = 30;
+const FOG_FAR = 62;
+const SHADOW_SIZE: Record<SceneMode, number> = { potager: 4096, backdrop: 2048 };
+// 120 Hz sur les écrans ProMotion : plafonné, l'image ne gagne rien à aller plus vite
+const MIN_FRAME_MS: Record<SceneMode, number> = { potager: 1000 / 60 - 1, backdrop: 1000 / 30 - 1 };
 
 export function createPotagerScene(
   canvas: HTMLCanvasElement,
-  mode: SceneMode,
+  initialMode: SceneMode,
   init: PotagerSave,
 ): PotagerScene {
+  let mode = initialMode;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   const post = createPost(renderer);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.Fog("#c9b892", 30, 62);
+  const fog = new THREE.Fog("#c9b892", FOG_NEAR, FOG_FAR);
+  scene.fog = fog;
   const camera = new THREE.PerspectiveCamera(FOV, 16 / 9, 1, 140);
 
   const hemi = new THREE.HemisphereLight();
   const sun = new THREE.DirectionalLight();
-  const size = mode === "potager" ? 4096 : 2048;
   sun.castShadow = true;
-  sun.shadow.mapSize.set(size, size);
+  sun.shadow.mapSize.setScalar(SHADOW_SIZE[mode]);
   Object.assign(sun.shadow.camera, {
     left: -22,
     right: 22,
@@ -104,13 +112,14 @@ export function createPotagerScene(
     hemi.color.set(l.sky);
     hemi.groundColor.set(l.ground);
     hemi.intensity = l.hemi;
-    (scene.fog as THREE.Fog).color.set(l.fog);
+    fog.color.set(l.fog);
     scene.background = new THREE.Color(l.fog);
     lanternsOn = l.lanterns;
     placed?.lanterns.forEach((x) => (x.glow.visible = lanternsOn));
   }
 
   const rig = createCameraRig(init.camera, MAP.bounds, groundHeight);
+  if (mode === "backdrop") rig.liftTo(1, 0);
 
   function sync(save: PotagerSave) {
     buildings = save.buildings;
@@ -218,7 +227,10 @@ export function createPotagerScene(
     highlight.update(t);
     if (rig.mode() === "follow") rig.follow(p);
     rig.update(dt);
-    const { position, look } = rig.pose();
+    const { position, look, distance } = rig.pose();
+    // le brouillard recule avec la caméra : la vue aérienne ne doit pas être délavée
+    fog.near = FOG_NEAR + distance - DISTANCE;
+    fog.far = FOG_FAR + distance - DISTANCE;
     camera.position.set(...position);
     camera.lookAt(...look);
     sun.target.position.set(look[0], 0, look[2]);
@@ -232,13 +244,12 @@ export function createPotagerScene(
     post.render(scene, camera);
   }
 
-  const minFrameMs = mode === "backdrop" ? 1000 / 30 - 1 : 0;
   let raf = 0;
   let last = 0;
   let lastLighting = 0;
   function loop(now: number) {
     raf = requestAnimationFrame(loop);
-    if (now - last < minFrameMs) return;
+    if (now - last < MIN_FRAME_MS[mode]) return;
     const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
     last = now;
     if (now - lastLighting > LIGHTING_EVERY_MS) {
@@ -254,6 +265,15 @@ export function createPotagerScene(
 
   return {
     sync,
+    setMode(next) {
+      if (next === mode) return;
+      mode = next;
+      // la shadow map est réallouée à la bonne taille au prochain rendu
+      sun.shadow.mapSize.setScalar(SHADOW_SIZE[mode]);
+      sun.shadow.map?.dispose();
+      sun.shadow.map = null;
+      if (mode === "potager") avatar.unstick();
+    },
     rig,
     avatar,
     walkable,
@@ -276,10 +296,14 @@ export function createPotagerScene(
         terrain.group,
         ...decor.props,
         ...(garden ? garden.forest : []),
+        ...(garden ? garden.crows : []),
         ...(placed ? [placed.group] : []),
       ];
       const hit = raycaster.intersectObjects(targets, true)[0];
-      return hit ? { x: hit.point.x, z: hit.point.z } : null;
+      if (!hit) return null;
+      // une corneille se vise à son oiseau : on renvoie la case sous elle, pas le sol derrière
+      const at = garden?.crows.includes(hit.object as THREE.Mesh) ? hit.object.position : hit.point;
+      return { x: at.x, z: at.z };
     },
     start() {
       if (raf) return;

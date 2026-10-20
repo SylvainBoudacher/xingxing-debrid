@@ -123,6 +123,15 @@ describe("sauvegarde du Potager", () => {
     expect(r?.rack.map((t) => t.id).sort()).toEqual(["arrosoir", "beche", "serfouette"]);
   });
 
+  it("garde les outils sains du râtelier quand une entrée est abîmée", () => {
+    const s = createStarterSave();
+    const r = parseSave({
+      ...s,
+      rack: [{ id: "beche" }, { id: "arrosoir", water: 2 }, "x"],
+    });
+    expect(r?.rack.find((t) => t.id === "arrosoir")?.water).toBe(2);
+  });
+
   it("ne double jamais un outil", () => {
     const s = createStarterSave();
     const inventory = [...s.inventory];

@@ -4,25 +4,35 @@ import { createPotagerScene, type PotagerScene } from "../render/createPotagerSc
 import { hasWebgl } from "../render/webgl";
 import { getMainHost } from "../sim/mainHost";
 import { backdropMode } from "./backdropMode";
-import { onPotagerOpenChange } from "./potagerWindow";
-import { PotagerFrozen } from "./PotagerFrozen";
+import { PotagerGame } from "./PotagerGame";
 
 // le fond ne suit pas l'avatar : il garde la dernière vue du Potager
 const fixed = (c: CameraState): CameraState => ({ ...c, mode: "free" });
 
-export function PotagerBackdrop({
+// Une seule scène : fond animé derrière l'app, et terrain de jeu quand on y entre.
+export function PotagerStage({
   active,
+  playing,
+  onExit,
   onWebglError,
 }: {
   active: boolean;
+  playing: boolean;
+  onExit: () => void;
   onWebglError: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const sceneRef = useRef<PotagerScene | null>(null);
-  const [ready, setReady] = useState(false);
+  const [stage, setStage] = useState<{ scene: PotagerScene; canvas: HTMLCanvasElement } | null>(
+    null,
+  );
+  const scene = stage?.scene ?? null;
   const [focused, setFocused] = useState(() => document.hasFocus());
   const [hidden, setHidden] = useState(() => document.hidden);
-  const [potagerOpen, setPotagerOpen] = useState(false);
+  // en jeu, la scène fait foi pour la caméra : le fond ne la recale plus sur la sauvegarde
+  const playingRef = useRef(playing);
+  useEffect(() => {
+    playingRef.current = playing;
+  }, [playing]);
 
   useEffect(() => {
     if (!hasWebgl()) {
@@ -30,14 +40,14 @@ export function PotagerBackdrop({
       return;
     }
     const host = getMainHost();
-    let scene: PotagerScene | null = null;
+    let created: PotagerScene | null = null;
     let camera = "";
     const apply = () => {
       const save = host.state();
       if (!save || !canvasRef.current) return;
-      if (!scene) {
+      if (!created) {
         try {
-          scene = createPotagerScene(canvasRef.current, "backdrop", {
+          created = createPotagerScene(canvasRef.current, "backdrop", {
             ...save,
             camera: fixed(save.camera),
           });
@@ -45,26 +55,25 @@ export function PotagerBackdrop({
           onWebglError();
           return;
         }
-        sceneRef.current = scene;
-        setReady(true);
+        setStage({ scene: created, canvas: canvasRef.current });
       }
-      scene.sync(save);
+      created.sync(save);
+      if (playingRef.current) return;
       const key = `${save.camera.x},${save.camera.z},${save.avatar.x},${save.avatar.z}`;
       if (key !== camera) {
         camera = key;
-        scene.rig.reset(fixed(save.camera));
-        scene.renderOnce();
+        created.rig.reset(fixed(save.camera));
+        created.renderOnce();
       }
     };
     apply();
     const unsubscribe = host.subscribe(apply);
-    const onResize = () => scene?.resize();
+    const onResize = () => created?.resize();
     window.addEventListener("resize", onResize);
     return () => {
       unsubscribe();
       window.removeEventListener("resize", onResize);
-      scene?.dispose();
-      sceneRef.current = null;
+      created?.dispose();
     };
   }, [onWebglError]);
 
@@ -75,37 +84,35 @@ export function PotagerBackdrop({
     window.addEventListener("focus", onFocus);
     window.addEventListener("blur", onBlur);
     document.addEventListener("visibilitychange", onVisibility);
-    const stop = onPotagerOpenChange(setPotagerOpen);
     return () => {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("blur", onBlur);
       document.removeEventListener("visibilitychange", onVisibility);
-      stop();
     };
   }, []);
 
-  const mode = backdropMode({ active, focused, hidden, potagerOpen });
+  const mode = backdropMode({ active: active || playing, focused, hidden });
 
   useEffect(() => {
-    const scene = sceneRef.current;
-    if (!scene || !ready) return;
+    if (!scene) return;
     if (mode === "run") scene.start();
     else {
       scene.stop();
       scene.renderOnce();
     }
-  }, [mode, ready]);
+  }, [mode, scene]);
 
-  const frozen = mode === "frozen";
   return (
     <div className="absolute inset-0 overflow-hidden bg-[#120c10]">
-      <canvas
-        ref={canvasRef}
-        className={`h-full w-full transition-[filter] duration-500 ${
-          frozen ? "scale-105 blur-[10px] brightness-[.55] saturate-[.7]" : ""
-        }`}
-      />
-      {frozen && <PotagerFrozen />}
+      <canvas ref={canvasRef} className="block h-full w-full" />
+      {playing && stage && (
+        <PotagerGame
+          scene={stage.scene}
+          canvas={stage.canvas}
+          host={getMainHost()}
+          onExit={onExit}
+        />
+      )}
     </div>
   );
 }

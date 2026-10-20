@@ -246,6 +246,11 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Potager : le calque de l'interface laisse passer les clics vers la scène, pas ses éléments
+     (en base, une classe pointer-events-none sur un élément garde la main) */
+  .potager-game > * {
+    pointer-events: auto;
+  }
   body {
     @apply bg-background text-foreground;
   }

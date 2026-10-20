@@ -164,7 +164,8 @@ export function useGardenActions(
       const pose = scene.avatar.pose();
       const s = host?.state();
       // une corneille s'envole quand l'avatar approche
-      if (s && scareCrows(s, pose) !== s) host!.update((cur) => scareCrows(cur, pose));
+      const scared = s && scareCrows(s, pose);
+      if (scared && scared !== s) host?.update(() => scared);
       const target = !lockedRef.current && s ? findTarget(s, pose) : null;
       const usable = target && s && "gesture" in prepareAction(s, target, selectedRef.current);
       scene.setHighlight(usable ? target : null);

@@ -1,10 +1,9 @@
 import { exportPotager, importPotager } from "@/potager/storage/potagerTransfer";
-import { onPotagerOpenChange, openPotagerWindow } from "@/potager/ui/potagerWindow";
 import type { Backdrop } from "@/lib/backdropPref";
 import { getSavedDucks, importSavedDucks, parseDucksJson } from "@/lib/savedDucks";
 import { invoke } from "@tauri-apps/api/core";
 import { Download, Sprout, Upload } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { SettingsPanel } from "../SettingsPanel";
 import { Segmented, SettingRow, Toggle } from "../controls";
@@ -21,6 +20,7 @@ export interface BackdropPanelProps {
   onSetIdleAutoHide: (v: boolean) => void;
   poolBackdropExit: boolean;
   onSetPoolBackdropExit: (v: boolean) => void;
+  onOpenPotager: () => void;
 }
 
 export function BackdropPanel({
@@ -34,11 +34,10 @@ export function BackdropPanel({
   onSetIdleAutoHide,
   poolBackdropExit,
   onSetPoolBackdropExit,
+  onOpenPotager,
 }: BackdropPanelProps) {
   const importDucksInputRef = useRef<HTMLInputElement>(null);
   const importGardenInputRef = useRef<HTMLInputElement>(null);
-  const [gardenOpen, setGardenOpen] = useState(false);
-  useEffect(() => onPotagerOpenChange(setGardenOpen), []);
   const [draftMaxDucks, setDraftMaxDucks] = useState(String(summerMaxDucks));
   const [prevMaxDucks, setPrevMaxDucks] = useState(summerMaxDucks);
   if (prevMaxDucks !== summerMaxDucks) {
@@ -67,7 +66,7 @@ export function BackdropPanel({
 
   async function handleExportGarden() {
     try {
-      const path = await exportPotager(gardenOpen);
+      const path = await exportPotager();
       toast.success(`Potager exporté : ${path}`);
     } catch (e) {
       toast.error(`Export impossible : ${e}`);
@@ -78,10 +77,6 @@ export function BackdropPanel({
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (gardenOpen) {
-      toast.error("Ferme la fenêtre Potager avant d'importer.");
-      return;
-    }
     if (!(await importPotager(await file.text()))) {
       toast.error("Fichier invalide");
       return;
@@ -128,12 +123,12 @@ export function BackdropPanel({
         <div className="mt-3 rounded-xl bg-white dark:bg-zinc-900/80 ring-1 ring-black/8 dark:ring-white/8 px-4 py-3">
           <p className="text-sm font-medium text-zinc-900 dark:text-white">Mon potager</p>
           <p className="text-xs text-zinc-500 mt-0.5 mb-3 leading-relaxed">
-            Le champ se gère dans sa propre fenêtre. La sauvegarde peut être exportée ou restaurée ;
+            Le champ se gère depuis l'accueil. La sauvegarde peut être exportée ou restaurée ;
             l'import remplace le potager actuel.
           </p>
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={() => void openPotagerWindow()}
+              onClick={onOpenPotager}
               className="flex items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-xs font-medium text-white hover:bg-amber-400 transition-colors"
             >
               <Sprout className="h-3.5 w-3.5" />

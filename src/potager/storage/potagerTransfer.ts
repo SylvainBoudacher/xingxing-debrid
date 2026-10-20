@@ -1,12 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
 import { parseSave } from "../core/save";
 import { getMainHost } from "../sim/mainHost";
-import { loadPotager } from "./potagerStore";
 
 // Renvoie le chemin du fichier écrit.
-export async function exportPotager(potagerOpen: boolean): Promise<string> {
-  // Potager ouvert : la fenêtre principale est en pause, le disque fait foi
-  const save = potagerOpen ? (await loadPotager()).save : getMainHost().state();
+export async function exportPotager(): Promise<string> {
+  const save = getMainHost().state();
   return invoke<string>("export_json", {
     filename: "c411-potager.json",
     content: JSON.stringify(save, null, 2),

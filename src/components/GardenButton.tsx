@@ -1,13 +1,12 @@
 import { ARROW, PUMPKIN, SPROUT } from "@/components/gardenButtonSprites";
 import { GardenButtonSprite } from "@/components/GardenButtonSprite";
-import { openPotagerWindow } from "@/potager/ui/potagerWindow";
 
-// Panneau de bois pixel qui ouvre la fenêtre Potager.
-export function GardenButton() {
+// Panneau de bois pixel qui lance le Potager.
+export function GardenButton({ onOpen }: { onOpen: () => void }) {
   return (
     <button
       type="button"
-      onClick={() => void openPotagerWindow()}
+      onClick={onOpen}
       aria-label="Ouvrir mon potager"
       className="garden-sign group relative cursor-pointer"
     >

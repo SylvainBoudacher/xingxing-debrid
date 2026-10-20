@@ -1,6 +1,5 @@
 import { AppMenu, type Page } from "@/components/AppMenu";
 import { GardenButton } from "@/components/GardenButton";
-import { onPotagerOpenChange } from "@/potager/ui/potagerWindow";
 import { NetworkErrorState } from "@/components/NetworkErrorState";
 import { NyaaSearchFilters } from "@/components/NyaaSearchFilters";
 import { MangaSearchSuggestions } from "@/components/MangaSearchSuggestions";
@@ -259,8 +258,6 @@ export function MainPage({
   const setSource = onSearchModeChange;
   const [activeSource, setActiveSource] = useState<"c411" | "nyaa">("c411");
   const [searchFocused, setSearchFocused] = useState(false);
-  const [gardenOpen, setGardenOpen] = useState(false);
-  useEffect(() => onPotagerOpenChange(setGardenOpen), []);
   const [nyaaTeam, setNyaaTeam] = useState("");
   const [nyaaQuality, setNyaaQuality] = useState("");
   const [nyaaCodec, setNyaaCodec] = useState("");
@@ -800,7 +797,7 @@ export function MainPage({
       </div>
 
       <AnimatePresence>
-        {showGardenButton && !gardenOpen && phase === "idle" && (
+        {showGardenButton && phase === "idle" && (
           <motion.div
             key="garden-button"
             initial={{ opacity: 0, y: 16 }}
@@ -812,7 +809,7 @@ export function MainPage({
             exit={{ opacity: 0, y: 16, transition: { duration: 0.18, ease: "easeIn" } }}
             className="absolute bottom-10 left-1/2 z-10 -translate-x-1/2"
           >
-            <GardenButton />
+            <GardenButton onOpen={() => onNavigate("potager")} />
           </motion.div>
         )}
       </AnimatePresence>

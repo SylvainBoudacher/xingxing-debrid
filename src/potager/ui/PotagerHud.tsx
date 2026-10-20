@@ -1,4 +1,4 @@
-import { BookOpen, LocateFixed, Move } from "lucide-react";
+import { ArrowLeft, BookOpen, LocateFixed, Move } from "lucide-react";
 import type { CameraMode } from "../core/types";
 
 export function PotagerHud({
@@ -6,12 +6,14 @@ export function PotagerHud({
   onToggleMode,
   onHerbier,
   herbierDisabled,
+  onExit,
 }: {
   mode: CameraMode;
   onToggleMode: () => void;
   onHerbier: () => void;
   // mini-jeu ou abri ouvert
   herbierDisabled: boolean;
+  onExit: () => void;
 }) {
   const follow = mode === "follow";
   return (
@@ -30,6 +32,19 @@ export function PotagerHud({
       >
         Le Potager
       </div>
+      <button
+        type="button"
+        onClick={onExit}
+        className="absolute bottom-6 left-6 flex cursor-pointer items-center gap-2 border-l-2 border-[#b8975a] px-4 py-2 text-lg font-semibold text-[#f6ecd2] transition-colors hover:text-white"
+        style={{
+          fontFamily: '"Cormorant Garamond", Georgia, serif',
+          textShadow: "0 2px 3px rgba(0,0,0,0.7)",
+          background: "linear-gradient(90deg, rgba(20,14,10,0.8), rgba(20,14,10,0))",
+        }}
+      >
+        <ArrowLeft className="size-4" />
+        Retour à l'accueil
+      </button>
       <button
         type="button"
         onClick={onToggleMode}

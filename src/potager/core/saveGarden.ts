@@ -146,7 +146,9 @@ export function parseGarden(raw: Record<string, unknown>, parcels: readonly Parc
   const inventory =
     slots && !slots.includes(undefined) ? (slots as (Slot | null)[]) : start.inventory;
 
-  const rack = Array.isArray(raw.rack) ? raw.rack.map(parseTool) : null;
+  const rack = Array.isArray(raw.rack)
+    ? raw.rack.map(parseTool).filter((t): t is Tool => t !== null)
+    : null;
   const chest = Array.isArray(raw.chest) ? raw.chest.map(parseStack) : null;
   const herbier = isObject(raw.herbier)
     ? Object.fromEntries(
@@ -179,10 +181,7 @@ export function parseGarden(raw: Record<string, unknown>, parcels: readonly Parc
       )
     : {};
 
-  const tools = uniqueTools(
-    inventory,
-    rack && !rack.includes(null) ? (rack as Tool[]) : start.rack,
-  );
+  const tools = uniqueTools(inventory, rack ?? start.rack);
   return {
     cells,
     ...tools,

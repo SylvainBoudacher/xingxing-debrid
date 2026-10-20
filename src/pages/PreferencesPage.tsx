@@ -116,6 +116,7 @@ export function PreferencesPage({
             onSetIdleAutoHide={onSetIdleAutoHide}
             poolBackdropExit={poolBackdropExit}
             onSetPoolBackdropExit={onSetPoolBackdropExit}
+            onOpenPotager={() => onNavigate("potager")}
           />
         );
     }

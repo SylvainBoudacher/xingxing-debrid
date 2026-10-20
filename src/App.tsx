@@ -52,8 +52,8 @@ import { toast } from "sonner";
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
 );
-const PotagerBackdrop = lazy(() =>
-  import("@/potager/ui/PotagerBackdrop").then((m) => ({ default: m.PotagerBackdrop })),
+const PotagerStage = lazy(() =>
+  import("@/potager/ui/PotagerStage").then((m) => ({ default: m.PotagerStage })),
 );
 const DuckShop = lazy(() => import("@/components/DuckShop").then((m) => ({ default: m.DuckShop })));
 const DuckDex = lazy(() => import("@/components/DuckDex").then((m) => ({ default: m.DuckDex })));
@@ -152,7 +152,9 @@ function App() {
   );
 
   useNavShortcuts((action) => {
-    setPage((p) => (p === null || p === "setup" || p === "boatgame" ? p : action));
+    setPage((p) =>
+      p === null || p === "setup" || p === "boatgame" || p === "potager" ? p : action,
+    );
   });
   useActionShortcuts();
 
@@ -258,7 +260,7 @@ function App() {
     await saveBackdrop(v);
   }
 
-  // stable : PotagerBackdrop l'utilise comme dépendance d'effet
+  // stable : PotagerStage l'utilise comme dépendance d'effet
   const handleWebglError = useCallback(() => {
     toast.error("Le Potager a besoin de WebGL : le fond animé a été désactivé.");
     setBackdrop("aucun");
@@ -426,13 +428,17 @@ function App() {
   const backdropVisible =
     animatedBackdrop && (page === "main" || page === "discover" || effectivePhase === "transition");
   const showPool = summerEnabled && backdropVisible;
+  // le jeu se joue sur la scène du fond, passée au premier plan
+  const playingPotager = effectivePhase === "done" && page === "potager";
 
   return (
     <>
-      <Toaster />
+      {!playingPotager && <Toaster />}
       <DownloadsOverlay />
       {/* Masqué dans l'Aide : la page de statut affiche déjà le détail (et le label couvrirait ses boutons). */}
-      {effectivePhase === "done" && page !== "setup" && page !== "help" && <ServiceAlert />}
+      {effectivePhase === "done" && page !== "setup" && page !== "help" && page !== "potager" && (
+        <ServiceAlert />
+      )}
 
       {effectivePhase === "done" && pendingUpdate && (
         <UpdateDialog update={pendingUpdate} onDismiss={() => setPendingUpdate(null)} />
@@ -448,10 +454,10 @@ function App() {
           déjà visible quand le voile du splash se lève */}
       {animatedBackdrop && (
         <div
-          aria-hidden
-          className={`pointer-events-none fixed inset-0 -z-10 transition-opacity duration-500 ${
-            backdropVisible ? "opacity-100" : "opacity-0"
-          }`}
+          aria-hidden={!playingPotager}
+          className={`fixed inset-0 transition-opacity duration-500 ${
+            playingPotager ? "z-40" : "pointer-events-none -z-10"
+          } ${backdropVisible || playingPotager ? "opacity-100" : "opacity-0"}`}
         >
           <Suspense fallback={null}>
             {backdrop === "mare" ? (
@@ -462,7 +468,12 @@ function App() {
                 onBoatWarp={() => setPage("boatgame")}
               />
             ) : (
-              <PotagerBackdrop active={backdropVisible} onWebglError={handleWebglError} />
+              <PotagerStage
+                active={backdropVisible}
+                playing={playingPotager}
+                onExit={() => setPage("main")}
+                onWebglError={handleWebglError}
+              />
             )}
           </Suspense>
         </div>

@@ -1,7 +1,6 @@
 import { stepSim } from "../core/clock";
 import type { PotagerSave } from "../core/types";
 import type { SaveStore } from "../storage/potagerStore";
-import type { Channel, HandoffMsg, HostRole } from "./channel";
 
 export interface SimHost {
   start(): Promise<void>;
@@ -15,36 +14,26 @@ export interface SimHost {
 }
 
 interface Options {
-  role: HostRole;
   store: SaveStore;
-  channel: Channel;
   now?: () => number;
   tickMs?: number;
   saveEveryMs?: number;
-  claimTimeoutMs?: number;
 }
 
-// Une seule simulation fait foi : celle de la fenêtre principale, sauf pendant que la
-// fenêtre Potager est ouverte (elle la réclame, la principale écrit puis se met en pause).
+// Simulation du Potager : le temps de jeu avance tant que l'app est ouverte.
 export function createSimHost(opts: Options): SimHost {
-  const { role, store, channel } = opts;
+  const { store } = opts;
   const now = opts.now ?? Date.now;
   const tickMs = opts.tickMs ?? 1000;
   // court : Cmd+Q et la relance après mise à jour ne laissent pas sauvegarder
   const saveEveryMs = opts.saveEveryMs ?? 3_000;
-  const claimTimeoutMs = opts.claimTimeoutMs ?? 2000;
 
   let state: PotagerSave | null = null;
   let recovered = false;
   let timer: ReturnType<typeof setInterval> | null = null;
   let lastTick = 0;
   let lastWrite = 0;
-  let paused = false;
   let stopped = false;
-  // fenêtre Potager qui a la main, côté fenêtre principale
-  let owner: string | null = null;
-  const id = Math.random().toString(36).slice(2);
-  let off: (() => void) | null = null;
   const subscribers = new Set<(s: PotagerSave) => void>();
 
   const notify = () => state && subscribers.forEach((cb) => cb(state!));
@@ -64,81 +53,22 @@ export function createSimHost(opts: Options): SimHost {
     if (t - lastWrite >= saveEveryMs) void write();
   }
 
-  function run() {
-    lastTick = now();
-    lastWrite = now();
-    timer ??= setInterval(tick, tickMs);
-  }
-
-  function halt() {
-    if (timer) clearInterval(timer);
-    timer = null;
-  }
-
-  async function load() {
-    const res = await store.load();
-    state = res.save;
-    recovered = res.recovered;
-    notify();
-  }
-
-  async function onMessage(msg: HandoffMsg) {
-    if (msg.from === role) return;
-    if (role === "potager") {
-      if (msg.type === "query" && timer) channel.post({ type: "claim", from: role, id });
-      return;
-    }
-    if (msg.type === "claim") {
-      owner = msg.id;
-      if (!paused) {
-        paused = true;
-        halt();
-        await write();
-      }
-      channel.post({ type: "released", from: role, id });
-    } else if (msg.type === "closed" && paused && msg.id === owner) {
-      owner = null;
-      paused = false;
-      if (msg.save) {
-        state = msg.save;
-        notify();
-        await write();
-      } else await load();
-      if (!paused && !stopped) run();
-    }
-  }
-
-  async function claim() {
-    await new Promise<void>((resolve) => {
-      const timeout = setTimeout(done, claimTimeoutMs);
-      const stopListening = channel.on((m) => m.type === "released" && m.from !== role && done());
-      function done() {
-        clearTimeout(timeout);
-        stopListening();
-        resolve();
-      }
-      channel.post({ type: "claim", from: role, id });
-    });
-  }
-
   return {
     async start() {
       stopped = false;
-      off = channel.on((m) => void onMessage(m));
-      if (role === "main") channel.post({ type: "query", from: role, id });
-      if (role === "potager") await claim();
+      const res = await store.load();
       if (stopped) return;
-      await load();
-      if (!stopped && !paused) run();
+      state = res.save;
+      recovered = res.recovered;
+      notify();
+      lastTick = now();
+      lastWrite = now();
+      timer ??= setInterval(tick, tickMs);
     },
     async stop() {
       stopped = true;
-      halt();
-      off?.();
-      off = null;
-      if (paused) return;
-      if (role === "potager")
-        channel.post({ type: "closed", from: role, id, save: state ?? undefined });
+      if (timer) clearInterval(timer);
+      timer = null;
       await write();
     },
     state: () => state,
