@@ -75,12 +75,7 @@ export function useEconomy(host: SimHost | null, say: (text: string) => void) {
         return null;
       }
       host.update(() => out.save);
-      // l'ouverture du sachet (cartes) remplacera ce message
-      say(
-        out.toChest
-          ? "Sac plein : graines rangées à l'abri"
-          : `${out.seeds.length} graines obtenues`,
-      );
+      if (out.toChest) say("Sac plein : graines rangées à l'abri");
       return out.seeds;
     },
     buyParcel: (id: ParcelId) => buy((s) => buyParcel(s, id)),

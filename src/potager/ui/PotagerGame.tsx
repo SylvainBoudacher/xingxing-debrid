@@ -1,6 +1,7 @@
 import { motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
-import type { CameraMode, Point } from "../core/types";
+import type { SachetId } from "../core/economy/catalog";
+import type { CameraMode, Point, Seed } from "../core/types";
 import type { PotagerScene } from "../render/createPotagerScene";
 import type { SimHost } from "../sim/simHost";
 import { MAP } from "../core/catalog/map";
@@ -15,6 +16,7 @@ import { MinigameOverlay } from "./minigames/MinigameOverlay";
 import { loadPotagerFont } from "./potagerFont";
 import { PotagerHud } from "./PotagerHud";
 import { PotagerToaster } from "./PotagerToaster";
+import { SachetOpening } from "./sachets/SachetOpening";
 import { useAvatarControls } from "./useAvatarControls";
 import { useBloomAnnounce } from "./useBloomAnnounce";
 import { useEconomy } from "./useEconomy";
@@ -40,10 +42,13 @@ export function PotagerGame({
   const save = useHostState(host);
   const [mode, setMode] = useState<CameraMode>(() => host.state()?.camera.mode ?? "follow");
   const [herbierOpen, setHerbierOpen] = useState(false);
-  const garden = useGardenActions(scene, host, herbierOpen);
+  // sachet acheté en cours d'ouverture : bloque actions et marche comme un mini-jeu
+  const [opening, setOpening] = useState<{ sachet: SachetId; seeds: Seed[] } | null>(null);
+  const garden = useGardenActions(scene, host, herbierOpen || opening !== null);
   const eco = useEconomy(host, garden.say);
   const [pop, setPop] = useState<{ gain: number; id: number } | null>(null);
-  const busy = !!garden.game || garden.panel !== null;
+  const busy = !!garden.game || garden.panel !== null || opening !== null;
+  const closeOpening = useCallback(() => setOpening(null), []);
   useBloomAnnounce(scene, host);
 
   // H : ouvrir ou fermer l'Herbier ; Échap : le fermer
@@ -136,7 +141,18 @@ export function PotagerGame({
         <GainPop key={pop.id} gain={pop.gain} where={etalOnScreen} onDone={() => setPop(null)} />
       )}
       {save && herbierOpen && <HerbierPanel save={save} onClose={() => setHerbierOpen(false)} />}
-      {save && <GardenPanels save={save} garden={garden} eco={eco} onServe={serve} />}
+      {save && (
+        <GardenPanels
+          save={save}
+          garden={garden}
+          eco={eco}
+          onServe={serve}
+          onOpenSachet={(sachet, seeds) => setOpening({ sachet, seeds })}
+        />
+      )}
+      {opening && (
+        <SachetOpening sachet={opening.sachet} seeds={opening.seeds} onClose={closeOpening} />
+      )}
     </motion.div>
   );
 }

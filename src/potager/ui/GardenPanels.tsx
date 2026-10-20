@@ -1,4 +1,5 @@
-import type { PotagerSave } from "../core/types";
+import type { SachetId } from "../core/economy/catalog";
+import type { PotagerSave, Seed } from "../core/types";
 import { AbriPanel } from "./AbriPanel";
 import { CabanePanel } from "./CabanePanel";
 import { EtalPanel } from "./EtalPanel";
@@ -12,11 +13,13 @@ export function GardenPanels({
   garden,
   eco,
   onServe,
+  onOpenSachet,
 }: {
   save: PotagerSave;
   garden: ReturnType<typeof useGardenActions>;
   eco: ReturnType<typeof useEconomy>;
   onServe: (stallIndex: number) => void;
+  onOpenSachet: (sachet: SachetId, seeds: Seed[]) => void;
 }) {
   const { panel, closePanel } = garden;
   if (!panel) return null;
@@ -46,7 +49,12 @@ export function GardenPanels({
     return (
       <CabanePanel
         save={save}
-        onBuySachet={(id) => eco.buySachet(id) && closePanel()}
+        onBuySachet={(id) => {
+          const seeds = eco.buySachet(id);
+          if (!seeds) return;
+          closePanel();
+          onOpenSachet(id, seeds);
+        }}
         onBuyTool={eco.buyTool}
         onClose={closePanel}
       />
