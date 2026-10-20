@@ -19,10 +19,12 @@ import {
   type ToolId,
   type Weed,
   type Crow,
+  type Client,
   type ForestItemKind,
   FOREST_KINDS,
 } from "./types";
 import { MAP } from "./catalog/map";
+import { CHEST_SIZES, CLIENT_LOOKS, STALL_SIZES } from "./economy/catalog";
 
 export const SLOTS = 6;
 
@@ -44,6 +46,12 @@ export function starterGarden(parcels: readonly ParcelId[]) {
     weeds: {} as Record<string, Weed>,
     crows: {} as Record<string, Crow>,
     forest: {} as Record<number, ForestItemKind>,
+    po: 0,
+    stall: [] as FlowerStack[],
+    stallLevel: 0,
+    chestLevel: 0,
+    client: null as Client | null,
+    nextClientAt: 0,
   };
 }
 
@@ -71,10 +79,28 @@ function parseSeed(v: unknown): Seed | null {
 
 function parseTool(v: unknown): Tool | null {
   if (!isObject(v) || !isToolId(v.id)) return null;
-  if (v.id !== "arrosoir") return { id: v.id };
+  const level = v.level === 2 ? { level: 2 as const } : {};
+  if (v.id !== "arrosoir") return { id: v.id, ...level };
   return {
     id: "arrosoir",
     water: isNumber(v.water) ? Math.min(5, Math.max(0, Math.round(v.water))) : 0,
+    ...level,
+  };
+}
+
+const parseCount = (v: unknown) => (isNumber(v) ? Math.max(0, Math.floor(v)) : 0);
+const parseLevel = (v: unknown, sizes: number[]) =>
+  isNumber(v) ? Math.min(sizes.length - 1, Math.max(0, Math.floor(v))) : 0;
+
+function parseClient(v: unknown): Client | null {
+  if (!isObject(v) || !isObject(v.demand)) return null;
+  const { species, color } = v.demand;
+  if (!isEntry(species, color)) return null;
+  if (!Number.isInteger(v.look) || (v.look as number) < 0 || (v.look as number) >= CLIENT_LOOKS)
+    return null;
+  return {
+    demand: { species: species as Client["demand"]["species"], color: color as ColorId },
+    look: v.look as number,
   };
 }
 
@@ -150,6 +176,7 @@ export function parseGarden(raw: Record<string, unknown>, parcels: readonly Parc
     ? raw.rack.map(parseTool).filter((t): t is Tool => t !== null)
     : null;
   const chest = Array.isArray(raw.chest) ? raw.chest.map(parseStack) : null;
+  const stall = Array.isArray(raw.stall) ? raw.stall.map(parseStack) : null;
   const herbier = isObject(raw.herbier)
     ? Object.fromEntries(
         Object.entries(raw.herbier).flatMap(([k, e]) =>
@@ -190,6 +217,13 @@ export function parseGarden(raw: Record<string, unknown>, parcels: readonly Parc
     weeds: keyed<Weed>(raw.weeds, "at", isCell),
     crows: keyed<Crow>(raw.crows, "leaveAt", isCell),
     forest: forest as Record<number, ForestItemKind>,
+    po: parseCount(raw.po),
+    stall:
+      stall && stall.every((x): x is FlowerStack => x?.kind === "flowers") ? stall : start.stall,
+    stallLevel: parseLevel(raw.stallLevel, STALL_SIZES),
+    chestLevel: parseLevel(raw.chestLevel, CHEST_SIZES),
+    client: parseClient(raw.client),
+    nextClientAt: isNumber(raw.nextClientAt) ? Math.max(0, raw.nextClientAt) : 0,
   };
 }
 

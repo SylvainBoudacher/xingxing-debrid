@@ -28,9 +28,11 @@ export const TOOL_IDS = ["beche", "arrosoir", "serfouette"] as const;
 export type ToolId = (typeof TOOL_IDS)[number];
 
 // water : arrosages restants (0 à 5), arrosoir seulement
+// level : absent = niveau 1
 export interface Tool {
   id: ToolId;
   water?: number;
+  level?: 2;
 }
 
 export interface Seed {
@@ -90,6 +92,17 @@ export interface Crow {
 export const FOREST_KINDS = ["champignon", "gland"] as const;
 export type ForestItemKind = (typeof FOREST_KINDS)[number];
 
+export interface Demand {
+  species: SpeciesId;
+  color: ColorId;
+}
+
+// look : indice d'apparence, 0 à CLIENT_LOOKS - 1
+export interface Client {
+  demand: Demand;
+  look: number;
+}
+
 export interface PotagerSave {
   version: 1;
   playTimeMs: number;
@@ -106,4 +119,10 @@ export interface PotagerSave {
   crows: Record<string, Crow>;
   // indice dans MAP.forest
   forest: Record<number, ForestItemKind>;
+  po: number;
+  stall: FlowerStack[];
+  stallLevel: number;
+  chestLevel: number;
+  client: Client | null;
+  nextClientAt: number;
 }

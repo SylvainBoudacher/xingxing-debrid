@@ -158,4 +158,73 @@ describe("sauvegarde du Potager", () => {
     expect(all.filter((id) => id === "beche")).toHaveLength(1);
     expect(r.inventory[2]).toBeNull();
   });
+  describe("économie", () => {
+    const base = () => createStarterSave();
+    const demand = { species: "rosetremiere", color: "red" };
+
+    it("démarre sans PO, sans étal garni, sans client", () => {
+      const s = base();
+      expect(s).toMatchObject({
+        po: 0,
+        stall: [],
+        stallLevel: 0,
+        chestLevel: 0,
+        client: null,
+        nextClientAt: 0,
+      });
+    });
+
+    it("complète une sauvegarde d'avant l'économie", () => {
+      const { po, stall, stallLevel, chestLevel, client, nextClientAt, ...old } = base();
+      expect(parseSave(old)).toMatchObject({
+        po: 0,
+        stall: [],
+        stallLevel: 0,
+        chestLevel: 0,
+        client: null,
+        nextClientAt: 0,
+      });
+    });
+
+    it("relit les PO en entier positif", () => {
+      expect(parseSave({ ...base(), po: -3 })?.po).toBe(0);
+      expect(parseSave({ ...base(), po: "12" })?.po).toBe(0);
+      expect(parseSave({ ...base(), po: 12.7 })?.po).toBe(12);
+    });
+
+    it("borne les niveaux", () => {
+      expect(parseSave({ ...base(), stallLevel: 5 })?.stallLevel).toBe(2);
+      expect(parseSave({ ...base(), chestLevel: -1 })?.chestLevel).toBe(0);
+    });
+
+    it("ne garde dans l'étal que des piles de fleurs lisibles", () => {
+      const flowers = { kind: "flowers", ...demand, quality: "belle", count: 2 };
+      expect(parseSave({ ...base(), stall: [flowers] })?.stall).toEqual([flowers]);
+      expect(parseSave({ ...base(), stall: [flowers, { kind: "x" }] })?.stall).toEqual([]);
+      const seeds = {
+        kind: "seeds",
+        rarity: "commune",
+        seeds: [{ rarity: "commune", species: "tournesol", color: "yellow" }],
+      };
+      expect(parseSave({ ...base(), stall: [seeds] })?.stall).toEqual([]);
+    });
+
+    it("relit le client ou l'oublie", () => {
+      const client = { demand, look: 2 };
+      expect(parseSave({ ...base(), client })?.client).toEqual(client);
+      expect(
+        parseSave({ ...base(), client: { demand: { species: "x", color: "red" }, look: 2 } })
+          ?.client,
+      ).toBeNull();
+      expect(parseSave({ ...base(), client: { demand, look: 4 } })?.client).toBeNull();
+      expect(parseSave({ ...base(), client: { demand, look: -1 } })?.client).toBeNull();
+    });
+
+    it("relit le niveau d'un outil", () => {
+      const rack = (tool: unknown) => parseSave({ ...base(), rack: [tool] })?.rack[0];
+      expect(rack({ id: "beche", level: 2 })).toEqual({ id: "beche", level: 2 });
+      expect(rack({ id: "beche", level: 3 })).toEqual({ id: "beche" });
+      expect(rack({ id: "beche", level: "2" })).toEqual({ id: "beche" });
+    });
+  });
 });
