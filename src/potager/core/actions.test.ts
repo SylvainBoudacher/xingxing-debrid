@@ -271,6 +271,28 @@ describe("forêt", () => {
     expect(r.events).toEqual([{ kind: "graine", rarity: "commune" }]);
   });
 
+  it("exige une case libre : la rareté tirée pourrait ne pas s'empiler", () => {
+    const full: (Slot | null)[] = Array.from({ length: 6 }, () => ({
+      kind: "flowers",
+      species: "tournesol",
+      color: "orange",
+      quality: "ordinaire",
+      count: 5,
+    }));
+    full[0] = {
+      kind: "seeds",
+      rarity: "commune",
+      seeds:
+        createStarterSave().inventory[0]!.kind === "seeds"
+          ? (createStarterSave().inventory[0] as Extract<Slot, { kind: "seeds" }>).seeds.slice(0, 4)
+          : [],
+    };
+    const s = { ...withItem(createStarterSave()), inventory: full };
+    expect(prepareAction(s, { kind: "foret", spot: 0 }, 0)).toEqual({
+      message: "Ton sac est plein",
+    });
+  });
+
   it("laisse l'objet en place sac plein", () => {
     const full: (Slot | null)[] = Array.from({ length: 6 }, () => ({
       kind: "flowers",

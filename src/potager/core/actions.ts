@@ -86,7 +86,8 @@ export function prepareAction(
   }
   if (target.kind === "foret") {
     if (!save.forest[target.spot]) return { message: "Il n'y a plus rien ici" };
-    return seedRoom(inv) ? { gesture: "ramasser" } : { message: "Ton sac est plein" };
+    // la rareté n'est connue qu'au tirage : seule une case libre garantit la place
+    return inv.includes(null) ? { gesture: "ramasser" } : { message: "Ton sac est plein" };
   }
   const c = save.cells[target.key];
   if (!c) return { message: "Rien à faire ici" };

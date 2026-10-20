@@ -196,13 +196,19 @@ export function parseGarden(raw: Record<string, unknown>, parcels: readonly Parc
 
 // Chaque outil existe exactement une fois : le sac l'emporte, un outil disparu revient au râtelier.
 function uniqueTools(inventory: (Slot | null)[], rack: Tool[]) {
-  const inBag = new Set(inventory.flatMap((s) => (s?.kind === "tool" ? [s.tool.id] : [])));
+  const inBag = new Set<ToolId>();
+  const bag = inventory.map((s) => {
+    if (s?.kind !== "tool") return s;
+    if (inBag.has(s.tool.id)) return null;
+    inBag.add(s.tool.id);
+    return s;
+  });
   const kept = rack.filter(
     (t, i) => !inBag.has(t.id) && rack.findIndex((x) => x.id === t.id) === i,
   );
   const missing = TOOL_IDS.filter((id) => !inBag.has(id) && !kept.some((t) => t.id === id));
   return {
-    inventory,
+    inventory: bag,
     rack: [...kept, ...missing.map((id): Tool => (id === "arrosoir" ? { id, water: 0 } : { id }))],
   };
 }

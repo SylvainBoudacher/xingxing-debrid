@@ -135,4 +135,18 @@ describe("sauvegarde du Potager", () => {
     expect(all.filter((id) => id === "beche")).toHaveLength(1);
     expect(r?.inventory[1]).toMatchObject({ kind: "tool", tool: { id: "beche" } });
   });
+
+  it("ne garde qu'un exemplaire d'un outil présent deux fois dans le sac", () => {
+    const s = createStarterSave();
+    const inventory = [...s.inventory];
+    inventory[1] = { kind: "tool", tool: { id: "beche" } };
+    inventory[2] = { kind: "tool", tool: { id: "beche" } };
+    const r = parseSave({ ...s, inventory })!;
+    const all = [
+      ...r.rack.map((t) => t.id),
+      ...r.inventory.flatMap((x) => (x?.kind === "tool" ? [x.tool.id] : [])),
+    ];
+    expect(all.filter((id) => id === "beche")).toHaveLength(1);
+    expect(r.inventory[2]).toBeNull();
+  });
 });
