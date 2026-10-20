@@ -7,7 +7,7 @@ import {
   type TreeSpot,
 } from "../core/catalog/map";
 import type { PotagerSave } from "../core/types";
-import { avatarFrames } from "../textures/avatar";
+import { avatarViews } from "../textures/avatar";
 import { cabaneTextures, etalTextures, signTex } from "../textures/buildings";
 import { bushTex, glowTex, treeTex, tuftTex } from "../textures/nature";
 import { abriTex, puitsTex } from "../textures/props";
@@ -294,8 +294,8 @@ export function buildDecor(): {
 }
 
 export function buildAvatar() {
-  const frames = avatarFrames();
-  const mesh = spriteMesh(frames[0], 1.2, 1.8);
+  const { views, textures } = avatarViews();
+  const mesh = spriteMesh(views.down.idle, 1.2, 1.8);
   mesh.position.set(MAP.spawn.x, groundHeight(MAP.spawn.x, MAP.spawn.z), MAP.spawn.z);
-  return { mesh, frames };
+  return { mesh, views, textures };
 }

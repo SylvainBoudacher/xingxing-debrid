@@ -42,7 +42,8 @@ export interface PotagerScene {
 
 const SUN_OFFSET = new THREE.Vector3(-12, 18, 9);
 const LIGHTING_EVERY_MS = 60_000;
-const STEP_FRAME_S = 0.18;
+// cycle de course de 8 frames : deux foulées en 0,6 s
+const STEP_FRAME_S = 0.075;
 const TREE_FADED = 0.45;
 const TREE_FADE_PER_S = 4;
 const FOG_NEAR = 30;
@@ -212,10 +213,13 @@ export function createPotagerScene(
     t += dt;
     const p = avatar.update(dt);
     const py = groundHeight(p.x, p.z);
-    sprite.mesh.position.set(p.x, py, p.z);
-    sprite.mesh.scale.x = p.facing;
     walkT = p.moving ? walkT + dt : 0;
-    const map = sprite.frames[Math.floor(walkT / STEP_FRAME_S) % 2];
+    const vertical = Math.abs(p.dir.z) > Math.abs(p.dir.x);
+    const view = sprite.views[vertical ? (p.dir.z < 0 ? "up" : "down") : "side"];
+    const step = Math.floor(walkT / STEP_FRAME_S) % view.walk.length;
+    const map = p.moving ? view.walk[step] : view.idle;
+    sprite.mesh.position.set(p.x, py, p.z);
+    sprite.mesh.scale.x = vertical ? 1 : p.facing;
     const mat = sprite.mesh.material as THREE.MeshLambertMaterial;
     if (mat.map !== map) mat.map = map;
     fadeTrees(p, py, dt);
@@ -329,7 +333,7 @@ export function createPotagerScene(
       highlight.dispose();
       disposeTree(scene);
       // hors de l'arbre : la frame d'avatar inactive et la shadow map
-      sprite.frames.forEach((f) => f.dispose());
+      sprite.textures.forEach((t) => t.dispose());
       sun.shadow.dispose();
       post.dispose();
       renderer.dispose();
