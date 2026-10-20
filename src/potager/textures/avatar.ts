@@ -34,16 +34,61 @@ interface Layer {
 }
 
 // couches peintes dans l'ordre : chaque pixel non vide recouvre les précédents
-const compose = (layers: Layer[]) =>
+const composer = (palette: Record<string, string>) => (layers: Layer[]) =>
   canvasTex(16, 24, (g) => {
     for (const { rows, y, x = 0, swap = NEAR } of layers)
       rows.forEach((row, j) =>
         [...row].forEach((ch, i) => {
-          const c = PAL[swap[ch] ?? ch];
+          const c = palette[swap[ch] ?? ch];
           if (c) dot(g, x + i, y + j, c);
         }),
       );
   });
+type Compose = ReturnType<typeof composer>;
+
+// tenues des clients : cheveux, bandeau, tunique et pantalon changent
+export const CLIENT_PALETTES: Record<string, string>[] = [
+  {
+    ...PAL,
+    h: "#4a3020",
+    H: "#2e1c12",
+    r: "#e8dcc0",
+    b: "#7a9a3a",
+    B: "#58742a",
+    p: "#3a4a6a",
+    P: "#28344c",
+  },
+  {
+    ...PAL,
+    h: "#c8402e",
+    H: "#8a2a1c",
+    r: "#2e5a8a",
+    b: "#b84a8a",
+    B: "#843464",
+    p: "#6a6a70",
+    P: "#4a4a50",
+  },
+  {
+    ...PAL,
+    h: "#d8d8dc",
+    H: "#9a9aa2",
+    r: "#7a4a24",
+    b: "#d8a040",
+    B: "#a47a2c",
+    p: "#4a2c18",
+    P: "#321e10",
+  },
+  {
+    ...PAL,
+    h: "#222228",
+    H: "#101014",
+    r: "#c8402e",
+    b: "#6a4a9a",
+    B: "#4a3270",
+    p: "#8a7a5a",
+    P: "#665a40",
+  },
+];
 
 const pad = (rows: string[]) => rows.map((r) => r.padEnd(16, "."));
 
@@ -58,6 +103,7 @@ const BACK_SWAP: Record<FrontArm, FrontArm> = {
 };
 
 function frontFrame(
+  compose: Compose,
   head: string[],
   legs: string[],
   dy: number,
@@ -74,21 +120,21 @@ function frontFrame(
   ]);
 }
 
-function frontView(back: boolean) {
+function frontView(compose: Compose, back: boolean) {
   const head = back ? BACK_HEAD : FRONT_HEAD;
-  const idle = frontFrame(head, FRONT_STAND, 0, ["mid", "mid"], back);
+  const idle = frontFrame(compose, head, FRONT_STAND, 0, ["mid", "mid"], back);
   const run = [false, true].flatMap((flip) =>
     FRONT_RUN.map(({ dy, legs }, i) => {
       const [l, r] = FRONT_RUN_ARMS[i];
       return flip
-        ? frontFrame(head, mirror(legs), dy, [r, l], back)
-        : frontFrame(head, legs, dy, [l, r], back);
+        ? frontFrame(compose, head, mirror(legs), dy, [r, l], back)
+        : frontFrame(compose, head, legs, dy, [l, r], back);
     }),
   );
   return { idle, walk: run };
 }
 
-function sideView() {
+function sideView(compose: Compose) {
   const idle = compose([
     { rows: SIDE_STAND, y: HIP_Y },
     { rows: SIDE_TORSO, y: SHOULDER_Y },
@@ -116,11 +162,12 @@ export interface AvatarView {
   walk: THREE.Texture[];
 }
 
-export function avatarViews() {
+export function avatarViews(palette: Record<string, string> = PAL) {
+  const compose = composer(palette);
   const views = {
-    down: frontView(false),
-    up: frontView(true),
-    side: sideView(),
+    down: frontView(compose, false),
+    up: frontView(compose, true),
+    side: sideView(compose),
   } satisfies Record<string, AvatarView>;
   const textures = Object.values(views).flatMap((v) => [v.idle, ...v.walk]);
   return { views, textures };

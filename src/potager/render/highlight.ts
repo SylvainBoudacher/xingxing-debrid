@@ -47,8 +47,10 @@ export function createHighlight(scene: THREE.Scene) {
     let at: { x: number; z: number } = MAP.puits;
     let r = 0.4;
     if (t.kind === "puits") r = MAP.puits.r + 0.25;
-    else if (t.kind === "panneau") at = parcelSign(t.parcel);
-    else if (t.kind === "foret") at = MAP.forest[t.spot];
+    else if (t.kind === "panneau") {
+      at = parcelSign(t.parcel);
+      r = 0.9;
+    } else if (t.kind === "foret") at = MAP.forest[t.spot];
     else {
       const rect = t.kind === "abri" ? MAP.abri : MAP.buildings.find((x) => x.id === t.kind)!;
       at = rect;

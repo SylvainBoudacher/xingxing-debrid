@@ -2,13 +2,21 @@ import * as THREE from "three";
 import {
   groundHeight,
   MAP,
+  parcelSign,
   type BuildingSlot,
   type Rect,
   type TreeSpot,
 } from "../core/catalog/map";
+import { PARCEL_PRICE } from "../core/economy/catalog";
 import type { PotagerSave } from "../core/types";
 import { avatarViews } from "../textures/avatar";
-import { abriTextures, cabaneTextures, etalTextures, signTex } from "../textures/buildings";
+import {
+  abriTextures,
+  cabaneTextures,
+  etalTextures,
+  priceSignTex,
+  signTex,
+} from "../textures/buildings";
 import { bushTex, glowTex, treeTex, tuftTex } from "../textures/nature";
 import { puitsTex } from "../textures/props";
 import { createRng, PPU, canvasTex, dot } from "../textures/pixel";
@@ -163,6 +171,12 @@ export function buildPlaced(save: PotagerSave): { group: THREE.Group; lanterns: 
     const owned = save.parcels.includes(p.id);
     if (owned) group.add(ownedParcel(p.rect, p.y, 300 + i));
     else {
+      const tex = priceSignTex(PARCEL_PRICE[p.id]);
+      const img = tex.image as HTMLCanvasElement;
+      const sign = spriteMesh(tex, img.width / 12, img.height / 12);
+      const at = parcelSign(p.id);
+      sign.position.set(at.x, p.y, at.z);
+      group.add(sign);
       const w = p.rect.x1 - p.rect.x0,
         d = p.rect.z1 - p.rect.z0;
       group.add(

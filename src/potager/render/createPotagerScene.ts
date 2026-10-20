@@ -8,6 +8,7 @@ import type { Target } from "../core/actions";
 import { createBloom } from "./bloom";
 import { buildGarden, disposeGarden, type GardenView } from "./garden";
 import { gardenKey } from "./gardenKey";
+import { createClients } from "./clients";
 import { createHighlight } from "./highlight";
 import { crowTex } from "../textures/pests";
 import { createParticles } from "./particles";
@@ -33,6 +34,8 @@ export interface PotagerScene {
   onBloomSeen(cb: (cellKey: string) => void): () => void;
   // élément du jardin où une action est possible (ou rien)
   setHighlight(t: Target | null): void;
+  // client arrivé devant l'étal (ou rien)
+  clientSpot(): Point | null;
   start(): void;
   stop(): void;
   renderOnce(): void;
@@ -96,6 +99,7 @@ export function createPotagerScene(
   const particles = createParticles(scene);
   const bloom = createBloom(scene);
   const highlight = createHighlight(scene);
+  const clients = createClients(scene);
   let garden: GardenView | null = null;
   let gKey = "";
   let lastSave = init;
@@ -128,6 +132,7 @@ export function createPotagerScene(
     if (mode === "backdrop") avatar.teleport(save.avatar);
     else avatar.unstick();
     lastSave = save;
+    clients.sync(save.client);
     for (const k of blooming) {
       const c = save.cells[k];
       if (c?.kind !== "plante" || c.seen) blooming.delete(k);
@@ -229,6 +234,7 @@ export function createPotagerScene(
     const wing = crowTex(Math.floor(t / 0.4) % 2 ? 1 : 0);
     garden?.crows.forEach((m) => ((m.material as THREE.MeshLambertMaterial).map = wing));
     highlight.update(t);
+    clients.update(dt);
     if (rig.mode() === "follow") rig.follow(p);
     rig.update(dt);
     const { position, look, distance } = rig.pose();
@@ -283,6 +289,7 @@ export function createPotagerScene(
     walkable,
     project,
     setHighlight: highlight.set,
+    clientSpot: clients.waiting,
     onBloomSeen(cb) {
       bloomListeners.add(cb);
       return () => bloomListeners.delete(cb);
@@ -331,6 +338,7 @@ export function createPotagerScene(
       }
       bloom.dispose();
       highlight.dispose();
+      clients.dispose();
       disposeTree(scene);
       // hors de l'arbre : la frame d'avatar inactive et la shadow map
       sprite.textures.forEach((t) => t.dispose());
