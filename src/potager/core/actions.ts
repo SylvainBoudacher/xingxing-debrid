@@ -1,4 +1,4 @@
-import { MAP } from "./catalog/map";
+import { MAP, parcelSign } from "./catalog/map";
 import { ROLL_HARVEST } from "./catalog/rarity";
 import { cellAt, parcelCells } from "./cells";
 import { markSeen, stageOf, WET_MS } from "./growth";
@@ -8,15 +8,29 @@ import { addFlower, addSeed, hasTool, setWater, STACK, takeSeed, waterLeft } fro
 import { FOREST_ROLL } from "./forest";
 import { hasWeed } from "./nuisances";
 import { rollRarity, rollSeed } from "./seeds";
-import type { Grade, Point, PotagerSave, Rarity, Slot } from "./types";
+import type { Grade, ParcelId, Point, PotagerSave, Rarity, Slot } from "./types";
 
 export type Target =
   | { kind: "cell"; key: string }
   | { kind: "abri" }
   | { kind: "puits" }
+  | { kind: "etal" }
+  | { kind: "cabane" }
+  | { kind: "panneau"; parcel: ParcelId }
   | { kind: "foret"; spot: number };
 export type Gesture =
-  "becher" | "semer" | "arroser" | "cueillir" | "puits" | "abri" | "desherber" | "ramasser";
+  | "becher"
+  | "semer"
+  | "arroser"
+  | "cueillir"
+  | "puits"
+  | "abri"
+  | "desherber"
+  | "ramasser"
+  | "etal"
+  | "cabane"
+  | "panneau"
+  | "servir";
 export type ActionEvent =
   { kind: "graine"; rarity: Rarity } | { kind: "decouverte"; species: SpeciesId; color: ColorId };
 
@@ -25,11 +39,13 @@ const AHEAD = 0.8;
 const BONUS_SEED: Record<Grade, number> = { parfait: 0.3, bien: 0.2, rate: 0.1 };
 const WEED_REGROW_MS = 60_000;
 
-const abriGap = (p: Point) =>
+const rectGap = (p: Point, r: { x: number; z: number; w: number; d: number }) =>
   Math.hypot(
-    Math.max(0, Math.abs(p.x - MAP.abri.x) - MAP.abri.w / 2),
-    Math.max(0, Math.abs(p.z - MAP.abri.z) - MAP.abri.d / 2),
+    Math.max(0, Math.abs(p.x - r.x) - r.w / 2),
+    Math.max(0, Math.abs(p.z - r.z) - r.d / 2),
   );
+const abriGap = (p: Point) => rectGap(p, MAP.abri);
+const building = (id: "etal" | "cabane") => MAP.buildings.find((b) => b.id === id)!;
 const puitsGap = (p: Point) => Math.hypot(p.x - MAP.puits.x, p.z - MAP.puits.z) - MAP.puits.r;
 
 // la case devant l'avatar (ou sous lui), sinon l'abri, le puits ou un objet de forêt à portée
@@ -43,7 +59,16 @@ export function findTarget(save: PotagerSave, pose: Point & { dir: Point }): Tar
   const spot = Object.keys(save.forest)
     .map(Number)
     .find((i) => Math.hypot(MAP.forest[i].x - pose.x, MAP.forest[i].z - pose.z) < REACH);
-  return spot === undefined ? null : { kind: "foret", spot };
+  if (spot !== undefined) return { kind: "foret", spot };
+  if (rectGap(pose, building("etal")) < REACH) return { kind: "etal" };
+  if (rectGap(pose, building("cabane")) < REACH) return { kind: "cabane" };
+  const sign = MAP.parcels.find(
+    (p) =>
+      !save.parcels.includes(p.id) &&
+      Math.hypot(parcelSign(p.id).x - pose.x, parcelSign(p.id).z - pose.z) < REACH,
+  );
+  if (sign) return { kind: "panneau", parcel: sign.id };
+  return null;
 }
 
 // où se tenir pour agir : devant, côté caméra
@@ -51,6 +76,14 @@ export function standPoint(t: Target): Point {
   if (t.kind === "abri") return { x: MAP.abri.x, z: MAP.abri.z + MAP.abri.d / 2 + 0.6 };
   if (t.kind === "puits") return { x: MAP.puits.x, z: MAP.puits.z + MAP.puits.r + 0.6 };
   if (t.kind === "foret") return { x: MAP.forest[t.spot].x, z: MAP.forest[t.spot].z + 0.6 };
+  if (t.kind === "etal" || t.kind === "cabane") {
+    const b = building(t.kind);
+    return { x: b.x, z: b.z + b.d / 2 + 0.6 };
+  }
+  if (t.kind === "panneau") {
+    const s = parcelSign(t.parcel);
+    return { x: s.x, z: s.z + 0.6 };
+  }
   const c = MAP.parcels.flatMap((p) => parcelCells(p.id)).find((x) => x.key === t.key);
   return c ? { x: c.center.x, z: c.center.z + 0.9 } : { ...MAP.spawn };
 }
@@ -80,6 +113,8 @@ export function prepareAction(
 ): { gesture: Gesture } | { message: string } {
   const inv = save.inventory;
   if (target.kind === "abri") return { gesture: "abri" };
+  if (target.kind === "etal" || target.kind === "cabane" || target.kind === "panneau")
+    return { gesture: target.kind };
   if (target.kind === "puits") {
     const missing = toolCheck(inv, hand, "arrosoir");
     return missing ? { message: missing } : { gesture: "puits" };
@@ -117,6 +152,45 @@ export function prepareAction(
   return waterLeft(inv) > 0 ? { gesture: "arroser" } : { message: "L'arrosoir est vide" };
 }
 
+const MULTI: Gesture[] = ["becher", "arroser", "desherber"];
+
+// la case visée, plus ses deux voisines perpendiculaires au regard avec un outil de niveau 2
+export function toolCells(save: PotagerSave, key: string, dir: Point, hand: number): string[] {
+  const held = save.inventory[hand];
+  const [parcel, col, row] = key.split(":");
+  const first = prepareAction(save, { kind: "cell", key }, hand);
+  if (held?.kind !== "tool" || held.tool.level !== 2) return [key];
+  if (!("gesture" in first) || !MULTI.includes(first.gesture)) return [key];
+  const alongRow = Math.abs(dir.x) >= Math.abs(dir.z);
+  const near = [-1, 1]
+    .map((d) => (alongRow ? `${parcel}:${col}:${+row + d}` : `${parcel}:${+col + d}:${row}`))
+    .filter((k) => {
+      if (!save.cells[k]) return false;
+      const p = prepareAction(save, { kind: "cell", key: k }, hand);
+      return "gesture" in p && p.gesture === first.gesture;
+    });
+  return [key, ...near];
+}
+
+function applyToCell(save: PotagerSave, key: string, gesture: Gesture, grade: Grade): PotagerSave {
+  if (gesture === "desherber") {
+    const weeds = { ...save.weeds };
+    // racine cassée : l'herbe revient sur la même case une minute plus tard
+    if (grade === "rate") weeds[key] = { at: save.playTimeMs + WEED_REGROW_MS };
+    else delete weeds[key];
+    return { ...save, weeds };
+  }
+  const c = save.cells[key];
+  if (gesture === "becher")
+    return {
+      ...save,
+      cells: { ...save.cells, [key]: { kind: "bechee", loose: grade === "parfait" } },
+    };
+  if (c.kind !== "plante") return save;
+  const wet = { ...c, wetUntil: save.playTimeMs + WET_MS, wetGrade: grade };
+  return { ...save, cells: { ...save.cells, [key]: wet } };
+}
+
 const seedRoom = (inv: (Slot | null)[]) =>
   inv.some((s) => s === null || (s.kind === "seeds" && s.seeds.length < STACK));
 
@@ -127,6 +201,7 @@ export function applyAction(
   result: { grade: Grade; water?: number },
   selectedSlot: number,
   rng: () => number,
+  dir: Point = { x: 0, z: -1 },
 ): { save: PotagerSave; events: ActionEvent[] } {
   const unchanged = { save, events: [] as ActionEvent[] };
   const p = prepareAction(save, target, selectedSlot);
@@ -158,12 +233,13 @@ export function applyAction(
     };
   }
   if (target.kind !== "cell") return unchanged;
-  if (gesture === "desherber") {
-    const weeds = { ...save.weeds };
-    // racine cassée : l'herbe revient sur la même case une minute plus tard
-    if (grade === "rate") weeds[target.key] = { at: save.playTimeMs + WEED_REGROW_MS };
-    else delete weeds[target.key];
-    return { save: { ...save, weeds }, events: [] };
+  if (MULTI.includes(gesture)) {
+    let next = save;
+    for (const k of toolCells(save, target.key, dir, selectedSlot))
+      next = applyToCell(next, k, gesture, grade);
+    if (gesture === "arroser")
+      next = { ...next, inventory: setWater(save.inventory, waterLeft(save.inventory) - 1) };
+    return { save: next, events: [] };
   }
   const c = save.cells[target.key];
   const withCell = (cell: typeof c, extra: Partial<PotagerSave> = {}) => ({
@@ -171,9 +247,6 @@ export function applyAction(
     ...extra,
     cells: { ...save.cells, [target.key]: cell },
   });
-
-  if (gesture === "becher")
-    return { save: withCell({ kind: "bechee", loose: grade === "parfait" }), events: [] };
 
   if (gesture === "semer" && c.kind === "bechee") {
     const taken = takeSeed(save.inventory, selectedSlot)!;
@@ -188,14 +261,6 @@ export function applyAction(
       seen: true,
     };
     return { save: withCell(plant, { inventory: taken.inv }), events: [] };
-  }
-
-  if (gesture === "arroser" && c.kind === "plante") {
-    const inventory = setWater(save.inventory, waterLeft(save.inventory) - 1);
-    return {
-      save: withCell({ ...c, wetUntil: save.playTimeMs + WET_MS, wetGrade: grade }, { inventory }),
-      events: [],
-    };
   }
 
   if (gesture === "cueillir" && c.kind === "plante") {

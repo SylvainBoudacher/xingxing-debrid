@@ -109,6 +109,8 @@ export function useGardenActions(
       if ("message" in p) return say(p.message);
       scene.avatar.walkTo([]);
       if (p.gesture === "abri") return setAbriOpen(true);
+      if (p.gesture === "etal" || p.gesture === "cabane" || p.gesture === "panneau") return;
+      if (p.gesture === "servir") return;
       // ramasser en forêt se fait sans mini-jeu
       if (p.gesture === "ramasser")
         return apply(target, p.gesture, { grade: "bien" }, selectedRef.current);

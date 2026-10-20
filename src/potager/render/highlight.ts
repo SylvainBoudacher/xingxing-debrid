@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Target } from "../core/actions";
-import { groundHeight, MAP } from "../core/catalog/map";
+import { groundHeight, MAP, parcelSign } from "../core/catalog/map";
 import { parcelCells } from "../core/cells";
 
 const GOLD = "#f2d27a";
@@ -44,13 +44,16 @@ export function createHighlight(scene: THREE.Scene) {
       frame.visible = true;
       return;
     }
-    const at = t.kind === "abri" ? MAP.abri : t.kind === "puits" ? MAP.puits : MAP.forest[t.spot];
-    const r =
-      t.kind === "abri"
-        ? Math.max(MAP.abri.w, MAP.abri.d) * 0.62
-        : t.kind === "puits"
-          ? MAP.puits.r + 0.25
-          : 0.4;
+    let at: { x: number; z: number } = MAP.puits;
+    let r = 0.4;
+    if (t.kind === "puits") r = MAP.puits.r + 0.25;
+    else if (t.kind === "panneau") at = parcelSign(t.parcel);
+    else if (t.kind === "foret") at = MAP.forest[t.spot];
+    else {
+      const rect = t.kind === "abri" ? MAP.abri : MAP.buildings.find((x) => x.id === t.kind)!;
+      at = rect;
+      r = Math.max(rect.w, rect.d) * 0.62;
+    }
     ring.scale.setScalar(r);
     ring.position.set(at.x, groundHeight(at.x, at.z) + 0.03, at.z);
     ring.visible = true;

@@ -150,3 +150,8 @@ export function groundHeight(x: number, z: number): number {
   for (const t of MAP.terraces) if (contains(t.rect, x, z)) h = Math.max(h, t.top);
   return h === -Infinity ? MAP.water.y : h;
 }
+
+export function parcelSign(id: ParcelId): Point {
+  const r = MAP.parcels.find((p) => p.id === id)!.rect;
+  return { x: (r.x0 + r.x1) / 2, z: (r.z0 + r.z1) / 2 };
+}

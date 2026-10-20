@@ -1,5 +1,5 @@
 import type { Gesture, Target } from "../../core/actions";
-import { MAP } from "../../core/catalog/map";
+import { MAP, parcelSign } from "../../core/catalog/map";
 import { parcelCells } from "../../core/cells";
 import { createArroser } from "../../core/minigames/arroser";
 import { createBecher } from "../../core/minigames/becher";
@@ -18,7 +18,10 @@ import {
   drawSemer,
 } from "./drawMinigames";
 
-export type GameGesture = Exclude<Gesture, "abri" | "ramasser">;
+export type GameGesture = Exclude<
+  Gesture,
+  "abri" | "ramasser" | "etal" | "cabane" | "panneau" | "servir"
+>;
 
 export interface ActiveGame {
   gesture: GameGesture;
@@ -57,6 +60,8 @@ export function anchorOf(t: Target): Point {
   if (t.kind === "abri") return { x: MAP.abri.x, z: MAP.abri.z };
   if (t.kind === "puits") return { x: MAP.puits.x, z: MAP.puits.z };
   if (t.kind === "foret") return MAP.forest[t.spot];
+  if (t.kind === "etal" || t.kind === "cabane") return MAP.buildings.find((b) => b.id === t.kind)!;
+  if (t.kind === "panneau") return parcelSign(t.parcel);
   const c = MAP.parcels.flatMap((p) => parcelCells(p.id)).find((x) => x.key === t.key);
   return c ? c.center : { ...MAP.spawn };
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { MAP } from "./catalog/map";
-import { applyAction, findTarget, prepareAction, type Target } from "./actions";
+import { MAP, parcelSign } from "./catalog/map";
+import { applyAction, findTarget, prepareAction, toolCells, type Target } from "./actions";
 import { parcelCells } from "./cells";
 import { advanceGarden } from "./growth";
 import { setWater, waterLeft, withdrawTool } from "./inventory";
@@ -308,5 +308,130 @@ describe("forêt", () => {
     expect(prepareAction(createStarterSave(), { kind: "foret", spot: 0 }, 0)).toEqual({
       message: "Il n'y a plus rien ici",
     });
+  });
+});
+
+const k = (col: number, row: number) => `p0:${col}:${row}`;
+const lvl2 = (s: PotagerSave, id: "beche" | "arrosoir" | "serfouette"): PotagerSave => ({
+  ...s,
+  inventory: s.inventory.map((x) =>
+    x?.kind === "tool" && x.tool.id === id ? { ...x, tool: { ...x.tool, level: 2 as const } } : x,
+  ),
+});
+const UP = { x: 0, z: -1 };
+
+describe("étal, cabane et panneaux", () => {
+  const front = (id: "etal" | "cabane") => {
+    const b = MAP.buildings.find((x) => x.id === id)!;
+    return { x: b.x, z: b.z + b.d / 2 + 0.5, dir: { x: 0, z: -1 } };
+  };
+
+  it("vise l'étal et la cabane", () => {
+    const s = createStarterSave();
+    expect(findTarget(s, front("etal"))).toEqual({ kind: "etal" });
+    expect(findTarget(s, front("cabane"))).toEqual({ kind: "cabane" });
+    expect(prepareAction(s, { kind: "etal" }, 0)).toEqual({ gesture: "etal" });
+    expect(prepareAction(s, { kind: "cabane" }, 0)).toEqual({ gesture: "cabane" });
+  });
+
+  it("vise le panneau d'une parcelle non possédée", () => {
+    const s = createStarterSave();
+    const sign = parcelSign("p1");
+    const pose = { ...sign, dir: UP };
+    expect(findTarget(s, pose)).toEqual({ kind: "panneau", parcel: "p1" });
+    expect(prepareAction(s, { kind: "panneau", parcel: "p1" }, 0)).toEqual({ gesture: "panneau" });
+    const owned = {
+      ...s,
+      parcels: [...s.parcels, "p1"],
+      cells: { ...s.cells, "p1:3:1": { kind: "herbe" as const } },
+    };
+    expect(findTarget(owned, pose)?.kind).toBe("cell");
+  });
+});
+
+describe("outils de niveau 2", () => {
+  it("bêche niveau 2 : trois cases de la même ligne", () => {
+    const s = lvl2(equipped(), "beche");
+    expect(toolCells(s, k(2, 1), UP, BECHE)).toEqual([k(2, 1), k(1, 1), k(3, 1)]);
+    const out = applyAction(
+      s,
+      { kind: "cell", key: k(2, 1) },
+      "becher",
+      { grade: "bien" },
+      BECHE,
+      never,
+    );
+    for (const c of [k(2, 1), k(1, 1), k(3, 1)]) expect(out.save.cells[c].kind).toBe("bechee");
+    expect(out.save.cells[k(4, 1)].kind).toBe("herbe");
+  });
+
+  it("direction horizontale : voisines de part et d'autre dans les colonnes", () => {
+    const s = lvl2(equipped(), "beche");
+    expect(toolCells(s, k(2, 1), { x: 1, z: 0 }, BECHE)).toEqual([k(2, 1), k(2, 0), k(2, 2)]);
+  });
+
+  it("bêche niveau 1 : une seule case", () => {
+    expect(toolCells(equipped(), k(2, 1), UP, BECHE)).toEqual([k(2, 1)]);
+  });
+
+  it("bord de parcelle : seules les cases existantes", () => {
+    const s = lvl2(equipped(), "beche");
+    const cells = toolCells(s, k(0, 1), UP, BECHE);
+    expect(cells).toEqual([k(0, 1), k(1, 1)]);
+    expect(cells.every((c) => c in s.cells)).toBe(true);
+  });
+
+  it("saute la voisine envahie d'herbe", () => {
+    let s = lvl2(equipped(), "beche");
+    s = { ...s, weeds: { [k(3, 1)]: { at: 0 } } };
+    const out = applyAction(
+      s,
+      { kind: "cell", key: k(2, 1) },
+      "becher",
+      { grade: "bien" },
+      BECHE,
+      never,
+    );
+    expect(out.save.cells[k(3, 1)].kind).toBe("herbe");
+    expect(out.save.weeds[k(3, 1)]).toBeDefined();
+    expect(out.save.cells[k(1, 1)].kind).toBe("bechee");
+  });
+
+  it("arrosoir niveau 2 : trois plantes, un seul arrosage", () => {
+    let s = lvl2(equipped(), "arrosoir");
+    for (const c of [k(1, 1), k(2, 1), k(3, 1)])
+      s = act(act(s, { kind: "cell", key: c }, BECHE), { kind: "cell", key: c }, SEEDS);
+    s = { ...s, cells: { ...s.cells, [k(4, 1)]: { kind: "bechee", loose: false } } };
+    const before = waterLeft(s.inventory);
+    const out = applyAction(
+      s,
+      { kind: "cell", key: k(2, 1) },
+      "arroser",
+      { grade: "bien" },
+      ARROSOIR,
+      never,
+    ).save;
+    for (const c of [k(1, 1), k(2, 1), k(3, 1)]) {
+      const p = out.cells[c];
+      expect(p.kind === "plante" && p.wetUntil > s.playTimeMs).toBe(true);
+    }
+    expect(waterLeft(out.inventory)).toBe(before - 1);
+    expect(toolCells(out, k(3, 1), UP, ARROSOIR)).not.toContain(k(4, 1));
+  });
+
+  it("serfouette niveau 2 : arrache les herbes voisines", () => {
+    const s = {
+      ...lvl2(weeder(), "serfouette"),
+      weeds: { [k(2, 1)]: { at: 0 }, [k(3, 1)]: { at: 0 } },
+    };
+    const out = applyAction(
+      s,
+      { kind: "cell", key: k(2, 1) },
+      "desherber",
+      { grade: "bien" },
+      SERFOUETTE,
+      never,
+    );
+    expect(out.save.weeds).toEqual({});
   });
 });
