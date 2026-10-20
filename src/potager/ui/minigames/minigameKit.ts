@@ -8,7 +8,7 @@ import { createDesherber } from "../../core/minigames/desherber";
 import { createPuits } from "../../core/minigames/puits";
 import { createRuban } from "../../core/minigames/ruban";
 import { createSemer } from "../../core/minigames/semer";
-import type { Input, Minigame } from "../../core/minigames/types";
+import type { Input, Minigame, MinigameResult } from "../../core/minigames/types";
 import type { Point } from "../../core/types";
 import {
   drawArroser,
@@ -28,6 +28,10 @@ export interface ActiveGame {
   anchor: Point;
   // case du sac en main au lancement : changer de main pendant le jeu ne change rien
   hand: number;
+  // direction de l'avatar au lancement : sens des outils de niveau 2
+  dir: Point;
+  // présent : reçoit le résultat à la place de l'action du jardin
+  onDone?: (r: MinigameResult) => void;
   // vue et dessin vont de pair : le type exact de la vue reste propre à chaque jeu
   game: Minigame<unknown>;
   draw: (c: CanvasRenderingContext2D, view: unknown) => void;

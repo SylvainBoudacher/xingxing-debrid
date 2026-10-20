@@ -3,8 +3,12 @@ import { useCallback, useEffect, useState } from "react";
 import type { CameraMode, Point } from "../core/types";
 import type { PotagerScene } from "../render/createPotagerScene";
 import type { SimHost } from "../sim/simHost";
-import { AbriPanel } from "./AbriPanel";
+import { MAP } from "../core/catalog/map";
+import { flowerDataUrl } from "../textures/flowers";
 import { AvatarBubble } from "./AvatarBubble";
+import { demandLabel } from "./demandLabel";
+import { GainPop } from "./GainPop";
+import { GardenPanels } from "./GardenPanels";
 import { HerbierPanel } from "./HerbierPanel";
 import { InventoryBar } from "./InventoryBar";
 import { MinigameOverlay } from "./minigames/MinigameOverlay";
@@ -13,6 +17,7 @@ import { PotagerHud } from "./PotagerHud";
 import { PotagerToaster } from "./PotagerToaster";
 import { useAvatarControls } from "./useAvatarControls";
 import { useBloomAnnounce } from "./useBloomAnnounce";
+import { useEconomy } from "./useEconomy";
 import { useFreeCamera } from "./useFreeCamera";
 import { useGardenActions } from "./useGardenActions";
 import { ENTER_S, useGameView } from "./useGameView";
@@ -36,18 +41,21 @@ export function PotagerGame({
   const [mode, setMode] = useState<CameraMode>(() => host.state()?.camera.mode ?? "follow");
   const [herbierOpen, setHerbierOpen] = useState(false);
   const garden = useGardenActions(scene, host, herbierOpen);
+  const eco = useEconomy(host, garden.say);
+  const [pop, setPop] = useState<{ gain: number; id: number } | null>(null);
+  const busy = !!garden.game || garden.panel !== null;
   useBloomAnnounce(scene, host);
 
   // H : ouvrir ou fermer l'Herbier ; Échap : le fermer
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
-      if (e.code === "KeyH" && !garden.game && !garden.abriOpen) setHerbierOpen((o) => !o);
+      if (e.code === "KeyH" && !busy) setHerbierOpen((o) => !o);
       if (e.code === "Escape") setHerbierOpen(false);
     };
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
-  }, [garden.game, garden.abriOpen]);
+  }, [busy]);
 
   useEffect(loadPotagerFont, []);
 
@@ -69,6 +77,27 @@ export function PotagerGame({
 
   const project = useCallback((p: Point) => scene.project(p), [scene]);
   const avatarOnScreen = useCallback(() => scene.project(scene.avatar.pose()), [scene]);
+  const clientOnScreen = useCallback(() => {
+    const p = scene.clientSpot();
+    return p ? scene.project(p) : { x: -9999, y: -9999 };
+  }, [scene]);
+  const etalOnScreen = useCallback(
+    () => scene.project(MAP.buildings.find((b) => b.id === "etal")!),
+    [scene],
+  );
+
+  // servir ferme le panneau, joue le ruban, puis encaisse
+  const { closePanel, play } = garden;
+  const serve = useCallback(
+    (stallIndex: number) => {
+      closePanel();
+      play("servir", (r) => {
+        const gain = eco.serve(stallIndex, r.grade);
+        if (gain !== null) setPop({ gain, id: Date.now() });
+      });
+    },
+    [closePanel, play, eco],
+  );
 
   return (
     <motion.div
@@ -81,7 +110,8 @@ export function PotagerGame({
         mode={mode}
         onToggleMode={() => applyMode(mode === "follow" ? "free" : "follow")}
         onHerbier={() => setHerbierOpen((o) => !o)}
-        herbierDisabled={!!garden.game || garden.abriOpen}
+        herbierDisabled={busy}
+        po={save?.po ?? 0}
         onExit={onExit}
       />
       {save && (
@@ -95,16 +125,18 @@ export function PotagerGame({
         <MinigameOverlay active={garden.game} project={project} onDone={garden.finish} />
       )}
       {garden.bubble && <AvatarBubble text={garden.bubble} where={avatarOnScreen} />}
-      {save && herbierOpen && <HerbierPanel save={save} onClose={() => setHerbierOpen(false)} />}
-      {save && garden.abriOpen && (
-        <AbriPanel
-          save={save}
-          onDeposit={garden.deposit}
-          onWithdrawTool={garden.withdrawTool}
-          onWithdrawStack={garden.withdrawStack}
-          onClose={garden.closeAbri}
+      {save?.client && !busy && !herbierOpen && (
+        <AvatarBubble
+          text={demandLabel(save.client.demand)}
+          icon={flowerDataUrl(save.client.demand.species, save.client.demand.color)}
+          where={clientOnScreen}
         />
       )}
+      {pop && (
+        <GainPop key={pop.id} gain={pop.gain} where={etalOnScreen} onDone={() => setPop(null)} />
+      )}
+      {save && herbierOpen && <HerbierPanel save={save} onClose={() => setHerbierOpen(false)} />}
+      {save && <GardenPanels save={save} garden={garden} eco={eco} onServe={serve} />}
     </motion.div>
   );
 }

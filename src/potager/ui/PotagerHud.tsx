@@ -1,18 +1,21 @@
 import { ArrowLeft, BookOpen, LocateFixed, Move } from "lucide-react";
 import type { CameraMode } from "../core/types";
+import { PoCounter } from "./PoCounter";
 
 export function PotagerHud({
   mode,
   onToggleMode,
   onHerbier,
   herbierDisabled,
+  po,
   onExit,
 }: {
   mode: CameraMode;
   onToggleMode: () => void;
   onHerbier: () => void;
-  // mini-jeu ou abri ouvert
+  // mini-jeu ou panneau ouvert
   herbierDisabled: boolean;
+  po: number;
   onExit: () => void;
 }) {
   const follow = mode === "follow";
@@ -73,6 +76,7 @@ export function PotagerHud({
         <BookOpen className="size-4" />
         Herbier (H)
       </button>
+      <PoCounter po={po} />
     </>
   );
 }

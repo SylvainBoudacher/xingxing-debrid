@@ -3,13 +3,12 @@ import {
   applyAction,
   findTarget,
   prepareAction,
-  REACH,
   standPoint,
   type ActionEvent,
   type Gesture,
   type Target,
 } from "../core/actions";
-import { MAP } from "../core/catalog/map";
+import { MAP, parcelSign } from "../core/catalog/map";
 import { RARITY_LABEL } from "../core/catalog/rarity";
 import { cellAt } from "../core/cells";
 import { deposit, withdrawStack, withdrawTool } from "../core/inventory";
@@ -23,6 +22,7 @@ import { nearestWalkable } from "../core/walk";
 import type { PotagerScene } from "../render/createPotagerScene";
 import type { SimHost } from "../sim/simHost";
 import { anchorOf, createGame, type ActiveGame } from "./minigames/minigameKit";
+import { usePanel } from "./usePanel";
 
 const BUBBLE_MS = 2000;
 const ARRIVED = 0.2;
@@ -38,10 +38,16 @@ function targetAt(p: Point, save: PotagerSave): Target | null {
   const c = cellAt(p, save.parcels);
   if (c) return { kind: "cell", key: c.key };
   const { abri, puits } = MAP;
-  if (Math.abs(p.x - abri.x) < abri.w / 2 + 0.5 && Math.abs(p.z - abri.z) < abri.d / 2 + 0.5)
-    return { kind: "abri" };
+  const onRect = (r: { x: number; z: number; w: number; d: number }) =>
+    Math.abs(p.x - r.x) < r.w / 2 + 0.5 && Math.abs(p.z - r.z) < r.d / 2 + 0.5;
+  if (onRect(abri)) return { kind: "abri" };
   if (near(p, puits, puits.r + 0.5)) return { kind: "puits" };
-  return null;
+  for (const kind of ["etal", "cabane"] as const)
+    if (onRect(MAP.buildings.find((b) => b.id === kind)!)) return { kind };
+  const sign = MAP.parcels.find(
+    (x) => !save.parcels.includes(x.id) && near(p, parcelSign(x.id), 0.8),
+  );
+  return sign ? { kind: "panneau", parcel: sign.id } : null;
 }
 
 const seedText = (rarity: Rarity) => `Graine ${RARITY_LABEL[rarity].toLowerCase()} trouvée !`;
@@ -54,7 +60,7 @@ export function useGardenActions(
   paused: boolean,
 ) {
   const [game, setGame] = useState<ActiveGame | null>(null);
-  const [abriOpen, setAbriOpen] = useState(false);
+  const { panel, open, close } = usePanel(scene);
   const [bubble, setBubble] = useState<{ text: string; id: number } | null>(null);
   const [selected, setSelected] = useState(0);
   const selectedRef = useRef(selected);
@@ -64,9 +70,9 @@ export function useGardenActions(
     gameRef.current = game;
   });
   const pending = useRef<{ target: Target; stand: Point } | null>(null);
-  // l'abri ouvert bloque les actions mais pas la marche : s'éloigner le ferme
+  // un panneau ouvert bloque les actions mais pas la marche : s'éloigner le ferme
   const moveLocked = game !== null || paused;
-  const locked = moveLocked || abriOpen;
+  const locked = moveLocked || panel !== null;
   const lockedRef = useRef(locked);
   useEffect(() => {
     lockedRef.current = locked;
@@ -82,12 +88,12 @@ export function useGardenActions(
 
   // applique un geste sur l'état courant (revalidé) et annonce ce qu'il a donné
   const apply = useCallback(
-    (target: Target, gesture: Gesture, r: MinigameResult, hand: number) => {
+    (target: Target, gesture: Gesture, r: MinigameResult, hand: number, dir: Point) => {
       if (!host) return;
       let events: ActionEvent[] = [];
       let changed = true;
       host.update((s) => {
-        const out = applyAction(s, target, gesture, r, hand, Math.random);
+        const out = applyAction(s, target, gesture, r, hand, Math.random, dir);
         events = out.events;
         changed = out.save !== s;
         return out.save;
@@ -108,21 +114,44 @@ export function useGardenActions(
       const p = prepareAction(s, target, selectedRef.current);
       if ("message" in p) return say(p.message);
       scene.avatar.walkTo([]);
-      if (p.gesture === "abri") return setAbriOpen(true);
-      if (p.gesture === "etal" || p.gesture === "cabane" || p.gesture === "panneau") return;
-      if (p.gesture === "servir") return;
+      const dir = scene.avatar.pose().dir;
+      if (target.kind === "panneau") return open({ kind: "panneau", parcel: target.parcel });
+      if (p.gesture === "abri" || p.gesture === "etal" || p.gesture === "cabane")
+        return open({ kind: p.gesture });
+      // servir passe par le panneau de l'étal
+      if (p.gesture === "servir" || p.gesture === "panneau") return;
       // ramasser en forêt se fait sans mini-jeu
       if (p.gesture === "ramasser")
-        return apply(target, p.gesture, { grade: "bien" }, selectedRef.current);
+        return apply(target, p.gesture, { grade: "bien" }, selectedRef.current, dir);
       setGame({
         gesture: p.gesture,
         target,
         anchor: anchorOf(target),
         hand: selectedRef.current,
+        dir,
         ...createGame(p.gesture),
       });
     },
-    [scene, host, say, apply],
+    [scene, host, say, apply, open],
+  );
+
+  // mini-jeu lancé depuis un panneau : son résultat revient à l'appelant
+  const play = useCallback(
+    (gesture: "servir", onDone: (r: MinigameResult) => void) => {
+      if (!scene) return;
+      scene.avatar.walkTo([]);
+      const target: Target = { kind: "etal" };
+      setGame({
+        gesture,
+        target,
+        anchor: anchorOf(target),
+        hand: selectedRef.current,
+        dir: scene.avatar.pose().dir,
+        onDone,
+        ...createGame(gesture),
+      });
+    },
+    [scene],
   );
 
   const finish = useCallback(
@@ -130,7 +159,8 @@ export function useGardenActions(
       const g = gameRef.current;
       gameRef.current = null;
       setGame(null);
-      if (g) apply(g.target, g.gesture, r, g.hand);
+      if (g?.onDone) g.onDone(r);
+      else if (g) apply(g.target, g.gesture, r, g.hand, g.dir);
     },
     [apply],
   );
@@ -186,25 +216,11 @@ export function useGardenActions(
     };
   }, [scene, host, start]);
 
-  useEffect(() => {
-    if (!scene || !abriOpen) return;
-    const id = setInterval(() => {
-      const pose = scene.avatar.pose();
-      const gap = Math.hypot(
-        Math.max(0, Math.abs(pose.x - MAP.abri.x) - MAP.abri.w / 2),
-        Math.max(0, Math.abs(pose.z - MAP.abri.z) - MAP.abri.d / 2),
-      );
-      if (gap > REACH + 1) setAbriOpen(false);
-    }, 250);
-    return () => clearInterval(id);
-  }, [scene, abriOpen]);
-
-  // Espace : agir devant soi ; 1 à 6 : choisir une case du sac ; Échap : fermer l'abri
+  // Espace : agir devant soi ; 1 à 6 : choisir une case du sac
   useEffect(() => {
     if (!scene || !host) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
-      if (e.code === "Escape") return setAbriOpen(false);
       const digit = /^Digit([1-6])$/.exec(e.code);
       if (digit) return lockedRef.current || setSelected(Number(digit[1]) - 1);
       if (e.code !== "Space" || lockedRef.current) return;
@@ -215,7 +231,7 @@ export function useGardenActions(
     };
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
-  }, [scene, host, game, abriOpen, start]);
+  }, [scene, host, start]);
 
   // déplacement entre le sac et l'abri ; refusé (sac plein) : message
   const transfer = useCallback(
@@ -232,8 +248,10 @@ export function useGardenActions(
     game,
     finish,
     bubble: bubble?.text ?? null,
-    abriOpen,
-    closeAbri: () => setAbriOpen(false),
+    say,
+    play,
+    panel,
+    closePanel: close,
     deposit: (i: number) => transfer((s) => deposit(s, i), "Le coffre est plein"),
     withdrawTool: (id: ToolId) => {
       // l'outil repris arrive dans la première case libre : il passe en main
