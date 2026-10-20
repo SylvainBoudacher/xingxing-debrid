@@ -17,7 +17,12 @@ import {
   type Slot,
   type Tool,
   type ToolId,
+  type Weed,
+  type Crow,
+  type ForestItemKind,
+  FOREST_KINDS,
 } from "./types";
+import { MAP } from "./catalog/map";
 
 export const SLOTS = 6;
 
@@ -36,6 +41,9 @@ export function starterGarden(parcels: readonly ParcelId[]) {
     rack: [{ id: "beche" }, { id: "arrosoir", water: 5 }, { id: "serfouette" }] as Tool[],
     chest: [] as ChestStack[],
     herbier: {} as Record<string, HerbierEntry>,
+    weeds: {} as Record<string, Weed>,
+    crows: {} as Record<string, Crow>,
+    forest: {} as Record<number, ForestItemKind>,
   };
 }
 
@@ -150,11 +158,51 @@ export function parseGarden(raw: Record<string, unknown>, parcels: readonly Parc
       )
     : start.herbier;
 
+  const keyed = <T>(v: unknown, field: string, keep: (k: string) => boolean): Record<string, T> =>
+    isObject(v)
+      ? Object.fromEntries(
+          Object.entries(v).flatMap(([k, e]) =>
+            keep(k) && isObject(e) && isNumber(e[field]) ? [[k, { [field]: e[field] } as T]] : [],
+          ),
+        )
+      : {};
+  const isCell = (k: string) => k in cells;
+  const forest = isObject(raw.forest)
+    ? Object.fromEntries(
+        Object.entries(raw.forest).filter(
+          ([k, kind]) =>
+            Number.isInteger(Number(k)) &&
+            Number(k) >= 0 &&
+            Number(k) < MAP.forest.length &&
+            FOREST_KINDS.includes(kind as ForestItemKind),
+        ),
+      )
+    : {};
+
+  const tools = uniqueTools(
+    inventory,
+    rack && !rack.includes(null) ? (rack as Tool[]) : start.rack,
+  );
   return {
     cells,
-    inventory,
-    rack: rack && !rack.includes(null) ? (rack as Tool[]) : start.rack,
+    ...tools,
     chest: chest && !chest.includes(null) ? (chest as ChestStack[]) : start.chest,
     herbier,
+    weeds: keyed<Weed>(raw.weeds, "at", isCell),
+    crows: keyed<Crow>(raw.crows, "leaveAt", isCell),
+    forest: forest as Record<number, ForestItemKind>,
+  };
+}
+
+// Chaque outil existe exactement une fois : le sac l'emporte, un outil disparu revient au râtelier.
+function uniqueTools(inventory: (Slot | null)[], rack: Tool[]) {
+  const inBag = new Set(inventory.flatMap((s) => (s?.kind === "tool" ? [s.tool.id] : [])));
+  const kept = rack.filter(
+    (t, i) => !inBag.has(t.id) && rack.findIndex((x) => x.id === t.id) === i,
+  );
+  const missing = TOOL_IDS.filter((id) => !inBag.has(id) && !kept.some((t) => t.id === id));
+  return {
+    inventory,
+    rack: [...kept, ...missing.map((id): Tool => (id === "arrosoir" ? { id, water: 0 } : { id }))],
   };
 }

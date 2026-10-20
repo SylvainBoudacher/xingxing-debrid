@@ -103,4 +103,36 @@ describe("sauvegarde du Potager", () => {
     });
     expect(s?.cells[key]).toEqual({ kind: "herbe" });
   });
+
+  it("démarre sans gêneurs ni objets de forêt", () => {
+    const s = createStarterSave();
+    expect([s.weeds, s.crows, s.forest]).toEqual([{}, {}, {}]);
+    const { weeds: _w, crows: _c, forest: _f, ...old } = s;
+    const r = parseSave(old);
+    expect([r?.weeds, r?.crows, r?.forest]).toEqual([{}, {}, {}]);
+    expect(parseSave({ ...s, forest: { 99: "gland", 0: "truffe" } })?.forest).toEqual({});
+  });
+
+  it("ne perd jamais un outil d'une sauvegarde abîmée", () => {
+    const s = createStarterSave();
+    const r = parseSave({
+      ...s,
+      inventory: "x",
+      rack: [{ id: "arrosoir", water: 2 }, { id: "serfouette" }],
+    });
+    expect(r?.rack.map((t) => t.id).sort()).toEqual(["arrosoir", "beche", "serfouette"]);
+  });
+
+  it("ne double jamais un outil", () => {
+    const s = createStarterSave();
+    const inventory = [...s.inventory];
+    inventory[1] = { kind: "tool", tool: { id: "beche" } };
+    const r = parseSave({ ...s, inventory });
+    const all = [
+      ...r!.rack.map((t) => t.id),
+      ...r!.inventory.flatMap((x) => (x?.kind === "tool" ? [x.tool.id] : [])),
+    ];
+    expect(all.filter((id) => id === "beche")).toHaveLength(1);
+    expect(r?.inventory[1]).toMatchObject({ kind: "tool", tool: { id: "beche" } });
+  });
 });

@@ -78,6 +78,18 @@ export interface HerbierEntry {
   announced: boolean;
 }
 
+// présente quand le temps de jeu atteint `at` (repousse programmée après un désherbage raté)
+export interface Weed {
+  at: number;
+}
+
+export interface Crow {
+  leaveAt: number;
+}
+
+export const FOREST_KINDS = ["champignon", "gland"] as const;
+export type ForestItemKind = (typeof FOREST_KINDS)[number];
+
 export interface PotagerSave {
   version: 1;
   playTimeMs: number;
@@ -90,4 +102,8 @@ export interface PotagerSave {
   rack: Tool[];
   chest: ChestStack[];
   herbier: Record<string, HerbierEntry>;
+  weeds: Record<string, Weed>;
+  crows: Record<string, Crow>;
+  // indice dans MAP.forest
+  forest: Record<number, ForestItemKind>;
 }

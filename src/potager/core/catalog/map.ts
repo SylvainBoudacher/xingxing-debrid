@@ -91,6 +91,17 @@ export const MAP = {
   // abri de jardin (râtelier et coffre) et puits : toujours présents
   abri: { x: -1.8, z: -2.7, w: 1.8, d: 1.6 },
   puits: { x: 18.5, z: -0.5, r: 0.8 },
+  // champignons et glands : devant les arbres du plateau
+  forest: [
+    { x: -15, z: -5.4 },
+    { x: -10.5, z: -8.4 },
+    { x: -1.5, z: -6.5 },
+    { x: 10.5, z: -5.7 },
+    { x: 19, z: -6.9 },
+    { x: -20, z: -7.9 },
+    { x: -12, z: -11.9 },
+    { x: 1.5, z: -12.9 },
+  ],
   spawn: { x: -2, z: 1.2 },
   spawnView: { x: 0, z: -0.6 },
   trees: [
@@ -119,6 +130,7 @@ export const MAP = {
   barrels: Point[];
   abri: { x: number; z: number; w: number; d: number };
   puits: { x: number; z: number; r: number };
+  forest: Point[];
   spawn: Point;
   spawnView: { x: number; z: number };
   trees: TreeSpot[];

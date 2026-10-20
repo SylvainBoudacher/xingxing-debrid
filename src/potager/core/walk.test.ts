@@ -45,4 +45,9 @@ describe("zones praticables", () => {
     expect(isWalkable(MAP.abri.x, MAP.abri.z, b)).toBe(false);
     expect(isWalkable(MAP.puits.x, MAP.puits.z, b)).toBe(false);
   });
+
+  it("place les objets de forêt sur des points praticables", () => {
+    expect(MAP.forest.length).toBeGreaterThanOrEqual(6);
+    for (const p of MAP.forest) expect(isWalkable(p.x, p.z, b), `${p.x},${p.z}`).toBe(true);
+  });
 });
