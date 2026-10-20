@@ -41,4 +41,14 @@ describe("clé visuelle du jardin", () => {
     const other = plant({ seed: { rarity: "commune", species: "cosmos", color: "pink" } });
     expect(gardenKey(withCell(other))).toBe(gardenKey(withCell(plant())));
   });
+
+  it("suit les herbes présentes, les corneilles et la forêt", () => {
+    const s = withCell(plant());
+    const key = Object.keys(s.cells)[0];
+    const base = gardenKey(s);
+    expect(gardenKey({ ...s, weeds: { [key]: { at: 5000 } } })).toBe(base);
+    expect(gardenKey({ ...s, weeds: { [key]: { at: 0 } } })).not.toBe(base);
+    expect(gardenKey({ ...s, crows: { [key]: { leaveAt: 1e9 } } })).not.toBe(base);
+    expect(gardenKey({ ...s, forest: { 2: "gland" } })).not.toBe(base);
+  });
 });

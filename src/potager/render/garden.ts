@@ -3,7 +3,10 @@ import { groundHeight } from "../core/catalog/map";
 import { parcelCells } from "../core/cells";
 import { stageOf } from "../core/growth";
 import type { PotagerSave } from "../core/types";
+import { hasWeed } from "../core/nuisances";
 import { flowerTex, rarityMarkTex, stageTex } from "../textures/flowers";
+import { crowTex, weedTex } from "../textures/pests";
+import { buildForest } from "./forestView";
 import { tuftTex } from "../textures/nature";
 import { canvasTex, dot } from "../textures/pixel";
 import { wetTex } from "../textures/terrain";
@@ -55,18 +58,34 @@ export interface GardenView {
   group: THREE.Group;
   // fleur de chaque case épanouie, pour l'animation d'éclosion
   flowers: Map<string, THREE.Mesh>;
+  // corneilles, animées par la scène
+  crows: THREE.Mesh[];
+  // objets de forêt, cliquables
+  forest: THREE.Mesh[];
 }
 
 export function buildGarden(save: PotagerSave): GardenView {
   const t = textures();
   const group = new THREE.Group();
   const flowers = new Map<string, THREE.Mesh>();
+  const crows: THREE.Mesh[] = [];
   for (const parcel of save.parcels)
     for (const slot of parcelCells(parcel)) {
       const c = save.cells[slot.key];
       if (!c) continue;
       const { x, z } = slot.center;
       const y = groundHeight(x, z) + SOIL_TOP;
+      if (hasWeed(save, slot.key)) {
+        const weed = spriteMesh(weedTex(), 0.6, 0.4);
+        weed.position.set(x - 0.22, y, z - 0.2);
+        group.add(weed);
+      }
+      if (save.crows[slot.key]) {
+        const crow = spriteMesh(crowTex(0), 0.7, 0.58);
+        crow.position.set(x + 0.15, y, z + 0.15);
+        group.add(crow);
+        crows.push(crow);
+      }
       if (c.kind === "herbe") {
         group.add(flat(t.grass, x, z, 0.94, y, { alphaTest: 0 }));
         for (const [dx, dz] of [
@@ -108,7 +127,9 @@ export function buildGarden(save: PotagerSave): GardenView {
         group.add(mark);
       }
     }
-  return { group, flowers };
+  const forest = buildForest(save);
+  forest.forEach((m) => group.add(m));
+  return { group, flowers, crows, forest };
 }
 
 // les textures sont en cache et partagées : seules géométries et matériaux sont libérés

@@ -9,6 +9,7 @@ import { createBloom } from "./bloom";
 import { buildGarden, disposeGarden, type GardenView } from "./garden";
 import { gardenKey } from "./gardenKey";
 import { createHighlight } from "./highlight";
+import { crowTex } from "../textures/pests";
 import { createParticles } from "./particles";
 import { createPost } from "./post";
 import { buildTerrain } from "./terrain";
@@ -210,6 +211,9 @@ export function createPotagerScene(
     fadeTrees(p, py, dt);
     if (mode === "potager") showBlooms();
     bloom.update(dt);
+    // corneilles : ailes qui battent doucement
+    const wing = crowTex(Math.floor(t / 0.4) % 2 ? 1 : 0);
+    garden?.crows.forEach((m) => ((m.material as THREE.MeshLambertMaterial).map = wing));
     highlight.update(t);
     if (rig.mode() === "follow") rig.follow(p);
     rig.update(dt);
@@ -267,7 +271,12 @@ export function createPotagerScene(
         ),
         camera,
       );
-      const targets = [terrain.group, ...decor.props, ...(placed ? [placed.group] : [])];
+      const targets = [
+        terrain.group,
+        ...decor.props,
+        ...(garden ? garden.forest : []),
+        ...(placed ? [placed.group] : []),
+      ];
       const hit = raycaster.intersectObjects(targets, true)[0];
       return hit ? { x: hit.point.x, z: hit.point.z } : null;
     },
