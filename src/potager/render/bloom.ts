@@ -4,6 +4,7 @@ const DURATION = 1.1;
 const SPARKS = 14;
 
 interface Burst {
+  key: string;
   t: number;
   flower: THREE.Mesh;
   sparks: THREE.Mesh[];
@@ -15,7 +16,7 @@ export function createBloom(scene: THREE.Scene) {
   const geo = new THREE.PlaneGeometry(0.09, 0.09);
   const bursts: Burst[] = [];
 
-  function play(flower: THREE.Mesh) {
+  function play(key: string, flower: THREE.Mesh) {
     const sparks: THREE.Mesh[] = [],
       vel: THREE.Vector3[] = [];
     for (let i = 0; i < SPARKS; i++) {
@@ -34,7 +35,17 @@ export function createBloom(scene: THREE.Scene) {
       vel.push(new THREE.Vector3(Math.cos(a) * 1.4, 1.2 + (i % 4) * 0.4, Math.sin(a) * 0.5));
     }
     flower.scale.setScalar(0.2);
-    bursts.push({ t: 0, flower, sparks, vel });
+    bursts.push({ key, t: 0, flower, sparks, vel });
+  }
+
+  // jardin reconstruit pendant une animation : elle continue sur la nouvelle fleur
+  function rebind(flowers: Map<string, THREE.Mesh>) {
+    for (const b of bursts) {
+      const next = flowers.get(b.key);
+      if (!next || next === b.flower) continue;
+      next.scale.copy(b.flower.scale);
+      b.flower = next;
+    }
   }
 
   function update(dt: number) {
@@ -59,5 +70,5 @@ export function createBloom(scene: THREE.Scene) {
     }
   }
 
-  return { play, update, dispose: () => geo.dispose() };
+  return { play, rebind, update, dispose: () => geo.dispose() };
 }

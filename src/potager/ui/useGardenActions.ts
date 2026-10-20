@@ -64,7 +64,13 @@ export function useGardenActions(
     gameRef.current = game;
   });
   const pending = useRef<{ target: Target; stand: Point } | null>(null);
-  const locked = game !== null || abriOpen || paused;
+  // l'abri ouvert bloque les actions mais pas la marche : s'éloigner le ferme
+  const moveLocked = game !== null || paused;
+  const locked = moveLocked || abriOpen;
+  const lockedRef = useRef(locked);
+  useEffect(() => {
+    lockedRef.current = locked;
+  });
 
   const say = useCallback((text: string) => setBubble({ text, id: Date.now() }), []);
 
@@ -130,6 +136,7 @@ export function useGardenActions(
   const interceptClick = useCallback(
     (p: Point) => {
       const s = host?.state();
+      if (lockedRef.current) return false;
       if (!scene || !s) return false;
       const target = targetAt(p, s);
       if (!target) return false;
@@ -147,11 +154,6 @@ export function useGardenActions(
   );
 
   const cancelPending = useCallback(() => (pending.current = null), []);
-
-  const lockedRef = useRef(locked);
-  useEffect(() => {
-    lockedRef.current = locked;
-  });
 
   // arrivée d'un déplacement au clic ; surbrillance de ce qui est faisable devant soi
   useEffect(() => {
@@ -230,11 +232,16 @@ export function useGardenActions(
     abriOpen,
     closeAbri: () => setAbriOpen(false),
     deposit: (i: number) => transfer((s) => deposit(s, i)),
-    withdrawTool: (id: ToolId) => transfer((s) => withdrawTool(s, id)),
+    withdrawTool: (id: ToolId) => {
+      // l'outil repris arrive dans la première case libre : il passe en main
+      const free = host?.state()?.inventory.indexOf(null) ?? -1;
+      transfer((s) => withdrawTool(s, id));
+      if (free >= 0 && host?.state()?.inventory[free]?.kind === "tool") setSelected(free);
+    },
     withdrawStack: (i: number) => transfer((s) => withdrawStack(s, i)),
     selected,
     select: (i: number) => locked || setSelected(i),
-    locked,
+    locked: moveLocked,
     interceptClick,
     cancelPending,
   };

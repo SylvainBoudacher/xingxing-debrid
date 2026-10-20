@@ -332,3 +332,7 @@ export const COLOR_HEX: Record<ColorId, [string, string]> = {
   black: ["#3a2a3e", "#1e141e"],
   lime: ["#a8d85a", "#6ea432"],
 };
+
+// forme d'une espèce en une seule teinte, pour les entrées non découvertes de l'Herbier
+export const silhouetteGrid = (species: SpeciesId): string[] =>
+  FLOWER_SHAPES[species].map((row) => row.replace(/[^.]/g, "x"));

@@ -3,7 +3,7 @@ import type { ColorId } from "../core/catalog/colors";
 import { RARITY_COLOR } from "../core/catalog/rarity";
 import type { SpeciesId } from "../core/catalog/species";
 import type { Rarity } from "../core/types";
-import { COLOR_HEX, FLOWER_SHAPES, H, STAGE_SHAPES, W } from "./flowerShapes";
+import { COLOR_HEX, FLOWER_SHAPES, H, silhouetteGrid, STAGE_SHAPES, W } from "./flowerShapes";
 import { canvasTex, dot, outlineCanvas } from "./pixel";
 
 const FIXED: Record<string, string> = {
@@ -33,10 +33,35 @@ export function flowerTex(species: SpeciesId, color: ColorId): THREE.Texture {
   return t;
 }
 
-// image d'une fleur pour l'interface (Herbier)
+const urlCache = new Map<string, string>();
+
+// image d'une fleur pour l'interface (Herbier), encodée une seule fois
 export function flowerDataUrl(species: SpeciesId, color: ColorId): string {
-  const tex = flowerTex(species, color);
-  return (tex.image as HTMLCanvasElement).toDataURL();
+  const key = `${species}:${color}`;
+  let url = urlCache.get(key);
+  if (!url) {
+    url = (flowerTex(species, color).image as HTMLCanvasElement).toDataURL();
+    urlCache.set(key, url);
+  }
+  return url;
+}
+
+// forme d'une espèce non découverte, d'une seule teinte sombre
+export function silhouetteDataUrl(species: SpeciesId): string {
+  const key = `silhouette:${species}`;
+  let url = urlCache.get(key);
+  if (!url) {
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    const g = c.getContext("2d")!;
+    silhouetteGrid(species).forEach((row, y) =>
+      [...row].forEach((ch, x) => ch === "x" && dot(g, x, y, "#3a2c20")),
+    );
+    url = c.toDataURL();
+    urlCache.set(key, url);
+  }
+  return url;
 }
 
 const stageCache: THREE.Texture[] = [];

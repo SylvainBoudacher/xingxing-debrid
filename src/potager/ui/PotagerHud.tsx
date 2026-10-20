@@ -5,10 +5,13 @@ export function PotagerHud({
   mode,
   onToggleMode,
   onHerbier,
+  herbierDisabled,
 }: {
   mode: CameraMode;
   onToggleMode: () => void;
   onHerbier: () => void;
+  // mini-jeu ou abri ouvert
+  herbierDisabled: boolean;
 }) {
   const follow = mode === "follow";
   return (
@@ -44,7 +47,8 @@ export function PotagerHud({
       <button
         type="button"
         onClick={onHerbier}
-        className="absolute top-8 right-6 flex cursor-pointer items-center gap-2 border-r-2 border-[#b8975a] px-4 py-2 text-lg font-semibold text-[#f6ecd2] transition-colors hover:text-white"
+        disabled={herbierDisabled}
+        className="absolute top-8 right-6 flex cursor-pointer disabled:cursor-default disabled:opacity-40 items-center gap-2 border-r-2 border-[#b8975a] px-4 py-2 text-lg font-semibold text-[#f6ecd2] transition-colors hover:text-white"
         style={{
           fontFamily: '"Cormorant Garamond", Georgia, serif',
           textShadow: "0 2px 3px rgba(0,0,0,0.7)",

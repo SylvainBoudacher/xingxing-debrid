@@ -29,12 +29,12 @@ export default function PotagerApp() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
-      if (e.code === "KeyH" && !garden.game) setHerbierOpen((o) => !o);
+      if (e.code === "KeyH" && !garden.game && !garden.abriOpen) setHerbierOpen((o) => !o);
       if (e.code === "Escape") setHerbierOpen(false);
     };
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
-  }, [garden.game]);
+  }, [garden.game, garden.abriOpen]);
 
   useEffect(loadPotagerFont, []);
 
@@ -68,6 +68,7 @@ export default function PotagerApp() {
               mode={mode}
               onToggleMode={toggleMode}
               onHerbier={() => setHerbierOpen((o) => !o)}
+              herbierDisabled={!!garden.game || garden.abriOpen}
             />
           )}
           {scene && save && (

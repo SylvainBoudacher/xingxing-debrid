@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { RARITY_COLOR, RARITY_LABEL } from "../core/catalog/rarity";
 import type { PotagerSave } from "../core/types";
-import { flowerDataUrl } from "../textures/flowers";
+import { CATALOG_ENTRIES } from "../core/catalog/species";
+import { flowerDataUrl, silhouetteDataUrl } from "../textures/flowers";
 import { PANEL_STYLE } from "./hdPanel";
 import { herbierView, type HerbierItem } from "./herbierView";
 
@@ -43,7 +44,15 @@ export function HerbierPanel({ save, onClose }: { save: PotagerSave; onClose: ()
                 style={{ imageRendering: "pixelated" }}
               />
             ) : (
-              <span className="text-2xl text-[#5a4630]">?</span>
+              <span className="relative flex h-full w-full items-center justify-center">
+                <img
+                  src={silhouetteDataUrl(CATALOG_ENTRIES[i].species)}
+                  alt=""
+                  className="h-full w-full opacity-80"
+                  style={{ imageRendering: "pixelated" }}
+                />
+                <span className="absolute text-2xl text-[#a8977a]">?</span>
+              </span>
             )}
           </button>
         ))}

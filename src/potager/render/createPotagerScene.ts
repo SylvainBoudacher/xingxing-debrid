@@ -131,6 +131,7 @@ export function createPotagerScene(
       }
       garden = buildGarden(save);
       scene.add(garden.group);
+      bloom.rebind(garden.flowers);
     }
     const key = `${save.buildings.join()}|${save.parcels.join()}`;
     if (key === placedKey) return;
@@ -180,7 +181,7 @@ export function createPotagerScene(
       if (c?.kind !== "plante" || c.seen || blooming.has(key)) continue;
       if (!project({ x: mesh.position.x, z: mesh.position.z }).visible) continue;
       blooming.add(key);
-      bloom.play(mesh);
+      bloom.play(key, mesh);
       bloomListeners.forEach((cb) => cb(key));
     }
   }

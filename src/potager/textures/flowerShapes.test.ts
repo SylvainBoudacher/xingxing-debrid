@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { COLORS } from "../core/catalog/colors";
 import { CATALOG_ENTRIES, SPECIES } from "../core/catalog/species";
-import { COLOR_HEX, FLOWER_SHAPES, STAGE_SHAPES } from "./flowerShapes";
+import { COLOR_HEX, FLOWER_SHAPES, silhouetteGrid, STAGE_SHAPES } from "./flowerShapes";
 
 const filled = (g: string[]) =>
   g.flatMap((row, y) => [...row].map((ch, x) => (ch !== "." ? `${x},${y}` : null))).filter(Boolean);
@@ -35,5 +35,13 @@ describe("formes des fleurs", () => {
   it("dessine les 4 étapes de pousse, identiques pour toutes les espèces", () => {
     expect(STAGE_SHAPES).toHaveLength(4);
     for (const g of STAGE_SHAPES) expect(g).toHaveLength(24);
+  });
+
+  it("réduit une espèce à sa silhouette d'une seule teinte", () => {
+    const g = silhouetteGrid("tournesol");
+    const src = FLOWER_SHAPES.tournesol;
+    g.forEach((row, y) =>
+      [...row].forEach((ch, x) => expect(ch).toBe(src[y][x] === "." ? "." : "x")),
+    );
   });
 });
