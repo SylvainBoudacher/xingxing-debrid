@@ -75,4 +75,17 @@ describe("pousse", () => {
     const c = second.save.cells[keys[1]];
     expect(c.kind === "plante" && c.seen).toBe(true);
   });
+
+  it("pousse deux fois moins vite près d'une mauvaise herbe", () => {
+    const { save, keys } = withCells([plant()]);
+    expect(
+      progressOf(advanceGarden({ ...save, weeds: { [keys[0]]: { at: 0 } } }, 300_000), keys[0]),
+    ).toBeCloseTo(0.25);
+  });
+
+  it("ne pousse pas sous une corneille", () => {
+    const { save, keys } = withCells([plant({ progress: 0.3 })]);
+    const s = advanceGarden({ ...save, crows: { [keys[0]]: { leaveAt: 1e9 } } }, 300_000);
+    expect(progressOf(s, keys[0])).toBeCloseTo(0.3);
+  });
 });

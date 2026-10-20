@@ -1,3 +1,4 @@
+import { weedFactor } from "./nuisances";
 import { entryKey } from "./seeds";
 import type { Cell, Grade, PotagerSave, Rarity } from "./types";
 
@@ -44,7 +45,9 @@ export function advanceGarden(save: PotagerSave, stepMs: number): PotagerSave {
   let herbier = save.herbier;
   for (const [key, c] of Object.entries(save.cells)) {
     if (c.kind !== "plante" || c.progress >= 1) continue;
-    const next = grow(c, stepMs, save.playTimeMs);
+    // une corneille posée bloque la pousse ; une herbe voisine la ralentit
+    if (save.crows[key]) continue;
+    const next = grow(c, stepMs * weedFactor(save, key), save.playTimeMs);
     if (next.progress >= 1) {
       next.seen = false;
       const k = entryKey(c.seed.species, c.seed.color);

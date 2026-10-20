@@ -58,7 +58,7 @@ export function createSimHost(opts: Options): SimHost {
   function tick() {
     if (!state) return;
     const t = now();
-    state = stepSim(state, t - lastTick);
+    state = stepSim(state, t - lastTick, Math.random);
     lastTick = t;
     notify();
     if (t - lastWrite >= saveEveryMs) void write();

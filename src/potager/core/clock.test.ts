@@ -40,11 +40,21 @@ describe("temps de jeu", () => {
             seen: true,
           },
         },
+        // gêneurs déjà au maximum, loin de la plante : seule la pousse est mesurée
+        weeds: { "p0:5:0": { at: 0 }, "p0:5:1": { at: 0 }, "p0:5:2": { at: 0 } },
+        crows: { "p0:4:0": { leaveAt: 1e12 }, "p0:4:1": { leaveAt: 1e12 } },
       },
       3 * 3_600_000,
+      () => 0.999,
     );
     expect(s.playTimeMs).toBe(600_000);
     const c = s.cells[key];
     expect(c.kind === "plante" && c.progress).toBeCloseTo(600_000 / 1_800_000);
+  });
+
+  it("fait apparaître gêneurs et forêt pendant un pas", () => {
+    const s = stepSim(createStarterSave(), 600_000, () => 0);
+    expect(Object.keys(s.weeds).length).toBeGreaterThan(0);
+    expect(Object.keys(s.forest).length).toBeGreaterThan(0);
   });
 });
