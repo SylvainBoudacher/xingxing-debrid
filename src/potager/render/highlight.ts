@@ -24,7 +24,7 @@ export function createHighlight(scene: THREE.Scene) {
   let key = "";
 
   function set(t: Target | null) {
-    const k = t ? (t.kind === "cell" ? t.key : t.kind) : "";
+    const k = t ? (t.kind === "cell" ? t.key : t.kind === "foret" ? `foret${t.spot}` : t.kind) : "";
     if (k === key) return;
     key = k;
     frame.visible = ring.visible = false;
@@ -44,8 +44,13 @@ export function createHighlight(scene: THREE.Scene) {
       frame.visible = true;
       return;
     }
-    const at = t.kind === "abri" ? MAP.abri : MAP.puits;
-    const r = t.kind === "abri" ? Math.max(MAP.abri.w, MAP.abri.d) * 0.62 : MAP.puits.r + 0.25;
+    const at = t.kind === "abri" ? MAP.abri : t.kind === "puits" ? MAP.puits : MAP.forest[t.spot];
+    const r =
+      t.kind === "abri"
+        ? Math.max(MAP.abri.w, MAP.abri.d) * 0.62
+        : t.kind === "puits"
+          ? MAP.puits.r + 0.25
+          : 0.4;
     ring.scale.setScalar(r);
     ring.position.set(at.x, groundHeight(at.x, at.z) + 0.03, at.z);
     ring.visible = true;

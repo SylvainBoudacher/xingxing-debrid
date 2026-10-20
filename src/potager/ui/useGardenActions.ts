@@ -14,6 +14,7 @@ import { RARITY_LABEL } from "../core/catalog/rarity";
 import { cellAt } from "../core/cells";
 import { deposit, withdrawStack, withdrawTool } from "../core/inventory";
 import type { MinigameResult } from "../core/minigames/types";
+import { scareCrows } from "../core/nuisances";
 import { findPath } from "../core/path";
 import type { Point, PotagerSave, Rarity, ToolId } from "../core/types";
 import { toast } from "sonner";
@@ -29,8 +30,12 @@ const ARRIVED = 0.2;
 const near = (a: Point, b: Point, d: number) => Math.hypot(a.x - b.x, a.z - b.z) < d;
 
 // élément du jardin sous un point cliqué au sol
-function targetAt(p: Point, parcels: readonly string[]): Target | null {
-  const c = cellAt(p, parcels);
+function targetAt(p: Point, save: PotagerSave): Target | null {
+  const spot = Object.keys(save.forest)
+    .map(Number)
+    .find((i) => near(p, MAP.forest[i], 0.6));
+  if (spot !== undefined) return { kind: "foret", spot };
+  const c = cellAt(p, save.parcels);
   if (c) return { kind: "cell", key: c.key };
   const { abri, puits } = MAP;
   if (Math.abs(p.x - abri.x) < abri.w / 2 + 0.5 && Math.abs(p.z - abri.z) < abri.d / 2 + 0.5)
@@ -126,7 +131,7 @@ export function useGardenActions(
     (p: Point) => {
       const s = host?.state();
       if (!scene || !s) return false;
-      const target = targetAt(p, s.parcels);
+      const target = targetAt(p, s);
       if (!target) return false;
       const stand = nearestWalkable(standPoint(target), scene.walkable) ?? standPoint(target);
       const path = findPath(scene.avatar.pose(), stand, scene.walkable);
@@ -156,6 +161,8 @@ export function useGardenActions(
       raf = requestAnimationFrame(loop);
       const pose = scene.avatar.pose();
       const s = host?.state();
+      // une corneille s'envole quand l'avatar approche
+      if (s && scareCrows(s, pose) !== s) host!.update((cur) => scareCrows(cur, pose));
       const target = !lockedRef.current && s ? findTarget(s, pose) : null;
       const usable = target && s && "gesture" in prepareAction(s, target, selectedRef.current);
       scene.setHighlight(usable ? target : null);
