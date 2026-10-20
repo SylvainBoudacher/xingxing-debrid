@@ -6,6 +6,7 @@ import { createBecher } from "../../core/minigames/becher";
 import { createCueillir } from "../../core/minigames/cueillir";
 import { createDesherber } from "../../core/minigames/desherber";
 import { createPuits } from "../../core/minigames/puits";
+import { createRuban } from "../../core/minigames/ruban";
 import { createSemer } from "../../core/minigames/semer";
 import type { Input, Minigame } from "../../core/minigames/types";
 import type { Point } from "../../core/types";
@@ -17,11 +18,9 @@ import {
   drawPuits,
   drawSemer,
 } from "./drawMinigames";
+import { drawRuban } from "./drawRuban";
 
-export type GameGesture = Exclude<
-  Gesture,
-  "abri" | "ramasser" | "etal" | "cabane" | "panneau" | "servir"
->;
+export type GameGesture = Exclude<Gesture, "abri" | "ramasser" | "etal" | "cabane" | "panneau">;
 
 export interface ActiveGame {
   gesture: GameGesture;
@@ -53,6 +52,8 @@ export function createGame(gesture: GameGesture) {
       return as(createPuits(), drawPuits);
     case "desherber":
       return as(createDesherber(), drawDesherber);
+    case "servir":
+      return as(createRuban(Math.random), drawRuban);
   }
 }
 

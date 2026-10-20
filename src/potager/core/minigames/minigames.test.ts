@@ -5,7 +5,9 @@ import { createBecher } from "./becher";
 import { createCueillir } from "./cueillir";
 import { createDesherber } from "./desherber";
 import { createPuits } from "./puits";
+import { createRuban } from "./ruban";
 import { createSemer } from "./semer";
+import type { RubanView } from "./ruban";
 import type { Input, Minigame } from "./types";
 
 const DT = 1 / 60;
@@ -131,5 +133,46 @@ describe("désherber", () => {
 
   it("raté sans rien faire, à 8 s", () => {
     expect(run(createDesherber(), 8.1)?.grade).toBe("rate");
+  });
+});
+
+describe("ruban", () => {
+  const onKnot = (g: Minigame<RubanView>, skipAfter = 2) => {
+    let pressed = 0;
+    return run(g, 2.4, (v) => {
+      const diff = Math.abs(v.angle - v.knot);
+      if (pressed < skipAfter && v.pass === pressed && Math.min(diff, 2 * Math.PI - diff) < 0.09) {
+        tap(g, "action");
+        pressed++;
+      }
+    });
+  };
+
+  it("parfait avec deux appuis pile sur le nœud", () => {
+    expect(onKnot(createRuban(() => 0.5))?.grade).toBe("parfait");
+  });
+
+  it("raté sans aucun appui, en au plus 2,4 s", () => {
+    expect(
+      run(
+        createRuban(() => 0.5),
+        2.4,
+      )?.grade,
+    ).toBe("rate");
+  });
+
+  it("bien avec un seul passage réussi", () => {
+    expect(
+      onKnot(
+        createRuban(() => 0.5),
+        1,
+      )?.grade,
+    ).toBe("bien");
+  });
+
+  it("ignore un appui pendant la pause", () => {
+    const g = createRuban(() => 0);
+    tap(g, "action");
+    expect(g.view().hits).toEqual([]);
   });
 });
