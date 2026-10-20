@@ -36,6 +36,27 @@ describe("rollDemand", () => {
       expect(keys).toContain(entryKey(d.species, d.color));
     }
   });
+  it("ne demande jamais une fleur éclose mais pas encore annoncée", () => {
+    const save = base({
+      herbier: {
+        "dahlia:red": { discoveredAt: 0, announced: true },
+        "aster:blue": { discoveredAt: 0, announced: false },
+      },
+    });
+    const rng = seededRng(7);
+    for (let i = 0; i < 500; i++) {
+      const d = rollDemand(save, rng)!;
+      expect(entryKey(d.species, d.color)).toBe("dahlia:red");
+    }
+  });
+  it("null et aucun client si seules des entrées non annoncées existent", () => {
+    const save = base({
+      herbier: { "dahlia:red": { discoveredAt: 0, announced: false } },
+      stall: [pile(2)],
+    });
+    expect(rollDemand(save, () => 0.5)).toBeNull();
+    expect(advanceClients(save, () => 0.5).client).toBeNull();
+  });
   it("renormalise : que des communes si l'Herbier n'en a que", () => {
     const commune = entriesOfRarity("commune").map((e) => entryKey(e.species, e.color));
     const save = base({ herbier: herbierOf(commune.slice(0, 3)) });

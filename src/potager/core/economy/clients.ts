@@ -12,7 +12,9 @@ const nextGap = (rng: () => number) =>
 export function rollDemand(save: PotagerSave, rng: () => number): Demand | null {
   const found = RARITIES.map((rarity) => ({
     rarity,
-    entries: entriesOfRarity(rarity).filter((e) => save.herbier[entryKey(e.species, e.color)]),
+    entries: entriesOfRarity(rarity).filter(
+      (e) => save.herbier[entryKey(e.species, e.color)]?.announced,
+    ),
   })).filter((r) => r.entries.length);
   if (!found.length) return null;
   const total = found.reduce((sum, r) => sum + DEMAND_WEIGHT[r.rarity], 0);

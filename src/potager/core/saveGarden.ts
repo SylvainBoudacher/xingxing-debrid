@@ -218,8 +218,7 @@ export function parseGarden(raw: Record<string, unknown>, parcels: readonly Parc
     crows: keyed<Crow>(raw.crows, "leaveAt", isCell),
     forest: forest as Record<number, ForestItemKind>,
     po: parseCount(raw.po),
-    stall:
-      stall && stall.every((x): x is FlowerStack => x?.kind === "flowers") ? stall : start.stall,
+    stall: stall?.filter((x): x is FlowerStack => x?.kind === "flowers") ?? start.stall,
     stallLevel: parseLevel(raw.stallLevel, STALL_SIZES),
     chestLevel: parseLevel(raw.chestLevel, CHEST_SIZES),
     client: parseClient(raw.client),

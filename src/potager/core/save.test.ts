@@ -200,12 +200,13 @@ describe("sauvegarde du Potager", () => {
     it("ne garde dans l'étal que des piles de fleurs lisibles", () => {
       const flowers = { kind: "flowers", ...demand, quality: "belle", count: 2 };
       expect(parseSave({ ...base(), stall: [flowers] })?.stall).toEqual([flowers]);
-      expect(parseSave({ ...base(), stall: [flowers, { kind: "x" }] })?.stall).toEqual([]);
+      expect(parseSave({ ...base(), stall: [flowers, { kind: "x" }] })?.stall).toEqual([flowers]);
       const seeds = {
         kind: "seeds",
         rarity: "commune",
         seeds: [{ rarity: "commune", species: "tournesol", color: "yellow" }],
       };
+      expect(parseSave({ ...base(), stall: [seeds, flowers] })?.stall).toEqual([flowers]);
       expect(parseSave({ ...base(), stall: [seeds] })?.stall).toEqual([]);
     });
 
