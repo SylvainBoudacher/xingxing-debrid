@@ -24,7 +24,8 @@ const puitsGap = (p: Point) => Math.hypot(p.x - MAP.puits.x, p.z - MAP.puits.z) 
 // la case devant l'avatar, sinon l'abri ou le puits à portée
 export function findTarget(save: PotagerSave, pose: Point & { dir: Point }): Target | null {
   const ahead = { x: pose.x + pose.dir.x * AHEAD, z: pose.z + pose.dir.z * AHEAD };
-  const c = cellAt(ahead, save.parcels);
+  // devant soi d'abord, sinon la case où l'on se tient
+  const c = cellAt(ahead, save.parcels) ?? cellAt(pose, save.parcels);
   if (c) return { kind: "cell", key: c.key };
   if (abriGap(pose) < REACH) return { kind: "abri" };
   if (puitsGap(pose) < REACH) return { kind: "puits" };
@@ -42,31 +43,49 @@ export function standPoint(t: Target): Point {
 const needTool = (tool: "la bêche" | "l'arrosoir", pronoun: "elle" | "il") =>
   `Il te faut ${tool} (${pronoun} est à l'abri)`;
 
+const IN_HAND = "en main (touches 1 à 6)";
+
+// L'outil doit être en main (case sélectionnée du sac) ; s'il est ailleurs dans le sac,
+// on le dit, sinon il est resté à l'abri.
+function toolCheck(inv: (Slot | null)[], hand: number, id: "beche" | "arrosoir"): string | null {
+  const held = inv[hand];
+  if (held?.kind === "tool" && held.tool.id === id) return null;
+  const name = id === "beche" ? "la bêche" : "l'arrosoir";
+  if (hasTool(inv, id)) return `Prends ${name} ${IN_HAND}`;
+  return needTool(name as "la bêche" | "l'arrosoir", id === "beche" ? "elle" : "il");
+}
+
 export function prepareAction(
   save: PotagerSave,
   target: Target,
-  selectedSlot: number,
+  hand: number,
 ): { gesture: Gesture } | { message: string } {
   const inv = save.inventory;
   if (target.kind === "abri") return { gesture: "abri" };
-  if (target.kind === "puits")
-    return hasTool(inv, "arrosoir")
-      ? { gesture: "puits" }
-      : { message: needTool("l'arrosoir", "il") };
+  if (target.kind === "puits") {
+    const missing = toolCheck(inv, hand, "arrosoir");
+    return missing ? { message: missing } : { gesture: "puits" };
+  }
   const c = save.cells[target.key];
   if (!c) return { message: "Rien à faire ici" };
-  if (c.kind === "herbe")
-    return hasTool(inv, "beche")
-      ? { gesture: "becher" }
-      : { message: needTool("la bêche", "elle") };
-  if (c.kind === "bechee")
-    return takeSeed(inv, selectedSlot) ? { gesture: "semer" } : { message: "Plus de graines" };
+  if (c.kind === "herbe") {
+    const missing = toolCheck(inv, hand, "beche");
+    return missing ? { message: missing } : { gesture: "becher" };
+  }
+  if (c.kind === "bechee") {
+    if (inv[hand]?.kind === "seeds") return { gesture: "semer" };
+    return inv.some((x) => x?.kind === "seeds")
+      ? { message: `Prends des graines ${IN_HAND}` }
+      : { message: "Plus de graines" };
+  }
+  // cueillir se fait à mains nues
   if (stageOf(c.progress) === 4)
     return addFlower(inv, { species: c.seed.species, color: c.seed.color, quality: "belle" }) ||
       addFlower(inv, { species: c.seed.species, color: c.seed.color, quality: "ordinaire" })
       ? { gesture: "cueillir" }
       : { message: "Ton sac est plein" };
-  if (!hasTool(inv, "arrosoir")) return { message: needTool("l'arrosoir", "il") };
+  const missing = toolCheck(inv, hand, "arrosoir");
+  if (missing) return { message: missing };
   return waterLeft(inv) > 0 ? { gesture: "arroser" } : { message: "L'arrosoir est vide" };
 }
 
@@ -90,7 +109,11 @@ export function applyAction(
     return {
       save: {
         ...save,
-        inventory: setWater(save.inventory, Math.max(1, Math.round(5 * (result.water ?? 0)))),
+        // l'eau remontée s'ajoute : un mauvais remplissage ne vide jamais l'arrosoir
+        inventory: setWater(
+          save.inventory,
+          Math.max(waterLeft(save.inventory), 1, Math.round(5 * (result.water ?? 0))),
+        ),
       },
       events: [],
     };

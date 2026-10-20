@@ -4,9 +4,11 @@ import { createAvatarMotion, type AvatarMotion } from "../core/avatarMotion";
 import type { BuildingId, Point, PotagerSave } from "../core/types";
 import { isWalkable, type Walkable } from "../core/walk";
 import { createCameraRig, FOV, fovFor, type CameraRig } from "./cameraRig";
+import type { Target } from "../core/actions";
 import { createBloom } from "./bloom";
 import { buildGarden, disposeGarden, type GardenView } from "./garden";
 import { gardenKey } from "./gardenKey";
+import { createHighlight } from "./highlight";
 import { createParticles } from "./particles";
 import { createPost } from "./post";
 import { buildTerrain } from "./terrain";
@@ -26,6 +28,8 @@ export interface PotagerScene {
   project(p: Point): { x: number; y: number; visible: boolean };
   // appelé quand une éclosion pas encore vue vient d'être montrée au joueur
   onBloomSeen(cb: (cellKey: string) => void): () => void;
+  // élément du jardin où une action est possible (ou rien)
+  setHighlight(t: Target | null): void;
   start(): void;
   stop(): void;
   renderOnce(): void;
@@ -81,6 +85,7 @@ export function createPotagerScene(
   const raycaster = new THREE.Raycaster();
   const particles = createParticles(scene);
   const bloom = createBloom(scene);
+  const highlight = createHighlight(scene);
   let garden: GardenView | null = null;
   let gKey = "";
   let lastSave = init;
@@ -204,6 +209,7 @@ export function createPotagerScene(
     fadeTrees(p, py, dt);
     if (mode === "potager") showBlooms();
     bloom.update(dt);
+    highlight.update(t);
     if (rig.mode() === "follow") rig.follow(p);
     rig.update(dt);
     const { position, look } = rig.pose();
@@ -246,6 +252,7 @@ export function createPotagerScene(
     avatar,
     walkable,
     project,
+    setHighlight: highlight.set,
     onBloomSeen(cb) {
       bloomListeners.add(cb);
       return () => bloomListeners.delete(cb);
@@ -284,6 +291,7 @@ export function createPotagerScene(
         disposeGarden(garden);
       }
       bloom.dispose();
+      highlight.dispose();
       disposeTree(scene);
       // hors de l'arbre : la frame d'avatar inactive et la shadow map
       sprite.frames.forEach((f) => f.dispose());

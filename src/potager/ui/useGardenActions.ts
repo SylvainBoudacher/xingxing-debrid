@@ -112,13 +112,22 @@ export function useGardenActions(scene: PotagerScene | null, host: SimHost | nul
 
   const cancelPending = useCallback(() => (pending.current = null), []);
 
-  // arrivée d'un déplacement au clic, éloignement de l'abri
+  const lockedRef = useRef(locked);
+  useEffect(() => {
+    lockedRef.current = locked;
+  });
+
+  // arrivée d'un déplacement au clic ; surbrillance de ce qui est faisable devant soi
   useEffect(() => {
     if (!scene) return;
     let raf = 0;
     const loop = () => {
       raf = requestAnimationFrame(loop);
       const pose = scene.avatar.pose();
+      const s = host?.state();
+      const target = !lockedRef.current && s ? findTarget(s, pose) : null;
+      const usable = target && s && "gesture" in prepareAction(s, target, selectedRef.current);
+      scene.setHighlight(usable ? target : null);
       const p = pending.current;
       if (p && !pose.moving && near(pose, p.stand, ARRIVED)) {
         pending.current = null;
@@ -126,8 +135,11 @@ export function useGardenActions(scene: PotagerScene | null, host: SimHost | nul
       }
     };
     loop();
-    return () => cancelAnimationFrame(raf);
-  }, [scene, start]);
+    return () => {
+      cancelAnimationFrame(raf);
+      scene.setHighlight(null);
+    };
+  }, [scene, host, start]);
 
   useEffect(() => {
     if (!scene || !abriOpen) return;

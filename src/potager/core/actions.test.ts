@@ -3,7 +3,7 @@ import { MAP } from "./catalog/map";
 import { applyAction, findTarget, prepareAction, type Target } from "./actions";
 import { parcelCells } from "./cells";
 import { advanceGarden } from "./growth";
-import { waterLeft, withdrawTool } from "./inventory";
+import { setWater, waterLeft, withdrawTool } from "./inventory";
 import { createStarterSave } from "./save";
 import type { PotagerSave, Slot } from "./types";
 
@@ -11,20 +11,30 @@ const first = parcelCells("p0")[0];
 const cell: Target = { kind: "cell", key: first.key };
 const equipped = () => withdrawTool(withdrawTool(createStarterSave(), "beche")!, "arrosoir")!;
 const never = () => 0.999;
+// sac équipé : 0 graines, 1 bêche, 2 arrosoir
+const SEEDS = 0,
+  BECHE = 1,
+  ARROSOIR = 2;
 const act = (
   s: PotagerSave,
   t: Target,
+  hand: number,
   grade: "parfait" | "bien" | "rate" = "bien",
   rng = never,
 ) => {
-  const p = prepareAction(s, t, 0);
+  const p = prepareAction(s, t, hand);
   if (!("gesture" in p)) throw new Error(p.message);
-  return applyAction(s, t, p.gesture, { grade }, 0, rng).save;
+  return applyAction(s, t, p.gesture, { grade }, hand, rng).save;
 };
 
 describe("cibles", () => {
   it("vise la case devant l'avatar", () => {
     const pose = { x: first.center.x, z: first.center.z + 0.8, dir: { x: 0, z: -1 } };
+    expect(findTarget(createStarterSave(), pose)).toEqual(cell);
+  });
+
+  it("vise la case sous l'avatar quand rien n'est devant", () => {
+    const pose = { x: first.center.x, z: first.center.z, dir: { x: 0, z: -1 } };
     expect(findTarget(createStarterSave(), pose)).toEqual(cell);
   });
 
@@ -43,32 +53,56 @@ describe("actions", () => {
     expect(prepareAction(createStarterSave(), cell, 0)).toEqual({
       message: "Il te faut la bêche (elle est à l'abri)",
     });
-    expect(prepareAction(equipped(), cell, 0)).toEqual({ gesture: "becher" });
+    expect(prepareAction(equipped(), cell, BECHE)).toEqual({ gesture: "becher" });
+  });
+
+  it("exige l'outil en main", () => {
+    const s = equipped();
+    expect(prepareAction(s, cell, SEEDS)).toEqual({
+      message: "Prends la bêche en main (touches 1 à 6)",
+    });
+    const dug = act(s, cell, BECHE);
+    expect(prepareAction(dug, cell, BECHE)).toEqual({
+      message: "Prends des graines en main (touches 1 à 6)",
+    });
+    const sown = act(dug, cell, SEEDS);
+    expect(prepareAction(sown, cell, BECHE)).toEqual({
+      message: "Prends l'arrosoir en main (touches 1 à 6)",
+    });
+    expect(prepareAction(s, { kind: "puits" }, BECHE)).toEqual({
+      message: "Prends l'arrosoir en main (touches 1 à 6)",
+    });
+  });
+
+  it("cueille à mains nues, quel que soit l'objet en main", () => {
+    let s = act(act(equipped(), cell, BECHE), cell, SEEDS);
+    s = advanceGarden(s, 3_600_000);
+    expect(prepareAction(s, cell, 5)).toEqual({ gesture: "cueillir" });
   });
 
   it("mène une case de l'herbe à la cueillette", () => {
-    let s = act(equipped(), cell, "parfait");
+    let s = act(equipped(), cell, BECHE, "parfait");
     expect(s.cells[first.key]).toEqual({ kind: "bechee", loose: true });
-    s = act(s, cell);
+    s = act(s, cell, SEEDS);
     const sown = s.cells[first.key];
     expect(sown.kind).toBe("plante");
     expect(s.inventory.find((x) => x?.kind === "seeds")?.kind === "seeds").toBe(true);
     const pile = s.inventory.find((x) => x?.kind === "seeds");
     expect(pile?.kind === "seeds" && pile.seeds).toHaveLength(4);
-    s = act(s, cell);
+    s = act(s, cell, ARROSOIR);
     expect(waterLeft(s.inventory)).toBe(4);
     const c = s.cells[first.key];
     expect(c.kind === "plante" && c.wetUntil).toBeGreaterThan(s.playTimeMs);
     s = advanceGarden(s, 3_600_000);
     expect(prepareAction(s, cell, 0)).toEqual({ gesture: "cueillir" });
-    s = act(s, cell, "parfait");
+    s = act(s, cell, BECHE, "parfait");
     expect(s.cells[first.key]).toEqual({ kind: "herbe" });
     expect(s.inventory.some((x) => x?.kind === "flowers" && x.quality === "belle")).toBe(true);
   });
 
   it("refuse de cueillir sac plein, sans rien perdre", () => {
     let s = equipped();
-    s = act(act(s, cell), cell);
+    s = act(act(s, cell, BECHE), cell, SEEDS);
     s = advanceGarden(s, 3_600_000);
     const full: (Slot | null)[] = Array.from({ length: 6 }, () => ({
       kind: "flowers",
@@ -84,7 +118,7 @@ describe("actions", () => {
 
   it("ne tire pas de graine bonus sans place pour elle", () => {
     let s = equipped();
-    s = act(act(s, cell), cell);
+    s = act(act(s, cell, BECHE), cell, SEEDS);
     s = advanceGarden(s, 3_600_000);
     const c = s.cells[first.key];
     if (c.kind !== "plante") throw new Error();
@@ -110,7 +144,7 @@ describe("actions", () => {
 
   it("range une belle fleur comme ordinaire faute de place", () => {
     let s = equipped();
-    s = act(act(s, cell), cell);
+    s = act(act(s, cell, BECHE), cell, SEEDS);
     s = advanceGarden(s, 3_600_000);
     const c = s.cells[first.key];
     if (c.kind !== "plante") throw new Error();
@@ -141,13 +175,40 @@ describe("actions", () => {
     expect(r.events).toEqual([]);
   });
 
-  it("remplit l'arrosoir au puits selon l'eau restante", () => {
-    const s = { ...equipped(), inventory: equipped().inventory };
-    const p = prepareAction(s, { kind: "puits" }, 0);
-    expect(p).toEqual({ gesture: "puits" });
-    const r = applyAction(s, { kind: "puits" }, "puits", { grade: "bien", water: 0.7 }, 0, never);
+  it("ne vide jamais l'arrosoir en le remplissant mal", () => {
+    const s = { ...equipped(), inventory: setWater(equipped().inventory, 4) };
+    const r = applyAction(
+      s,
+      { kind: "puits" },
+      "puits",
+      { grade: "rate", water: 0.1 },
+      ARROSOIR,
+      never,
+    );
     expect(waterLeft(r.save.inventory)).toBe(4);
-    const low = applyAction(s, { kind: "puits" }, "puits", { grade: "rate", water: 0 }, 0, never);
+  });
+
+  it("remplit l'arrosoir au puits selon l'eau restante", () => {
+    const s = { ...equipped(), inventory: setWater(equipped().inventory, 0) };
+    const p = prepareAction(s, { kind: "puits" }, ARROSOIR);
+    expect(p).toEqual({ gesture: "puits" });
+    const r = applyAction(
+      s,
+      { kind: "puits" },
+      "puits",
+      { grade: "bien", water: 0.7 },
+      ARROSOIR,
+      never,
+    );
+    expect(waterLeft(r.save.inventory)).toBe(4);
+    const low = applyAction(
+      s,
+      { kind: "puits" },
+      "puits",
+      { grade: "rate", water: 0 },
+      ARROSOIR,
+      never,
+    );
     expect(waterLeft(low.save.inventory)).toBe(1);
   });
 });

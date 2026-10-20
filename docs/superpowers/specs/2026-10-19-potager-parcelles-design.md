@@ -62,8 +62,9 @@ Maquettes validées par l'utilisateur : `.superpowers/brainstorm/15239-179243980
 - **Action** : Espace. Elle agit sur la case devant l'avatar (dans sa direction de marche, à moins de 1 unité) ou sur l'objet interactif le plus proche à portée (abri, puits, champignon, corneille).
 - **Clic** sur une case, un objet ou l'abri : l'avatar s'y rend (chemin existant), puis l'action se lance à l'arrivée.
 - L'action est **contextuelle** : herbe vers bêcher, bêchée vers semer, semée ou en pousse vers arroser, épanouie vers cueillir, mauvaise herbe vers désherber.
-- **Outil manquant** : pas de mini-jeu, un message court s'affiche au-dessus de l'avatar, par exemple « Il te faut la bêche (elle est à l'abri) ». Même chose pour « Plus de graines », « L'arrosoir est vide », « Ton sac est plein ».
-- **Choix de la graine** : les cases de l'inventaire se sélectionnent avec 1 à 6 ou un clic. Semer utilise la pile de graines sélectionnée ; si la sélection n'est pas une graine, la première pile de graines.
+- **L'objet en main** est la case sélectionnée de l'inventaire (touches 1 à 6 ou clic). Chaque geste exige le bon objet en main : bêche pour bêcher, une pile de graines pour semer, arrosoir pour arroser et pour le puits, serfouette pour désherber. Cueillir se fait à mains nues, quel que soit l'objet en main.
+- **Objet manquant** : pas de mini-jeu, un message court s'affiche au-dessus de l'avatar : « Prends la bêche en main (touches 1 à 6) » si elle est dans le sac, « Il te faut la bêche (elle est à l'abri) » sinon. Même logique pour les graines et l'arrosoir, plus « Plus de graines », « L'arrosoir est vide », « Ton sac est plein ».
+- **Surbrillance** : la case (ou l'abri, le puits) visée se met en surbrillance (cadre doré pulsant) quand l'action y est possible avec l'objet en main ; rien ne s'éclaire sinon. La cible est la case devant l'avatar, sinon celle où il se tient.
 
 ### 2.4 Inventaire et outils
 
