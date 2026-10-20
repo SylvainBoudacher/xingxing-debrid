@@ -151,7 +151,7 @@ export function priceSignTex(price: number) {
   const w = textWidth(text) + 8;
   const h = 24;
   return canvasTex(w, h, (g) => {
-    dot(g, w / 2 - 1, 12, "#6a4628", 2, 12);
+    dot(g, Math.floor(w / 2) - 1, 12, "#6a4628", 2, 12);
     dot(g, 1, 1, "#b8924e", w - 2, 11);
     dot(g, 1, 11, "#8a6a3a", w - 2, 1);
     drawText(g, text, 4, 3, "#3a2010");
