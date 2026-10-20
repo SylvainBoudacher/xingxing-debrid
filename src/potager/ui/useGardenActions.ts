@@ -99,13 +99,14 @@ export function useGardenActions(
       // ramasser en forêt se fait sans mini-jeu
       if (p.gesture === "ramasser")
         return apply(target, p.gesture, { grade: "bien" }, selectedRef.current, dir);
+      const cell = target.kind === "cell" ? s.cells[target.key] : undefined;
       setGame({
         gesture: p.gesture,
         target,
         anchor: anchorOf(target),
         hand: selectedRef.current,
         dir,
-        ...createGame(p.gesture),
+        ...createGame(p.gesture, cell?.kind === "plante" ? cell.seed : undefined),
       });
     },
     [scene, host, say, apply, open],

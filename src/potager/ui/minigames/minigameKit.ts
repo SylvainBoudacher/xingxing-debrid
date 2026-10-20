@@ -10,15 +10,13 @@ import { createRuban } from "../../core/minigames/ruban";
 import { createSemer } from "../../core/minigames/semer";
 import type { Input, Minigame, MinigameResult } from "../../core/minigames/types";
 import type { Point } from "../../core/types";
-import {
-  drawArroser,
-  drawBecher,
-  drawCueillir,
-  drawDesherber,
-  drawPuits,
-  drawSemer,
-} from "./drawMinigames";
-import { drawRuban } from "./drawRuban";
+import { arroserArt } from "./drawArroser";
+import { becherArt } from "./drawBecher";
+import { cueillirArt, type Bloom } from "./drawCueillir";
+import { desherberArt } from "./drawDesherber";
+import { puitsArt } from "./drawPuits";
+import { rubanArt } from "./drawRuban";
+import { semerArt } from "./drawSemer";
 
 export type GameGesture = Exclude<Gesture, "abri" | "ramasser" | "etal" | "cabane" | "panneau">;
 
@@ -42,22 +40,23 @@ const as = <V>(game: Minigame<V>, draw: (c: CanvasRenderingContext2D, v: V) => v
   draw: draw as (c: CanvasRenderingContext2D, v: unknown) => void,
 });
 
-export function createGame(gesture: GameGesture) {
+// bloom : la fleur à cueillir, dessinée dans le mini-jeu
+export function createGame(gesture: GameGesture, bloom?: Bloom) {
   switch (gesture) {
     case "becher":
-      return as(createBecher(), drawBecher);
+      return as(createBecher(), becherArt());
     case "semer":
-      return as(createSemer(Math.random), drawSemer);
+      return as(createSemer(Math.random), semerArt());
     case "arroser":
-      return as(createArroser(), drawArroser);
+      return as(createArroser(), arroserArt());
     case "cueillir":
-      return as(createCueillir(Math.random), drawCueillir);
+      return as(createCueillir(Math.random), cueillirArt(bloom));
     case "puits":
-      return as(createPuits(), drawPuits);
+      return as(createPuits(), puitsArt());
     case "desherber":
-      return as(createDesherber(), drawDesherber);
+      return as(createDesherber(), desherberArt());
     case "servir":
-      return as(createRuban(Math.random), drawRuban);
+      return as(createRuban(Math.random), rubanArt());
   }
 }
 

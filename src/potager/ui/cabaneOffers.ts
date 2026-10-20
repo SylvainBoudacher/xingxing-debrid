@@ -1,9 +1,9 @@
 import type { PotagerSave, ToolId } from "../core/types";
 
-export const TOOL_OFFERS: { id: ToolId; label: string }[] = [
-  { id: "beche", label: "Bêche niv. 2 : bêche 3 cases" },
-  { id: "arrosoir", label: "Arrosoir niv. 2 : arrose 3 cases" },
-  { id: "serfouette", label: "Serfouette niv. 2 : désherbe 3 cases" },
+export const TOOL_OFFERS: { id: ToolId; name: string; effect: string }[] = [
+  { id: "beche", name: "Bêche niv. 2", effect: "bêche 3 cases" },
+  { id: "arrosoir", name: "Arrosoir niv. 2", effect: "arrose 3 cases" },
+  { id: "serfouette", name: "Serfouette niv. 2", effect: "désherbe 3 cases" },
 ];
 
 // l'outil est au sac ou au râtelier

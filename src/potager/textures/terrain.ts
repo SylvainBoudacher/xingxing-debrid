@@ -1,6 +1,6 @@
 import { canvasTex, dot, pick, range } from "./pixel";
 
-const GRASS = ["#5e8a30", "#6a9636", "#76a23c", "#527c2a", "#82ac44"];
+export const GRASS = ["#5e8a30", "#6a9636", "#76a23c", "#527c2a", "#82ac44"];
 
 const rgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
 const GRASS_RGB = GRASS.map(rgb);

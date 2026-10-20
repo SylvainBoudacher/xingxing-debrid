@@ -182,10 +182,13 @@ function applyToCell(save: PotagerSave, key: string, gesture: Gesture, grade: Gr
   }
   const c = save.cells[key];
   if (gesture === "becher")
-    return {
-      ...save,
-      cells: { ...save.cells, [key]: { kind: "bechee", loose: grade === "parfait" } },
-    };
+    // raté : la case reste de l'herbe (copie, pour ne pas passer pour une action périmée)
+    return grade === "rate"
+      ? { ...save }
+      : {
+          ...save,
+          cells: { ...save.cells, [key]: { kind: "bechee", loose: grade === "parfait" } },
+        };
   if (c.kind !== "plante") return save;
   const wet = { ...c, wetUntil: save.playTimeMs + WET_MS, wetGrade: grade };
   return { ...save, cells: { ...save.cells, [key]: wet } };

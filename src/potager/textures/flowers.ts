@@ -6,7 +6,7 @@ import type { Rarity } from "../core/types";
 import { COLOR_HEX, FLOWER_SHAPES, H, silhouetteGrid, STAGE_SHAPES, W } from "./flowerShapes";
 import { canvasTex, dot, outlineCanvas } from "./pixel";
 
-const FIXED: Record<string, string> = {
+export const FIXED: Record<string, string> = {
   c: "#5a3418",
   y: "#f0c43a",
   s: "#4a7a2a",

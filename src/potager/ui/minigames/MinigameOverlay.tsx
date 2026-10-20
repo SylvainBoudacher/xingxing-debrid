@@ -1,10 +1,17 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MinigameResult } from "../../core/minigames/types";
-import type { Point } from "../../core/types";
-import { drawGrade, MH, MW } from "./drawMinigames";
+import type { Grade, Point } from "../../core/types";
+import { PANEL_STYLE } from "../hdPanel";
+import { GradeBanner } from "./GradeBanner";
+import { HINTS } from "./minigameHints";
+import { MinigameHint } from "./MinigameHint";
 import { KEY_INPUT, type ActiveGame } from "./minigameKit";
+import { LH, LW } from "./pixelKit";
 
 const GRADE_SHOWN_MS = 600;
+const MARGIN = 8;
+
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 export function MinigameOverlay({
   active,
@@ -17,11 +24,14 @@ export function MinigameOverlay({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState<{ game: ActiveGame; grade: Grade } | null>(null);
+  const grade = shown?.game === active ? shown.grade : null;
 
   useEffect(() => {
     const { game, draw, gesture } = active;
     const c = canvasRef.current?.getContext("2d");
     if (!c) return;
+    c.imageSmoothingEnabled = false;
     let raf = 0,
       last = performance.now(),
       doneAt = 0;
@@ -33,16 +43,25 @@ export function MinigameOverlay({
       draw(c, game.view());
       const r = game.result();
       if (r) {
-        drawGrade(c, r.grade);
-        doneAt ||= now;
+        if (!doneAt) {
+          doneAt = now;
+          setShown({ game: active, grade: r.grade });
+        }
         if (now - doneAt > GRADE_SHOWN_MS) {
           cancelAnimationFrame(raf);
           onDone(r);
         }
       }
-      const at = project(active.anchor);
-      if (boxRef.current)
-        boxRef.current.style.transform = `translate(${at.x}px, ${at.y}px) translate(-50%, -115%)`;
+      // au-dessus de la cible, sans sortir de la fenêtre
+      const el = boxRef.current;
+      if (el) {
+        const at = project(active.anchor);
+        const w = el.offsetWidth,
+          h = el.offsetHeight;
+        const x = clamp(at.x - w / 2, MARGIN, innerWidth - w - MARGIN),
+          y = clamp(at.y - h * 1.15, MARGIN, innerHeight - h - MARGIN);
+        el.style.transform = `translate(${x}px, ${y}px)`;
+      }
     };
     raf = requestAnimationFrame(loop);
 
@@ -79,19 +98,27 @@ export function MinigameOverlay({
     };
   }, [active, project, onDone]);
 
+  const hint = HINTS[active.gesture];
   return (
-    <div ref={boxRef} className="pointer-events-none fixed left-0 top-0 z-20">
+    <div ref={boxRef} className="pointer-events-none fixed top-0 left-0 z-20">
       <div
-        className="border-2 border-[#b8975a] p-1"
-        style={{ background: "rgba(20,14,10,0.85)", boxShadow: "0 4px 12px rgba(0,0,0,0.6)" }}
+        className="w-[338px] px-1.5 pt-1 pb-2"
+        style={{ ...PANEL_STYLE, boxShadow: "0 4px 14px rgba(0,0,0,0.6)" }}
       >
-        <canvas
-          ref={canvasRef}
-          width={MW}
-          height={MH}
-          className="block h-[162px] w-[288px]"
-          style={{ imageRendering: "pixelated" }}
-        />
+        <div className="px-1 pb-1 text-xl leading-tight font-bold text-[#f5d27a] italic">
+          {hint.title}
+        </div>
+        <div className="relative border border-[#5a4426]">
+          <canvas
+            ref={canvasRef}
+            width={LW}
+            height={LH}
+            className="block h-[180px] w-[320px]"
+            style={{ imageRendering: "pixelated" }}
+          />
+          {grade && <GradeBanner grade={grade} />}
+        </div>
+        <MinigameHint hint={hint} />
       </div>
     </div>
   );

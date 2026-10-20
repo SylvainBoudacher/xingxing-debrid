@@ -1,7 +1,7 @@
 import type * as THREE from "three";
 import { canvasTex, dot, outlineCanvas } from "./pixel";
 
-const PAL: Record<string, string> = {
+export const PEST_PAL: Record<string, string> = {
   g: "#6a8a2a",
   G: "#4a6a1e",
   y: "#c8b040",
@@ -22,7 +22,9 @@ function sprite(rows: string[]): THREE.Texture {
   const w = rows[0].length,
     h = rows.length;
   return canvasTex(w, h, (g) => {
-    rows.forEach((row, y) => [...row].forEach((ch, x) => PAL[ch] && dot(g, x, y, PAL[ch])));
+    rows.forEach((row, y) =>
+      [...row].forEach((ch, x) => PEST_PAL[ch] && dot(g, x, y, PEST_PAL[ch])),
+    );
     outlineCanvas(g, w, h);
   });
 }
@@ -35,17 +37,18 @@ const cached = (key: string, rows: () => string[]) => {
 };
 
 // touffe hirsute aux épis jaunâtres
-export const weedTex = () =>
-  cached("weed", () => [
-    "...y....y...",
-    "..gy.g..yg..",
-    "..g..g.g.g..",
-    ".gG.gG.gGg..",
-    ".gG.gGgG.Gg.",
-    "gGG.GGgG.GG.",
-    "gGGgGGGGgGG.",
-    ".GGGGGGGGGG.",
-  ]);
+export const WEED_ROWS = [
+  "...y....y...",
+  "..gy.g..yg..",
+  "..g..g.g.g..",
+  ".gG.gG.gGg..",
+  ".gG.gGgG.Gg.",
+  "gGG.GGgG.GG.",
+  "gGGgGGGGgGG.",
+  ".GGGGGGGGGG.",
+];
+
+export const weedTex = () => cached("weed", () => WEED_ROWS);
 
 const CROW_BODY = [
   "......kk....",

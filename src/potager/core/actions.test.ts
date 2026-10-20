@@ -83,6 +83,11 @@ describe("actions", () => {
     expect(prepareAction(s, cell, 5)).toEqual({ gesture: "cueillir" });
   });
 
+  it("ne bêche pas la case quand le mini-jeu est raté", () => {
+    const s = equipped();
+    expect(act(s, cell, BECHE, "rate").cells[first.key]).toEqual(s.cells[first.key]);
+  });
+
   it("mène une case de l'herbe à la cueillette", () => {
     let s = act(equipped(), cell, BECHE, "parfait");
     expect(s.cells[first.key]).toEqual({ kind: "bechee", loose: true });
