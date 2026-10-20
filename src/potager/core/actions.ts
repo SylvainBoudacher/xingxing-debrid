@@ -5,17 +5,25 @@ import { markSeen, stageOf, WET_MS } from "./growth";
 import type { ColorId } from "./catalog/colors";
 import type { SpeciesId } from "./catalog/species";
 import { addFlower, addSeed, hasTool, setWater, STACK, takeSeed, waterLeft } from "./inventory";
+import { FOREST_ROLL } from "./forest";
+import { hasWeed } from "./nuisances";
 import { rollRarity, rollSeed } from "./seeds";
 import type { Grade, Point, PotagerSave, Rarity, Slot } from "./types";
 
-export type Target = { kind: "cell"; key: string } | { kind: "abri" } | { kind: "puits" };
-export type Gesture = "becher" | "semer" | "arroser" | "cueillir" | "puits" | "abri";
+export type Target =
+  | { kind: "cell"; key: string }
+  | { kind: "abri" }
+  | { kind: "puits" }
+  | { kind: "foret"; spot: number };
+export type Gesture =
+  "becher" | "semer" | "arroser" | "cueillir" | "puits" | "abri" | "desherber" | "ramasser";
 export type ActionEvent =
   { kind: "graine"; rarity: Rarity } | { kind: "decouverte"; species: SpeciesId; color: ColorId };
 
 export const REACH = 1.2;
 const AHEAD = 0.8;
 const BONUS_SEED: Record<Grade, number> = { parfait: 0.3, bien: 0.2, rate: 0.1 };
+const WEED_REGROW_MS = 60_000;
 
 const abriGap = (p: Point) =>
   Math.hypot(
@@ -24,7 +32,7 @@ const abriGap = (p: Point) =>
   );
 const puitsGap = (p: Point) => Math.hypot(p.x - MAP.puits.x, p.z - MAP.puits.z) - MAP.puits.r;
 
-// la case devant l'avatar, sinon l'abri ou le puits à portée
+// la case devant l'avatar (ou sous lui), sinon l'abri, le puits ou un objet de forêt à portée
 export function findTarget(save: PotagerSave, pose: Point & { dir: Point }): Target | null {
   const ahead = { x: pose.x + pose.dir.x * AHEAD, z: pose.z + pose.dir.z * AHEAD };
   // devant soi d'abord, sinon la case où l'on se tient
@@ -32,30 +40,37 @@ export function findTarget(save: PotagerSave, pose: Point & { dir: Point }): Tar
   if (c) return { kind: "cell", key: c.key };
   if (abriGap(pose) < REACH) return { kind: "abri" };
   if (puitsGap(pose) < REACH) return { kind: "puits" };
-  return null;
+  const spot = Object.keys(save.forest)
+    .map(Number)
+    .find((i) => Math.hypot(MAP.forest[i].x - pose.x, MAP.forest[i].z - pose.z) < REACH);
+  return spot === undefined ? null : { kind: "foret", spot };
 }
 
 // où se tenir pour agir : devant, côté caméra
 export function standPoint(t: Target): Point {
   if (t.kind === "abri") return { x: MAP.abri.x, z: MAP.abri.z + MAP.abri.d / 2 + 0.6 };
   if (t.kind === "puits") return { x: MAP.puits.x, z: MAP.puits.z + MAP.puits.r + 0.6 };
+  if (t.kind === "foret") return { x: MAP.forest[t.spot].x, z: MAP.forest[t.spot].z + 0.6 };
   const c = MAP.parcels.flatMap((p) => parcelCells(p.id)).find((x) => x.key === t.key);
   return c ? { x: c.center.x, z: c.center.z + 0.9 } : { ...MAP.spawn };
 }
 
-const needTool = (tool: "la bêche" | "l'arrosoir", pronoun: "elle" | "il") =>
-  `Il te faut ${tool} (${pronoun} est à l'abri)`;
+const TOOL_NAME = {
+  beche: ["la bêche", "elle"],
+  arrosoir: ["l'arrosoir", "il"],
+  serfouette: ["la serfouette", "elle"],
+} as const;
 
 const IN_HAND = "en main (touches 1 à 6)";
 
 // L'outil doit être en main (case sélectionnée du sac) ; s'il est ailleurs dans le sac,
 // on le dit, sinon il est resté à l'abri.
-function toolCheck(inv: (Slot | null)[], hand: number, id: "beche" | "arrosoir"): string | null {
+function toolCheck(inv: (Slot | null)[], hand: number, id: keyof typeof TOOL_NAME): string | null {
   const held = inv[hand];
   if (held?.kind === "tool" && held.tool.id === id) return null;
-  const name = id === "beche" ? "la bêche" : "l'arrosoir";
+  const [name, pronoun] = TOOL_NAME[id];
   if (hasTool(inv, id)) return `Prends ${name} ${IN_HAND}`;
-  return needTool(name as "la bêche" | "l'arrosoir", id === "beche" ? "elle" : "il");
+  return `Il te faut ${name} (${pronoun} est à l'abri)`;
 }
 
 export function prepareAction(
@@ -69,8 +84,17 @@ export function prepareAction(
     const missing = toolCheck(inv, hand, "arrosoir");
     return missing ? { message: missing } : { gesture: "puits" };
   }
+  if (target.kind === "foret") {
+    if (!save.forest[target.spot]) return { message: "Il n'y a plus rien ici" };
+    return seedRoom(inv) ? { gesture: "ramasser" } : { message: "Ton sac est plein" };
+  }
   const c = save.cells[target.key];
   if (!c) return { message: "Rien à faire ici" };
+  // une mauvaise herbe passe avant tout autre geste sur la case
+  if (hasWeed(save, target.key)) {
+    const missing = toolCheck(inv, hand, "serfouette");
+    return missing ? { message: missing } : { gesture: "desherber" };
+  }
   if (c.kind === "herbe") {
     const missing = toolCheck(inv, hand, "beche");
     return missing ? { message: missing } : { gesture: "becher" };
@@ -120,7 +144,26 @@ export function applyAction(
       },
       events: [],
     };
+  if (gesture === "ramasser" && target.kind === "foret") {
+    const kind = save.forest[target.spot];
+    const seed = rollSeed(rollRarity(FOREST_ROLL[kind], rng), rng);
+    const inventory = addSeed(save.inventory, seed);
+    if (!inventory) return unchanged;
+    const forest = { ...save.forest };
+    delete forest[target.spot];
+    return {
+      save: { ...save, inventory, forest },
+      events: [{ kind: "graine", rarity: seed.rarity }],
+    };
+  }
   if (target.kind !== "cell") return unchanged;
+  if (gesture === "desherber") {
+    const weeds = { ...save.weeds };
+    // racine cassée : l'herbe revient sur la même case une minute plus tard
+    if (grade === "rate") weeds[target.key] = { at: save.playTimeMs + WEED_REGROW_MS };
+    else delete weeds[target.key];
+    return { save: { ...save, weeds }, events: [] };
+  }
   const c = save.cells[target.key];
   const withCell = (cell: typeof c, extra: Partial<PotagerSave> = {}) => ({
     ...save,

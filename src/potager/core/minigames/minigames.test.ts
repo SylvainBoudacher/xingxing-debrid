@@ -3,6 +3,7 @@ import { seededRng } from "../seeds";
 import { createArroser } from "./arroser";
 import { createBecher } from "./becher";
 import { createCueillir } from "./cueillir";
+import { createDesherber } from "./desherber";
 import { createPuits } from "./puits";
 import { createSemer } from "./semer";
 import type { Input, Minigame } from "./types";
@@ -111,5 +112,24 @@ describe("puits", () => {
       }
     });
     expect(r?.grade).toBe("parfait");
+  });
+});
+
+describe("désherber", () => {
+  it("arrache en suivant la zone", () => {
+    const g = createDesherber();
+    let holding = false;
+    const r = run(g, 8, (v) => {
+      const want = v.cursor < v.zone;
+      if (want !== holding) {
+        g.press("action", want);
+        holding = want;
+      }
+    });
+    expect(["parfait", "bien"]).toContain(r?.grade);
+  });
+
+  it("raté sans rien faire, à 8 s", () => {
+    expect(run(createDesherber(), 8.1)?.grade).toBe("rate");
   });
 });

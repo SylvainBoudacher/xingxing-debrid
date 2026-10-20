@@ -4,13 +4,21 @@ import { parcelCells } from "../../core/cells";
 import { createArroser } from "../../core/minigames/arroser";
 import { createBecher } from "../../core/minigames/becher";
 import { createCueillir } from "../../core/minigames/cueillir";
+import { createDesherber } from "../../core/minigames/desherber";
 import { createPuits } from "../../core/minigames/puits";
 import { createSemer } from "../../core/minigames/semer";
 import type { Input, Minigame } from "../../core/minigames/types";
 import type { Point } from "../../core/types";
-import { drawArroser, drawBecher, drawCueillir, drawPuits, drawSemer } from "./drawMinigames";
+import {
+  drawArroser,
+  drawBecher,
+  drawCueillir,
+  drawDesherber,
+  drawPuits,
+  drawSemer,
+} from "./drawMinigames";
 
-export type GameGesture = Exclude<Gesture, "abri">;
+export type GameGesture = Exclude<Gesture, "abri" | "ramasser">;
 
 export interface ActiveGame {
   gesture: GameGesture;
@@ -40,12 +48,15 @@ export function createGame(gesture: GameGesture) {
       return as(createCueillir(Math.random), drawCueillir);
     case "puits":
       return as(createPuits(), drawPuits);
+    case "desherber":
+      return as(createDesherber(), drawDesherber);
   }
 }
 
 export function anchorOf(t: Target): Point {
   if (t.kind === "abri") return { x: MAP.abri.x, z: MAP.abri.z };
   if (t.kind === "puits") return { x: MAP.puits.x, z: MAP.puits.z };
+  if (t.kind === "foret") return MAP.forest[t.spot];
   const c = MAP.parcels.flatMap((p) => parcelCells(p.id)).find((x) => x.key === t.key);
   return c ? c.center : { ...MAP.spawn };
 }

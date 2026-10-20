@@ -10,6 +10,9 @@ import type { PotagerSave, Slot } from "./types";
 const first = parcelCells("p0")[0];
 const cell: Target = { kind: "cell", key: first.key };
 const equipped = () => withdrawTool(withdrawTool(createStarterSave(), "beche")!, "arrosoir")!;
+// sac équipé + serfouette en case 3
+const weeder = () => withdrawTool(equipped(), "serfouette")!;
+const SERFOUETTE = 3;
 const never = () => 0.999;
 // sac équipé : 0 graines, 1 bêche, 2 arrosoir
 const SEEDS = 0,
@@ -225,5 +228,63 @@ describe("actions", () => {
       never,
     );
     expect(waterLeft(low.save.inventory)).toBe(1);
+  });
+
+  it("désherbe avant de cueillir, sans toucher à la fleur", () => {
+    let s = act(act(weeder(), cell, BECHE), cell, SEEDS);
+    s = advanceGarden(s, 3_600_000);
+    s = { ...s, weeds: { [first.key]: { at: 0 } } };
+    expect(prepareAction(s, cell, SERFOUETTE)).toEqual({ gesture: "desherber" });
+    const after = act(s, cell, SERFOUETTE, "bien");
+    expect(after.weeds).toEqual({});
+    expect(after.cells[first.key].kind).toBe("plante");
+  });
+
+  it("réclame la serfouette en main", () => {
+    const s = { ...weeder(), weeds: { [first.key]: { at: 0 } } };
+    expect(prepareAction(s, cell, BECHE)).toEqual({
+      message: "Prends la serfouette en main (touches 1 à 6)",
+    });
+    expect(prepareAction({ ...equipped(), weeds: s.weeds }, cell, BECHE)).toEqual({
+      message: "Il te faut la serfouette (elle est à l'abri)",
+    });
+  });
+
+  it("fait repousser l'herbe d'un désherbage raté", () => {
+    const s = { ...weeder(), playTimeMs: 1000, weeds: { [first.key]: { at: 0 } } };
+    const after = act(s, cell, SERFOUETTE, "rate");
+    expect(after.weeds[first.key]).toEqual({ at: 61_000 });
+    expect(prepareAction(after, cell, BECHE)).toEqual({ gesture: "becher" });
+  });
+});
+
+describe("forêt", () => {
+  const spot = MAP.forest[0];
+  const withItem = (s: PotagerSave) => ({ ...s, forest: { 0: "champignon" as const } });
+
+  it("vise et ramasse un champignon", () => {
+    const s = withItem(createStarterSave());
+    const t = findTarget(s, { x: spot.x, z: spot.z + 0.6, dir: { x: 1, z: 0 } });
+    expect(t).toEqual({ kind: "foret", spot: 0 });
+    const r = applyAction(s, t!, "ramasser", { grade: "bien" }, 0, () => 0);
+    expect(r.save.forest).toEqual({});
+    expect(r.events).toEqual([{ kind: "graine", rarity: "commune" }]);
+  });
+
+  it("laisse l'objet en place sac plein", () => {
+    const full: (Slot | null)[] = Array.from({ length: 6 }, () => ({
+      kind: "flowers",
+      species: "tournesol",
+      color: "orange",
+      quality: "ordinaire",
+      count: 5,
+    }));
+    const s = { ...withItem(createStarterSave()), inventory: full };
+    expect(prepareAction(s, { kind: "foret", spot: 0 }, 0)).toEqual({
+      message: "Ton sac est plein",
+    });
+    expect(prepareAction(createStarterSave(), { kind: "foret", spot: 0 }, 0)).toEqual({
+      message: "Il n'y a plus rien ici",
+    });
   });
 });

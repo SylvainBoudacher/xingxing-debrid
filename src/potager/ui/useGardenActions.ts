@@ -6,6 +6,7 @@ import {
   REACH,
   standPoint,
   type ActionEvent,
+  type Gesture,
   type Target,
 } from "../core/actions";
 import { MAP } from "../core/catalog/map";
@@ -68,36 +69,14 @@ export function useGardenActions(
     return () => clearTimeout(id);
   }, [bubble]);
 
-  const start = useCallback(
-    (target: Target) => {
-      const s = host?.state();
-      if (!scene || !s) return;
-      pending.current = null;
-      const p = prepareAction(s, target, selectedRef.current);
-      if ("message" in p) return say(p.message);
-      scene.avatar.walkTo([]);
-      if (p.gesture === "abri") return setAbriOpen(true);
-      setGame({
-        gesture: p.gesture,
-        target,
-        anchor: anchorOf(target),
-        hand: selectedRef.current,
-        ...createGame(p.gesture),
-      });
-    },
-    [scene, host, say],
-  );
-
-  const finish = useCallback(
-    (r: MinigameResult) => {
-      const g = gameRef.current;
-      gameRef.current = null;
-      setGame(null);
-      if (!g || !host) return;
+  // applique un geste sur l'état courant (revalidé) et annonce ce qu'il a donné
+  const apply = useCallback(
+    (target: Target, gesture: Gesture, r: MinigameResult, hand: number) => {
+      if (!host) return;
       let events: ActionEvent[] = [];
       let changed = true;
       host.update((s) => {
-        const out = applyAction(s, g.target, g.gesture, r, g.hand, Math.random);
+        const out = applyAction(s, target, gesture, r, hand, Math.random);
         events = out.events;
         changed = out.save !== s;
         return out.save;
@@ -108,6 +87,39 @@ export function useGardenActions(
         else toast(`Nouvelle découverte ! ${flowerName(e.species, e.color)}`);
     },
     [host, say],
+  );
+
+  const start = useCallback(
+    (target: Target) => {
+      const s = host?.state();
+      if (!scene || !s) return;
+      pending.current = null;
+      const p = prepareAction(s, target, selectedRef.current);
+      if ("message" in p) return say(p.message);
+      scene.avatar.walkTo([]);
+      if (p.gesture === "abri") return setAbriOpen(true);
+      // ramasser en forêt se fait sans mini-jeu
+      if (p.gesture === "ramasser")
+        return apply(target, p.gesture, { grade: "bien" }, selectedRef.current);
+      setGame({
+        gesture: p.gesture,
+        target,
+        anchor: anchorOf(target),
+        hand: selectedRef.current,
+        ...createGame(p.gesture),
+      });
+    },
+    [scene, host, say, apply],
+  );
+
+  const finish = useCallback(
+    (r: MinigameResult) => {
+      const g = gameRef.current;
+      gameRef.current = null;
+      setGame(null);
+      if (g) apply(g.target, g.gesture, r, g.hand);
+    },
+    [apply],
   );
 
   const interceptClick = useCallback(

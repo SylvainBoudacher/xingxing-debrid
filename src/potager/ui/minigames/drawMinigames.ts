@@ -1,6 +1,7 @@
 import type { ArroserView } from "../../core/minigames/arroser";
 import type { BecherView } from "../../core/minigames/becher";
 import type { CueillirView } from "../../core/minigames/cueillir";
+import type { DesherberView } from "../../core/minigames/desherber";
 import type { PuitsView } from "../../core/minigames/puits";
 import type { SemerView } from "../../core/minigames/semer";
 
@@ -181,6 +182,38 @@ export function drawPuits(c: CanvasRenderingContext2D, v: PuitsView) {
   c.fillRect(250, 20, 14, 140);
   c.fillStyle = "#5a8ab8";
   c.fillRect(252, 158 - 136 * v.water, 10, 136 * v.water);
+}
+
+export function drawDesherber(c: CanvasRenderingContext2D, v: DesherberView) {
+  bg(c);
+  c.fillStyle = C.soil;
+  c.fillRect(90, 100, 90, 70);
+  const lift = v.progress * 26;
+  c.fillStyle = "#5a7a2a";
+  for (let i = 0; i < 5; i++) c.fillRect(120 + i * 6, 72 - lift - (i % 2) * 8, 4, 30);
+  if (lift > 8) {
+    c.strokeStyle = "#c8a878";
+    c.lineWidth = 1;
+    c.beginPath();
+    for (let i = 0; i < 4; i++) {
+      c.moveTo(126 + i * 5, 102 - lift);
+      c.lineTo(122 + i * 7, 114 - lift);
+    }
+    c.stroke();
+  }
+  const bx = 230,
+    by = 20,
+    bh = 140;
+  c.fillStyle = C.well;
+  c.fillRect(bx, by, 26, bh);
+  c.fillStyle = "rgba(122,176,90,.75)";
+  c.fillRect(bx + 2, by + bh * (1 - v.zone - v.halfZone), 22, bh * v.halfZone * 2);
+  c.fillStyle = C.gold;
+  c.fillRect(bx - 4, by + bh * (1 - v.cursor) - 2, 34, 4);
+  c.fillStyle = C.well;
+  c.fillRect(270, 20, 12, 140);
+  c.fillStyle = C.ok;
+  c.fillRect(272, 158 - 136 * v.progress, 8, 136 * v.progress);
 }
 
 export const GRADE_LABEL = {
