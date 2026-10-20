@@ -15,7 +15,8 @@ export const flowerName = (species: SpeciesId, color: ColorId) => {
 // Une entrée non découverte ne garde que sa rareté (pour le cadre).
 export function herbierView(save: PotagerSave) {
   const entries: HerbierItem[] = CATALOG_ENTRIES.map((e) =>
-    save.herbier[entryKey(e.species, e.color)]
+    // découverte seulement une fois l'éclosion montrée au joueur
+    save.herbier[entryKey(e.species, e.color)]?.announced
       ? {
           found: true,
           species: e.species,

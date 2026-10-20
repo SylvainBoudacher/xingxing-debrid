@@ -172,7 +172,8 @@ export function createPotagerScene(
 
   // une éclosion pas encore vue se joue dès que sa case est à l'écran
   function showBlooms() {
-    if (!garden) return;
+    // sans abonné (interface pas encore montée), l'éclosion attend : elle ne doit pas être perdue
+    if (!garden || !bloomListeners.size) return;
     for (const [key, mesh] of garden.flowers) {
       const c = lastSave.cells[key];
       if (c?.kind !== "plante" || c.seen || blooming.has(key)) continue;

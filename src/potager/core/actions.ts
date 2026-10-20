@@ -1,14 +1,17 @@
 import { MAP } from "./catalog/map";
 import { ROLL_HARVEST } from "./catalog/rarity";
 import { cellAt, parcelCells } from "./cells";
-import { stageOf, WET_MS } from "./growth";
+import { markSeen, stageOf, WET_MS } from "./growth";
+import type { ColorId } from "./catalog/colors";
+import type { SpeciesId } from "./catalog/species";
 import { addFlower, addSeed, hasTool, setWater, STACK, takeSeed, waterLeft } from "./inventory";
 import { rollRarity, rollSeed } from "./seeds";
 import type { Grade, Point, PotagerSave, Rarity, Slot } from "./types";
 
 export type Target = { kind: "cell"; key: string } | { kind: "abri" } | { kind: "puits" };
 export type Gesture = "becher" | "semer" | "arroser" | "cueillir" | "puits" | "abri";
-export type ActionEvent = { kind: "graine"; rarity: Rarity };
+export type ActionEvent =
+  { kind: "graine"; rarity: Rarity } | { kind: "decouverte"; species: SpeciesId; color: ColorId };
 
 export const REACH = 1.2;
 const AHEAD = 0.8;
@@ -160,6 +163,9 @@ export function applyAction(
       addFlower(save.inventory, { ...flower, quality: "ordinaire" });
     if (!inventory) return unchanged;
     const events: ActionEvent[] = [];
+    // une fleur cueillie sans avoir été vue est annoncée ici
+    const seen = markSeen(save, target.key);
+    if (seen.announce) events.push({ kind: "decouverte", ...seen.announce });
     // pas de tirage sans place : aucune graine n'est trouvée puis perdue
     if (seedRoom(inventory) && rng() < BONUS_SEED[grade]) {
       const seed = rollSeed(rollRarity(ROLL_HARVEST, rng), rng);
@@ -169,7 +175,10 @@ export function applyAction(
         events.push({ kind: "graine", rarity: seed.rarity });
       }
     }
-    return { save: withCell({ kind: "herbe" }, { inventory }), events };
+    return {
+      save: { ...withCell({ kind: "herbe" }, { inventory }), herbier: seen.save.herbier },
+      events,
+    };
   }
   return unchanged;
 }

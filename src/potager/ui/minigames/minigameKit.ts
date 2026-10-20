@@ -16,6 +16,8 @@ export interface ActiveGame {
   gesture: GameGesture;
   target: Target;
   anchor: Point;
+  // case du sac en main au lancement : changer de main pendant le jeu ne change rien
+  hand: number;
   // vue et dessin vont de pair : le type exact de la vue reste propre à chaque jeu
   game: Minigame<unknown>;
   draw: (c: CanvasRenderingContext2D, view: unknown) => void;

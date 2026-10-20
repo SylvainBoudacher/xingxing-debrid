@@ -14,7 +14,9 @@ import { cellAt } from "../core/cells";
 import { deposit, withdrawStack, withdrawTool } from "../core/inventory";
 import type { MinigameResult } from "../core/minigames/types";
 import { findPath } from "../core/path";
-import type { Point, PotagerSave, ToolId } from "../core/types";
+import type { Point, PotagerSave, Rarity, ToolId } from "../core/types";
+import { toast } from "sonner";
+import { flowerName } from "./herbierView";
 import { nearestWalkable } from "../core/walk";
 import type { PotagerScene } from "../render/createPotagerScene";
 import type { SimHost } from "../sim/simHost";
@@ -36,7 +38,7 @@ function targetAt(p: Point, parcels: readonly string[]): Target | null {
   return null;
 }
 
-const eventText = (e: ActionEvent) => `Graine ${RARITY_LABEL[e.rarity].toLowerCase()} trouvée !`;
+const seedText = (rarity: Rarity) => `Graine ${RARITY_LABEL[rarity].toLowerCase()} trouvée !`;
 
 // Espace ou clic sur le jardin : préparer l'action, jouer le mini-jeu, appliquer le résultat.
 export function useGardenActions(
@@ -70,11 +72,18 @@ export function useGardenActions(
     (target: Target) => {
       const s = host?.state();
       if (!scene || !s) return;
+      pending.current = null;
       const p = prepareAction(s, target, selectedRef.current);
       if ("message" in p) return say(p.message);
       scene.avatar.walkTo([]);
       if (p.gesture === "abri") return setAbriOpen(true);
-      setGame({ gesture: p.gesture, target, anchor: anchorOf(target), ...createGame(p.gesture) });
+      setGame({
+        gesture: p.gesture,
+        target,
+        anchor: anchorOf(target),
+        hand: selectedRef.current,
+        ...createGame(p.gesture),
+      });
     },
     [scene, host, say],
   );
@@ -86,12 +95,17 @@ export function useGardenActions(
       setGame(null);
       if (!g || !host) return;
       let events: ActionEvent[] = [];
+      let changed = true;
       host.update((s) => {
-        const out = applyAction(s, g.target, g.gesture, r, selectedRef.current, Math.random);
+        const out = applyAction(s, g.target, g.gesture, r, g.hand, Math.random);
         events = out.events;
+        changed = out.save !== s;
         return out.save;
       });
-      if (events.length) say(eventText(events[0]));
+      if (!changed) return say("La case a changé entre-temps");
+      for (const e of events)
+        if (e.kind === "graine") say(seedText(e.rarity));
+        else toast(`Nouvelle découverte ! ${flowerName(e.species, e.color)}`);
     },
     [host, say],
   );
@@ -134,7 +148,9 @@ export function useGardenActions(
       const usable = target && s && "gesture" in prepareAction(s, target, selectedRef.current);
       scene.setHighlight(usable ? target : null);
       const p = pending.current;
-      if (p && !pose.moving && near(pose, p.stand, ARRIVED)) {
+      // un panneau ou un mini-jeu ouvert entre-temps annule l'action prévue
+      if (p && lockedRef.current) pending.current = null;
+      else if (p && !pose.moving && near(pose, p.stand, ARRIVED)) {
         pending.current = null;
         start(p.target);
       }
@@ -166,7 +182,7 @@ export function useGardenActions(
       if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
       if (e.code === "Escape") return setAbriOpen(false);
       const digit = /^Digit([1-6])$/.exec(e.code);
-      if (digit) return setSelected(Number(digit[1]) - 1);
+      if (digit) return lockedRef.current || setSelected(Number(digit[1]) - 1);
       if (e.code !== "Space" || lockedRef.current) return;
       e.preventDefault();
       const s = host.state();
@@ -198,7 +214,7 @@ export function useGardenActions(
     withdrawTool: (id: ToolId) => transfer((s) => withdrawTool(s, id)),
     withdrawStack: (i: number) => transfer((s) => withdrawStack(s, i)),
     selected,
-    select: setSelected,
+    select: (i: number) => locked || setSelected(i),
     locked,
     interceptClick,
     cancelPending,

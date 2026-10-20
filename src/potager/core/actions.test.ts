@@ -100,6 +100,21 @@ describe("actions", () => {
     expect(s.inventory.some((x) => x?.kind === "flowers" && x.quality === "belle")).toBe(true);
   });
 
+  it("annonce une fleur cueillie avant d'avoir été montrée", () => {
+    let s = act(act(equipped(), cell, BECHE), cell, SEEDS);
+    s = advanceGarden(s, 3_600_000);
+    const c = s.cells[first.key];
+    if (c.kind !== "plante") throw new Error();
+    expect(c.seen).toBe(false);
+    const r = applyAction(s, cell, "cueillir", { grade: "bien" }, 0, never);
+    expect(r.events).toContainEqual({
+      kind: "decouverte",
+      species: c.seed.species,
+      color: c.seed.color,
+    });
+    expect(Object.values(r.save.herbier).every((e) => e.announced)).toBe(true);
+  });
+
   it("refuse de cueillir sac plein, sans rien perdre", () => {
     let s = equipped();
     s = act(act(s, cell, BECHE), cell, SEEDS);
