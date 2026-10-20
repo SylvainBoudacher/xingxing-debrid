@@ -144,3 +144,26 @@ export function signTex(text: string) {
     outlineCanvas(g, w, 11);
   });
 }
+
+// Abri de jardin : bardage, fenêtre avec râtelier d'outils, coffre, toit de tuiles brunes.
+export function abriTextures() {
+  const front = canvasTex(36, 32, (g, rng) => {
+    planks(g, rng, 36, 32);
+    dot(g, 3, 7, "#3a2414", 13, 13);
+    dot(g, 4, 8, "#c8b080", 1, 11);
+    dot(g, 8, 9, "#5a8ab8", 3, 6);
+    dot(g, 12, 9, "#9aa0a8", 2, 4);
+    dot(g, 12, 13, "#7a5434", 1, 7);
+    dot(g, 19, 16, "#6a4628", 12, 8);
+    dot(g, 19, 16, "#8a6a3a", 12, 2);
+    dot(g, 24, 19, "#e8c060", 2, 2);
+  });
+  const side = canvasTex(32, 32, (g, rng) => planks(g, rng, 32, 32));
+  const roof = canvasTex(48, 32, (g, rng) => {
+    dot(g, 0, 0, "#8a3a20", 48, 32);
+    for (let y = 0; y < 32; y += 4) dot(g, 0, y, y % 8 === 0 ? "#c8642e" : "#7a3018", 48, 2);
+    for (let i = 0; i < 80; i++)
+      dot(g, Math.floor(range(rng, 0, 48)), Math.floor(range(rng, 0, 32)), "#a04a28", 2, 1);
+  });
+  return { front, side, roof, gable: "#7a4e2c" };
+}

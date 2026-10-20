@@ -8,9 +8,9 @@ import {
 } from "../core/catalog/map";
 import type { PotagerSave } from "../core/types";
 import { avatarViews } from "../textures/avatar";
-import { cabaneTextures, etalTextures, signTex } from "../textures/buildings";
+import { abriTextures, cabaneTextures, etalTextures, signTex } from "../textures/buildings";
 import { bushTex, glowTex, treeTex, tuftTex } from "../textures/nature";
-import { abriTex, puitsTex } from "../textures/props";
+import { puitsTex } from "../textures/props";
 import { createRng, PPU, canvasTex, dot } from "../textures/pixel";
 import { PATH_GHOST, pathTex, soilTex, stoneTex } from "../textures/terrain";
 import { decal } from "./terrain";
@@ -25,8 +25,9 @@ interface BuildingLook {
   textures: { front: THREE.Texture; side: THREE.Texture; roof: THREE.Texture; gable: string };
   h: number;
   rise: number;
-  sign: string;
+  sign?: string;
   chimney: boolean;
+  lit?: boolean;
 }
 
 const LOOKS: Partial<Record<BuildingSlot["id"], () => BuildingLook>> = {
@@ -35,9 +36,9 @@ const LOOKS: Partial<Record<BuildingSlot["id"], () => BuildingLook>> = {
 };
 
 function building(
-  slot: BuildingSlot,
+  slot: Omit<BuildingSlot, "id">,
   look: BuildingLook,
-): { group: THREE.Group; lantern: Lantern } {
+): { group: THREE.Group; lantern?: Lantern } {
   const { w, d } = slot;
   const { textures: t, h, rise } = look;
   const g = new THREE.Group();
@@ -83,12 +84,17 @@ function building(
     c.castShadow = true;
     g.add(c);
   }
-  const sign = signTex(look.sign);
-  const img = sign.image as HTMLCanvasElement;
-  const sw = img.width / 12;
-  const signMesh = spriteMesh(sign, sw, (sw * img.height) / img.width);
-  signMesh.position.set(-w / 4, h * 0.72, d / 2 + 0.15);
-  g.add(signMesh);
+  if (look.sign) {
+    const sign = signTex(look.sign);
+    const img = sign.image as HTMLCanvasElement;
+    const sw = Math.min(img.width / 12, w / 2);
+    const sh = (sw * img.height) / img.width;
+    const signMesh = spriteMesh(sign, sw, sh);
+    signMesh.position.set(-w / 4, h - 0.12 - sh, d / 2 + 0.15);
+    g.add(signMesh);
+  }
+  g.position.set(slot.x, slot.y, slot.z);
+  if (look.lit === false) return { group: g };
 
   const light = new THREE.PointLight("#ffb860", 0, 4, 1.6);
   light.position.set(w / 2 - 0.1, h * 0.75, d / 2 + 0.6);
@@ -105,7 +111,6 @@ function building(
   glow.visible = false;
   g.add(light, glow);
 
-  g.position.set(slot.x, slot.y, slot.z);
   return { group: g, lantern: { light, glow } };
 }
 
@@ -152,7 +157,7 @@ export function buildPlaced(save: PotagerSave): { group: THREE.Group; lanterns: 
     if (!look || !save.buildings.includes(slot.id)) continue;
     const b = building(slot, look());
     group.add(b.group);
-    lanterns.push(b.lantern);
+    if (b.lantern) lanterns.push(b.lantern);
   }
   MAP.parcels.forEach((p, i) => {
     const owned = save.parcels.includes(p.id);
@@ -222,7 +227,7 @@ export function buildDecor(): {
   group: THREE.Group;
   trees: { spot: TreeSpot; mesh: THREE.Mesh }[];
   // abri et puits : cliquables
-  props: THREE.Mesh[];
+  props: THREE.Object3D[];
 } {
   const group = new THREE.Group();
   const treeTexs = [0, 1, 2, 3].map(treeTex);
@@ -234,12 +239,10 @@ export function buildDecor(): {
     group.add(mesh);
     return { spot, mesh };
   });
-  const abri = spriteMesh(abriTex(), 2.2, 2.08);
-  abri.position.set(
-    MAP.abri.x,
-    groundHeight(MAP.abri.x, MAP.abri.z),
-    MAP.abri.z + MAP.abri.d / 2 - 0.2,
-  );
+  const abri = building(
+    { ...MAP.abri, y: groundHeight(MAP.abri.x, MAP.abri.z) },
+    { textures: abriTextures(), h: 1.5, rise: 0.7, chimney: false, lit: false },
+  ).group;
   const puits = spriteMesh(puitsTex(), 1.7, 2.06);
   puits.position.set(MAP.puits.x, groundHeight(MAP.puits.x, MAP.puits.z), MAP.puits.z + 0.2);
   group.add(abri, puits);
@@ -281,10 +284,13 @@ export function buildDecor(): {
     dot(g, 0, 12, "#4a4a50", 32, 1);
   });
   for (const p of MAP.barrels) {
-    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.85, 14), [
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.85, 0.7), [
+      lambert(barrelTex),
       lambert(barrelTex),
       lambert(null, { color: "#7a5030" }),
       lambert(null),
+      lambert(barrelTex),
+      lambert(barrelTex),
     ]);
     b.castShadow = b.receiveShadow = true;
     b.position.set(p.x, 0.42, p.z);

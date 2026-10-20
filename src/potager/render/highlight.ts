@@ -17,7 +17,7 @@ export function createHighlight(scene: THREE.Scene) {
     frame.add(m);
     return m;
   });
-  const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 32), mat);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(0.9, 1, 4).rotateZ(Math.PI / 4), mat);
   ring.rotation.x = -Math.PI / 2;
   frame.visible = ring.visible = false;
   scene.add(frame, ring);
@@ -52,7 +52,7 @@ export function createHighlight(scene: THREE.Scene) {
     else {
       const rect = t.kind === "abri" ? MAP.abri : MAP.buildings.find((x) => x.id === t.kind)!;
       at = rect;
-      r = Math.max(rect.w, rect.d) * 0.62;
+      r = (Math.max(rect.w, rect.d) / 2 + 0.3) * Math.SQRT2;
     }
     ring.scale.setScalar(r);
     ring.position.set(at.x, groundHeight(at.x, at.z) + 0.03, at.z);
