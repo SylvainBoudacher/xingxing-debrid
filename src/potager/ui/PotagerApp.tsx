@@ -3,12 +3,14 @@ import type { Point } from "../core/types";
 import { hasWebgl } from "../render/webgl";
 import { AbriPanel } from "./AbriPanel";
 import { AvatarBubble } from "./AvatarBubble";
+import { HerbierPanel } from "./HerbierPanel";
 import { InventoryBar } from "./InventoryBar";
 import { MinigameOverlay } from "./minigames/MinigameOverlay";
 import { loadPotagerFont } from "./potagerFont";
 import { PotagerHud } from "./PotagerHud";
 import { PotagerToaster } from "./PotagerToaster";
 import { useAvatarControls } from "./useAvatarControls";
+import { useBloomAnnounce } from "./useBloomAnnounce";
 import { useFreeCamera } from "./useFreeCamera";
 import { useGardenActions } from "./useGardenActions";
 import { useHostState } from "./useHostState";
@@ -19,7 +21,20 @@ export default function PotagerApp() {
   const [webglOk] = useState(hasWebgl);
   const { scene, canvas, mode, failed, applyMode, host } = usePotagerSession(canvasRef, webglOk);
   const save = useHostState(host);
-  const garden = useGardenActions(scene, host);
+  const [herbierOpen, setHerbierOpen] = useState(false);
+  const garden = useGardenActions(scene, host, herbierOpen);
+  useBloomAnnounce(scene, host);
+
+  // H : ouvrir ou fermer l'Herbier ; Échap : le fermer
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+      if (e.code === "KeyH" && !garden.game) setHerbierOpen((o) => !o);
+      if (e.code === "Escape") setHerbierOpen(false);
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [garden.game]);
 
   useEffect(loadPotagerFont, []);
 
@@ -48,7 +63,13 @@ export default function PotagerApp() {
       ) : webglOk ? (
         <>
           <canvas ref={canvasRef} className="block h-full w-full" />
-          {scene && <PotagerHud mode={mode} onToggleMode={toggleMode} />}
+          {scene && (
+            <PotagerHud
+              mode={mode}
+              onToggleMode={toggleMode}
+              onHerbier={() => setHerbierOpen((o) => !o)}
+            />
+          )}
           {scene && save && (
             <InventoryBar
               inventory={save.inventory}
@@ -60,6 +81,9 @@ export default function PotagerApp() {
             <MinigameOverlay active={garden.game} project={project} onDone={garden.finish} />
           )}
           {scene && garden.bubble && <AvatarBubble text={garden.bubble} where={avatarOnScreen} />}
+          {save && herbierOpen && (
+            <HerbierPanel save={save} onClose={() => setHerbierOpen(false)} />
+          )}
           {save && garden.abriOpen && (
             <AbriPanel
               save={save}

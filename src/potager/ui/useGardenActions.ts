@@ -39,7 +39,12 @@ function targetAt(p: Point, parcels: readonly string[]): Target | null {
 const eventText = (e: ActionEvent) => `Graine ${RARITY_LABEL[e.rarity].toLowerCase()} trouvée !`;
 
 // Espace ou clic sur le jardin : préparer l'action, jouer le mini-jeu, appliquer le résultat.
-export function useGardenActions(scene: PotagerScene | null, host: SimHost | null) {
+export function useGardenActions(
+  scene: PotagerScene | null,
+  host: SimHost | null,
+  // un autre panneau (Herbier) est ouvert
+  paused: boolean,
+) {
   const [game, setGame] = useState<ActiveGame | null>(null);
   const [abriOpen, setAbriOpen] = useState(false);
   const [bubble, setBubble] = useState<{ text: string; id: number } | null>(null);
@@ -51,7 +56,7 @@ export function useGardenActions(scene: PotagerScene | null, host: SimHost | nul
     gameRef.current = game;
   });
   const pending = useRef<{ target: Target; stand: Point } | null>(null);
-  const locked = game !== null || abriOpen;
+  const locked = game !== null || abriOpen || paused;
 
   const say = useCallback((text: string) => setBubble({ text, id: Date.now() }), []);
 
@@ -162,7 +167,7 @@ export function useGardenActions(scene: PotagerScene | null, host: SimHost | nul
       if (e.code === "Escape") return setAbriOpen(false);
       const digit = /^Digit([1-6])$/.exec(e.code);
       if (digit) return setSelected(Number(digit[1]) - 1);
-      if (e.code !== "Space" || game || abriOpen) return;
+      if (e.code !== "Space" || lockedRef.current) return;
       e.preventDefault();
       const s = host.state();
       const target = s && findTarget(s, scene.avatar.pose());

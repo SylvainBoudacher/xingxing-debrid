@@ -1,7 +1,15 @@
-import { LocateFixed, Move } from "lucide-react";
+import { BookOpen, LocateFixed, Move } from "lucide-react";
 import type { CameraMode } from "../core/types";
 
-export function PotagerHud({ mode, onToggleMode }: { mode: CameraMode; onToggleMode: () => void }) {
+export function PotagerHud({
+  mode,
+  onToggleMode,
+  onHerbier,
+}: {
+  mode: CameraMode;
+  onToggleMode: () => void;
+  onHerbier: () => void;
+}) {
   const follow = mode === "follow";
   return (
     <>
@@ -32,6 +40,19 @@ export function PotagerHud({ mode, onToggleMode }: { mode: CameraMode; onToggleM
       >
         {follow ? <LocateFixed className="size-4" /> : <Move className="size-4" />}
         {follow ? "Caméra : suit l'avatar" : "Caméra : libre"}
+      </button>
+      <button
+        type="button"
+        onClick={onHerbier}
+        className="absolute top-8 right-6 flex cursor-pointer items-center gap-2 border-r-2 border-[#b8975a] px-4 py-2 text-lg font-semibold text-[#f6ecd2] transition-colors hover:text-white"
+        style={{
+          fontFamily: '"Cormorant Garamond", Georgia, serif',
+          textShadow: "0 2px 3px rgba(0,0,0,0.7)",
+          background: "linear-gradient(270deg, rgba(20,14,10,0.8), rgba(20,14,10,0))",
+        }}
+      >
+        <BookOpen className="size-4" />
+        Herbier (H)
       </button>
     </>
   );
