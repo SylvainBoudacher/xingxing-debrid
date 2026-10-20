@@ -1,3 +1,4 @@
+import { advanceClients } from "./economy/clients";
 import { advanceGarden } from "./growth";
 import { advanceNuisances } from "./nuisances";
 import type { PotagerSave } from "./types";
@@ -10,8 +11,11 @@ export function advancePlayTime(save: PotagerSave, elapsedMs: number): PotagerSa
   return { ...save, playTimeMs: save.playTimeMs + step };
 }
 
-// Un pas de simulation : gêneurs, puis pousse au temps de jeu du début du pas, puis le temps avance.
+// Un pas de simulation : gêneurs et clients, puis pousse au temps de jeu du début du pas, puis le temps avance.
 export function stepSim(save: PotagerSave, elapsedMs: number, rng: () => number): PotagerSave {
   const step = Math.min(MAX_STEP_MS, Math.max(0, elapsedMs));
-  return advancePlayTime(advanceGarden(advanceNuisances(save, step, rng), step), step);
+  return advancePlayTime(
+    advanceGarden(advanceClients(advanceNuisances(save, step, rng), rng), step),
+    step,
+  );
 }
