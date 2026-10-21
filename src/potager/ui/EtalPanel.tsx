@@ -28,6 +28,7 @@ export function EtalPanel({
 }) {
   const [hover, setHover] = useState<string | null>(null);
   const demand = save.client?.demand;
+  const floristServing = save.crew.fleuriste?.task?.gesture === "servir";
   const price = STALL_PRICES[save.stallLevel];
   return (
     <div
@@ -36,12 +37,15 @@ export function EtalPanel({
     >
       <PanelHeader title="Étal" onClose={onClose} />
       {demand && <ClientNote demand={demand} />}
+      {demand && floristServing && (
+        <p className="mb-3 text-base text-[#e8c060] italic">Le fleuriste sert ce client</p>
+      )}
       <StallBoard
         stall={save.stall}
         capacity={stallCapacity(save)}
         demand={demand}
         onUnstock={onUnstock}
-        onServe={onServe}
+        onServe={floristServing ? null : onServe}
         onHover={setHover}
       />
       <div className="mt-4 grid grid-cols-2 gap-4">

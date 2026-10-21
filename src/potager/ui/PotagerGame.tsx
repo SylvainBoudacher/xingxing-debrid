@@ -25,6 +25,9 @@ import { useFreeCamera } from "./useFreeCamera";
 import { useGardenActions } from "./useGardenActions";
 import { ENTER_S, useGameView } from "./useGameView";
 import { useHostState } from "./useHostState";
+import { usePlayerBusy } from "./usePlayerBusy";
+import { useStaff } from "./useStaff";
+import { useStaffAnnounce } from "./useStaffAnnounce";
 import { withView } from "./viewSave";
 
 // Interface du jeu, posée sur la scène du fond pendant qu'on joue.
@@ -47,6 +50,9 @@ export function PotagerGame({
   const [opening, setOpening] = useState<{ sachet: SachetId; seeds: Seed[] } | null>(null);
   const garden = useGardenActions(scene, host, herbierOpen || opening !== null);
   const eco = useEconomy(host, garden.say);
+  const staff = useStaff(host, garden.say);
+  usePlayerBusy(host, garden.game);
+  useStaffAnnounce(host);
   const [pop, setPop] = useState<{ gain: number; id: number } | null>(null);
   const busy = !!garden.game || garden.panel !== null || opening !== null;
   const closeOpening = useCallback(() => setOpening(null), []);
@@ -148,6 +154,7 @@ export function PotagerGame({
           save={save}
           garden={garden}
           eco={eco}
+          staff={staff}
           onServe={serve}
           onOpenSachet={(sachet, seeds) => setOpening({ sachet, seeds })}
         />

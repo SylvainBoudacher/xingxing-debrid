@@ -23,7 +23,8 @@ export function StallBoard({
   capacity: number;
   demand: Demand | undefined;
   onUnstock: (index: number) => void;
-  onServe: (index: number) => void;
+  // null : le fleuriste sert déjà ce client
+  onServe: ((index: number) => void) | null;
   onHover: (label: string | null) => void;
 }) {
   return (
@@ -60,13 +61,15 @@ export function StallBoard({
                     <span className="-mx-2 h-4 text-center text-[11px] leading-4 whitespace-nowrap text-[#e8c060]">
                       {match}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => onServe(i)}
-                      className={`w-full !px-0 !text-sm ${HD_BUTTON}`}
-                    >
-                      Servir
-                    </button>
+                    {onServe && (
+                      <button
+                        type="button"
+                        onClick={() => onServe(i)}
+                        className={`w-full !px-0 !text-sm ${HD_BUTTON}`}
+                      >
+                        Servir
+                      </button>
+                    )}
                   </>
                 )}
               </div>
