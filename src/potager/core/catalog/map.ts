@@ -77,6 +77,8 @@ export const MAP = {
     { id: "cabane", x: -15.5, z: -2.7, y: MIDDLE, w: 2.6, d: 2.2 },
     { id: "atelier", x: -6, z: -8, y: PLATEAU, w: 3.6, d: 2.8 },
     { id: "serre", x: 14, z: -9, y: PLATEAU, w: 4, d: 3 },
+    // maison des employés : à l'est, après le puits ; absente tant qu'elle n'est pas achetée
+    { id: "maison", x: 21.6, z: -2.6, y: MIDDLE, w: 3.2, d: 2.4 },
   ],
   parcels: [
     { id: "p0", rect: { x0: 0.6, x1: 7.4, z0: -1.9, z1: 1.7 }, y: MIDDLE },

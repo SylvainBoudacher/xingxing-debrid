@@ -22,6 +22,10 @@ import {
   type Client,
   type ForestItemKind,
   FOREST_KINDS,
+  STAFF_IDS,
+  type Hired,
+  type StaffId,
+  type Worker,
 } from "./types";
 import { MAP } from "./catalog/map";
 import { CHEST_SIZES, CLIENT_LOOKS, STALL_SIZES } from "./economy/catalog";
@@ -52,6 +56,9 @@ export function starterGarden(parcels: readonly ParcelId[]) {
     chestLevel: 0,
     client: null as Client | null,
     nextClientAt: 0,
+    staff: {} as Partial<Record<StaffId, Hired>>,
+    crew: {} as Partial<Record<StaffId, Worker>>,
+    playerBusy: null as string | null,
   };
 }
 
@@ -157,6 +164,30 @@ function parseCell(v: unknown): Cell | null {
   };
 }
 
+function parseStaff(v: unknown, parcels: readonly ParcelId[]): Partial<Record<StaffId, Hired>> {
+  if (!isObject(v)) return {};
+  const out: Partial<Record<StaffId, Hired>> = {};
+  for (const id of STAFF_IDS) {
+    const h = v[id];
+    if (
+      !isObject(h) ||
+      !Number.isInteger(h.level) ||
+      (h.level as number) < 1 ||
+      (h.level as number) > 5
+    )
+      continue;
+    out[id] = {
+      level: h.level as Hired["level"],
+      parcels: Array.isArray(h.parcels)
+        ? [...new Set(h.parcels.filter((p): p is ParcelId => parcels.includes(p as ParcelId)))]
+        : [],
+      maxRarity: isRarity(h.maxRarity) ? h.maxRarity : "commune",
+      active: h.active !== false,
+    };
+  }
+  return out;
+}
+
 // Champs ajoutés après la première sauvegarde : absents ou abîmés, ils reprennent leur valeur de départ.
 export function parseGarden(raw: Record<string, unknown>, parcels: readonly ParcelId[]) {
   const start = starterGarden(parcels);
@@ -223,6 +254,10 @@ export function parseGarden(raw: Record<string, unknown>, parcels: readonly Parc
     chestLevel: parseLevel(raw.chestLevel, CHEST_SIZES),
     client: parseClient(raw.client),
     nextClientAt: isNumber(raw.nextClientAt) ? Math.max(0, raw.nextClientAt) : 0,
+    staff: parseStaff(raw.staff, parcels),
+    // l'équipe repart de la maison à chaque chargement
+    crew: start.crew,
+    playerBusy: start.playerBusy,
   };
 }
 

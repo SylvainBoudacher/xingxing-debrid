@@ -3,7 +3,7 @@ import type { SpeciesId } from "./catalog/species";
 
 export type Rarity = "commune" | "rare" | "epique" | "legendaire";
 
-export const BUILDING_IDS = ["etal", "cabane", "atelier", "serre"] as const;
+export const BUILDING_IDS = ["etal", "cabane", "atelier", "serre", "maison"] as const;
 export type BuildingId = (typeof BUILDING_IDS)[number];
 
 export type ParcelId = string;
@@ -103,6 +103,62 @@ export interface Client {
   look: number;
 }
 
+// ordre d'embauche
+export const STAFF_IDS = ["arroseur", "jardinier", "cueilleur", "fleuriste"] as const;
+export type StaffId = (typeof STAFF_IDS)[number];
+
+// maxRarity : jardinier seulement ; active : fleuriste seulement
+export interface Hired {
+  level: 1 | 2 | 3 | 4 | 5;
+  parcels: ParcelId[];
+  maxRarity: Rarity;
+  active: boolean;
+}
+
+export interface Carry {
+  seeds: Seed[];
+  flowers: FlowerStack[];
+}
+
+export type StaffGesture =
+  | "arroser"
+  | "chasser"
+  | "desherber"
+  | "becher"
+  | "semer"
+  | "cueillir"
+  | "servir"
+  | "remplir"
+  | "deposer"
+  | "prendre";
+
+export type StaffStatus =
+  | { kind: "idle" }
+  | { kind: "pause" }
+  | { kind: "work"; gesture: StaffGesture; cell: string }
+  | { kind: "puits" }
+  | { kind: "abri" }
+  | { kind: "etal" }
+  | { kind: "noSeeds" }
+  | { kind: "chestFull" };
+
+export interface StaffTask {
+  gesture: StaffGesture;
+  cell?: string;
+  stand: Point;
+}
+
+// doneAt : temps de jeu de fin du geste en cours, null en marche ou au repos
+export interface Worker {
+  pos: Point;
+  path: Point[];
+  task: StaffTask | null;
+  doneAt: number | null;
+  carry: Carry;
+  water: number;
+  status: StaffStatus;
+}
+
 export interface PotagerSave {
   version: 1;
   playTimeMs: number;
@@ -125,4 +181,9 @@ export interface PotagerSave {
   chestLevel: number;
   client: Client | null;
   nextClientAt: number;
+  staff: Partial<Record<StaffId, Hired>>;
+  // état d'exécution de l'équipe : jamais écrit sur disque (storedSave)
+  crew: Partial<Record<StaffId, Worker>>;
+  // case (ou "etal") du mini-jeu en cours du joueur
+  playerBusy: string | null;
 }

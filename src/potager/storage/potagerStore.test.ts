@@ -32,7 +32,7 @@ vi.mock("@tauri-apps/plugin-store", () => {
 });
 
 const { loadPotager, savePotager } = await import("./potagerStore");
-const { createStarterSave } = await import("../core/save");
+const { createStarterSave, storedSave } = await import("../core/save");
 
 beforeEach(() => {
   registry.clear();
@@ -46,7 +46,7 @@ describe("stockage du Potager", () => {
     const { save, recovered } = await loadPotager();
     expect(recovered).toBe(false);
     expect(save).toEqual(createStarterSave());
-    expect(registry.get("potager.json")?.get("save")).toEqual(createStarterSave());
+    expect(registry.get("potager.json")?.get("save")).toEqual(storedSave(createStarterSave()));
   });
 
   it("relit ce qui a été écrit", async () => {
@@ -56,14 +56,14 @@ describe("stockage du Potager", () => {
   });
 
   it("met de côté une sauvegarde illisible", async () => {
-    await savePotager({ version: 9 } as never);
+    registry.set("potager.json", new Map([["save", { version: 9 }]]));
     const { save, recovered } = await loadPotager();
     expect(recovered).toBe(true);
     expect(save).toEqual(createStarterSave());
     const backups = [...registry.keys()].filter((k) => k.startsWith("potager.corrupt-"));
     expect(backups).toHaveLength(1);
     expect(registry.get(backups[0])?.get("save")).toEqual({ version: 9 });
-    expect(registry.get("potager.json")?.get("save")).toEqual(createStarterSave());
+    expect(registry.get("potager.json")?.get("save")).toEqual(storedSave(createStarterSave()));
   });
 
   it("démarre une partie si le fichier n'existe pas encore", async () => {
@@ -71,7 +71,7 @@ describe("stockage du Potager", () => {
     const { save, recovered } = await loadPotager();
     expect(recovered).toBe(false);
     expect(save).toEqual(createStarterSave());
-    expect(registry.get("potager.json")?.get("save")).toEqual(createStarterSave());
+    expect(registry.get("potager.json")?.get("save")).toEqual(storedSave(createStarterSave()));
   });
 
   it("met de côté un fichier qui n'est pas du JSON", async () => {

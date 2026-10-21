@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { LazyStore } from "@tauri-apps/plugin-store";
-import { createStarterSave, parseSave } from "../core/save";
+import { createStarterSave, parseSave, storedSave } from "../core/save";
 import type { PotagerSave } from "../core/types";
 
 const KEY = "save";
@@ -13,7 +13,7 @@ function stamp(d = new Date()): string {
 }
 
 export async function savePotager(save: PotagerSave): Promise<void> {
-  await store.set(KEY, save);
+  await store.set(KEY, storedSave(save));
   await store.save();
 }
 

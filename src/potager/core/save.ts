@@ -1,5 +1,6 @@
 import { MAP } from "./catalog/map";
 import { parseGarden, starterGarden } from "./saveGarden";
+import { foldCarry } from "./staff/carry";
 import {
   BUILDING_IDS,
   type BuildingId,
@@ -50,4 +51,12 @@ export function parseSave(raw: unknown): PotagerSave | null {
     parcels: [...parcels],
     ...parseGarden(raw, parcels),
   };
+}
+
+// Ce qui s'écrit sur disque : ce que portent les employés passe au coffre, leur état est oublié.
+export function storedSave(save: PotagerSave): Omit<PotagerSave, "crew" | "playerBusy"> {
+  const { crew, playerBusy: _busy, ...rest } = save;
+  let chest = save.chest;
+  for (const w of Object.values(crew)) if (w) chest = foldCarry(chest, w.carry);
+  return { ...rest, chest };
 }

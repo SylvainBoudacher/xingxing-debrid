@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { MAP } from "./catalog/map";
-import { createStarterSave, parseSave } from "./save";
+import { CHEST_SIZES } from "./economy/catalog";
+import { createStarterSave, parseSave, storedSave } from "./save";
+import type { Carry, PotagerSave, Worker } from "./types";
 
 describe("sauvegarde du Potager", () => {
   it("crée une partie de départ", () => {
@@ -226,6 +228,108 @@ describe("sauvegarde du Potager", () => {
       expect(rack({ id: "beche", level: 2 })).toEqual({ id: "beche", level: 2 });
       expect(rack({ id: "beche", level: 3 })).toEqual({ id: "beche" });
       expect(rack({ id: "beche", level: "2" })).toEqual({ id: "beche" });
+    });
+  });
+  describe("employés", () => {
+    const base = () => createStarterSave();
+    const hired = { level: 3, parcels: ["p0"], maxRarity: "rare", active: false };
+    const worker = (carry: Carry): Worker => ({
+      pos: { x: 0, z: 0 },
+      path: [],
+      task: null,
+      doneAt: null,
+      carry,
+      water: 5,
+      status: { kind: "idle" },
+    });
+
+    it("démarre sans maison ni employé", () => {
+      const s = base();
+      expect(s).toMatchObject({ staff: {}, crew: {}, playerBusy: null });
+      expect(s.buildings).not.toContain("maison");
+    });
+
+    it("complète une sauvegarde d'avant les employés", () => {
+      const { staff, crew, playerBusy, ...old } = base();
+      expect(parseSave(old)).toMatchObject({ staff: {}, crew: {}, playerBusy: null });
+    });
+
+    it("relit un employé embauché", () => {
+      expect(parseSave({ ...base(), staff: { arroseur: hired } })?.staff).toEqual({
+        arroseur: hired,
+      });
+    });
+
+    it("ignore un niveau illisible", () => {
+      for (const level of [0, 6, "2"])
+        expect(parseSave({ ...base(), staff: { arroseur: { ...hired, level } } })?.staff).toEqual(
+          {},
+        );
+    });
+
+    it("nettoie les réglages abîmés", () => {
+      const staff = parseSave({
+        ...base(),
+        staff: { arroseur: { level: 2, parcels: ["p0", "p1", "zz"], maxRarity: "x" } },
+      })?.staff;
+      expect(staff).toEqual({
+        arroseur: { level: 2, parcels: ["p0"], maxRarity: "commune", active: true },
+      });
+    });
+
+    it("relit un jardinier sans arroseur", () => {
+      const staff = { jardinier: { ...hired, active: true } };
+      expect(parseSave({ ...base(), staff })?.staff).toEqual(staff);
+    });
+
+    it("ne relit jamais l'équipe en cours ni le mini-jeu du joueur", () => {
+      const raw = {
+        ...base(),
+        crew: { arroseur: worker({ seeds: [], flowers: [] }) },
+        playerBusy: "p0:0:0",
+      };
+      expect(parseSave(raw)).toMatchObject({ crew: {}, playerBusy: null });
+    });
+
+    it("range au coffre ce que portent les employés, même coffre plein", () => {
+      const filler = Array.from({ length: CHEST_SIZES[0] }, (_, i) => ({
+        kind: "flowers" as const,
+        species: "tournesol" as const,
+        color: "yellow" as const,
+        quality: i % 2 ? ("belle" as const) : ("ordinaire" as const),
+        count: 1 + i,
+      }));
+      const rare = {
+        rarity: "rare" as const,
+        species: "rosetremiere" as const,
+        color: "red" as const,
+      };
+      const roses = {
+        kind: "flowers" as const,
+        species: "rosetremiere" as const,
+        color: "red" as const,
+        quality: "ordinaire" as const,
+        count: 4,
+      };
+      const s: PotagerSave = {
+        ...base(),
+        chest: [
+          ...filler.slice(0, CHEST_SIZES[0] - 1),
+          { kind: "seeds", rarity: "rare", seeds: [rare] },
+        ],
+        crew: {
+          cueilleur: worker({ seeds: [], flowers: [roses] }),
+          jardinier: worker({ seeds: [rare, rare, rare], flowers: [] }),
+        },
+        playerBusy: "etal",
+      };
+      const out = storedSave(s);
+      expect("crew" in out).toBe(false);
+      expect("playerBusy" in out).toBe(false);
+      expect(out.chest).toHaveLength(CHEST_SIZES[0] + 1);
+      expect(out.chest[CHEST_SIZES[0]]).toEqual(roses);
+      const seeds = out.chest.find((c) => c.kind === "seeds");
+      expect(seeds?.kind === "seeds" && seeds.seeds).toHaveLength(4);
     });
   });
 });
