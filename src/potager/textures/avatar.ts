@@ -1,3 +1,4 @@
+import type { StaffId } from "../core/types";
 import * as THREE from "three";
 import {
   BACK_HEAD,
@@ -89,6 +90,50 @@ export const CLIENT_PALETTES: Record<string, string>[] = [
     P: "#665a40",
   },
 ];
+
+// une tenue par métier, distincte de l'avatar et des clients
+export const STAFF_PALETTES: Record<StaffId, Record<string, string>> = {
+  arroseur: {
+    ...PAL,
+    h: "#6a4a2a",
+    H: "#4a321c",
+    r: "#3a7ac8",
+    b: "#3a6aa8",
+    B: "#284c7c",
+    p: "#5a4a3a",
+    P: "#403428",
+  },
+  jardinier: {
+    ...PAL,
+    h: "#2e2018",
+    H: "#1a120c",
+    r: "#e8c050",
+    b: "#5a8a3a",
+    B: "#406628",
+    p: "#7a5a3a",
+    P: "#58402a",
+  },
+  cueilleur: {
+    ...PAL,
+    h: "#d89a4a",
+    H: "#a8702e",
+    r: "#e8dcc0",
+    b: "#c86a8a",
+    B: "#9a4a66",
+    p: "#4a4a5a",
+    P: "#343440",
+  },
+  fleuriste: {
+    ...PAL,
+    h: "#8a2a2a",
+    H: "#5e1a1a",
+    r: "#f2ecd8",
+    b: "#3a8a6a",
+    B: "#28644c",
+    p: "#e6d8b8",
+    P: "#b8a888",
+  },
+};
 
 const pad = (rows: string[]) => rows.map((r) => r.padEnd(16, "."));
 

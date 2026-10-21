@@ -1,8 +1,10 @@
 import * as THREE from "three";
 import {
   groundHeight,
+  maisonSign,
   MAP,
   parcelSign,
+  parcelStake,
   type BuildingSlot,
   type Rect,
   type TreeSpot,
@@ -14,9 +16,12 @@ import {
   abriTextures,
   cabaneTextures,
   etalTextures,
+  maisonTextures,
   priceSignTex,
   signTex,
+  stakeTex,
 } from "../textures/buildings";
+import { MAISON_PRICE } from "../core/staff/catalog";
 import { bushTex, glowTex, treeTex, tuftTex } from "../textures/nature";
 import { puitsTex } from "../textures/props";
 import { createRng, PPU, canvasTex, dot } from "../textures/pixel";
@@ -41,6 +46,20 @@ interface BuildingLook {
 const LOOKS: Partial<Record<BuildingSlot["id"], () => BuildingLook>> = {
   etal: () => ({ textures: etalTextures(), h: 2.4, rise: 1.3, sign: "Fleurs", chimney: true }),
   cabane: () => ({ textures: cabaneTextures(), h: 2, rise: 1.1, sign: "Graines", chimney: false }),
+  maison: () => ({
+    textures: maisonTextures(),
+    h: 2.3,
+    rise: 1.2,
+    sign: "Employés",
+    chimney: true,
+  }),
+};
+
+const standing = (tex: THREE.Texture, at: { x: number; z: number }) => {
+  const img = tex.image as HTMLCanvasElement;
+  const m = spriteMesh(tex, img.width / 12, img.height / 12);
+  m.position.set(at.x, groundHeight(at.x, at.z), at.z);
+  return m;
 };
 
 function building(
@@ -167,9 +186,12 @@ export function buildPlaced(save: PotagerSave): { group: THREE.Group; lanterns: 
     group.add(b.group);
     if (b.lantern) lanterns.push(b.lantern);
   }
+  if (!save.buildings.includes("maison"))
+    group.add(standing(priceSignTex(MAISON_PRICE), maisonSign()));
   MAP.parcels.forEach((p, i) => {
     const owned = save.parcels.includes(p.id);
-    if (owned) group.add(ownedParcel(p.rect, p.y, 300 + i));
+    if (owned)
+      group.add(ownedParcel(p.rect, p.y, 300 + i), standing(stakeTex(), parcelStake(p.id)));
     else {
       const tex = priceSignTex(PARCEL_PRICE[p.id]);
       const img = tex.image as HTMLCanvasElement;

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Target } from "../core/actions";
-import { groundHeight, MAP, parcelSign } from "../core/catalog/map";
+import { groundHeight, maisonSign, MAP, parcelSign, parcelStake } from "../core/catalog/map";
 import { parcelCells } from "../core/cells";
 
 const GOLD = "#f2d27a";
@@ -24,7 +24,15 @@ export function createHighlight(scene: THREE.Scene) {
   let key = "";
 
   function set(t: Target | null) {
-    const k = t ? (t.kind === "cell" ? t.key : t.kind === "foret" ? `foret${t.spot}` : t.kind) : "";
+    const k = t
+      ? t.kind === "cell"
+        ? t.key
+        : t.kind === "foret"
+          ? `foret${t.spot}`
+          : t.kind === "panneau" || t.kind === "piquet"
+            ? `${t.kind}${t.parcel}`
+            : t.kind
+      : "";
     if (k === key) return;
     key = k;
     frame.visible = ring.visible = false;
@@ -49,6 +57,12 @@ export function createHighlight(scene: THREE.Scene) {
     if (t.kind === "puits") r = MAP.puits.r + 0.25;
     else if (t.kind === "panneau") {
       at = parcelSign(t.parcel);
+      r = 0.9;
+    } else if (t.kind === "piquet") {
+      at = parcelStake(t.parcel);
+      r = 0.5;
+    } else if (t.kind === "chantier") {
+      at = maisonSign();
       r = 0.9;
     } else if (t.kind === "foret") at = MAP.forest[t.spot];
     else {

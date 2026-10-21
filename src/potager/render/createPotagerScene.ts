@@ -9,6 +9,7 @@ import { createBloom } from "./bloom";
 import { buildGarden, disposeGarden, type GardenView } from "./garden";
 import { gardenKey } from "./gardenKey";
 import { createClients } from "./clients";
+import { createStaff } from "./staff";
 import { createHighlight } from "./highlight";
 import { crowTex } from "../textures/pests";
 import { createParticles } from "./particles";
@@ -100,6 +101,7 @@ export function createPotagerScene(
   const bloom = createBloom(scene);
   const highlight = createHighlight(scene);
   const clients = createClients(scene);
+  const staff = createStaff(scene);
   let garden: GardenView | null = null;
   let gKey = "";
   let lastSave = init;
@@ -133,6 +135,7 @@ export function createPotagerScene(
     else avatar.unstick();
     lastSave = save;
     clients.sync(save.client);
+    staff.sync(save);
     for (const k of blooming) {
       const c = save.cells[k];
       if (c?.kind !== "plante" || c.seen) blooming.delete(k);
@@ -234,6 +237,7 @@ export function createPotagerScene(
     garden?.crows.forEach((m) => ((m.material as THREE.MeshLambertMaterial).map = wing));
     highlight.update(t);
     clients.update(dt);
+    staff.update(dt);
     if (rig.mode() === "follow") rig.follow(p);
     rig.update(dt);
     const { position, look, distance } = rig.pose();
@@ -338,6 +342,7 @@ export function createPotagerScene(
       bloom.dispose();
       highlight.dispose();
       clients.dispose();
+      staff.dispose();
       disposeTree(scene);
       // hors de l'arbre : la frame d'avatar inactive et la shadow map
       sprite.textures.forEach((t) => t.dispose());

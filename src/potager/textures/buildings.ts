@@ -135,6 +135,77 @@ export function cabaneTextures() {
   return { front, side, roof, gable: "#8a6038" };
 }
 
+// Maison des employés : colombages sur crépi ocre, porte bleue, deux fenêtres fleuries.
+export function maisonTextures() {
+  const beams = (g: CanvasRenderingContext2D, w: number, h: number) => {
+    for (const x of [0, Math.floor(w / 2) - 1, w - 2]) dot(g, x, 0, "#5a3820", 2, h - 8);
+    dot(g, 0, 0, "#5a3820", w, 2);
+    dot(g, 0, Math.floor((h - 8) / 2), "#5a3820", w, 2);
+  };
+  const front = canvasTex(52, 40, (g, rng) => {
+    dot(g, 0, 0, "#e0b878", 52, 40);
+    for (let i = 0; i < 60; i++)
+      dot(
+        g,
+        Math.floor(range(rng, 0, 51)),
+        Math.floor(range(rng, 2, 31)),
+        pick(rng, ["#d4a868", "#ecc890"]),
+        2,
+        1,
+      );
+    bricks(g, 52, 32, 40, "#7a6a5a", "#948474");
+    beams(g, 52, 40);
+    dot(g, 20, 14, "#3a2414", 12, 18);
+    dot(g, 21, 15, "#3a6a9a", 10, 17);
+    dot(g, 21, 15, "#5a8aba", 10, 2);
+    dot(g, 29, 24, "#e8c050", 1, 2);
+    for (const x of [5, 38]) {
+      dot(g, x, 8, "#3a2414", 10, 9);
+      dot(g, x + 1, 9, "#6ab0c0", 8, 7);
+      dot(g, x + 4, 9, "#3a2414", 1, 7);
+      dot(g, x, 17, "#6a4426", 10, 2);
+      dot(g, x + 1, 16, "#e0503e", 2, 1);
+      dot(g, x + 6, 16, "#f2c03a", 2, 1);
+    }
+  });
+  const side = canvasTex(40, 40, (g, rng) => {
+    dot(g, 0, 0, "#d8b070", 40, 40);
+    for (let i = 0; i < 40; i++)
+      dot(
+        g,
+        Math.floor(range(rng, 0, 39)),
+        Math.floor(range(rng, 2, 31)),
+        pick(rng, ["#c8a060", "#e4c088"]),
+        2,
+        1,
+      );
+    bricks(g, 40, 32, 40, "#6a5a4a");
+    beams(g, 40, 40);
+  });
+  const roof = canvasTex(64, 40, (g, rng) => {
+    for (let y = 0; y < 40; y += 5) {
+      const off = (y / 5) % 2 ? 3 : 0;
+      for (let x = -off; x < 64; x += 6) {
+        dot(g, x, y, pick(rng, ["#4a5a6a", "#56687a", "#3e4e5e"]), 6, 5);
+        dot(g, x, y, "#7a8c9c", 5, 1);
+      }
+      dot(g, 0, y + 4, "#2a3440", 64, 1);
+    }
+  });
+  return { front, side, roof, gable: "#d0a868" };
+}
+
+// Petit piquet planté au bord d'une parcelle possédée, avec un fanion.
+export function stakeTex() {
+  return canvasTex(10, 20, (g) => {
+    dot(g, 4, 3, "#6a4628", 2, 17);
+    dot(g, 5, 3, "#8a6038", 1, 17);
+    dot(g, 6, 3, "#3a8a6a", 3, 4);
+    dot(g, 6, 3, "#5aaa8a", 3, 1);
+    outlineCanvas(g, 10, 20);
+  });
+}
+
 export function signTex(text: string) {
   const w = textWidth(text) + 8;
   return canvasTex(w, 11, (g) => {
