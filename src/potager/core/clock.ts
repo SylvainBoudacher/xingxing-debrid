@@ -1,6 +1,7 @@
 import { advanceClients } from "./economy/clients";
 import { advanceGarden } from "./growth";
 import { advanceNuisances } from "./nuisances";
+import { advanceStaff } from "./staff/crew";
 import type { PotagerSave } from "./types";
 
 // une veille de la machine app ouverte ne doit pas faire sauter des heures de jeu
@@ -11,11 +12,14 @@ export function advancePlayTime(save: PotagerSave, elapsedMs: number): PotagerSa
   return { ...save, playTimeMs: save.playTimeMs + step };
 }
 
-// Un pas de simulation : gêneurs et clients, puis pousse au temps de jeu du début du pas, puis le temps avance.
+// Un pas de simulation : gêneurs, clients et employés, puis pousse au temps de jeu du début du pas, puis le temps avance.
 export function stepSim(save: PotagerSave, elapsedMs: number, rng: () => number): PotagerSave {
   const step = Math.min(MAX_STEP_MS, Math.max(0, elapsedMs));
   return advancePlayTime(
-    advanceGarden(advanceClients(advanceNuisances(save, step, rng), rng), step),
+    advanceGarden(
+      advanceStaff(advanceClients(advanceNuisances(save, step, rng), rng), step, rng),
+      step,
+    ),
     step,
   );
 }
