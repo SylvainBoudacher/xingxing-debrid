@@ -9,6 +9,7 @@ import { FOREST_ROLL } from "./forest";
 import { hasWeed } from "./nuisances";
 import { rollRarity, rollSeed } from "./seeds";
 import type {
+  Cell,
   Demand,
   FlowerStack,
   Grade,
@@ -209,6 +210,23 @@ export function applyToCell(
   return { ...save, cells: { ...save.cells, [key]: wet } };
 }
 
+// semis sur une case bêchée, partagé par le joueur et le jardinier
+export function sowCell(save: PotagerSave, key: string, seed: Seed, grade: Grade): PotagerSave {
+  const c = save.cells[key];
+  if (c?.kind !== "bechee") return save;
+  const plant: Cell = {
+    kind: "plante",
+    seed,
+    progress: 0,
+    loose: c.loose,
+    sowGrade: grade,
+    wetUntil: 0,
+    wetGrade: "rate",
+    seen: true,
+  };
+  return { ...save, cells: { ...save.cells, [key]: plant } };
+}
+
 // Cueillette d'une fleur épanouie, partagée par le joueur et le cueilleur : la case repasse en herbe.
 // announce : la fleur est montrée (joueur) ; sinon l'Herbier attend son annonce (orphanDiscoveries).
 export function harvestCell(
@@ -294,25 +312,12 @@ export function applyAction(
     return { save: next, events: [] };
   }
   const c = save.cells[target.key];
-  const withCell = (cell: typeof c, extra: Partial<PotagerSave> = {}) => ({
-    ...save,
-    ...extra,
-    cells: { ...save.cells, [target.key]: cell },
-  });
-
   if (gesture === "semer" && c.kind === "bechee") {
     const taken = takeSeed(save.inventory, selectedSlot)!;
-    const plant = {
-      kind: "plante" as const,
-      seed: taken.seed,
-      progress: 0,
-      loose: c.loose,
-      sowGrade: grade,
-      wetUntil: 0,
-      wetGrade: "rate" as const,
-      seen: true,
+    return {
+      save: { ...sowCell(save, target.key, taken.seed, grade), inventory: taken.inv },
+      events: [],
     };
-    return { save: withCell(plant, { inventory: taken.inv }), events: [] };
   }
 
   if (gesture === "cueillir" && c.kind === "plante") {

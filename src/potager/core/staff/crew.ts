@@ -11,12 +11,13 @@ import {
 } from "../types";
 import { isWalkable } from "../walk";
 import { ARROSEUR } from "./arroseur";
+import { JARDINIER } from "./jardinier";
 import { EMPTY_CARRY } from "./carry";
 import { CAN_SIZE } from "./catalog";
 import { gestureMs, rollStaffGrade, staffSpeed } from "./grade";
 import { isTask, statusOf, type Trade } from "./tasks";
 
-const TRADES: Partial<Record<StaffId, Trade>> = { arroseur: ARROSEUR };
+const TRADES: Partial<Record<StaffId, Trade>> = { arroseur: ARROSEUR, jardinier: JARDINIER };
 const MAX_TASKS = 20;
 const UNGRADED = new Set(["remplir", "chasser", "deposer", "prendre"]);
 
