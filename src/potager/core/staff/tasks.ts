@@ -26,10 +26,13 @@ export interface Trade {
   ): { save: PotagerSave; worker: Worker } | null;
 }
 
-// cases des parcelles possédées et confiées à cet employé
+// cases des parcelles possédées et confiées à cet employé, sauf celle du mini-jeu du joueur
 export function assignedCells(save: PotagerSave, id: StaffId): CellSlot[] {
   const parcels = save.staff[id]?.parcels ?? [];
-  return parcels.filter((p) => save.parcels.includes(p)).flatMap((p) => parcelCells(p));
+  return parcels
+    .filter((p) => save.parcels.includes(p))
+    .flatMap((p) => parcelCells(p))
+    .filter((c) => c.key !== save.playerBusy);
 }
 
 export const isAssigned = (save: PotagerSave, id: StaffId, key: string) =>

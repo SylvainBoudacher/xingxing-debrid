@@ -8,7 +8,7 @@ import {
   type StaffId,
 } from "../../core/types";
 import { HD_BUTTON } from "../hdButton";
-import { levelLine, parcelNumber, statusLabel } from "../staffView";
+import { levelLine, nextLevelLine, parcelNumber, statusLabel } from "../staffView";
 
 const PREV_LABEL: Partial<Record<StaffId, string>> = {
   jardinier: "l'arroseur",
@@ -75,6 +75,9 @@ export function StaffCard({
       {h && (
         <div className="flex flex-col gap-2">
           <p className="text-[#c8b890]">{levelLine(h.level)}</p>
+          {nextLevelLine(h.level) && (
+            <p className="text-sm text-[#a89870] italic">Ensuite : {nextLevelLine(h.level)}</p>
+          )}
           {h.level < MAX_LEVEL ? (
             <Price
               label="Niveau suivant"

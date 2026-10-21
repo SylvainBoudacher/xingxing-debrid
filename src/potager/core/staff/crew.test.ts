@@ -135,3 +135,17 @@ describe("arroseur", () => {
     expect(out.crew.arroseur?.water).toBe(1);
   });
 });
+
+describe("le joueur passe avant", () => {
+  it("l'arroseur arrose les autres cases pendant le mini-jeu du joueur", () => {
+    const s = village({ cells: dry(P0.slice(0, 4)), staff: { arroseur: hired() } });
+    const nearest = run(s, 1).crew.arroseur!.task!.cell!;
+    const out = run(s, 60, STEP, (x) => ({ ...x, playerBusy: nearest }));
+    expect(isWet(out, nearest)).toBe(false);
+    expect(
+      P0.slice(0, 4)
+        .filter((k) => k !== nearest)
+        .every((k) => isWet(out, k)),
+    ).toBe(true);
+  });
+});

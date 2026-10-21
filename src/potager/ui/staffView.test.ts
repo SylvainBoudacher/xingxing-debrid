@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { levelLine, statusLabel } from "./staffView";
+import { floristServing, levelLine, nextLevelLine, statusLabel } from "./staffView";
 
 describe("libellés des employés", () => {
   it("décrit le repos et les attentes", () => {
@@ -30,5 +30,22 @@ describe("libellés des employés", () => {
   it("résume un niveau", () => {
     expect(levelLine(1)).toBe("Niveau 1 : 60 % de vitesse, 40 % de Bien");
     expect(levelLine(5)).toBe("Niveau 5 : 100 % de vitesse, 100 % de Bien");
+  });
+});
+
+describe("fleuriste à l'étal", () => {
+  const save = (task: unknown, doneAt: number | null) =>
+    ({ crew: { fleuriste: { task, doneAt } } }) as never;
+
+  it("n'occupe l'étal que pendant son geste", () => {
+    const servir = { gesture: "servir", stand: { x: 0, z: 0 } };
+    expect(floristServing(save(servir, null))).toBe(false);
+    expect(floristServing(save(servir, 123))).toBe(true);
+    expect(floristServing(save(null, null))).toBe(false);
+  });
+
+  it("annonce le gain du niveau suivant", () => {
+    expect(nextLevelLine(1)).toBe("Niveau 2 : 70 % de vitesse, 55 % de Bien");
+    expect(nextLevelLine(5)).toBeNull();
   });
 });

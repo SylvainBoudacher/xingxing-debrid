@@ -7,6 +7,7 @@ import { StallBoard } from "./etal/StallBoard";
 import { HD_BUTTON } from "./hdButton";
 import { PANEL_STYLE } from "./hdPanel";
 import { PanelHeader } from "./PanelHeader";
+import { floristServing } from "./staffView";
 import { useState } from "react";
 
 const HINT = "Clique une fleur de ton sac pour la mettre en vente";
@@ -28,7 +29,7 @@ export function EtalPanel({
 }) {
   const [hover, setHover] = useState<string | null>(null);
   const demand = save.client?.demand;
-  const floristServing = save.crew.fleuriste?.task?.gesture === "servir";
+  const florist = floristServing(save);
   const price = STALL_PRICES[save.stallLevel];
   return (
     <div
@@ -37,7 +38,7 @@ export function EtalPanel({
     >
       <PanelHeader title="Étal" onClose={onClose} />
       {demand && <ClientNote demand={demand} />}
-      {demand && floristServing && (
+      {demand && florist && (
         <p className="mb-3 text-base text-[#e8c060] italic">Le fleuriste sert ce client</p>
       )}
       <StallBoard
@@ -45,7 +46,7 @@ export function EtalPanel({
         capacity={stallCapacity(save)}
         demand={demand}
         onUnstock={onUnstock}
-        onServe={floristServing ? null : onServe}
+        onServe={florist ? null : onServe}
         onHover={setHover}
       />
       <div className="mt-4 grid grid-cols-2 gap-4">

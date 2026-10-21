@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parcelCells } from "../cells";
 import type { PotagerSave } from "../types";
-import { advanceStaff } from "./crew";
+import { advanceStaff, newWorker } from "./crew";
 import { hired, P0, plant, seedOf, village } from "./testkit";
 
 const rng = () => 0.3;
@@ -98,5 +98,19 @@ describe("jardinier", () => {
     const out = run(s, 300);
     expect(count(out, "bechee")).toBe(P0.length);
     for (const k of Object.keys(p1)) expect(out.cells[k].kind).toBe("herbe");
+  });
+});
+
+describe("rareté maximale baissée en cours de route", () => {
+  it("ne sème pas des graines portées au-dessus de la limite et les rapporte au coffre", () => {
+    const rares = seedOf("rare", 4);
+    let s = jardinier({}, 5, "commune" as never);
+    s = { ...s, crew: { jardinier: { ...newWorker(), carry: { seeds: rares, flowers: [] } } } };
+    const out = run(s, 400);
+    const sown = P0.map((k) => out.cells[k]).filter((c) => c.kind === "plante");
+    expect(sown).toHaveLength(0);
+    const chest = out.chest.find((c) => c.kind === "seeds" && c.rarity === "rare");
+    expect(chest?.kind === "seeds" && chest.seeds).toHaveLength(4);
+    expect(out.crew.jardinier?.carry.seeds).toEqual([]);
   });
 });
