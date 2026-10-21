@@ -8,7 +8,17 @@ import { addFlower, addSeed, hasTool, setWater, STACK, takeSeed, waterLeft } fro
 import { FOREST_ROLL } from "./forest";
 import { hasWeed } from "./nuisances";
 import { rollRarity, rollSeed } from "./seeds";
-import type { Grade, ParcelId, Point, PotagerSave, Rarity, Slot } from "./types";
+import type {
+  Demand,
+  FlowerStack,
+  Grade,
+  ParcelId,
+  Point,
+  PotagerSave,
+  Rarity,
+  Seed,
+  Slot,
+} from "./types";
 
 export type Target =
   | { kind: "cell"; key: string }
@@ -172,7 +182,12 @@ export function toolCells(save: PotagerSave, key: string, dir: Point, hand: numb
   return [key, ...near];
 }
 
-function applyToCell(save: PotagerSave, key: string, gesture: Gesture, grade: Grade): PotagerSave {
+export function applyToCell(
+  save: PotagerSave,
+  key: string,
+  gesture: Gesture,
+  grade: Grade,
+): PotagerSave {
   if (gesture === "desherber") {
     const weeds = { ...save.weeds };
     // racine cassée : l'herbe revient sur la même case une minute plus tard
@@ -192,6 +207,40 @@ function applyToCell(save: PotagerSave, key: string, gesture: Gesture, grade: Gr
   if (c.kind !== "plante") return save;
   const wet = { ...c, wetUntil: save.playTimeMs + WET_MS, wetGrade: grade };
   return { ...save, cells: { ...save.cells, [key]: wet } };
+}
+
+// Cueillette d'une fleur épanouie, partagée par le joueur et le cueilleur : la case repasse en herbe.
+// announce : la fleur est montrée (joueur) ; sinon l'Herbier attend son annonce (orphanDiscoveries).
+export function harvestCell(
+  save: PotagerSave,
+  key: string,
+  grade: Grade,
+  rng: () => number,
+  seedRoom: boolean,
+  announce: boolean,
+): { save: PotagerSave; flower: FlowerStack; seed: Seed | null; announce: Demand | null } | null {
+  const c = save.cells[key];
+  if (c?.kind !== "plante" || stageOf(c.progress) !== 4) return null;
+  const flower: FlowerStack = {
+    kind: "flowers",
+    species: c.seed.species,
+    color: c.seed.color,
+    quality: grade === "parfait" ? "belle" : "ordinaire",
+    count: 1,
+  };
+  const seen = announce ? markSeen(save, key) : { save, announce: null };
+  const seed =
+    seedRoom && rng() < BONUS_SEED[grade] ? rollSeed(rollRarity(ROLL_HARVEST, rng), rng) : null;
+  return {
+    save: {
+      ...save,
+      herbier: seen.save.herbier,
+      cells: { ...save.cells, [key]: { kind: "herbe" } },
+    },
+    flower,
+    seed,
+    announce: seen.announce,
+  };
 }
 
 const seedRoom = (inv: (Slot | null)[]) =>
@@ -274,23 +323,16 @@ export function applyAction(
       addFlower(save.inventory, { ...flower, quality }) ??
       addFlower(save.inventory, { ...flower, quality: "ordinaire" });
     if (!inventory) return unchanged;
-    const events: ActionEvent[] = [];
-    // une fleur cueillie sans avoir été vue est annoncée ici
-    const seen = markSeen(save, target.key);
-    if (seen.announce) events.push({ kind: "decouverte", ...seen.announce });
     // pas de tirage sans place : aucune graine n'est trouvée puis perdue
-    if (seedRoom(inventory) && rng() < BONUS_SEED[grade]) {
-      const seed = rollSeed(rollRarity(ROLL_HARVEST, rng), rng);
-      const added = addSeed(inventory, seed);
-      if (added) {
-        inventory = added;
-        events.push({ kind: "graine", rarity: seed.rarity });
-      }
+    const h = harvestCell(save, target.key, grade, rng, seedRoom(inventory), true)!;
+    const events: ActionEvent[] = [];
+    if (h.announce) events.push({ kind: "decouverte", ...h.announce });
+    const added = h.seed && addSeed(inventory, h.seed);
+    if (added) {
+      inventory = added;
+      events.push({ kind: "graine", rarity: h.seed!.rarity });
     }
-    return {
-      save: { ...withCell({ kind: "herbe" }, { inventory }), herbier: seen.save.herbier },
-      events,
-    };
+    return { save: { ...h.save, inventory }, events };
   }
   return unchanged;
 }
