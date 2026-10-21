@@ -74,7 +74,7 @@ export function desherberArt() {
     }
     // la touffe tremble quand on tire au bon endroit
     const shake = inside && v.progress < 1 ? Math.round(Math.sin(now / 30)) : 0;
-    blit(c, WEED(), WX - 12 + shake, base - 15, 2);
+    blit(c, WEED(), WX - 14 + shake, base - 19, 2);
     if (inside && Math.random() < 0.25) fx.burst(WX, GROUND, 2, CLODS, { speed: 20, up: 25 });
     fx.draw(c, now);
 
@@ -93,6 +93,6 @@ export function desherberArt() {
     const fill = pulled.h * v.progress;
     rect(c, pulled.x, pulled.y + pulled.h - fill, pulled.w, fill, C.good);
     rect(c, pulled.x, pulled.y + pulled.h - fill, pulled.w, 1, "#c8f0a0");
-    blit(c, WEED(), P.x - 1, P.y - 12);
+    blit(c, WEED(), P.x - 2, P.y - 14);
   };
 }

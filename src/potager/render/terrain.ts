@@ -1,7 +1,15 @@
 import * as THREE from "three";
 import { MAP, type Rect } from "../core/catalog/map";
 import { PPU } from "../textures/pixel";
-import { cliffFace, grassTop, pathTex, shimmerTex, stoneTex } from "../textures/terrain";
+import {
+  cliffFace,
+  foamTex,
+  grassTop,
+  pathTex,
+  sandTex,
+  shimmerTex,
+  stoneTex,
+} from "../textures/terrain";
 import { lambert } from "./sprite";
 
 const px = (u: number) => Math.round(u * PPU);
@@ -13,22 +21,30 @@ function block(
   y1: number,
   z0: number,
   z1: number,
-  stone: boolean,
+  kind: "grass" | "stone" | "sand",
   seed: number,
 ) {
   const w = x1 - x0,
     h = y1 - y0,
     d = z1 - z0;
+  const sand = kind === "sand";
   const side = (a: number, b: number, s: number) =>
-    stone ? stoneTex(px(a), px(b), s) : cliffFace(px(a), px(b), s);
-  const top = stone ? stoneTex(px(w), px(d), seed) : grassTop(px(w), px(d), seed);
+    sand
+      ? lambert(null, { color: "#b89a62" })
+      : lambert(kind === "stone" ? stoneTex(px(a), px(b), s) : cliffFace(px(a), px(b), s));
+  const top =
+    kind === "stone"
+      ? stoneTex(px(w), px(d), seed)
+      : sand
+        ? sandTex(px(w), px(d), seed)
+        : grassTop(px(w), px(d), seed);
   const mats = [
-    lambert(side(d, h, seed + 1)),
-    lambert(side(d, h, seed + 2)),
+    side(d, h, seed + 1),
+    side(d, h, seed + 2),
     lambert(top),
     lambert(null, { color: "#2a1a10" }),
-    lambert(side(w, h, seed + 3)),
-    lambert(side(w, h, seed + 4)),
+    side(w, h, seed + 3),
+    side(w, h, seed + 4),
   ];
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats);
   m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
@@ -62,7 +78,16 @@ export function buildTerrain() {
   const group = new THREE.Group();
   MAP.terraces.forEach((t, i) =>
     group.add(
-      block(t.rect.x0, t.rect.x1, t.bottom, t.top, t.rect.z0, t.rect.z1, false, 11 + i * 10),
+      block(
+        t.rect.x0,
+        t.rect.x1,
+        t.bottom,
+        t.top,
+        t.rect.z0,
+        t.rect.z1,
+        t.sand ? "sand" : "grass",
+        11 + i * 10,
+      ),
     ),
   );
 
@@ -78,7 +103,7 @@ export function buildTerrain() {
           s.from + k * rise,
           -4,
           -4 + (s.steps + 1 - k) * depth,
-          true,
+          "stone",
           90 + k,
         ),
       );
@@ -110,6 +135,23 @@ export function buildTerrain() {
   ripples.position.set(0, MAP.water.y + 0.02, MAP.water.zFrom + 20);
   group.add(water, ripples);
 
+  const width = 68;
+  const shoreZ = MAP.water.zFrom;
+  const foamTexture = foamTex();
+  foamTexture.repeat.set(width / 4, 1);
+  const foam = new THREE.Mesh(
+    new THREE.PlaneGeometry(width, 1.5),
+    new THREE.MeshBasicMaterial({
+      map: foamTexture,
+      transparent: true,
+      alphaTest: 0.3,
+      depthWrite: false,
+    }),
+  );
+  foam.rotation.x = -Math.PI / 2;
+  foam.position.set(0, MAP.water.y + 0.03, shoreZ + 0.6);
+  group.add(foam);
+
   const wood = new THREE.MeshLambertMaterial({ color: "#7a5434" });
   const fence = (x0: number, x1: number) => {
     for (let x = x0; x <= x1; x += 1.6) {
@@ -128,5 +170,11 @@ export function buildTerrain() {
   fence(-30, -11.6);
   fence(-8.6, 30);
 
-  return { group, shimmer };
+  return {
+    group,
+    tick(t: number) {
+      shimmer.offset.set(t * 0.01, Math.sin(t * 0.4) * 0.02);
+      foam.position.z = shoreZ + 0.6 + Math.sin(t * 0.7) * 0.25;
+    },
+  };
 }

@@ -12,6 +12,7 @@ export interface Terrace {
   rect: Rect;
   top: number;
   bottom: number;
+  sand?: boolean;
 }
 
 export interface Stair {
@@ -57,11 +58,11 @@ const SHORE = -3;
 
 // Les terrasses débordent des bornes : la caméra bornée ne doit jamais voir le vide.
 export const MAP = {
-  bounds: { x0: -24, x1: 24, z0: -14, z1: 8 },
+  bounds: { x0: -24, x1: 24, z0: -14, z1: 11 },
   terraces: [
     { rect: { x0: -34, x1: 34, z0: -4, z1: 4.6 }, top: MIDDLE, bottom: SHORE },
     { rect: { x0: -34, x1: 34, z0: -34, z1: -4 }, top: PLATEAU, bottom: SHORE },
-    { rect: { x0: -34, x1: 34, z0: 4.6, z1: 8.5 }, top: SHORE, bottom: -7 },
+    { rect: { x0: -34, x1: 34, z0: 4.6, z1: 7.8 }, top: MIDDLE, bottom: -1.2, sand: true },
   ],
   stairs: [{ x0: -11, x1: -9.4, zFoot: -1.5, from: MIDDLE, to: PLATEAU, steps: 5 }],
   paths: [
@@ -70,7 +71,7 @@ export const MAP = {
     { rect: { x0: -15.6, x1: -14.6, z0: -1.6, z1: 2.1 }, y: MIDDLE },
     { rect: { x0: -9, x1: 18, z0: -5.6, z1: -4.6 }, y: PLATEAU },
   ],
-  water: { y: -3.4, zFrom: 8.5 },
+  water: { y: -0.45, zFrom: 7.8 },
   buildings: [
     { id: "etal", x: -5.3, z: -2.7, y: MIDDLE, w: 3.6, d: 2.6 },
     { id: "cabane", x: -15.5, z: -2.7, y: MIDDLE, w: 2.6, d: 2.2 },

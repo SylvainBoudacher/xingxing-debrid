@@ -219,12 +219,11 @@ export function createPotagerScene(
     const p = avatar.update(dt);
     const py = groundHeight(p.x, p.z);
     walkT = p.moving ? walkT + dt : 0;
-    const vertical = Math.abs(p.dir.z) > Math.abs(p.dir.x);
-    const view = sprite.views[vertical ? (p.dir.z < 0 ? "up" : "down") : "side"];
+    const view = sprite.views[p.view];
     const step = Math.floor(walkT / STEP_FRAME_S) % view.walk.length;
     const map = p.moving ? view.walk[step] : view.idle;
     sprite.mesh.position.set(p.x, py, p.z);
-    sprite.mesh.scale.x = vertical ? 1 : p.facing;
+    sprite.mesh.scale.x = p.view === "side" ? p.facing : 1;
     const mat = sprite.mesh.material as THREE.MeshLambertMaterial;
     if (mat.map !== map) mat.map = map;
     fadeTrees(p, py, dt);
@@ -245,7 +244,7 @@ export function createPotagerScene(
     camera.lookAt(...look);
     sun.target.position.set(look[0], 0, look[2]);
     sun.position.copy(sun.target.position).add(SUN_OFFSET);
-    terrain.shimmer.offset.set(t * 0.01, Math.sin(t * 0.4) * 0.02);
+    terrain.tick(t);
     placed?.lanterns.forEach(
       (x) =>
         (x.light.intensity = lanternsOn ? 3 + Math.sin(t * 7) * 0.4 + Math.sin(t * 13) * 0.3 : 0),

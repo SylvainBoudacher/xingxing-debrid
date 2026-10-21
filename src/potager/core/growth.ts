@@ -20,12 +20,17 @@ const FIRST_STAGE = 0.25;
 export const stageOf = (progress: number): 0 | 1 | 2 | 3 | 4 =>
   progress >= 1 ? 4 : (Math.min(3, Math.floor(progress * 4)) as 0 | 1 | 2 | 3);
 
-type Plant = Extract<Cell, { kind: "plante" }>;
+export type Plant = Extract<Cell, { kind: "plante" }>;
+
+function speedOf(c: Plant, wet: boolean): number {
+  let speed = 1 / GROW_MS[c.seed.rarity];
+  if (wet) speed *= WET_SPEED[c.wetGrade];
+  if (c.loose) speed *= LOOSE_SPEED;
+  return speed;
+}
 
 function grow(c: Plant, stepMs: number, now: number): Plant {
-  let speed = 1 / GROW_MS[c.seed.rarity];
-  if (now < c.wetUntil) speed *= WET_SPEED[c.wetGrade];
-  if (c.loose) speed *= LOOSE_SPEED;
+  const speed = speedOf(c, now < c.wetUntil);
   let progress = c.progress,
     left = stepMs;
   if (progress < FIRST_STAGE) {
@@ -36,6 +41,26 @@ function grow(c: Plant, stepMs: number, now: number): Plant {
     left -= toStage;
   }
   return { ...c, progress: Math.min(1, progress + left * speed) };
+}
+
+// durée de pousse restante à vitesse constante, sans tenir compte des herbes
+function finishMs(c: Plant, wet: boolean): number {
+  const speed = speedOf(c, wet);
+  const first =
+    c.progress < FIRST_STAGE
+      ? ((FIRST_STAGE - c.progress) * SOW_FIRST_STAGE[c.sowGrade]) / speed
+      : 0;
+  return first + (1 - Math.max(c.progress, FIRST_STAGE)) / speed;
+}
+
+// Temps de jeu avant l'éclosion, à la vitesse actuelle (humidité qui s'éteint comprise).
+export function bloomEtaMs(c: Plant, now: number, weed: number): number {
+  if (c.progress >= 1) return 0;
+  const wetMs = Math.max(0, c.wetUntil - now) * weed;
+  if (wetMs <= 0) return finishMs(c, false) / weed;
+  const wetFinish = finishMs(c, true);
+  if (wetFinish <= wetMs) return wetFinish / weed;
+  return (wetMs + finishMs(grow(c, wetMs, now), false)) / weed;
 }
 
 // Fait pousser les plantes ; une éclosion inscrit l'entrée dans l'Herbier, à annoncer plus tard.

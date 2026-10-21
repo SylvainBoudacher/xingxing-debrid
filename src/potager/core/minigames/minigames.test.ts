@@ -137,37 +137,53 @@ describe("désherber", () => {
 });
 
 describe("ruban", () => {
-  const onKnot = (g: Minigame<RubanView>, skipAfter = 2) => {
+  const onKnot = (g: Minigame<RubanView>, presses: boolean[] = [true, true, true]) => {
     let pressed = 0;
-    return run(g, 2.4, (v) => {
+    return run(g, 5, (v) => {
       const diff = Math.abs(v.angle - v.knot);
-      if (pressed < skipAfter && v.pass === pressed && Math.min(diff, 2 * Math.PI - diff) < 0.09) {
+      if (v.pass === pressed && presses[pressed] && Math.min(diff, 2 * Math.PI - diff) < 0.09) {
         tap(g, "action");
         pressed++;
-      }
+      } else if (v.pass === pressed && !presses[pressed] && v.angle > 6) pressed++;
     });
   };
 
-  it("parfait avec deux appuis pile sur le nœud", () => {
+  it("parfait avec trois appuis pile sur le nœud", () => {
     expect(onKnot(createRuban(() => 0.5))?.grade).toBe("parfait");
   });
 
-  it("raté sans aucun appui, en au plus 2,4 s", () => {
+  it("parfait avec deux tours validés sur trois", () => {
+    expect(
+      onKnot(
+        createRuban(() => 0.5),
+        [true, false, true],
+      )?.grade,
+    ).toBe("parfait");
+  });
+
+  it("bien avec un seul tour validé", () => {
+    expect(
+      onKnot(
+        createRuban(() => 0.5),
+        [false, true, false],
+      )?.grade,
+    ).toBe("bien");
+  });
+
+  it("raté sans aucun appui, en au plus 5 s", () => {
     expect(
       run(
         createRuban(() => 0.5),
-        2.4,
+        5,
       )?.grade,
     ).toBe("rate");
   });
 
-  it("bien avec un seul passage réussi", () => {
-    expect(
-      onKnot(
-        createRuban(() => 0.5),
-        1,
-      )?.grade,
-    ).toBe("bien");
+  it("le nœud n'est jamais dans le premier quart du tour", () => {
+    for (const r of [0, 0.5, 0.999]) {
+      const v = createRuban(() => r).view();
+      expect(v.knot).toBeGreaterThanOrEqual(Math.PI / 2 + 0.45 - 1e-9);
+    }
   });
 
   it("ignore un appui pendant la pause", () => {

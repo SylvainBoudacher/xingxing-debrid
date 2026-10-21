@@ -3,6 +3,10 @@ import type { Point } from "./types";
 import { nearestWalkable, type Walkable } from "./walk";
 
 export const AVATAR_SPEED = 4.5;
+// marge avant de changer de vue : en diagonale pure, l'arrondi ferait alterner haut et côté
+const VIEW_SWITCH = 1.2;
+
+export type AvatarView = "up" | "down" | "side";
 
 export interface AvatarPose {
   x: number;
@@ -12,6 +16,7 @@ export interface AvatarPose {
   facing: 1 | -1;
   // direction unitaire du dernier déplacement (vers la caméra au départ)
   dir: Point;
+  view: AvatarView;
 }
 
 export interface AvatarMotion {
@@ -33,6 +38,7 @@ export function createAvatarMotion(
   let { x, z } = place(start);
   let facing: 1 | -1 = 1;
   let dir: Point = { x: 0, z: 1 };
+  let view: AvatarView = "down";
   let moving = false;
   let input = { x: 0, z: 0 };
   let path: Point[] = [];
@@ -40,7 +46,13 @@ export function createAvatarMotion(
   const face = (dx: number) => {
     if (dx) facing = dx < 0 ? -1 : 1;
   };
-  const pose = (): AvatarPose => ({ x, z, moving, facing, dir });
+  const pose = (): AvatarPose => ({ x, z, moving, facing, dir, view });
+  const updateView = () => {
+    const ax = Math.abs(dir.x),
+      az = Math.abs(dir.z);
+    const vertical = view === "side" ? az > ax * VIEW_SWITCH : az * VIEW_SWITCH >= ax;
+    view = vertical ? (dir.z < 0 ? "up" : "down") : "side";
+  };
 
   return {
     pose,
@@ -89,6 +101,7 @@ export function createAvatarMotion(
       if (moving) {
         const len = Math.hypot(x - x0, z - z0);
         dir = { x: (x - x0) / len, z: (z - z0) / len };
+        updateView();
       }
       return pose();
     },

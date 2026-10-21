@@ -3,7 +3,7 @@ import type { BuildingId, Point } from "./types";
 
 export type Walkable = (x: number, z: number) => boolean;
 
-const MIDDLE_Z: [number, number] = [-3.6, 4.2];
+const MIDDLE_Z: [number, number] = [-3.6, 7.4];
 const PLATEAU_Z: [number, number] = [MAP.bounds.z0 + 0.5, -4.7];
 const BUILDING_PAD = 0.3;
 const BARREL_R = 0.45;

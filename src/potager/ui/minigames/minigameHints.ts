@@ -51,7 +51,7 @@ export const HINTS: Record<GameGesture, Hint> = {
   },
   servir: {
     title: "Nouer le ruban",
-    goal: "Appuie quand l'aiguille passe sur le nœud, deux tours de suite.",
+    goal: "Appuie quand l'aiguille passe sur le nœud, sur trois tours. Deux réussis donnent le bonus de vente.",
     keys: SPACE_OR_CLICK,
   },
 };

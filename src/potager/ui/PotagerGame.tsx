@@ -14,6 +14,7 @@ import { HerbierPanel } from "./HerbierPanel";
 import { InventoryBar } from "./InventoryBar";
 import { MinigameOverlay } from "./minigames/MinigameOverlay";
 import { loadPotagerFont } from "./potagerFont";
+import { PlantInfoPanel } from "./PlantInfoPanel";
 import { PotagerHud } from "./PotagerHud";
 import { PotagerToaster } from "./PotagerToaster";
 import { SachetOpening } from "./sachets/SachetOpening";
@@ -129,6 +130,7 @@ export function PotagerGame({
       {garden.game && (
         <MinigameOverlay active={garden.game} project={project} onDone={garden.finish} />
       )}
+      <PlantInfoPanel scene={scene} host={host} hidden={busy || herbierOpen} />
       {garden.bubble && <AvatarBubble text={garden.bubble} where={avatarOnScreen} />}
       {save?.client && !busy && !herbierOpen && (
         <AvatarBubble

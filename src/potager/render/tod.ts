@@ -19,12 +19,12 @@ const PHASES: Record<DayPhase, Lighting> = {
   soir: { phase: "soir", sun: "#ffd8a0", sunIntensity: 2.6, hemi: 1.1, fog: "#c9b892", ...DAY },
   nuit: {
     phase: "nuit",
-    sun: "#8aa0d8",
-    sunIntensity: 0.6,
-    hemi: 0.45,
-    fog: "#2a3048",
-    sky: "#4a5a88",
-    ground: "#1a1420",
+    sun: "#a8bce8",
+    sunIntensity: 1.3,
+    hemi: 0.95,
+    fog: "#34405e",
+    sky: "#7080b0",
+    ground: "#3a3040",
     lanterns: true,
   },
 };

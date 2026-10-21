@@ -16,6 +16,8 @@ export const PEST_PAL: Record<string, string> = {
   a: "#8a5a2a",
   A: "#5a3a1a",
   c: "#a8763a",
+  t: "#e05ac0",
+  T: "#9a2a88",
 };
 
 function sprite(rows: string[]): THREE.Texture {
@@ -36,19 +38,36 @@ const cached = (key: string, rows: () => string[]) => {
   return t;
 };
 
-// touffe hirsute aux épis jaunâtres
+// chardon hirsute aux têtes violettes, pour trancher sur la verdure
 export const WEED_ROWS = [
-  "...y....y...",
-  "..gy.g..yg..",
-  "..g..g.g.g..",
-  ".gG.gG.gGg..",
-  ".gG.gGgG.Gg.",
-  "gGG.GGgG.GG.",
-  "gGGgGGGGgGG.",
-  ".GGGGGGGGGG.",
+  "..tt....tt....",
+  ".tTt...tTt.tt.",
+  "..g.....g.tTt.",
+  "..g..g..g..g..",
+  ".gG.gG.gGg.g..",
+  ".gG.gGgG.Gg.g.",
+  "gGG.GGgG.GGgG.",
+  "gGGgGGGGgGGGG.",
+  ".GGGGGGGGGGGG.",
+  "..GGGGGGGGGG..",
 ];
-
 export const weedTex = () => cached("weed", () => WEED_ROWS);
+
+// enchevêtrement posé à plat qui couvre la case envahie
+export const weedPatchTex = () =>
+  cached("weedPatch", () => {
+    const rows: string[] = [];
+    for (let y = 0; y < 16; y++) {
+      let row = "";
+      for (let x = 0; x < 16; x++) {
+        const edge = Math.min(x, y, 15 - x, 15 - y);
+        const h = (x * 7 + y * 13 + x * y) % 11;
+        row += edge === 0 && h % 2 ? "." : h === 0 ? "t" : h < 4 ? "G" : h < 6 ? "A" : ".";
+      }
+      rows.push(row);
+    }
+    return rows;
+  });
 
 const CROW_BODY = [
   "......kk....",

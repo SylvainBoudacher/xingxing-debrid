@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceGarden, markSeen, stageOf } from "./growth";
+import { advanceGarden, bloomEtaMs, markSeen, stageOf, type Plant } from "./growth";
 import { createStarterSave } from "./save";
 import { entryKey } from "./seeds";
 import type { Cell, PotagerSave, Seed } from "./types";
@@ -87,5 +87,33 @@ describe("pousse", () => {
     const { save, keys } = withCells([plant({ progress: 0.3 })]);
     const s = advanceGarden({ ...save, crows: { [keys[0]]: { leaveAt: 1e9 } } }, 300_000);
     expect(progressOf(s, keys[0])).toBeCloseTo(0.3);
+  });
+});
+
+describe("temps avant l'éclosion", () => {
+  const cases: [string, Partial<Plant>, number][] = [
+    ["terre sèche", {}, 1],
+    ["semis parfait", { sowGrade: "parfait" }, 1],
+    ["terre bêchée", { loose: true, progress: 0.4 }, 1],
+    ["humide jusqu'au bout", { wetUntil: 1e9, wetGrade: "parfait", progress: 0.3 }, 1],
+    ["humidité qui s'éteint", { wetUntil: 100_000, wetGrade: "bien" }, 1],
+    ["près d'une herbe", { wetUntil: 100_000, wetGrade: "bien", progress: 0.1 }, 0.5],
+  ];
+  it.each(cases)("%s : éclôt à l'échéance annoncée", (_name, extra, weed) => {
+    const p = plant(extra) as Plant;
+    const eta = bloomEtaMs(p, 0, weed);
+    // le jeu avance par petits pas : l'humidité s'évalue à chacun
+    const run = (ms: number) => {
+      const { save, keys } = withCells([p]);
+      let s: PotagerSave = { ...save, weeds: weed < 1 ? { [keys[0]]: { at: 0 } } : {} };
+      for (let t = 0; t < ms; t += 1000) s = advanceGarden({ ...s, playTimeMs: t }, 1000);
+      return progressOf(s, keys[0]);
+    };
+    expect(run(eta + 1000)).toBe(1);
+    expect(run(eta - 2000)).toBeLessThan(1);
+  });
+
+  it("vaut 0 pour une fleur épanouie", () => {
+    expect(bloomEtaMs(plant({ progress: 1 }) as Plant, 0, 1)).toBe(0);
   });
 });

@@ -91,6 +91,70 @@ export function cliffFace(w: number, h: number, seed?: number) {
   );
 }
 
+const SAND = ["#e6cf8e", "#dcc382", "#d2b878", "#ecd89a"];
+const WET_SAND = ["#b99a62", "#a98c58", "#c2a46c"];
+
+// Haut = bord de l'herbe, bas = bord de l'eau (sable mouillé).
+export function sandTex(w: number, h: number, seed?: number) {
+  return canvasTex(
+    w,
+    h,
+    (g, rng) => {
+      for (let y = 0; y < h; y++) {
+        const t = y / h;
+        for (let x = 0; x < w; x++) {
+          const wet = t > 0.78 + Math.sin(x * 0.11) * 0.05 + range(rng, -0.02, 0.02);
+          const r = rng();
+          dot(g, x, y, wet ? pick(rng, WET_SAND) : r < 0.1 ? "#c8ae70" : pick(rng, SAND));
+        }
+      }
+      for (let i = 0; i < w / 5; i++) {
+        const x = Math.floor(range(rng, 0, w)),
+          y = Math.floor(range(rng, 8, h * 0.6));
+        dot(g, x, y, "#c4a86a", Math.floor(range(rng, 3, 8)), 1);
+      }
+      for (let i = 0; i < w / 14; i++) {
+        const x = Math.floor(range(rng, 0, w)),
+          y = Math.floor(range(rng, 6, h));
+        dot(g, x, y, pick(rng, ["#f4efe2", "#9a8a72", "#c9b8a0"]), rng() < 0.5 ? 2 : 1, 1);
+      }
+      let len = 4;
+      for (let x = 0; x < w; x++) {
+        len = Math.max(2, Math.min(7, len + Math.floor(range(rng, -2, 3))));
+        for (let y = 0; y < len; y++)
+          dot(
+            g,
+            x,
+            y,
+            y === 0
+              ? "#9cc458"
+              : y === len - 1
+                ? "#8a7a48"
+                : pick(rng, [GRASS[0], GRASS[1], GRASS[2], GRASS[3]]),
+          );
+      }
+    },
+    { seed },
+  );
+}
+
+// Bande d'écume ondulée, transparente au-dehors.
+export function foamTex() {
+  return canvasTex(
+    64,
+    24,
+    (g, rng) => {
+      for (let x = 0; x < 64; x++) {
+        const y = 7 + Math.round(Math.sin(x * 0.2) * 2 + Math.sin(x * 0.07) * 2);
+        if (rng() < 0.85) dot(g, x, y, "rgba(255,255,255,0.95)", 1, 2);
+        if (rng() < 0.3) dot(g, x, y + 3, "rgba(225,245,250,0.7)", 2, 1);
+        if (rng() < 0.15) dot(g, x, y + 6 + Math.floor(rng() * 4), "rgba(225,245,250,0.55)", 3, 1);
+      }
+    },
+    { repeat: true, seed: 8 },
+  );
+}
+
 export function stoneTex(w: number, h: number, seed?: number) {
   return canvasTex(
     w,

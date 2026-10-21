@@ -15,8 +15,8 @@ describe("zones praticables", () => {
     expect(isWalkable(-5.3, -2.7, [])).toBe(true);
   });
 
-  it("bloque la berge, la barrière et les tonneaux", () => {
-    expect(isWalkable(0, 6, b)).toBe(false);
+  it("bloque la mer, la barrière et les tonneaux", () => {
+    expect(isWalkable(0, 8, b)).toBe(false);
     expect(isWalkable(0, -4.3, b)).toBe(false);
     expect(isWalkable(-7.8, -1.6, b)).toBe(false);
   });
@@ -32,10 +32,14 @@ describe("zones praticables", () => {
     expect(isWalkable(-11.2, -1, b)).toBe(true);
   });
 
+  it("laisse marcher sur le sable", () => {
+    expect(isWalkable(0, 6, b)).toBe(true);
+  });
+
   it("trouve le point praticable le plus proche", () => {
-    const p = nearestWalkable({ x: 0, z: 5 }, w);
+    const p = nearestWalkable({ x: 0, z: 8.5 }, w);
     expect(p).not.toBeNull();
-    expect(p!.z).toBeLessThanOrEqual(4.2);
+    expect(p!.z).toBeLessThanOrEqual(7.4);
     expect(nearestWalkable({ x: 0, z: 30 }, w)).toBeNull();
     const inside = nearestWalkable({ x: -5.3, z: -2.7 }, w);
     expect(inside && w(inside.x, inside.z)).toBe(true);

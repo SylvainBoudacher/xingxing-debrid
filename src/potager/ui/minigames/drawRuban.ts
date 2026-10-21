@@ -96,6 +96,6 @@ export function rubanArt() {
     ring(c, CX, CY, 0, 2, C.gold);
     fx.draw(c, now);
 
-    for (let i = 0; i < 2; i++) pip(c, CX - 6 + i * 12, 83, v.hits[i], i === v.hits.length, now);
+    for (let i = 0; i < 3; i++) pip(c, CX - 12 + i * 12, 83, v.hits[i], i === v.hits.length, now);
   };
 }

@@ -102,4 +102,28 @@ describe("mouvement de l'avatar", () => {
     m.update(0.1);
     expect(m.pose().dir).toEqual({ x: -1, z: 0 });
   });
+
+  it("garde la même vue en diagonale, image après image", () => {
+    for (const [dx, dz] of [
+      [1, -1],
+      [1, 1],
+      [-1, -1],
+      [-1, 1],
+    ]) {
+      const m = createAvatarMotion({ x: 13.7, z: 6.3 }, open);
+      m.setInput(dx, dz);
+      const views = new Set(Array.from({ length: 300 }, () => m.update(1 / 60).view));
+      expect(views.size).toBe(1);
+    }
+  });
+
+  it("change de vue quand un axe domine nettement", () => {
+    const m = createAvatarMotion(origin, open);
+    m.setInput(1, -1);
+    m.update(0.1);
+    m.setInput(1, 0);
+    expect(m.update(0.1).view).toBe("side");
+    m.setInput(0, -1);
+    expect(m.update(0.1).view).toBe("up");
+  });
 });

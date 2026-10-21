@@ -5,7 +5,7 @@ import { stageOf } from "../core/growth";
 import type { PotagerSave } from "../core/types";
 import { hasWeed } from "../core/nuisances";
 import { flowerTex, rarityMarkTex, stageTex } from "../textures/flowers";
-import { crowTex, weedTex } from "../textures/pests";
+import { crowTex, weedPatchTex, weedTex } from "../textures/pests";
 import { buildForest } from "./forestView";
 import { tuftTex } from "../textures/nature";
 import { canvasTex, dot } from "../textures/pixel";
@@ -75,9 +75,11 @@ export function buildGarden(save: PotagerSave): GardenView {
       if (!c) continue;
       const { x, z } = slot.center;
       const y = groundHeight(x, z) + SOIL_TOP;
+      // centrée sur la case et devant une éventuelle plante, pour rester visible
       if (hasWeed(save, slot.key)) {
-        const weed = spriteMesh(weedTex(), 0.6, 0.4);
-        weed.position.set(x - 0.22, y, z - 0.2);
+        group.add(flat(weedPatchTex(), x, z, 0.92, y + 0.006, { alphaTest: 0.5 }));
+        const weed = spriteMesh(weedTex(), 0.84, 0.6);
+        weed.position.set(x, y, z + 0.24);
         group.add(weed);
       }
       if (save.crows[slot.key]) {
