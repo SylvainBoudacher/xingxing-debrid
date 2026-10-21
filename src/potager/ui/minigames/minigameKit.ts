@@ -18,7 +18,10 @@ import { puitsArt } from "./drawPuits";
 import { rubanArt } from "./drawRuban";
 import { semerArt } from "./drawSemer";
 
-export type GameGesture = Exclude<Gesture, "abri" | "ramasser" | "etal" | "cabane" | "panneau">;
+export type GameGesture = Exclude<
+  Gesture,
+  "abri" | "ramasser" | "etal" | "cabane" | "panneau" | "chantier" | "maison" | "piquet"
+>;
 
 export interface ActiveGame {
   gesture: GameGesture;
@@ -66,6 +69,7 @@ export function anchorOf(t: Target): Point {
   if (t.kind === "foret") return MAP.forest[t.spot];
   if (t.kind === "etal" || t.kind === "cabane") return MAP.buildings.find((b) => b.id === t.kind)!;
   if (t.kind === "panneau") return parcelSign(t.parcel);
+  if (t.kind !== "cell") return { ...MAP.spawn };
   const c = MAP.parcels.flatMap((p) => parcelCells(p.id)).find((x) => x.key === t.key);
   return c ? c.center : { ...MAP.spawn };
 }

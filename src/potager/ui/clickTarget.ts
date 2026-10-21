@@ -1,5 +1,5 @@
 import type { Target } from "../core/actions";
-import { MAP, parcelSign } from "../core/catalog/map";
+import { maisonSign, MAP, parcelSign, parcelStake } from "../core/catalog/map";
 import { cellAt } from "../core/cells";
 import type { Point, PotagerSave } from "../core/types";
 
@@ -23,5 +23,11 @@ export function targetAt(p: Point, save: PotagerSave): Target | null {
   const sign = MAP.parcels.find(
     (x) => !save.parcels.includes(x.id) && near(p, parcelSign(x.id), 0.8),
   );
-  return sign ? { kind: "panneau", parcel: sign.id } : null;
+  if (sign) return { kind: "panneau", parcel: sign.id };
+  const maison = MAP.buildings.find((b) => b.id === "maison")!;
+  if (save.buildings.includes("maison")) {
+    if (onRect(maison)) return { kind: "maison" };
+  } else if (near(p, maisonSign(), 0.8)) return { kind: "chantier" };
+  const stake = save.parcels.find((id) => near(p, parcelStake(id), 0.6));
+  return stake ? { kind: "piquet", parcel: stake } : null;
 }

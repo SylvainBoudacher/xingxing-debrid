@@ -59,6 +59,7 @@ export function GardenPanels({
         onClose={closePanel}
       />
     );
+  if (panel.kind !== "panneau") return null;
   return (
     <ParcelSignPanel
       parcel={panel.parcel}

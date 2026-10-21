@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { MAP, parcelSign } from "./catalog/map";
-import { applyAction, findTarget, prepareAction, toolCells, type Target } from "./actions";
+import {
+  applyAction,
+  findTarget,
+  prepareAction,
+  standPoint,
+  toolCells,
+  type Target,
+} from "./actions";
+import { isWalkable } from "./walk";
 import { parcelCells } from "./cells";
 import { advanceGarden } from "./growth";
 import { setWater, waterLeft, withdrawTool } from "./inventory";
@@ -438,5 +446,49 @@ describe("outils de niveau 2", () => {
       never,
     );
     expect(out.save.weeds).toEqual({});
+  });
+});
+
+describe("maison, chantier et piquets", () => {
+  const built = (): PotagerSave => ({
+    ...createStarterSave(),
+    buildings: ["etal", "cabane", "maison"],
+  });
+  const facing = (p: { x: number; z: number }) => ({ ...p, dir: { x: 0, z: -1 } });
+  const walkable = (s: PotagerSave) => (x: number, z: number) => isWalkable(x, z, s.buildings);
+
+  it("vise le panneau de chantier tant que la maison n'est pas construite", () => {
+    const s = createStarterSave();
+    const t: Target = { kind: "chantier" };
+    expect(findTarget(s, facing(standPoint(t)))).toEqual(t);
+    expect(prepareAction(s, t, 0)).toEqual({ gesture: "chantier" });
+  });
+
+  it("vise la maison une fois construite", () => {
+    const s = built();
+    const t: Target = { kind: "maison" };
+    expect(findTarget(s, facing(standPoint(t)))).toEqual(t);
+    expect(prepareAction(s, t, 0)).toEqual({ gesture: "maison" });
+  });
+
+  it("vise le piquet d'une parcelle possédée seulement", () => {
+    const s = createStarterSave();
+    const t: Target = { kind: "piquet", parcel: "p0" };
+    expect(findTarget(s, facing(standPoint(t)))).toEqual(t);
+    expect(prepareAction(s, t, 0)).toEqual({ gesture: "piquet" });
+    expect(findTarget(s, facing(standPoint({ kind: "piquet", parcel: "p1" })))).not.toEqual({
+      kind: "piquet",
+      parcel: "p1",
+    });
+  });
+
+  it("se tient sur un sol praticable", () => {
+    const s = built();
+    for (const t of [{ kind: "maison" }, { kind: "piquet", parcel: "p0" }] as Target[]) {
+      const p = standPoint(t);
+      expect(walkable(s)(p.x, p.z)).toBe(true);
+    }
+    const c = standPoint({ kind: "chantier" });
+    expect(walkable(createStarterSave())(c.x, c.z)).toBe(true);
   });
 });

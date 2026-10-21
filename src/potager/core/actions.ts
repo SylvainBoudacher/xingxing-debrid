@@ -1,4 +1,4 @@
-import { MAP, parcelSign } from "./catalog/map";
+import { maisonSign, maisonStand, MAP, parcelSign, parcelStake } from "./catalog/map";
 import { ROLL_HARVEST } from "./catalog/rarity";
 import { cellAt, parcelCells } from "./cells";
 import { markSeen, stageOf, WET_MS } from "./growth";
@@ -9,6 +9,7 @@ import { FOREST_ROLL } from "./forest";
 import { hasWeed } from "./nuisances";
 import { rollRarity, rollSeed } from "./seeds";
 import type {
+  BuildingId,
   Cell,
   Demand,
   FlowerStack,
@@ -28,7 +29,10 @@ export type Target =
   | { kind: "etal" }
   | { kind: "cabane" }
   | { kind: "panneau"; parcel: ParcelId }
-  | { kind: "foret"; spot: number };
+  | { kind: "foret"; spot: number }
+  | { kind: "chantier" }
+  | { kind: "maison" }
+  | { kind: "piquet"; parcel: ParcelId };
 export type Gesture =
   | "becher"
   | "semer"
@@ -41,7 +45,10 @@ export type Gesture =
   | "etal"
   | "cabane"
   | "panneau"
-  | "servir";
+  | "servir"
+  | "chantier"
+  | "maison"
+  | "piquet";
 export type ActionEvent =
   { kind: "graine"; rarity: Rarity } | { kind: "decouverte"; species: SpeciesId; color: ColorId };
 
@@ -55,8 +62,9 @@ const rectGap = (p: Point, r: { x: number; z: number; w: number; d: number }) =>
     Math.max(0, Math.abs(p.x - r.x) - r.w / 2),
     Math.max(0, Math.abs(p.z - r.z) - r.d / 2),
   );
+const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.z - b.z);
 const abriGap = (p: Point) => rectGap(p, MAP.abri);
-const building = (id: "etal" | "cabane") => MAP.buildings.find((b) => b.id === id)!;
+const building = (id: BuildingId) => MAP.buildings.find((b) => b.id === id)!;
 const puitsGap = (p: Point) => Math.hypot(p.x - MAP.puits.x, p.z - MAP.puits.z) - MAP.puits.r;
 
 // la case devant l'avatar (ou sous lui), sinon l'abri, le puits ou un objet de forêt à portée
@@ -79,7 +87,11 @@ export function findTarget(save: PotagerSave, pose: Point & { dir: Point }): Tar
       Math.hypot(parcelSign(p.id).x - pose.x, parcelSign(p.id).z - pose.z) < REACH,
   );
   if (sign) return { kind: "panneau", parcel: sign.id };
-  return null;
+  if (save.buildings.includes("maison")) {
+    if (rectGap(pose, building("maison")) < REACH) return { kind: "maison" };
+  } else if (dist(pose, maisonSign()) < REACH) return { kind: "chantier" };
+  const stake = save.parcels.find((id) => dist(pose, parcelStake(id)) < REACH);
+  return stake ? { kind: "piquet", parcel: stake } : null;
 }
 
 // où se tenir pour agir : devant, côté caméra
@@ -91,8 +103,13 @@ export function standPoint(t: Target): Point {
     const b = building(t.kind);
     return { x: b.x, z: b.z + b.d / 2 + 0.6 };
   }
-  if (t.kind === "panneau") {
-    const s = parcelSign(t.parcel);
+  if (t.kind === "panneau" || t.kind === "piquet") {
+    const s = t.kind === "panneau" ? parcelSign(t.parcel) : parcelStake(t.parcel);
+    return { x: s.x, z: s.z + 0.6 };
+  }
+  if (t.kind === "maison") return maisonStand();
+  if (t.kind === "chantier") {
+    const s = maisonSign();
     return { x: s.x, z: s.z + 0.6 };
   }
   const c = MAP.parcels.flatMap((p) => parcelCells(p.id)).find((x) => x.key === t.key);
@@ -124,7 +141,14 @@ export function prepareAction(
 ): { gesture: Gesture } | { message: string } {
   const inv = save.inventory;
   if (target.kind === "abri") return { gesture: "abri" };
-  if (target.kind === "etal" || target.kind === "cabane" || target.kind === "panneau")
+  if (
+    target.kind === "etal" ||
+    target.kind === "cabane" ||
+    target.kind === "panneau" ||
+    target.kind === "chantier" ||
+    target.kind === "maison" ||
+    target.kind === "piquet"
+  )
     return { gesture: target.kind };
   if (target.kind === "puits") {
     const missing = toolCheck(inv, hand, "arrosoir");

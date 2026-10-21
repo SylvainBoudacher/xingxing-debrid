@@ -91,11 +91,12 @@ export function useGardenActions(
       if ("message" in p) return say(p.message);
       scene.avatar.walkTo([]);
       const dir = scene.avatar.pose().dir;
-      if (target.kind === "panneau") return open({ kind: "panneau", parcel: target.parcel });
+      if (target.kind === "panneau" || target.kind === "piquet") return open(target);
+      if (p.gesture === "chantier" || p.gesture === "maison") return open({ kind: p.gesture });
       if (p.gesture === "abri" || p.gesture === "etal" || p.gesture === "cabane")
         return open({ kind: p.gesture });
       // servir passe par le panneau de l'étal
-      if (p.gesture === "servir" || p.gesture === "panneau") return;
+      if (p.gesture === "servir" || p.gesture === "panneau" || p.gesture === "piquet") return;
       // ramasser en forêt se fait sans mini-jeu
       if (p.gesture === "ramasser")
         return apply(target, p.gesture, { grade: "bien" }, selectedRef.current, dir);
