@@ -158,3 +158,23 @@ export function parcelSign(id: ParcelId): Point {
   const r = MAP.parcels.find((p) => p.id === id)!.rect;
   return { x: (r.x0 + r.x1) / 2, z: (r.z0 + r.z1) / 2 };
 }
+
+const maisonSlot = () => MAP.buildings.find((b) => b.id === "maison")!;
+
+// panneau de chantier, au centre de l'emplacement de la maison
+export function maisonSign(): Point {
+  const b = maisonSlot();
+  return { x: b.x, z: b.z };
+}
+
+// devant la maison, côté caméra
+export function maisonStand(): Point {
+  const b = maisonSlot();
+  return { x: b.x, z: b.z + b.d / 2 + 0.6 };
+}
+
+// piquet de réglage : au bord gauche de la parcelle, hors des cases
+export function parcelStake(id: ParcelId): Point {
+  const r = MAP.parcels.find((p) => p.id === id)!.rect;
+  return { x: r.x0 - 0.4, z: r.z1 - 0.3 };
+}
