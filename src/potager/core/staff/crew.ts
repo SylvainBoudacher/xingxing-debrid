@@ -11,13 +11,20 @@ import {
 } from "../types";
 import { isWalkable } from "../walk";
 import { ARROSEUR } from "./arroseur";
+import { CUEILLEUR } from "./cueilleur";
+import { FLEURISTE, FLORIST_SPOT } from "./fleuriste";
 import { JARDINIER } from "./jardinier";
 import { EMPTY_CARRY } from "./carry";
 import { CAN_SIZE } from "./catalog";
 import { gestureMs, rollStaffGrade, staffSpeed } from "./grade";
 import { isTask, statusOf, type Trade } from "./tasks";
 
-const TRADES: Partial<Record<StaffId, Trade>> = { arroseur: ARROSEUR, jardinier: JARDINIER };
+const TRADES: Record<StaffId, Trade> = {
+  arroseur: ARROSEUR,
+  jardinier: JARDINIER,
+  cueilleur: CUEILLEUR,
+  fleuriste: FLEURISTE,
+};
 const MAX_TASKS = 20;
 const UNGRADED = new Set(["remplir", "chasser", "deposer", "prendre"]);
 
@@ -82,9 +89,10 @@ function advanceOne(
     if (!task) {
       const next = trade.plan(at(save), id, w);
       if (!isTask(next)) {
-        // repos : retour à la maison
+        // repos : retour à la maison, le fleuriste attend à l'étal
+        const home = next.kind === "etal" ? FLORIST_SPOT : maisonStand();
         if (w.status.kind !== next.kind || !w.path.length)
-          w = { ...w, status: next, path: routeTo(save, w.pos, maisonStand()) ?? [] };
+          w = { ...w, status: next, path: routeTo(save, w.pos, home) ?? [] };
         const r = walk(w, speed, budget);
         w = r.w;
         break;
@@ -128,8 +136,7 @@ function advanceOne(
 // Fait travailler chaque employé embauché pendant `stepMs` de temps de jeu.
 export function advanceStaff(save: PotagerSave, stepMs: number, rng: () => number): PotagerSave {
   for (const id of STAFF_IDS) {
-    const trade = TRADES[id];
-    if (save.staff[id] && trade) save = advanceOne(save, id, trade, stepMs, rng);
+    if (save.staff[id]) save = advanceOne(save, id, TRADES[id], stepMs, rng);
   }
   return save;
 }
