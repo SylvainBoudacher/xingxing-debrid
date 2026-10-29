@@ -472,6 +472,7 @@ export function DiscoverPage({
             tmdbKey={tmdbKey}
             getC411Key={() => c411KeyRef.current}
             liked={likedKeys.has(`${selected.mediaType}-${selected.id}`)}
+            inLibrary={ownedKeys.has(`${selected.mediaType}-${selected.id}`)}
             sendingHash={sendingHash}
             libraryHash={libraryHash}
             onToggleLike={toggleLike}

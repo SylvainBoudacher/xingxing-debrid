@@ -1161,6 +1161,7 @@ export function LibraryPage({
             tmdbKey={initialTmdbKey}
             getC411Key={() => initialC411Key ?? ""}
             liked={likedKeys.has(`${findMore.mediaType}-${findMore.id}`)}
+            inLibrary={ownedKeys.has(`${findMore.mediaType}-${findMore.id}`)}
             sendingHash={sendingHash}
             libraryHash={libraryHash}
             onToggleLike={toggleLike}

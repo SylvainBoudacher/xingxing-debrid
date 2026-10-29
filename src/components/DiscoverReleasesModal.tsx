@@ -26,7 +26,7 @@ import { tmdbKeys, tvDetail as tmdbTvDetail } from "@/lib/services/tmdb";
 import { TMDB_STALE_MS } from "@/lib/tmdbCache";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, Heart, Star, X } from "lucide-react";
+import { Check, ChevronDown, Heart, Star, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo, useState } from "react";
 
@@ -35,6 +35,7 @@ interface DiscoverReleasesModalProps {
   tmdbKey: string;
   getC411Key: () => string;
   liked: boolean;
+  inLibrary: boolean;
   sendingHash: string | null;
   libraryHash: string | null;
   onToggleLike: (item: TmdbItem) => void;
@@ -51,6 +52,7 @@ export function DiscoverReleasesModal({
   tmdbKey,
   getC411Key,
   liked,
+  inLibrary,
   sendingHash,
   libraryHash,
   onToggleLike,
@@ -224,9 +226,15 @@ export function DiscoverReleasesModal({
         exit={{ opacity: 0, scale: 0.97, y: 8 }}
         transition={{ type: "spring", stiffness: 260, damping: 26, mass: 0.9 }}
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
+        className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
       >
-        <div className="flex shrink-0 items-start gap-4 px-5 pt-5 pb-4">
+        {inLibrary && (
+          <span className="absolute left-1/2 top-0 z-10 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-b-lg bg-emerald-600/90 px-3 py-1 text-xs font-semibold leading-none text-white backdrop-blur-sm">
+            <Check className="h-3 w-3 flex-none" strokeWidth={3} />
+            Dans la bibliothèque
+          </span>
+        )}
+        <div className={`flex shrink-0 items-start gap-4 px-5 pb-4 ${inLibrary ? "pt-8" : "pt-5"}`}>
           {item.posterPath && (
             <img
               src={`https://image.tmdb.org/t/p/w154${item.posterPath}`}

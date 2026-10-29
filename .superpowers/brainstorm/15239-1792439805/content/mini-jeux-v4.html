@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Mini-jeux du Potager</title>
+<style>
+  :root { --bg:#1a1410; --card:#2a2018; --gold:#b8975a; --ink:#f1e6d2; --dim:#a8977a; --ok:#7ab05a; --mid:#d8b048; --bad:#c8604a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family: Georgia, serif; padding:24px; }
+  h1 { font-style:italic; color:#f2e2b0; margin:0 0 4px; }
+  p.sub { color:var(--dim); margin:0 0 20px; font-family: system-ui, sans-serif; font-size:14px; }
+  .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:16px; }
+  .card { background:var(--card); border:2px solid #3a2c20; border-radius:6px; padding:12px; cursor:pointer; outline:none; }
+  .card.active { border-color:var(--gold); }
+  .card h3 { margin:0 0 2px; font-size:19px; color:#f2e2b0; }
+  .card .how { font-family: system-ui, sans-serif; font-size:12.5px; color:var(--dim); margin:0 0 8px; min-height:34px; }
+  canvas { width:100%; height:auto; display:block; image-rendering: pixelated; background:#3a5a2c; border-radius:3px; }
+  .res { font-family: system-ui, sans-serif; font-size:13px; margin-top:6px; min-height:18px; }
+  .pick { margin-top:8px; display:flex; gap:6px; font-family: system-ui, sans-serif; font-size:12px; }
+  .pick button { background:#3a2c20; color:var(--ink); border:1px solid #5a4630; border-radius:4px; padding:4px 8px; cursor:pointer; }
+  .pick button.on { background:var(--gold); color:#1a1410; }
+</style>
+</head>
+<body>
+<h1>Mini-jeux du cycle d'une case</h1>
+<p class="sub">Clique sur l'image d'une carte pour jouer. Clic ou maintien = Espace ; les flèches marchent une fois la carte cliquée. Chaque geste a son propre mini-jeu. Rater ne détruit rien : on gagne juste moins. Dis-moi ce qui te plaît, avec les boutons sous chaque carte.</p>
+<div class="grid" id="grid"></div>
+<script>
+const W = 320, H = 180;
+const PAL = { soil:"#6a4a30", soilDark:"#3e2a1a", wet:"#4a3020", grass:"#3a5a2c", gold:"#e8c060", ink:"#f1e6d2", ok:"#7ab05a", mid:"#d8b048", bad:"#c8604a", shade:"rgba(0,0,0,.35)" };
+const grade = (g) => ({ parfait: ["Parfait !", PAL.ok], bien: ["Bien", PAL.mid], rate: ["Raté (la case avance quand même, plus lentement)", PAL.bad] }[g]);
+
+function txt(c, s, x, y, col = PAL.ink, size = 14, align = "center") {
+  c.fillStyle = col; c.font = `bold ${size}px Georgia`; c.textAlign = align; c.fillText(s, x, y);
+}
+function bar(c, x, y, w, h, v, col) {
+  c.fillStyle = "#1e140c"; c.fillRect(x, y, w, h);
+  c.fillStyle = col; c.fillRect(x + 2, y + 2, Math.max(0, (w - 4) * Math.min(1, v)), h - 4);
+}
+function tile(c, x, y, s, col) { c.fillStyle = col; c.fillRect(x, y, s, s); c.fillStyle = "rgba(0,0,0,.18)"; for (let i = 0; i < 14; i++) c.fillRect(x + ((i * 37) % s), y + ((i * 53) % s), 3, 3); }
+
+const GAMES = [
+  {
+    id: "becher", name: "Bêcher", how: "Rythme : 3 coups de bêche. Appuie sur Espace quand le cercle qui se resserre touche l'anneau doré.",
+    init() { return { beat: 0, t0: performance.now(), hits: [], done: null }; },
+    key(s, code, down) {
+      if (!down || code !== "Space" || s.done) return;
+      const r = this.radius(s); const d = Math.abs(r - 18);
+      s.hits.push(d < 5 ? 2 : d < 12 ? 1 : 0); this.next(s);
+    },
+    radius(s) { return 70 - ((performance.now() - s.t0) / 900) * 52; },
+    next(s) { s.beat++; s.t0 = performance.now() + 250; if (s.beat >= 3) { const sum = s.hits.reduce((a, b) => a + b, 0); s.done = sum >= 5 ? "parfait" : sum >= 3 ? "bien" : "rate"; } },
+    draw(c, s) {
+      if (!s.done && this.radius(s) < 6) { s.hits.push(0); this.next(s); }
+      const cracked = s.hits.filter(Boolean).length;
+      tile(c, 110, 40, 100, cracked >= 3 ? PAL.soilDark : PAL.grass);
+      for (let i = 0; i < cracked; i++) { c.fillStyle = PAL.soil; c.fillRect(118 + i * 30, 50, 24, 80); }
+      if (!s.done && performance.now() >= s.t0) {
+        c.strokeStyle = PAL.gold; c.lineWidth = 3; c.beginPath(); c.arc(160, 90, 18, 0, 7); c.stroke();
+        c.strokeStyle = PAL.ink; c.lineWidth = 2; c.beginPath(); c.arc(160, 90, Math.max(2, this.radius(s)), 0, 7); c.stroke();
+      }
+      s.hits.forEach((h, i) => txt(c, h === 2 ? "✓" : h === 1 ? "~" : "✗", 130 + i * 30, 168, h === 2 ? PAL.ok : h === 1 ? PAL.mid : PAL.bad, 16));
+    },
+  },
+  {
+    id: "semer", name: "Semer", how: "Précision : la graine se balance au-dessus du sillon. Appuie sur Espace quand elle est pile au-dessus du trou.",
+    init() { return { t0: performance.now(), hole: 70 + Math.random() * 180, done: null, x: null }; },
+    pos(s) { return 40 + (Math.sin((performance.now() - s.t0) / 520) * 0.5 + 0.5) * 240; },
+    key(s, code, down) {
+      if (!down || code !== "Space" || s.done) return;
+      s.x = this.pos(s); const d = Math.abs(s.x - s.hole); s.done = d < 10 ? "parfait" : d < 26 ? "bien" : "rate";
+    },
+    draw(c, s) {
+      c.fillStyle = PAL.soil; c.fillRect(30, 110, 260, 34);
+      c.fillStyle = PAL.soilDark; c.fillRect(s.hole - 10, 116, 20, 10);
+      const x = s.x ?? this.pos(s);
+      c.fillStyle = "#c89a5a"; c.beginPath(); c.ellipse(x, s.done ? 121 : 70, 5, 7, 0, 0, 7); c.fill();
+      if (!s.done) { c.strokeStyle = "rgba(241,230,210,.35)"; c.setLineDash([3, 4]); c.beginPath(); c.moveTo(x, 80); c.lineTo(x, 112); c.stroke(); c.setLineDash([]); }
+    },
+  },
+  {
+    id: "arroser", name: "Arroser", how: "Dosage : maintiens Espace pour verser, relâche quand la terre est juste mouillée (zone verte). Trop d'eau compte moins.",
+    init() { return { level: 0, pouring: false, last: performance.now(), done: null }; },
+    key(s, code, down) {
+      if (code !== "Space" || s.done) return;
+      if (down) s.pouring = true;
+      else if (s.pouring) { s.pouring = false; this.judge(s); }
+    },
+    judge(s) { const l = s.level; s.done = Math.abs(l - 0.7) < 0.035 ? "parfait" : l > 0.6 && l < 0.82 ? "bien" : "rate"; },
+    draw(c, s) {
+      const now = performance.now(), dt = (now - s.last) / 1000; s.last = now;
+      if (s.pouring && !s.done) { s.level += dt / 1.7; if (s.level >= 1) { s.level = 1; s.pouring = false; this.judge(s); } }
+      const k = Math.min(1, s.level);
+      const mix = (a, b) => Math.round(a + (b - a) * k);
+      tile(c, 100, 50, 90, `rgb(${mix(106, 50)},${mix(74, 30)},${mix(48, 18)})`);
+      if (s.pouring) { c.fillStyle = "#7ab0d8"; for (let i = 0; i < 6; i++) c.fillRect(140 + Math.random() * 20, 20 + Math.random() * 30, 2, 6); }
+      c.fillStyle = "#1e140c"; c.fillRect(230, 30, 22, 130);
+      c.fillStyle = "rgba(122,176,90,.45)"; c.fillRect(232, 30 + 130 * (1 - 0.82), 18, 130 * 0.22);
+      c.fillStyle = PAL.ok; c.fillRect(232, 30 + 130 * (1 - 0.735), 18, 130 * 0.07);
+      c.fillStyle = "#5a8ab8"; c.fillRect(234, 158 - 126 * k, 14, 126 * k);
+    },
+  },
+  {
+    id: "cueillir", name: "Cueillir", how: "Séquence : tape les 3 flèches affichées, dans l'ordre, avant la fin du temps. Réussi = belle fleur, meilleure chance de graine.",
+    init() { const A = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]; return { seq: [0, 1, 2].map(() => A[Math.floor(Math.random() * 4)]), i: 0, err: false, t0: performance.now(), done: null }; },
+    key(s, code, down) {
+      if (!down || s.done || !code.startsWith("Arrow")) return;
+      if (code === s.seq[s.i]) s.i++; else s.err = true;
+      if (s.i >= 3) { const t = (performance.now() - s.t0) / 1000; s.done = !s.err && t < 1.6 ? "parfait" : "bien"; }
+    },
+    draw(c, s) {
+      const left = 2.5 - (performance.now() - s.t0) / 1000;
+      if (!s.done && left <= 0) s.done = "rate";
+      c.fillStyle = "#4a7a3a"; c.fillRect(158, 90, 4, 60);
+      c.fillStyle = s.done === "rate" ? "#8a6a5a" : "#d8506a"; for (let a = 0; a < 6; a++) { c.beginPath(); c.arc(160 + Math.cos(a) * 12, 80 + Math.sin(a) * 12, 9, 0, 7); c.fill(); }
+      c.fillStyle = PAL.gold; c.beginPath(); c.arc(160, 80, 7, 0, 7); c.fill();
+      const G = { ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→" };
+      s.seq.forEach((k, j) => { c.fillStyle = j < s.i ? PAL.ok : "#1e140c"; c.fillRect(110 + j * 36, 20, 30, 30); txt(c, G[k], 125 + j * 36, 42, PAL.ink, 20); });
+      if (!s.done) bar(c, 60, 166, 200, 8, left / 2.5, PAL.mid);
+    },
+  },
+  {
+    id: "puits", name: "Puits (remplir l'arrosoir)", how: "Équilibre : le seau remonte en tanguant. Garde-le droit avec ← et → (ou clic sur la moitié gauche / droite) pour ne pas renverser. L'eau restante remplit l'arrosoir.",
+    init() { return { ang: 0, vel: 0, push: 0, water: 1, h: 0, t0: performance.now(), last: performance.now(), done: null }; },
+    key(s, code, down) {
+      if (s.done) return;
+      const d = code === "ArrowLeft" || code === "KeyA" ? -1 : code === "ArrowRight" || code === "KeyD" ? 1 : 0;
+      if (d) s.push = down ? d : s.push === d ? 0 : s.push;
+    },
+    draw(c, s) {
+      const now = performance.now(), dt = Math.min(0.05, (now - s.last) / 1000); s.last = now;
+      const t = (now - s.t0) / 1000;
+      if (!s.done) {
+        const wind = Math.sin(t * 1.7) * 1.1 + Math.sin(t * 3.1 + 1) * 0.7;
+        s.vel += (wind + s.ang * 1.2 - s.push * 2.4) * dt; s.vel *= 0.97;
+        s.ang = Math.max(-1, Math.min(1, s.ang + s.vel * dt));
+        if (Math.abs(s.ang) > 0.35) s.water = Math.max(0, s.water - (Math.abs(s.ang) - 0.35) * 0.9 * dt);
+        s.h = Math.min(1, t / 3.5);
+        if (s.h >= 1) s.done = s.water > 0.9 ? "parfait" : s.water > 0.6 ? "bien" : "rate";
+      }
+      c.fillStyle = "#8a8a90"; c.fillRect(100, 130, 120, 40); c.fillStyle = "#1e2a3a"; c.fillRect(110, 130, 100, 10);
+      c.fillStyle = "#6a4a30"; c.fillRect(102, 20, 8, 112); c.fillRect(210, 20, 8, 112); c.fillRect(98, 16, 124, 8);
+      const by = 140 - s.h * 105;
+      c.strokeStyle = "#c8b080"; c.beginPath(); c.moveTo(160, 24); c.lineTo(160, by); c.stroke();
+      c.save(); c.translate(160, by); c.rotate(s.ang * 0.9);
+      c.fillStyle = "#9a6a3a"; c.fillRect(-14, 0, 28, 20);
+      c.fillStyle = "#5a8ab8"; c.fillRect(-12, 2 + 16 * (1 - s.water), 24, 16 * s.water);
+      c.restore();
+      if (Math.abs(s.ang) > 0.35 && !s.done) { c.fillStyle = "#7ab0d8"; for (let i = 0; i < 4; i++) c.fillRect(160 + Math.sign(s.ang) * (16 + Math.random() * 6), by + 6 + Math.random() * 20, 2, 5); }
+      bar(c, 250, 20, 14, 140, 0, PAL.ok); c.fillStyle = "#5a8ab8"; c.fillRect(252, 158 - 136 * s.water, 10, 136 * s.water);
+      txt(c, "eau", 257, 174, "#a8977a", 11);
+    },
+  },
+  {
+    id: "desherber", name: "Désherber", how: "Tension : maintiens pour tirer (le curseur monte), relâche pour qu'il redescende. Garde-le dans la zone verte mobile jusqu'à ce que la racine sorte.",
+    init() { return { cur: 0.2, vel: 0, hold: false, prog: 0, out: 0, t0: performance.now(), last: performance.now(), done: null }; },
+    key(s, code, down) { if (code === "Space" && !s.done) s.hold = down; },
+    zone(s) { const t = (performance.now() - s.t0) / 1000; return 0.5 + Math.sin(t * 1.3) * 0.25 + Math.sin(t * 2.9) * 0.08; },
+    draw(c, s) {
+      const now = performance.now(), dt = Math.min(0.05, (now - s.last) / 1000); s.last = now;
+      const z = this.zone(s), half = 0.11;
+      if (!s.done) {
+        s.vel += (s.hold ? 2.2 : -1.8) * dt; s.vel *= 0.9; s.cur = Math.min(1, Math.max(0, s.cur + s.vel * dt * 4));
+        if (s.cur <= 0 || s.cur >= 1) s.vel = 0;
+        const inside = Math.abs(s.cur - z) < half;
+        s.prog = Math.min(1, Math.max(0, s.prog + (inside ? 0.45 : -0.25) * dt));
+        if (!inside) s.out += dt;
+        if (s.prog >= 1) s.done = s.out < 0.6 ? "parfait" : "bien";
+        else if (now - s.t0 > 8000) s.done = "rate";
+      }
+      tile(c, 90, 100, 90, PAL.soil);
+      const lift = s.done && s.done !== "rate" ? 50 : s.prog * 26;
+      c.fillStyle = "#5a7a2a"; for (let i = 0; i < 5; i++) c.fillRect(120 + i * 6, 72 - lift - (i % 2) * 8, 4, 30);
+      if (lift > 8) { c.strokeStyle = "#c8a878"; c.beginPath(); for (let i = 0; i < 4; i++) { c.moveTo(126 + i * 5, 102 - lift); c.lineTo(122 + i * 7, 114 - lift); } c.stroke(); }
+      const bx = 230, by = 20, bh = 140;
+      c.fillStyle = "#1e140c"; c.fillRect(bx, by, 26, bh);
+      c.fillStyle = "rgba(122,176,90,.75)"; c.fillRect(bx + 2, by + bh * (1 - z - half), 22, bh * half * 2);
+      c.fillStyle = PAL.gold; c.fillRect(bx - 4, by + bh * (1 - s.cur) - 2, 34, 4);
+      bar(c, 270, 20, 12, 140, 0, PAL.ok); c.fillStyle = PAL.ok; c.fillRect(272, 158 - 136 * s.prog, 8, 136 * s.prog);
+    },
+  },
+];
+
+const grid = document.getElementById("grid");
+let active = null;
+const states = {};
+GAMES.forEach((g) => {
+  const card = document.createElement("div");
+  card.className = "card"; card.tabIndex = 0;
+  card.innerHTML = `<h3>${g.name}</h3><p class="how">${g.how}</p><canvas width="${W}" height="${H}"></canvas><div class="res"></div>
+    <div class="pick" data-id="${g.id}"><button data-v="garder" data-choice="${g.id}:garder">Je garde</button><button data-v="modifier" data-choice="${g.id}:retravailler">À retravailler</button><button data-v="non" data-choice="${g.id}:non">Non</button></div>`;
+  grid.appendChild(card);
+  g.card = card; g.ctx = card.querySelector("canvas").getContext("2d"); g.res = card.querySelector(".res");
+  card.addEventListener("click", (e) => {
+    if (e.target.tagName === "BUTTON") {
+      card.querySelectorAll(".pick button").forEach((b) => b.classList.toggle("on", b === e.target));
+      return;
+    }
+    GAMES.forEach((o) => o.card.classList.toggle("active", o === g)); active = g;
+  });
+});
+
+function press(code, down, e) {
+  if (!active) return;
+  const s = states[active.id];
+  if (down && code === "Space" && (!s || s.done)) { states[active.id] = active.init(); active.res.textContent = ""; return; }
+  if (s) active.key(s, code, down);
+}
+GAMES.forEach((g) => {
+  const cv = g.card.querySelector("canvas");
+  const side = (e) => (e.offsetX < cv.clientWidth / 2 ? "ArrowLeft" : "ArrowRight");
+  cv.addEventListener("pointerdown", (e) => {
+    e.preventDefault(); GAMES.forEach((o) => o.card.classList.toggle("active", o === g)); active = g; g.card.focus();
+    const s = states[g.id];
+    if (g.id === "puits" && s && !s.done) press(side(e), true); else press("Space", true);
+  });
+  cv.addEventListener("pointerup", (e) => { if (g.id === "puits") { press("ArrowLeft", false); press("ArrowRight", false); } else press("Space", false); });
+});
+addEventListener("keydown", (e) => {
+  if (!active) return;
+  if (e.code === "Space" || e.code.startsWith("Arrow")) e.preventDefault();
+  if (e.repeat) return;
+  const s = states[active.id];
+  if (e.code === "Space" && (!s || s.done)) { states[active.id] = active.init(); active.res.textContent = ""; if (active.id === "arroser") states[active.id].pouring = false; return; }
+  if (s) active.key(s, e.code, true);
+});
+addEventListener("keyup", (e) => { if (active && states[active.id]) active.key(states[active.id], e.code, false); });
+
+function loop() {
+  GAMES.forEach((g) => {
+    const c = g.ctx, s = states[g.id];
+    c.fillStyle = PAL.grass; c.fillRect(0, 0, W, H);
+    if (!s) { txt(c, "Clique ici (ou Espace) pour jouer", W / 2, H / 2, PAL.ink, 15); return; }
+    g.draw(c, s);
+    if (s.done) { const [label, col] = grade(s.done); g.res.innerHTML = `<span style="color:${col}">${label}</span> <span style="color:#a8977a">- Espace pour rejouer</span>`; }
+  });
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>

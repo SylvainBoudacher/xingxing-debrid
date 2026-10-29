@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Potager toon 3/4</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #8fc45a; font-family: "Nunito", system-ui, sans-serif; }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; }
+  .grade { position: fixed; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 45%, rgba(255,230,190,0) 55%, rgba(90,50,40,0.35) 100%),
+                linear-gradient(180deg, rgba(255,214,150,0.18), rgba(255,255,255,0) 40%); }
+  .hud { position: fixed; pointer-events: none; color: #4a3226; font-weight: 800; }
+  .pill { display: inline-flex; align-items: center; gap: 10px; background: #fff7e6; border-radius: 999px;
+    padding: 8px 18px 8px 10px; box-shadow: 0 4px 0 #d9b98a, 0 8px 18px rgba(60,30,10,0.25); font-size: 20px; }
+  .coin { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3a8, #f2c230 55%, #c98d14);
+    box-shadow: inset 0 -2px 0 #b07a10; }
+  #po { position: fixed; top: 18px; left: 18px; }
+  #staff { top: 18px; right: 18px; width: 250px; background: #fff7e6; border-radius: 22px; padding: 14px 16px;
+    box-shadow: 0 4px 0 #d9b98a, 0 8px 18px rgba(60,30,10,0.25); pointer-events: auto; }
+  #staff h3 { margin: 0 0 10px; font-size: 15px; letter-spacing: 0.04em; color: #8a6040; text-transform: uppercase; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 14px; background: #f6e8cc; margin-bottom: 8px; }
+  .row.locked { opacity: 0.55; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; color: #fff; flex: none; }
+  .row .name { font-size: 14px; }
+  .row .sub { font-size: 12px; font-weight: 700; color: #8a6040; }
+  .bar { height: 6px; border-radius: 3px; background: #e6d2ac; margin-top: 4px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 40%; background: #6cbf4a; border-radius: 3px; }
+  #hint { left: 50%; bottom: 22px; transform: translateX(-50%); }
+  #hint .pill { font-size: 15px; padding: 10px 18px; }
+  .float { position: fixed; pointer-events: none; font-weight: 900; font-size: 22px; color: #fff3a8;
+    text-shadow: 0 2px 0 #b07a10, 0 0 8px rgba(120,60,0,0.5); transform: translate(-50%, -50%); transition: transform 1.1s ease-out, opacity 1.1s ease-in; }
+  #err { position: fixed; inset: 0; display: none; place-items: center; color: #4a3226; font: 700 18px system-ui; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="grade"></div>
+<div id="po" class="hud"><span class="pill"><span class="coin"></span><span id="poVal">128</span> PO</span></div>
+<div id="staff" class="hud">
+  <h3>Employés</h3>
+  <div class="row"><div class="avatar" style="background:#4f8fd0">Ar</div><div style="flex:1"><div class="name">Arroseur <span class="sub">niv. 1</span></div><div class="sub" id="staffState">Arrose les plantes</div><div class="bar"><i id="staffBar"></i></div></div></div>
+  <div class="row locked"><div class="avatar" style="background:#6a9a3a">Ja</div><div style="flex:1"><div class="name">Jardinier</div><div class="sub">250 PO pour l'embaucher</div></div></div>
+  <div class="row locked"><div class="avatar" style="background:#c06a8a">Cu</div><div style="flex:1"><div class="name">Cueilleur</div><div class="sub">Verrouillé</div></div></div>
+</div>
+<div id="hint" class="hud"><span class="pill">Clique une fleur épanouie pour la cueillir</span></div>
+<div id="err">Impossible de charger three.js.</div>
+
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js" } }
+</script>
+<script type="module">
+import * as THREE from "three";
+
+const app = document.getElementById("app");
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#a8d26a");
+scene.fog = new THREE.Fog("#f3d9a8", 24, 42);
+
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 120);
+const LOOK = new THREE.Vector3(0, 0.3, 0.2);
+camera.position.set(0, 10.2, 13.2);
+camera.lookAt(LOOK);
+
+scene.add(new THREE.HemisphereLight("#fff1d6", "#7a9a4a", 1.35));
+const sun = new THREE.DirectionalLight("#ffd9a8", 2.1);
+sun.position.set(-9, 13, 7);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15, near: 1, far: 50 });
+sun.shadow.bias = -0.0006;
+sun.shadow.normalBias = 0.02;
+scene.add(sun);
+
+const ramp = new THREE.DataTexture(new Uint8Array([120, 195, 255]), 3, 1, THREE.RedFormat);
+ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
+ramp.needsUpdate = true;
+const mats = new Map();
+const toon = (c) => {
+  if (!mats.has(c)) mats.set(c, new THREE.MeshToonMaterial({ color: c, gradientMap: ramp }));
+  return mats.get(c);
+};
+
+function mesh(geo, color, opts = {}) {
+  const m = new THREE.Mesh(geo, typeof color === "string" ? toon(color) : color);
+  m.castShadow = opts.cast !== false;
+  m.receiveShadow = opts.receive !== false;
+  return m;
+}
+const sph = (r, ws = 20, hs = 14) => new THREE.SphereGeometry(r, ws, hs);
+const rand = (a, b) => a + Math.random() * (b - a);
+let seed = 7;
+const srand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+
+// --- sol ---
+const ground = mesh(new THREE.PlaneGeometry(90, 90), "#9ccc58", { cast: false });
+ground.rotation.x = -Math.PI / 2;
+scene.add(ground);
+for (let i = 0; i < 26; i++) {
+  const p = mesh(new THREE.CircleGeometry(rand(1.2, 3.2), 28), i % 2 ? "#a9d462" : "#8fc04e", { cast: false });
+  p.rotation.x = -Math.PI / 2;
+  p.position.set(rand(-16, 16), 0.005 + i * 0.0003, rand(-12, 8));
+  scene.add(p);
+}
+
+function blobShape(w, h, wobble, n = 64) {
+  const s = new THREE.Shape();
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const c = Math.cos(a), si = Math.sin(a);
+    const k = 1 + Math.sin(a * 3 + 1.3) * wobble + Math.sin(a * 7) * wobble * 0.4;
+    const x = Math.sign(c) * Math.pow(Math.abs(c), 0.55) * w / 2 * k;
+    const y = Math.sign(si) * Math.pow(Math.abs(si), 0.55) * h / 2 * k;
+    i ? s.lineTo(x, y) : s.moveTo(x, y);
+  }
+  return s;
+}
+function bed(w, h, color, y = 0) {
+  const g = new THREE.ExtrudeGeometry(blobShape(w, h, 0.045), { depth: 0.1, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.18, bevelSegments: 4, curveSegments: 48 });
+  const m = mesh(g, color, { cast: false });
+  m.rotation.x = -Math.PI / 2;
+  m.position.y = y;
+  return m;
+}
+const soil = bed(6.6, 4.4, "#8a5a3a");
+soil.position.z = 0.3;
+scene.add(soil);
+
+// --- herbe ---
+const tuftGeo = new THREE.ConeGeometry(0.06, 0.32, 5);
+tuftGeo.translate(0, 0.16, 0);
+const tufts = new THREE.InstancedMesh(tuftGeo, toon("#6fae3e"), 1400);
+tufts.castShadow = true;
+const dummy = new THREE.Object3D();
+let ti = 0;
+while (ti < 1400) {
+  const x = rand(-16, 16), z = rand(-11, 7);
+  if (Math.abs(x) < 3.9 && Math.abs(z - 0.3) < 2.8) continue;
+  for (let b = 0; b < 3 && ti < 1400; b++) {
+    dummy.position.set(x + rand(-0.08, 0.08), 0, z + rand(-0.08, 0.08));
+    dummy.rotation.set(rand(-0.35, 0.35), rand(0, 6), rand(-0.35, 0.35));
+    dummy.scale.setScalar(rand(0.7, 1.3));
+    dummy.updateMatrix();
+    tufts.setMatrixAt(ti++, dummy.matrix);
+  }
+}
+scene.add(tufts);
+
+// --- feuilles mortes au sol ---
+const leafShape = new THREE.Shape();
+leafShape.moveTo(0, -0.12);
+leafShape.quadraticCurveTo(0.12, 0, 0, 0.14);
+leafShape.quadraticCurveTo(-0.12, 0, 0, -0.12);
+const leafGeo = new THREE.ShapeGeometry(leafShape, 6);
+const leafColors = ["#e0702e", "#c8462a", "#f0a63c", "#d98c2a"];
+for (let i = 0; i < 120; i++) {
+  const x = rand(-15, 15), z = rand(-10, 7);
+  if (Math.abs(x) < 3.6 && Math.abs(z - 0.3) < 2.5) continue;
+  const l = mesh(leafGeo, leafColors[i % 4], { cast: false });
+  l.material = toon(leafColors[i % 4]);
+  l.rotation.set(-Math.PI / 2, 0, rand(0, 6));
+  l.position.set(x, 0.02, z);
+  l.scale.setScalar(rand(0.9, 1.6));
+  scene.add(l);
+}
+
+// --- arbres d'automne ---
+function tree(x, z, s, palette) {
+  const g = new THREE.Group();
+  const trunk = mesh(new THREE.CylinderGeometry(0.18 * s, 0.3 * s, 2.2 * s, 10), "#7a4e30");
+  trunk.position.y = 1.1 * s;
+  g.add(trunk);
+  const blobs = [[0, 2.9, 0, 1.25], [-0.8, 2.5, 0.2, 0.9], [0.85, 2.6, -0.1, 0.95], [0.1, 3.6, -0.1, 0.85], [0.3, 2.4, 0.7, 0.8]];
+  blobs.forEach(([bx, by, bz, r], i) => {
+    const b = mesh(sph(r * s, 22, 16), palette[i % palette.length]);
+    b.position.set(bx * s, by * s, bz * s);
+    g.add(b);
+  });
+  g.position.set(x, 0, z);
+  scene.add(g);
+  return g;
+}
+const warm = [["#e36d2c", "#f29a3a", "#d5502a"], ["#f2b33c", "#e8902e", "#f6c64e"], ["#c9452c", "#e0642e", "#b83a2a"]];
+[[-8.5, -6.5, 1.15], [-4.6, -8, 1.3], [-0.6, -7.2, 1.05], [3.6, -8.2, 1.35], [7.8, -6.8, 1.2], [11.5, -4, 1.1], [-12, -3.5, 1.2], [10.6, 4.8, 1.0], [-11.2, 4.2, 0.95]]
+  .forEach(([x, z, s], i) => tree(x, z, s, warm[i % 3]));
+
+function bush(x, z, s, c) {
+  const g = new THREE.Group();
+  [[0, 0.45, 0, 0.6], [-0.5, 0.35, 0.1, 0.45], [0.5, 0.35, 0, 0.48]].forEach(([bx, by, bz, r]) => {
+    const b = mesh(sph(r * s), c);
+    b.position.set(bx * s, by * s, bz * s);
+    g.add(b);
+  });
+  g.position.set(x, 0, z);
+  scene.add(g);
+}
+bush(-2.6, -5.2, 1, "#5f9e3c"); bush(5.6, -5, 1.1, "#6aa842"); bush(-9.5, 1.5, 1, "#5f9e3c"); bush(9.8, 1.2, 0.9, "#e0702e");
+
+// --- barrière ---
+const wood = "#c99a62", woodDark = "#a87a48";
+for (let x = -9; x <= 9.01; x += 1.5) {
+  const post = mesh(new THREE.CylinderGeometry(0.1, 0.12, 1.05, 8), woodDark);
+  post.position.set(x, 0.52, -4.1);
+  scene.add(post);
+  const cap = mesh(new THREE.ConeGeometry(0.13, 0.16, 8), woodDark);
+  cap.position.set(x, 1.12, -4.1);
+  scene.add(cap);
+}
+[0.45, 0.82].forEach((y) => {
+  const rail = mesh(new THREE.BoxGeometry(18.2, 0.12, 0.08), wood);
+  rail.position.set(0, y, -4.1);
+  scene.add(rail);
+});
+
+// --- citrouilles, champignons, cailloux ---
+function pumpkin(x, z, s) {
+  const g = new THREE.Group();
+  for (let i = 0; i < 6; i++) {
+    const r = mesh(sph(0.3 * s, 18, 12), i % 2 ? "#f08a2a" : "#e67a22");
+    r.scale.set(0.55, 0.8, 1);
+    r.rotation.y = (i / 6) * Math.PI;
+    r.position.y = 0.24 * s;
+    g.add(r);
+  }
+  const st = mesh(new THREE.CylinderGeometry(0.04 * s, 0.06 * s, 0.18 * s, 6), "#6a8a3a");
+  st.position.y = 0.5 * s;
+  st.rotation.z = 0.3;
+  g.add(st);
+  g.position.set(x, 0, z);
+  scene.add(g);
+}
+pumpkin(-4.4, 2.6, 1.2); pumpkin(-3.8, 3.3, 0.9); pumpkin(4.6, -3.2, 1);
+function mushroom(x, z) {
+  const st = mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.22, 8), "#f6ead0");
+  st.position.set(x, 0.11, z);
+  const cap = mesh(new THREE.SphereGeometry(0.17, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), "#d8402e");
+  cap.position.set(x, 0.2, z);
+  scene.add(st, cap);
+}
+mushroom(-7.6, -4.9); mushroom(-7.2, -5.2); mushroom(8.6, -4.8);
+[[2.5, 3.6, 0.35], [-1.5, 4.4, 0.28], [0.6, 4.9, 0.3], [-3, 5.4, 0.26], [6.2, 3, 0.4]].forEach(([x, z, r]) => {
+  const s = mesh(new THREE.DodecahedronGeometry(r, 1), "#cfc4b0");
+  s.scale.y = 0.45;
+  s.position.set(x, r * 0.2, z);
+  scene.add(s);
+});
+
+// --- étal du fleuriste ---
+function textTex(text, w, h, bg, fg, size) {
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const x = c.getContext("2d");
+  x.fillStyle = bg; x.fillRect(0, 0, w, h);
+  x.fillStyle = fg; x.font = `900 ${size}px Nunito, system-ui, sans-serif`;
+  x.textAlign = "center"; x.textBaseline = "middle";
+  x.fillText(text, w / 2, h / 2 + 2);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const stall = new THREE.Group();
+const counter = mesh(new THREE.BoxGeometry(2.6, 0.9, 1.1), wood);
+counter.position.y = 0.45;
+stall.add(counter);
+const plank = mesh(new THREE.BoxGeometry(2.8, 0.1, 1.3), woodDark);
+plank.position.y = 0.95;
+stall.add(plank);
+[[-1.2, -0.45], [1.2, -0.45], [-1.2, 0.45], [1.2, 0.45]].forEach(([x, z]) => {
+  const p = mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.3, 8), woodDark);
+  p.position.set(x, 1.15, z);
+  stall.add(p);
+});
+for (let i = 0; i < 7; i++) {
+  const a = mesh(new THREE.BoxGeometry(0.42, 0.06, 1.6), i % 2 ? "#fff3dc" : "#e0503e");
+  a.position.set(-1.26 + i * 0.42, 2.38, 0.12);
+  a.rotation.x = 0.28;
+  stall.add(a);
+  const flap = mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.06, 16, 1, false, 0, Math.PI), i % 2 ? "#fff3dc" : "#e0503e");
+  flap.rotation.set(Math.PI / 2, 0, Math.PI / 2);
+  flap.position.set(-1.26 + i * 0.42, 2.17, 0.92);
+  stall.add(flap);
+}
+const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.42), new THREE.MeshBasicMaterial({ map: textTex("Fleurs", 320, 84, "#fff3dc", "#b8402e", 54) }));
+sign.position.set(0, 0.5, 0.56);
+stall.add(sign);
+["#e0503e", "#f2c03a", "#d65a9a", "#8a6ad8", "#ffffff"].forEach((c, i) => {
+  const crate = mesh(new THREE.BoxGeometry(0.42, 0.22, 0.42), "#b5844e");
+  crate.position.set(-1 + i * 0.5, 1.11, 0.05);
+  stall.add(crate);
+  for (let k = 0; k < 5; k++) {
+    const f = mesh(sph(0.08, 10, 8), c);
+    f.position.set(-1 + i * 0.5 + rand(-0.12, 0.12), 1.27 + rand(0, 0.06), 0.05 + rand(-0.12, 0.12));
+    stall.add(f);
+  }
+});
+stall.position.set(-6.4, 0, -0.6);
+stall.rotation.y = 0.38;
+scene.add(stall);
+
+// --- parcelle à acheter ---
+const lockedBed = bed(4.2, 4, "#b89a72", -0.06);
+lockedBed.material = new THREE.MeshToonMaterial({ color: "#b89a72", gradientMap: ramp, transparent: true, opacity: 0.55 });
+lockedBed.position.set(7.6, 0, 0.6);
+scene.add(lockedBed);
+const lockSign = new THREE.Group();
+const lsPost = mesh(new THREE.CylinderGeometry(0.07, 0.08, 1.2, 8), woodDark);
+lsPost.position.y = 0.6;
+const lsBoard = mesh(new THREE.BoxGeometry(1.3, 0.62, 0.08), wood);
+lsBoard.position.y = 1.25;
+const lsFace = new THREE.Mesh(new THREE.PlaneGeometry(1.18, 0.52), new THREE.MeshBasicMaterial({ map: textTex("50 PO", 236, 104, "#fff3dc", "#4a3226", 50) }));
+lsFace.position.set(0, 1.25, 0.05);
+lockSign.add(lsPost, lsBoard, lsFace);
+lockSign.position.set(6.6, 0, 0.9);
+lockSign.rotation.y = -0.25;
+scene.add(lockSign);
+
+// --- fleurs générées ---
+const GREEN = "#4f9a34", LEAF = "#6cbf4a";
+function stem(h) {
+  const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0.04, h * 0.5, 0.02), new THREE.Vector3(0, h, 0.05)]);
+  return mesh(new THREE.TubeGeometry(curve, 8, 0.035, 6), GREEN);
+}
+function leaf(y, side, s = 1) {
+  const l = mesh(sph(0.17 * s, 12, 8), LEAF);
+  l.scale.set(1, 0.22, 0.45);
+  l.position.set(0.13 * side * s, y, 0);
+  l.rotation.z = 0.5 * side;
+  return l;
+}
+function petalRing(n, len, wid, color, tilt, r0 = 0.06) {
+  const g = new THREE.Group();
+  for (let i = 0; i < n; i++) {
+    const p = mesh(sph(1, 12, 8), color);
+    p.scale.set(len, 0.03, wid);
+    const a = (i / n) * Math.PI * 2;
+    const arm = new THREE.Group();
+    p.position.x = r0 + len * 0.85;
+    p.rotation.z = tilt;
+    arm.add(p);
+    arm.rotation.y = a;
+    g.add(arm);
+  }
+  return g;
+}
+const SPECIES = {
+  marguerite: { h: 0.75, head(c) { const g = petalRing(12, 0.13, 0.045, c, 0.15); const d = mesh(sph(0.085), "#f6c43a"); d.scale.y = 0.6; g.add(d); return g; } },
+  cosmos: { h: 0.9, head(c) { const g = petalRing(8, 0.15, 0.08, c, 0.2); const d = mesh(sph(0.06), "#f2d04a"); d.scale.y = 0.6; g.add(d); return g; } },
+  tulipe: { h: 0.65, head(c) {
+    const pts = [[0, 0], [0.1, 0.02], [0.15, 0.1], [0.16, 0.2], [0.13, 0.3], [0.11, 0.33]].map(([x, y]) => new THREE.Vector2(x, y));
+    const g = new THREE.Group();
+    const cup = mesh(new THREE.LatheGeometry(pts, 18), new THREE.MeshToonMaterial({ color: c, gradientMap: ramp, side: THREE.DoubleSide }));
+    cup.position.y = -0.08;
+    g.add(cup);
+    return g;
+  }, upright: true },
+  dahlia: { h: 0.8, head(c) {
+    const g = new THREE.Group();
+    for (let i = 0; i < 46; i++) {
+      const p = mesh(sph(0.07, 8, 6), c);
+      const u = Math.acos(1 - (i + 0.5) / 46 * 1.4), v = i * 2.4;
+      const dir = new THREE.Vector3(Math.sin(u) * Math.cos(v), Math.cos(u), Math.sin(u) * Math.sin(v));
+      p.position.copy(dir.clone().multiplyScalar(0.13));
+      p.scale.set(0.8, 0.8, 1.4);
+      p.lookAt(dir.multiplyScalar(2));
+      g.add(p);
+    }
+    return g;
+  }, upright: true },
+  tournesol: { h: 1.45, head(c) {
+    const g = petalRing(16, 0.15, 0.05, c, 0.1, 0.13);
+    const d = mesh(new THREE.CylinderGeometry(0.17, 0.15, 0.07, 22), "#6a3e1e");
+    g.add(d);
+    return g;
+  } },
+};
+
+const spots = [];
+const colsX = [-2.25, -0.75, 0.75, 2.25], rowsZ = [-1.0, 0.25, 1.5];
+const plan = [
+  ["marguerite", "#ffffff"], ["tulipe", "#e0403a"], ["dahlia", "#d6447a"], ["tournesol", "#f6c43a"],
+  ["cosmos", "#f08ac0"], ["dahlia", "#f29a3a"], ["tulipe", "#f6d24a"], ["cosmos", "#ffffff"],
+  ["tulipe", "#9a6ae0"], ["marguerite", "#f6c43a"], ["dahlia", "#9a2a4a"], ["cosmos", "#e0503e"],
+];
+const startStage = [3, 3, 3, 3, 2, 3, 1, 3, 3, 0, 2, 3];
+const raycastTargets = [];
+rowsZ.forEach((z, r) => colsX.forEach((x, c) => {
+  const i = r * 4 + c;
+  const mound = mesh(sph(0.46, 20, 10), toon("#7a4a2e").clone(), { cast: false });
+  mound.scale.set(1, 0.3, 0.85);
+  mound.position.set(x, 0.18, z);
+  scene.add(mound);
+  const holder = new THREE.Group();
+  holder.position.set(x, 0.26, z);
+  holder.scale.setScalar(1.4);
+  scene.add(holder);
+  const spot = { i, x, z, mound, holder, species: plan[i][0], color: plan[i][1], stage: startStage[i], t: rand(0, 4), wet: 0, phase: rand(0, 6), pop: 0 };
+  mound.userData.spot = spot;
+  raycastTargets.push(mound);
+  spots.push(spot);
+  buildPlant(spot);
+}));
+
+function buildPlant(spot) {
+  spot.holder.clear();
+  const sp = SPECIES[spot.species];
+  const g = new THREE.Group();
+  if (spot.stage === 1) {
+    g.add(leaf(0.06, 1, 0.6), leaf(0.06, -1, 0.6));
+    const s = stem(0.1); g.add(s);
+  } else if (spot.stage >= 2) {
+    const h = spot.stage === 2 ? sp.h * 0.6 : sp.h;
+    g.add(stem(h), leaf(h * 0.35, 1), leaf(h * 0.55, -1, 0.85));
+    let head;
+    if (spot.stage === 2) {
+      head = mesh(sph(0.08, 12, 10), spot.color);
+      head.scale.set(0.8, 1.3, 0.8);
+      const sep = mesh(sph(0.085, 12, 8, ), GREEN);
+      sep.scale.set(0.9, 0.6, 0.9);
+      sep.position.y = -0.05;
+      head = new THREE.Group().add(head, sep);
+    } else {
+      head = sp.head(spot.color);
+      if (!sp.upright) head.rotation.x = 0.75;
+      if (spot.species === "tournesol") head.rotation.x = 1.15;
+    }
+    head.position.set(0, h, 0.05);
+    g.add(head);
+  }
+  g.traverse((o) => { if (o.isMesh) { o.userData.spot = spot; raycastTargets.push(o); } });
+  spot.plant = g;
+  spot.holder.add(g);
+}
+
+// --- l'arroseur ---
+const SKIN = "#ffd4b0";
+const gardener = new THREE.Group();
+const body = new THREE.Group();
+gardener.add(body);
+const torso = mesh(new THREE.CapsuleGeometry(0.24, 0.22, 6, 16), "#4f8fd0");
+torso.position.y = 0.55;
+const apron = mesh(new THREE.CapsuleGeometry(0.245, 0.12, 6, 16, ), "#3a6a3a");
+apron.scale.set(1.02, 1, 1.05);
+apron.position.y = 0.46;
+const legs = [-0.11, 0.11].map((x) => {
+  const leg = new THREE.Group();
+  const l = mesh(new THREE.CapsuleGeometry(0.08, 0.14, 4, 10), "#5a4a3a");
+  l.position.y = -0.12;
+  const shoe = mesh(sph(0.1, 12, 8), "#7a4a2a");
+  shoe.scale.set(0.9, 0.6, 1.3);
+  shoe.position.set(0, -0.25, 0.04);
+  leg.add(l, shoe);
+  leg.position.set(x, 0.3, 0);
+  body.add(leg);
+  return leg;
+});
+const head = new THREE.Group();
+const skull = mesh(sph(0.36, 28, 20), SKIN);
+skull.scale.set(1, 0.95, 0.95);
+head.add(skull);
+[-0.12, 0.12].forEach((x) => {
+  const eye = mesh(sph(0.05, 12, 10), "#2a1e1a", { cast: false });
+  eye.scale.set(0.8, 1.15, 0.5);
+  eye.position.set(x, 0.02, 0.33);
+  const glint = mesh(sph(0.015, 8, 6), "#ffffff", { cast: false });
+  glint.position.set(x + 0.015, 0.05, 0.355);
+  const cheek = mesh(sph(0.055, 12, 8), "#ff9a8a", { cast: false });
+  cheek.scale.set(1, 0.6, 0.3);
+  cheek.position.set(x * 1.6, -0.08, 0.3);
+  head.add(eye, glint, cheek);
+});
+const nose = mesh(sph(0.035, 10, 8), "#f4b890", { cast: false });
+nose.position.set(0, -0.04, 0.36);
+head.add(nose);
+const brim = mesh(new THREE.CylinderGeometry(0.6, 0.62, 0.04, 28), "#f2d27a");
+brim.position.y = 0.22;
+brim.rotation.x = -0.12;
+const crown = mesh(new THREE.CylinderGeometry(0.28, 0.33, 0.24, 24), "#f2d27a");
+crown.position.y = 0.34;
+const band = mesh(new THREE.CylinderGeometry(0.335, 0.335, 0.07, 24), "#d84a3a");
+band.position.y = 0.27;
+head.add(brim, crown, band);
+head.position.y = 1.05;
+const armL = new THREE.Group(), armR = new THREE.Group();
+[armL, armR].forEach((arm, k) => {
+  const a = mesh(new THREE.CapsuleGeometry(0.065, 0.2, 4, 10), "#4f8fd0");
+  a.position.y = -0.14;
+  const hand = mesh(sph(0.075, 12, 8), SKIN);
+  hand.position.y = -0.3;
+  arm.add(a, hand);
+  arm.position.set(k ? 0.3 : -0.3, 0.72, 0);
+  body.add(arm);
+});
+const can = new THREE.Group();
+const canBody = mesh(new THREE.CylinderGeometry(0.15, 0.17, 0.26, 18), "#5aa0b8");
+const spout = mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.4, 8), "#5aa0b8");
+spout.position.set(0, 0.08, 0.25);
+spout.rotation.x = 1.0;
+const rose = mesh(new THREE.CylinderGeometry(0.06, 0.035, 0.05, 10), "#4a8aa0");
+rose.position.set(0, 0.2, 0.43);
+rose.rotation.x = 1.0;
+const handle = mesh(new THREE.TorusGeometry(0.11, 0.022, 8, 16, Math.PI), "#4a8aa0");
+handle.position.y = 0.13;
+handle.rotation.y = Math.PI / 2;
+can.add(canBody, spout, rose, handle);
+can.position.set(0, -0.38, 0.12);
+armR.add(can);
+body.add(torso, apron, head);
+gardener.scale.setScalar(1.05);
+gardener.position.set(-3.6, 0, 3);
+scene.add(gardener);
+
+// --- particules : gouttes et feuilles qui tombent ---
+const drops = [];
+const dropGeo = sph(0.035, 8, 6);
+const dropMat = new THREE.MeshToonMaterial({ color: "#8fd4f6", gradientMap: ramp });
+for (let i = 0; i < 40; i++) {
+  const d = new THREE.Mesh(dropGeo, dropMat);
+  d.visible = false;
+  d.scale.set(0.8, 1.4, 0.8);
+  scene.add(d);
+  drops.push({ m: d, v: new THREE.Vector3(), life: 0 });
+}
+const falling = [];
+for (let i = 0; i < 28; i++) {
+  const l = new THREE.Mesh(leafGeo, new THREE.MeshToonMaterial({ color: leafColors[i % 4], gradientMap: ramp, side: THREE.DoubleSide }));
+  l.castShadow = true;
+  l.scale.setScalar(1.3);
+  scene.add(l);
+  falling.push({ m: l, reset(first) {
+    l.position.set(rand(-12, 12), first ? rand(0.5, 7) : rand(6, 8), rand(-9, 4));
+    this.sp = rand(0.35, 0.7); this.ph = rand(0, 6); this.rs = rand(0.8, 2);
+  } });
+  falling[i].reset(true);
+}
+
+// --- boucle de jeu ---
+let po = 128;
+const poVal = document.getElementById("poVal");
+const staffState = document.getElementById("staffState");
+const staffBar = document.getElementById("staffBar");
+const brown = new THREE.Color("#7a4a2e"), wetBrown = new THREE.Color("#4e2e1c");
+const GROW = 7;
+let task = null, waterT = 0;
+
+function pickTask() {
+  const dry = spots.filter((s) => s.wet < 0.2 && s.stage > 0 && s.stage < 3);
+  const pool = dry.length ? dry : spots.filter((s) => s.wet < 0.3);
+  if (!pool.length) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function emitDrops(spot) {
+  const tip = new THREE.Vector3();
+  rose.getWorldPosition(tip);
+  for (const d of drops) {
+    if (d.life > 0) continue;
+    d.life = rand(0.4, 0.7);
+    d.m.visible = true;
+    d.m.position.copy(tip);
+    const dir = new THREE.Vector3(spot.x - tip.x, 0, spot.z - tip.z).normalize();
+    d.v.set(dir.x * rand(0.8, 1.4) + rand(-0.3, 0.3), rand(0.2, 0.8), dir.z * rand(0.8, 1.4) + rand(-0.3, 0.3));
+    if (Math.random() < 0.6) break;
+  }
+}
+
+function harvest(spot) {
+  if (spot.stage !== 3 || spot.pop) return;
+  spot.pop = 0.0001;
+  const gain = 8 + Math.floor(Math.random() * 10);
+  const p = new THREE.Vector3(spot.x, 1, spot.z).project(camera);
+  const el = document.createElement("div");
+  el.className = "float";
+  el.textContent = `+${gain} PO`;
+  el.style.left = `${(p.x * 0.5 + 0.5) * innerWidth}px`;
+  el.style.top = `${(-p.y * 0.5 + 0.5) * innerHeight}px`;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => { el.style.transform = "translate(-50%, -160%)"; el.style.opacity = "0"; });
+  setTimeout(() => el.remove(), 1200);
+  po += gain;
+  poVal.textContent = po;
+}
+
+const ray = new THREE.Raycaster();
+const ptr = new THREE.Vector2();
+function hit(e) {
+  ptr.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ptr, camera);
+  const h = ray.intersectObjects(raycastTargets, false)[0];
+  return h ? h.object.userData.spot : null;
+}
+renderer.domElement.addEventListener("pointermove", (e) => {
+  const s = hit(e);
+  renderer.domElement.style.cursor = s && s.stage === 3 ? "pointer" : "default";
+});
+renderer.domElement.addEventListener("click", (e) => { const s = hit(e); if (s) harvest(s); });
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.fov = camera.aspect < 1.3 ? 42 : 32;
+  camera.updateProjectionMatrix();
+}
+addEventListener("resize", resize);
+resize();
+
+const clock = new THREE.Clock();
+function tick() {
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+
+  for (const s of spots) {
+    s.wet = Math.max(0, s.wet - dt / 25);
+    s.mound.material.color.copy(brown).lerp(wetBrown, Math.min(1, s.wet * 1.4));
+    if (s.pop) {
+      s.pop += dt * 3;
+      const k = s.pop < 0.3 ? 1 + s.pop : Math.max(0, 1.3 - (s.pop - 0.3) * 2.2);
+      s.plant.scale.setScalar(k);
+      if (k <= 0) { s.pop = 0; s.stage = 0; s.t = 0; s.plant.scale.setScalar(1); buildPlant(s); }
+    } else if (s.stage < 3) {
+      s.t += dt * (1 + s.wet * 1.5);
+      if (s.t > GROW) { s.t = 0; s.stage++; buildPlant(s); s.plant.scale.setScalar(0.6); }
+    }
+    if (!s.pop && s.plant.scale.x < 1) s.plant.scale.setScalar(Math.min(1, s.plant.scale.x + dt * 2.5));
+    s.plant.rotation.z = Math.sin(t * 1.6 + s.phase) * 0.06;
+    s.plant.rotation.x = Math.sin(t * 1.1 + s.phase * 2) * 0.03;
+  }
+
+  if (!task) { task = pickTask(); waterT = 0; }
+  if (task) {
+    const target = new THREE.Vector3(task.x + 0.78, 0, task.z + 0.05);
+    const to = target.clone().sub(gardener.position);
+    to.y = 0;
+    const dist = to.length();
+    if (dist > 0.05) {
+      const step = Math.min(dist, dt * 1.7);
+      gardener.position.addScaledVector(to.normalize(), step);
+      const want = Math.atan2(to.x, to.z);
+      let d = want - gardener.rotation.y;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      gardener.rotation.y += d * Math.min(1, dt * 8);
+      const w = t * 9;
+      legs[0].rotation.x = Math.sin(w) * 0.6;
+      legs[1].rotation.x = -Math.sin(w) * 0.6;
+      armL.rotation.x = -Math.sin(w) * 0.5;
+      armR.rotation.x = Math.sin(w) * 0.3;
+      body.position.y = Math.abs(Math.sin(w)) * 0.06;
+      can.rotation.x = 0;
+      staffState.textContent = "Va vers une plante";
+    } else {
+      const want = Math.atan2(task.x - gardener.position.x, task.z - gardener.position.z);
+      let d = want - gardener.rotation.y;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      gardener.rotation.y += d * Math.min(1, dt * 8);
+      legs[0].rotation.x = legs[1].rotation.x = 0;
+      body.position.y = 0;
+      armR.rotation.x = THREE.MathUtils.lerp(armR.rotation.x, -1.1, dt * 6);
+      can.rotation.x = THREE.MathUtils.lerp(can.rotation.x, 0.5, dt * 6);
+      armL.rotation.x = Math.sin(t * 2) * 0.05;
+      waterT += dt;
+      if (waterT > 0.35) emitDrops(task);
+      task.wet = Math.min(1, task.wet + dt * 0.5);
+      staffState.textContent = "Arrose";
+      if (waterT > 2.2) { task = null; armR.rotation.x = 0; }
+    }
+    staffBar.style.width = `${Math.min(100, (waterT / 2.2) * 100)}%`;
+  }
+  head.rotation.z = Math.sin(t * 1.3) * 0.04;
+
+  for (const d of drops) {
+    if (d.life <= 0) continue;
+    d.life -= dt;
+    d.v.y -= 9 * dt;
+    d.m.position.addScaledVector(d.v, dt);
+    if (d.life <= 0 || d.m.position.y < 0.2) { d.life = 0; d.m.visible = false; }
+  }
+  for (const f of falling) {
+    const m = f.m;
+    m.position.y -= f.sp * dt;
+    m.position.x += Math.sin(t * 1.2 + f.ph) * dt * 0.6 + dt * 0.25;
+    m.rotation.set(Math.sin(t * f.rs + f.ph) * 1.2, t * f.rs * 0.7, Math.cos(t * f.rs + f.ph) * 0.8);
+    if (m.position.y < 0.03) f.reset(false);
+  }
+  lockSign.rotation.z = Math.sin(t * 2) * 0.03;
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+<script>
+  setTimeout(() => { if (!document.querySelector("canvas")) document.getElementById("err").style.display = "grid"; }, 4000);
+</script>
+</body>
+</html>

@@ -1,0 +1,210 @@
+<h2>Quel rendu pour la vue de côté ?</h2>
+<p class="subtitle">Même scène dans les trois cas : fin d'après-midi d'automne, un stand de vente à gauche, des fleurs à différents stades, l'arroseur au travail. Clique sur celle qui te parle (ou dis-moi ce que tu mélangerais).</p>
+
+<style>
+  .scene { width: 100%; max-width: 820px; aspect-ratio: 2 / 1; display: block; border-radius: 8px; image-rendering: pixelated; }
+  .opt-block { margin-bottom: 28px; }
+</style>
+
+<div class="options">
+  <div class="option opt-block" data-choice="pixel" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Pixel art net</h3>
+      <p>Petite résolution agrandie, aplats et contours francs, ciel en bandes. Lisible, rétro, le plus proche des sprites actuels.</p>
+      <canvas id="cA" class="scene" width="768" height="384"></canvas>
+    </div>
+  </div>
+  <div class="option opt-block" data-choice="pixel-lumiere" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Pixel art + lumière</h3>
+      <p>Les mêmes pixels, mais avec halo du soleil, rayons, lueur douce et vignette. L'esprit HD-2D actuel, sans la 3D.</p>
+      <canvas id="cB" class="scene" width="768" height="384"></canvas>
+    </div>
+  </div>
+  <div class="option opt-block" data-choice="illustre" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Illustration lisse</h3>
+      <p>Formes vectorielles douces, dégradés, pas de pixels. Plus "jeu mobile cosy", plus libre pour les animations.</p>
+      <canvas id="cC" class="scene" width="768" height="384"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const LW = 192, LH = 96;
+
+  function px(ctx, x, y, w, h, c) { ctx.fillStyle = c; ctx.fillRect(x | 0, y | 0, w | 0, h | 0); }
+  function disc(ctx, cx, cy, r, c) {
+    ctx.fillStyle = c;
+    for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++)
+      if (x * x + y * y <= r * r + r * 0.6) ctx.fillRect(cx + x, cy + y, 1, 1);
+  }
+
+  const plants = [
+    { x: 44, s: 1, c: '#d8452f' }, { x: 54, s: 2, c: '#e8b23a' }, { x: 64, s: 3, c: '#c2457a' },
+    { x: 74, s: 3, c: '#e8b23a' }, { x: 84, s: 2, c: '#7a5cc4' }, { x: 108, s: 0 }, { x: 118, s: 1 },
+    { x: 128, s: 3, c: '#d8452f' }, { x: 138, s: 3, c: '#f2efe4' }, { x: 148, s: 2, c: '#c2457a' },
+    { x: 158, s: 3, c: '#7a5cc4' }, { x: 168, s: 1 },
+  ];
+
+  function drawPixelScene(ctx) {
+    const sky = ['#5d7fae', '#7b93b8', '#a99fb4', '#d6a99a', '#f0b47a', '#f6c98c'];
+    sky.forEach((c, i) => px(ctx, 0, i * 9, LW, 9, c));
+    disc(ctx, 150, 34, 9, '#ffe7b0'); disc(ctx, 150, 34, 7, '#fff3d0');
+    for (let x = 0; x < LW; x++) {
+      const h1 = 50 + Math.sin(x / 17) * 5 + Math.sin(x / 7) * 1.5;
+      px(ctx, x, h1, 1, LH - h1, '#a2849a');
+      const h2 = 58 + Math.sin(x / 23 + 2) * 4 + Math.sin(x / 9) * 1.2;
+      px(ctx, x, h2, 1, LH - h2, '#7d7a58');
+    }
+    [[14, 46, 11], [180, 44, 12], [100, 56, 6]].forEach(([x, y, r]) => {
+      px(ctx, x - 1, y, 3, 72 - y, '#5a3a24');
+      disc(ctx, x, y, r, '#a3401f'); disc(ctx, x - 1, y - 1, r - 2, '#d9682b'); disc(ctx, x - 3, y - 3, r - 6 > 1 ? r - 6 : 2, '#f0a040');
+    });
+    px(ctx, 0, 70, LW, 3, '#8a9a42'); px(ctx, 0, 72, LW, 1, '#6a7a32');
+    px(ctx, 0, 73, LW, LH - 73, '#6b4428');
+    for (let x = 38; x < 176; x += 10) { px(ctx, x, 75, 8, 2, '#563420'); px(ctx, x + 1, 74, 6, 1, '#835636'); }
+    for (let y = 80; y < LH; y += 4) for (let x = (y % 8) * 2; x < LW; x += 16) px(ctx, x, y, 2, 1, '#5a3822');
+    // stand
+    px(ctx, 6, 50, 26, 3, '#b8432f'); for (let i = 0; i < 26; i += 4) px(ctx, 6 + i, 50, 2, 3, '#f2e6d0');
+    px(ctx, 7, 53, 2, 20, '#6e4a2c'); px(ctx, 29, 53, 2, 20, '#6e4a2c');
+    px(ctx, 8, 63, 22, 9, '#94673e'); px(ctx, 8, 63, 22, 1, '#b48354');
+    [['#d8452f', 11], ['#e8b23a', 15], ['#c2457a', 19], ['#7a5cc4', 23]].forEach(([c, x]) => { px(ctx, x, 60, 3, 3, c); px(ctx, x + 1, 62, 1, 1, '#4f7a2e'); });
+    // plants
+    plants.forEach(p => {
+      const g = '#4f7a2e', gl = '#78a83e';
+      if (p.s === 0) { px(ctx, p.x + 3, 72, 2, 1, gl); return; }
+      const h = [0, 4, 8, 12][p.s];
+      px(ctx, p.x + 3, 74 - h, 1, h, g);
+      px(ctx, p.x + 1, 72 - Math.floor(h / 2), 2, 1, gl); px(ctx, p.x + 4, 71 - Math.floor(h / 2), 2, 1, gl);
+      if (p.s >= 2) {
+        const top = 74 - h - 3;
+        const sz = p.s === 3 ? 2 : 1;
+        disc(ctx, p.x + 3, top + 1, sz, p.c); px(ctx, p.x + 3, top + 1, 1, 1, '#f6d26a');
+      }
+    });
+    // gardener
+    const gx = 96, gy = 52;
+    px(ctx, gx - 2, gy, 9, 2, '#e8c070'); px(ctx, gx, gy - 2, 5, 2, '#e8c070'); px(ctx, gx, gy - 2, 5, 1, '#f6dc98');
+    px(ctx, gx + 1, gy + 2, 4, 3, '#f0c4a0'); px(ctx, gx + 3, gy + 3, 1, 1, '#3a2a20');
+    px(ctx, gx, gy + 5, 6, 6, '#4a7ab0'); px(ctx, gx + 1, gy + 7, 4, 4, '#2f5a8a');
+    px(ctx, gx + 1, gy + 11, 2, 7, '#3a3a4a'); px(ctx, gx + 4, gy + 11, 2, 7, '#3a3a4a');
+    px(ctx, gx, gy + 18, 3, 2, '#4a3020'); px(ctx, gx + 4, gy + 18, 3, 2, '#4a3020');
+    px(ctx, gx + 6, gy + 7, 3, 2, '#f0c4a0');
+    px(ctx, gx + 8, gy + 7, 6, 5, '#8c98a4'); px(ctx, gx + 8, gy + 7, 6, 1, '#b8c2cc'); px(ctx, gx + 14, gy + 6, 3, 1, '#8c98a4');
+    [[gx + 17, gy + 8], [gx + 18, gy + 11], [gx + 16, gy + 13], [gx + 19, gy + 15]].forEach(([x, y]) => px(ctx, x, y, 1, 2, '#7fc4f0'));
+    // leaves
+    [[30, 20, '#d9682b'], [70, 34, '#f0a040'], [124, 14, '#a3401f'], [176, 28, '#f0a040']].forEach(([x, y, c]) => { px(ctx, x, y, 2, 1, c); px(ctx, x + 1, y + 1, 1, 1, c); });
+    // coins hud
+    disc(ctx, 6, 6, 3, '#f2c230'); px(ctx, 5, 5, 1, 2, '#fff0a0');
+    [[12, 4], [16, 4], [20, 4]].forEach(([x, y]) => px(ctx, x, y, 3, 5, '#fff3d0'));
+  }
+
+  function lowres() {
+    const c = document.createElement('canvas'); c.width = LW; c.height = LH;
+    const ctx = c.getContext('2d'); drawPixelScene(ctx); return c;
+  }
+
+  // A
+  (() => {
+    const ctx = document.getElementById('cA').getContext('2d');
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(lowres(), 0, 0, 768, 384);
+  })();
+
+  // B
+  (() => {
+    const cv = document.getElementById('cB'), ctx = cv.getContext('2d');
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(lowres(), 0, 0, 768, 384);
+    const base = document.createElement('canvas'); base.width = 768; base.height = 384;
+    base.getContext('2d').drawImage(cv, 0, 0);
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.28; ctx.filter = 'blur(8px) brightness(0.9)';
+    ctx.drawImage(base, 0, 0); ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = 'screen';
+    let g = ctx.createRadialGradient(600, 136, 10, 600, 136, 260);
+    g.addColorStop(0, 'rgba(255,220,150,0.75)'); g.addColorStop(1, 'rgba(255,180,100,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 768, 384);
+    ctx.translate(600, 136);
+    for (let i = 0; i < 6; i++) {
+      ctx.rotate(0.19); const rg = ctx.createLinearGradient(0, 0, -520, 0);
+      rg.addColorStop(0, 'rgba(255,225,170,0.22)'); rg.addColorStop(1, 'rgba(255,225,170,0)');
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-560, 40 + i * 6); ctx.lineTo(-560, 80 + i * 6); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    ctx.save(); ctx.globalCompositeOperation = 'multiply';
+    g = ctx.createLinearGradient(0, 280, 0, 384); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(120,80,110,0.6)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 768, 384);
+    g = ctx.createRadialGradient(384, 192, 200, 384, 192, 480); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(60,30,60,0.75)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, 768, 384);
+    ctx.restore();
+  })();
+
+  // C
+  (() => {
+    const ctx = document.getElementById('cC').getContext('2d'), W = 768, H = 384;
+    let g = ctx.createLinearGradient(0, 0, 0, 300);
+    g.addColorStop(0, '#6c8cc0'); g.addColorStop(0.55, '#e9b29a'); g.addColorStop(1, '#fbd59a');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    g = ctx.createRadialGradient(600, 136, 0, 600, 136, 120); g.addColorStop(0, 'rgba(255,248,220,1)'); g.addColorStop(0.3, 'rgba(255,236,180,0.9)'); g.addColorStop(1, 'rgba(255,220,160,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    function hill(base, amp, f, ph, col) {
+      ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, H);
+      for (let x = 0; x <= W; x += 8) ctx.lineTo(x, base + Math.sin(x / f + ph) * amp + Math.sin(x / (f / 3)) * amp * 0.25);
+      ctx.lineTo(W, H); ctx.fill();
+    }
+    hill(205, 18, 70, 0, '#b394a8'); hill(236, 14, 95, 2, '#8e8a62');
+    function tree(x, y, r) {
+      ctx.fillStyle = '#5e3d27'; ctx.beginPath(); ctx.moveTo(x - 6, 290); ctx.quadraticCurveTo(x - 3, y + 10, x - 2, y); ctx.lineTo(x + 2, y); ctx.quadraticCurveTo(x + 3, y + 10, x + 6, 290); ctx.fill();
+      [[0, 0, r, '#b84a26'], [-r * 0.35, -r * 0.3, r * 0.75, '#df7230'], [-r * 0.45, -r * 0.5, r * 0.4, '#f3a649']].forEach(([dx, dy, rr, c]) => {
+        ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x + dx, y + dy, rr, rr * 0.9, 0, 0, Math.PI * 2); ctx.fill();
+      });
+    }
+    tree(56, 180, 46); tree(720, 172, 50); tree(400, 222, 24);
+    g = ctx.createLinearGradient(0, 282, 0, H); g.addColorStop(0, '#8e9e48'); g.addColorStop(0.06, '#6f8236'); g.addColorStop(0.07, '#7a4f30'); g.addColorStop(1, '#5a3822');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(0, 284); for (let x = 0; x <= W; x += 16) ctx.quadraticCurveTo(x + 8, 280, x + 16, 284); ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
+    for (let x = 152; x < 704; x += 40) { ctx.fillStyle = '#4e301c'; ctx.beginPath(); ctx.ellipse(x + 16, 302, 16, 4, 0, 0, Math.PI * 2); ctx.fill(); }
+    // stand
+    ctx.fillStyle = '#7a5232'; ctx.fillRect(30, 210, 8, 80); ctx.fillRect(118, 210, 8, 80);
+    ctx.fillStyle = '#a7774a'; ctx.beginPath(); ctx.roundRect(34, 252, 88, 36, 6); ctx.fill();
+    for (let i = 0; i < 6; i++) { ctx.fillStyle = i % 2 ? '#f4e8d2' : '#c4483a'; ctx.beginPath(); ctx.moveTo(24 + i * 18, 196); ctx.lineTo(42 + i * 18, 196); ctx.lineTo(42 + i * 18, 212); ctx.quadraticCurveTo(33 + i * 18, 220, 24 + i * 18, 212); ctx.fill(); }
+    ['#d8452f', '#e8b23a', '#c2457a', '#7a5cc4'].forEach((c, i) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(48 + i * 20, 246, 7, 0, Math.PI * 2); ctx.fill(); });
+    // plants
+    plants.forEach(p => {
+      const x = p.x * 4 + 14, base = 298;
+      if (p.s === 0) { ctx.fillStyle = '#86b44a'; ctx.beginPath(); ctx.ellipse(x, base - 3, 5, 3, -0.4, 0, Math.PI * 2); ctx.fill(); return; }
+      const h = [0, 16, 32, 50][p.s];
+      ctx.strokeStyle = '#4f7a2e'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(x, base); ctx.quadraticCurveTo(x + 4, base - h / 2, x, base - h); ctx.stroke();
+      ctx.fillStyle = '#78a83e';
+      ctx.beginPath(); ctx.ellipse(x - 7, base - h * 0.45, 7, 3, 0.5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(x + 8, base - h * 0.55, 7, 3, -0.5, 0, Math.PI * 2); ctx.fill();
+      if (p.s >= 2) {
+        const r = p.s === 3 ? 9 : 5;
+        ctx.fillStyle = p.c;
+        for (let k = 0; k < 6; k++) { const a = k * Math.PI / 3; ctx.beginPath(); ctx.ellipse(x + Math.cos(a) * r * 0.8, base - h + Math.sin(a) * r * 0.8, r * 0.6, r * 0.4, a, 0, Math.PI * 2); ctx.fill(); }
+        ctx.fillStyle = '#f6d26a'; ctx.beginPath(); ctx.arc(x, base - h, r * 0.4, 0, Math.PI * 2); ctx.fill();
+      }
+    });
+    // gardener
+    const gx = 396, gy = 210;
+    ctx.fillStyle = '#3a3a4a'; ctx.beginPath(); ctx.roundRect(gx + 2, gy + 44, 8, 30, 4); ctx.roundRect(gx + 14, gy + 44, 8, 30, 4); ctx.fill();
+    ctx.fillStyle = '#4a7ab0'; ctx.beginPath(); ctx.roundRect(gx, gy + 18, 24, 30, 8); ctx.fill();
+    ctx.fillStyle = '#2f5a8a'; ctx.beginPath(); ctx.roundRect(gx + 3, gy + 28, 18, 20, 5); ctx.fill();
+    ctx.fillStyle = '#f0c4a0'; ctx.beginPath(); ctx.arc(gx + 12, gy + 10, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#e8c070'; ctx.beginPath(); ctx.ellipse(gx + 12, gy + 2, 20, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.ellipse(gx + 12, gy - 3, 10, 8, 0, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#3a2a20'; ctx.beginPath(); ctx.arc(gx + 17, gy + 11, 1.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#9aa6b2'; ctx.beginPath(); ctx.roundRect(gx + 30, gy + 26, 24, 20, 5); ctx.fill();
+    ctx.strokeStyle = '#9aa6b2'; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(gx + 52, gy + 32); ctx.lineTo(gx + 66, gy + 24); ctx.stroke();
+    ctx.fillStyle = 'rgba(127,196,240,0.9)'; [[72, 30], [76, 42], [70, 52], [78, 60]].forEach(([dx, dy]) => { ctx.beginPath(); ctx.ellipse(gx + dx, gy + dy, 2, 4, 0, 0, Math.PI * 2); ctx.fill(); });
+    ctx.fillStyle = '#f0c4a0'; ctx.beginPath(); ctx.arc(gx + 28, gy + 32, 4, 0, Math.PI * 2); ctx.fill();
+    // leaves + hud
+    [[120, 80, '#d9682b'], [280, 136, '#f0a040'], [496, 56, '#a3401f'], [704, 112, '#f0a040']].forEach(([x, y, c]) => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(x, y, 6, 3, 0.7, 0, Math.PI * 2); ctx.fill(); });
+    ctx.fillStyle = 'rgba(40,24,30,0.35)'; ctx.beginPath(); ctx.roundRect(12, 12, 96, 30, 15); ctx.fill();
+    ctx.fillStyle = '#f2c230'; ctx.beginPath(); ctx.arc(28, 27, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff3d0'; ctx.font = '600 16px system-ui'; ctx.fillText('128 PO', 44, 33);
+  })();
+})();
+</script>
