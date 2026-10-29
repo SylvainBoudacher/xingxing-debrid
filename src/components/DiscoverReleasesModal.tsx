@@ -229,12 +229,12 @@ export function DiscoverReleasesModal({
         className="relative flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl ring-1 ring-black/10 dark:ring-white/10 overflow-hidden shadow-2xl"
       >
         {inLibrary && (
-          <span className="absolute left-1/2 top-0 z-10 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-b-lg bg-emerald-600/90 px-3 py-1 text-xs font-semibold leading-none text-white backdrop-blur-sm">
-            <Check className="h-3 w-3 flex-none" strokeWidth={3} />
+          <div className="flex shrink-0 items-center justify-center gap-1.5 bg-emerald-500/15 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+            <Check className="h-4 w-4 flex-none" strokeWidth={3} />
             Dans la bibliothèque
-          </span>
+          </div>
         )}
-        <div className={`flex shrink-0 items-start gap-4 px-5 pb-4 ${inLibrary ? "pt-8" : "pt-5"}`}>
+        <div className="flex shrink-0 items-start gap-4 px-5 pt-5 pb-4">
           {item.posterPath && (
             <img
               src={`https://image.tmdb.org/t/p/w154${item.posterPath}`}
