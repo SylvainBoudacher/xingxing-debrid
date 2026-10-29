@@ -1,4 +1,5 @@
 import { Collapse } from "@/components/Collapse";
+import { DiscoverEpisodePicks } from "@/components/DiscoverEpisodePicks";
 import { DiscoverQuickPicks } from "@/components/DiscoverQuickPicks";
 import { DiscoverReleaseFilters, type ReleaseSort } from "@/components/DiscoverReleaseFilters";
 import { DiscoverReleaseRow } from "@/components/DiscoverReleaseRow";
@@ -20,7 +21,7 @@ import {
   type SeasonSelection,
 } from "@/lib/discoverReleases";
 import { networkErrorMessage } from "@/lib/networkError";
-import { quickPicks } from "@/lib/releasePicks";
+import { episodePicks, quickPicks } from "@/lib/releasePicks";
 import { loadReleasesView, releasesViewQueryKey } from "@/lib/releasesView";
 import { tmdbKeys, tvDetail as tmdbTvDetail } from "@/lib/services/tmdb";
 import { TMDB_STALE_MS } from "@/lib/tmdbCache";
@@ -154,6 +155,15 @@ export function DiscoverReleasesModal({
     () => (releases && !fullView ? quickPicks(releases, item.mediaType === "tv") : []),
     [releases, fullView, item.mediaType],
   );
+
+  const episodes = useMemo(
+    () =>
+      releases && !fullView && item.mediaType === "tv" && picks.length === 0
+        ? episodePicks(releases)
+        : [],
+    [releases, fullView, item.mediaType, picks.length],
+  );
+  const hasSimpleView = picks.length > 0 || episodes.length > 0;
 
   const resOptions = useMemo(
     () =>
@@ -318,14 +328,23 @@ export function DiscoverReleasesModal({
                 onSearchNyaa={() => onSearchTracker(item.originalTitle || item.title, "nyaa")}
               />
             )}
-            {viewQuery.data && picks.length > 0 && (
+            {viewQuery.data && hasSimpleView && (
               <>
-                <DiscoverQuickPicks
-                  picks={picks}
-                  sendingHash={sendingHash}
-                  libraryHash={libraryHash}
-                  onSend={onSend}
-                />
+                {picks.length > 0 ? (
+                  <DiscoverQuickPicks
+                    picks={picks}
+                    sendingHash={sendingHash}
+                    libraryHash={libraryHash}
+                    onSend={onSend}
+                  />
+                ) : (
+                  <DiscoverEpisodePicks
+                    episodes={episodes}
+                    sendingHash={sendingHash}
+                    libraryHash={libraryHash}
+                    onSend={onSend}
+                  />
+                )}
                 <button
                   onClick={() => setExpertOpen(!expertOpen)}
                   className="mt-3 flex items-center gap-1 text-xs font-medium text-zinc-500 transition-colors hover:text-zinc-800 dark:hover:text-zinc-200"
@@ -340,7 +359,7 @@ export function DiscoverReleasesModal({
           </div>
 
           {viewQuery.data && releases !== null && releases.length > 0 && (
-            <Collapse open={expertOpen || picks.length === 0}>
+            <Collapse open={expertOpen || !hasSimpleView}>
               <div className="pt-3">
                 <DiscoverReleaseFilters
                   sort={releaseSort}

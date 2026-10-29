@@ -1,14 +1,9 @@
+import { AVAILABILITY } from "@/components/availabilityStyles";
 import { formatSize } from "@/lib/debrid";
 import type { Occupant } from "@/lib/discoverReleases";
-import { availability, languageLabel, type Availability, type QuickPick } from "@/lib/releasePicks";
+import { availability, languageLabel, type QuickPick } from "@/lib/releasePicks";
 import { Loader2, Plus } from "lucide-react";
 import { motion } from "motion/react";
-
-const AVAILABILITY: Record<Availability, { label: string; dot: string }> = {
-  fast: { label: "rapide", dot: "bg-green-500" },
-  ok: { label: "correcte", dot: "bg-amber-400" },
-  slow: { label: "lente", dot: "bg-rose-500" },
-};
 
 interface DiscoverQuickPickCardProps {
   pick: QuickPick;

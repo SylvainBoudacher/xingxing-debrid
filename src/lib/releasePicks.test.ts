@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { Occupant } from "@/lib/discoverReleases";
-import { availability, languageLabel, quickPicks } from "@/lib/releasePicks";
+import { availability, episodePicks, languageLabel, quickPicks } from "@/lib/releasePicks";
 
 function occ(partial: Partial<Occupant>): Occupant {
   return {
@@ -52,6 +52,29 @@ describe("quickPicks", () => {
     const pack = occ({ resolution: "720p", scope: { kind: "season", season: 1 } });
     expect(quickPicks([ep, pack], true).map((p) => p.occ)).toEqual([pack]);
     expect(quickPicks([ep], false)).toHaveLength(1);
+  });
+});
+
+describe("episodePicks", () => {
+  const ep = (episode: number, resolution: string | null, seeders = 1) =>
+    occ({ resolution, seeders, scope: { kind: "episode", season: 13, episode } });
+
+  it("regroupe par épisode, meilleure version par résolution", () => {
+    const best = ep(1, "1080p", 269);
+    const result = episodePicks([
+      ep(2, "1080p"),
+      ep(1, "1080p", 45),
+      best,
+      ep(1, "2160p", 82),
+      occ({ resolution: "1080p", scope: { kind: "season", season: 13 } }),
+    ]);
+    expect(result.map((e) => e.episode)).toEqual([1, 2]);
+    expect(result[0].picks.map((p) => p.label)).toEqual(["4K", "1080p"]);
+    expect(result[0].picks[1].occ).toBe(best);
+  });
+
+  it("ignore les épisodes sans résolution connue", () => {
+    expect(episodePicks([ep(1, null)])).toEqual([]);
   });
 });
 
