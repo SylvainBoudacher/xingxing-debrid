@@ -35,7 +35,7 @@ export function ToolUpgradeBoard({
             <span className="absolute top-1 right-1 block h-3 w-3 rotate-45 border border-black/50 bg-[#e8b040]" />
           </div>
           <p className="text-lg leading-tight">{t.name}</p>
-          <p className="mb-1 text-sm text-[#f0d8a0]/80 italic">{t.effect}</p>
+          <p className="mb-1 text-sm text-[#f0d8a0]/80">{t.effect}</p>
           <PriceTag
             price={TOOL_UPGRADE_PRICE}
             owned={toolLevel(save, t.id) === 2}

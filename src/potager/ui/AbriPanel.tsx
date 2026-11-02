@@ -45,7 +45,7 @@ export function AbriPanel({
         onHover={setHover}
       />
       <div className="mt-3 flex items-center justify-between gap-3">
-        <p className="text-base text-[#c8b890] italic">{hover ?? HINT}</p>
+        <p className="text-base text-[#ecd3a0]">{hover ?? HINT}</p>
         {price !== undefined && (
           <button type="button" onClick={onUpgrade} className={`shrink-0 ${HD_BUTTON}`}>
             Agrandir le coffre ({price} PO)

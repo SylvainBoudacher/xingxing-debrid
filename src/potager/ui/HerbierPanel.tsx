@@ -5,6 +5,7 @@ import { CATALOG_ENTRIES } from "../core/catalog/species";
 import { flowerDataUrl, silhouetteDataUrl } from "../textures/flowers";
 import { PANEL_STYLE } from "./hdPanel";
 import { herbierView, type HerbierItem } from "./herbierView";
+import { PanelHeader } from "./PanelHeader";
 
 export function HerbierPanel({ save, onClose }: { save: PotagerSave; onClose: () => void }) {
   const view = useMemo(() => herbierView(save), [save]);
@@ -14,18 +15,7 @@ export function HerbierPanel({ save, onClose }: { save: PotagerSave; onClose: ()
       className="absolute top-1/2 left-1/2 z-10 flex max-h-[85vh] w-[720px] -translate-x-1/2 -translate-y-1/2 flex-col p-5"
       style={PANEL_STYLE}
     >
-      <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-3xl font-bold italic">
-          Herbier : {view.found} / {view.total}
-        </h2>
-        <button
-          type="button"
-          onClick={onClose}
-          className="cursor-pointer text-sm text-[#c8b890] hover:text-white"
-        >
-          Fermer (Échap)
-        </button>
-      </div>
+      <PanelHeader title={`Herbier : ${view.found} / ${view.total}`} onClose={onClose} />
       <div className="grid grid-cols-10 gap-1.5 overflow-y-auto pr-1">
         {view.entries.map((e, i) => (
           <button
@@ -51,7 +41,7 @@ export function HerbierPanel({ save, onClose }: { save: PotagerSave; onClose: ()
                   className="h-full w-full opacity-80"
                   style={{ imageRendering: "pixelated" }}
                 />
-                <span className="absolute text-2xl text-[#a8977a]">?</span>
+                <span className="absolute text-2xl text-[#d8bd88]">?</span>
               </span>
             )}
           </button>
@@ -60,16 +50,16 @@ export function HerbierPanel({ save, onClose }: { save: PotagerSave; onClose: ()
       <div className="mt-3 min-h-16 text-lg">
         {picked ? (
           <>
-            <p className="font-bold">
+            <p>
               {picked.name}{" "}
               <span style={{ color: RARITY_COLOR[picked.rarity] }}>
                 ({RARITY_LABEL[picked.rarity]})
               </span>
             </p>
-            <p className="text-base text-[#e6d8b8] italic">{picked.note}</p>
+            <p className="text-base text-[#e6d8b8]">{picked.note}</p>
           </>
         ) : (
-          <p className="text-base text-[#a8977a] italic">
+          <p className="text-base text-[#d8bd88]">
             Choisis une fleur découverte pour lire la note du jardinier.
           </p>
         )}

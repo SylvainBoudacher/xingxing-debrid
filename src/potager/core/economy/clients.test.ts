@@ -95,6 +95,12 @@ describe("advanceClients", () => {
     expect(r.nextClientAt).toBeGreaterThanOrEqual(100_000 + 5000);
     expect(r.nextClientAt).toBeLessThanOrEqual(100_000 + 15_000);
   });
+  it("étal fermé : le client repart et aucun autre ne vient", () => {
+    const client = { demand: { species: "dahlia" as const, color: "red" as const }, look: 1 };
+    const s = base({ stall: [pile(1)], nextClientAt: 0, stallOpen: false });
+    expect(advanceClients({ ...s, client }, seededRng(3)).client).toBeNull();
+    expect(advanceClients(s, () => 0.5).client).toBeNull();
+  });
   it("stepSim fait arriver un client", () => {
     const s = stepSim(base({ stall: [pile(2)], nextClientAt: 0 }), 1000, () => 0.999);
     expect(s.client).not.toBeNull();

@@ -17,11 +17,11 @@ export function ClientNote({ demand }: { demand: Demand }) {
       <img
         src={flowerDataUrl(demand.species, demand.color)}
         alt=""
-        className="h-12 w-12"
+        className="h-12 w-8"
         style={{ imageRendering: "pixelated" }}
       />
       <p className="text-lg">
-        Un client demande : <span className="font-bold">{demandLabel(demand)}</span>
+        Un client demande : <span>{demandLabel(demand)}</span>
       </p>
     </div>
   );

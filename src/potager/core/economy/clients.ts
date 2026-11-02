@@ -29,9 +29,11 @@ export function rollDemand(save: PotagerSave, rng: () => number): Demand | null 
 export function advanceClients(save: PotagerSave, rng: () => number): PotagerSave {
   const now = save.playTimeMs;
   if (save.client) {
-    return save.stall.length ? save : { ...save, client: null, nextClientAt: now + nextGap(rng) };
+    return save.stall.length && save.stallOpen
+      ? save
+      : { ...save, client: null, nextClientAt: now + nextGap(rng) };
   }
-  if (!save.stall.length || now < save.nextClientAt) return save;
+  if (!save.stallOpen || !save.stall.length || now < save.nextClientAt) return save;
   const demand = rollDemand(save, rng);
   if (!demand) return save;
   return { ...save, client: { demand, look: randInt(rng, CLIENT_LOOKS) } };

@@ -1,4 +1,5 @@
 import { speciesOf } from "../core/catalog/species";
+import { salePrice } from "../core/economy/price";
 import type { Demand, FlowerStack } from "../core/types";
 import { flowerName } from "./herbierView";
 
@@ -14,4 +15,11 @@ export function matchLabel(pile: FlowerStack, d: Demand): string | null {
   if (species) return "Bonne espèce";
   if (color) return "Bonne couleur";
   return null;
+}
+
+// prix sans ruban jusqu'au ruban parfait du mini-jeu
+export function priceLabel(pile: FlowerStack, d: Demand): string {
+  const min = salePrice(pile, d, "rate");
+  const max = salePrice(pile, d, "parfait");
+  return min === max ? `${min} PO` : `${min}-${max} PO`;
 }

@@ -18,6 +18,7 @@ export function EtalPanel({
   onUnstock,
   onServe,
   onUpgrade,
+  onToggle,
   onClose,
 }: {
   save: PotagerSave;
@@ -25,6 +26,7 @@ export function EtalPanel({
   onUnstock: (stallIndex: number) => void;
   onServe: (stallIndex: number) => void;
   onUpgrade: () => void;
+  onToggle: () => void;
   onClose: () => void;
 }) {
   const [hover, setHover] = useState<string | null>(null);
@@ -37,9 +39,12 @@ export function EtalPanel({
       style={PANEL_STYLE}
     >
       <PanelHeader title="Étal" onClose={onClose} />
+      {!save.stallOpen && (
+        <p className="mb-3 text-base text-[#e8c060]">L'étal est fermé : aucun client ne viendra</p>
+      )}
       {demand && <ClientNote demand={demand} />}
       {demand && florist && (
-        <p className="mb-3 text-base text-[#e8c060] italic">Le fleuriste sert ce client</p>
+        <p className="mb-3 text-base text-[#e8c060]">Le fleuriste sert ce client</p>
       )}
       <StallBoard
         stall={save.stall}
@@ -56,7 +61,10 @@ export function EtalPanel({
           onHover={setHover}
         />
         <div className="flex flex-col justify-end gap-3 pb-2">
-          <p className="min-h-12 text-base text-[#c8b890] italic">{hover ?? HINT}</p>
+          <p className="min-h-12 text-base text-[#ecd3a0]">{hover ?? HINT}</p>
+          <button type="button" onClick={onToggle} className={HD_BUTTON}>
+            {save.stallOpen ? "Fermer l'étal" : "Ouvrir l'étal"}
+          </button>
           {price !== undefined && (
             <button type="button" onClick={onUpgrade} className={HD_BUTTON}>
               Agrandir la réserve ({price} PO)

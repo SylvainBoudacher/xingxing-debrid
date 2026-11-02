@@ -60,7 +60,7 @@ export function RevealCard({
           style={{ backgroundColor: CARD_BG, boxShadow: `inset 0 0 0 3px ${color}` }}
         >
           <LiveSprite sprite={seedCanvas(seed.rarity)} rarity={seed.rarity} className={s.art} />
-          <b className={`text-center font-bold italic ${s.name}`} style={{ color }}>
+          <b className={`text-center ${s.name}`} style={{ color }}>
             {seedLabel(seed.rarity)}
           </b>
         </div>

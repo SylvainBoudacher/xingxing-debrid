@@ -1,6 +1,6 @@
 import type { SachetId } from "../core/economy/catalog";
 import type { PotagerSave, ToolId } from "../core/types";
-import { PANEL_STYLE } from "./hdPanel";
+import { PANEL_LABEL, PANEL_STYLE } from "./hdPanel";
 import { PanelHeader } from "./PanelHeader";
 import { SachetShelf } from "./cabane/SachetShelf";
 import { ToolUpgradeBoard } from "./cabane/ToolUpgradeBoard";
@@ -22,11 +22,11 @@ export function CabanePanel({
       style={PANEL_STYLE}
     >
       <PanelHeader title="Cabane à graines" onClose={onClose} />
-      <p className="mb-2 text-lg text-[#c8b890] italic">Sachets de 3 graines</p>
+      <p className={PANEL_LABEL}>Sachets de 3 graines</p>
       <div className="mb-5">
         <SachetShelf onBuy={onBuySachet} />
       </div>
-      <p className="mb-2 text-lg text-[#c8b890] italic">Outils améliorés</p>
+      <p className={PANEL_LABEL}>Outils améliorés</p>
       <ToolUpgradeBoard save={save} onBuy={onBuyTool} />
     </div>
   );

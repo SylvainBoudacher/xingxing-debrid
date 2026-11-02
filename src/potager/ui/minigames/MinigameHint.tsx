@@ -28,7 +28,7 @@ export function MinigameHint({ hint }: { hint: Hint }) {
   return (
     <div className="px-1 pt-1.5 leading-snug">
       <p className="text-[15px]">{hint.goal}</p>
-      <div className="mt-1 flex flex-wrap items-center gap-1 text-[13px] text-[#c8b890]">
+      <div className="mt-1 flex flex-wrap items-center gap-1 text-[13px] text-[#ecd3a0]">
         {hint.hold && <span className="mr-0.5">Maintenir</span>}
         {hint.keys.map((group, i) => (
           <Fragment key={i}>

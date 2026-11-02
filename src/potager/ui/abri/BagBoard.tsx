@@ -27,7 +27,7 @@ export function BagBoard({
           }}
         />
         <span className="absolute top-[34px] left-1/2 h-4 w-4 -translate-x-1/2 border-2 border-[#6a4c10] bg-[#e0b040] shadow-[inset_0_-2px_0_#a8801c]" />
-        <span className="absolute top-1.5 left-3 text-sm italic text-[#f0d8a0]">Ton sac</span>
+        <span className="absolute top-1.5 left-3 text-sm text-[#f0d8a0]">Ton sac</span>
         <div className="pointer-events-none absolute inset-1.5 rounded-b-[22px] border-2 border-dashed border-[#c89a5a]/45" />
         <div className="relative mt-1 grid grid-cols-3 justify-items-center gap-2">
           {inventory.map((s, i) => (

@@ -56,7 +56,7 @@ export function ItemTile({
             </span>
           )}
           {view.count > 1 && (
-            <span className="absolute right-1 bottom-0 text-[13px] font-bold text-[#f8e08a]">
+            <span className="absolute right-1 bottom-0 text-[13px] text-[#f8e08a]">
               {view.count}
             </span>
           )}

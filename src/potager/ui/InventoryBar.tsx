@@ -3,6 +3,7 @@ import { slotView } from "../core/inventory";
 import type { Slot } from "../core/types";
 import { ItemTile } from "./abri/ItemTile";
 import { LEATHER, POCKET } from "./abri/leather";
+import { POTAGER_FONT } from "./potagerFont";
 
 // La ceinture : une bande de cuir cousue, une poche par emplacement du sac.
 export function InventoryBar({
@@ -20,8 +21,8 @@ export function InventoryBar({
   return (
     <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-1">
       <p
-        className="h-6 text-lg text-[#f2e2b0] italic"
-        style={{ textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
+        className="h-6 text-lg text-[#f2e2b0]"
+        style={{ ...POTAGER_FONT, textShadow: "0 1px 3px rgba(0,0,0,0.9)" }}
       >
         {caption}
       </p>

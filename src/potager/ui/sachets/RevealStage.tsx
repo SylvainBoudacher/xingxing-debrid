@@ -82,7 +82,7 @@ export function RevealStage({
               );
             })}
           </div>
-          <p className="text-base text-[#c8b890]">
+          <p className="text-base text-[#ecd3a0]">
             {flipped ? "Cliquer pour ranger la carte" : "Cliquer pour retourner la carte"}
           </p>
         </div>

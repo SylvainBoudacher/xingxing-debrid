@@ -2,15 +2,15 @@ import * as THREE from "three";
 import { groundHeight } from "../core/catalog/map";
 import { COLOR_HEX } from "../textures/flowerShapes";
 import { RARITY_COLOR } from "../core/catalog/rarity";
-import { staffSpeed } from "../core/staff/grade";
 import { STAFF_IDS, type Point, type PotagerSave, type StaffId, type Worker } from "../core/types";
 import { avatarViews, STAFF_PALETTES } from "../textures/avatar";
 import { canIconTex, flowerIconTex, pouchIconTex } from "../textures/staffIcons";
 import { spriteMesh } from "./sprite";
 
 const STEP_FRAME_S = 0.075;
-// la simulation avance par pas d'une seconde : l'affichage rattrape un peu plus vite
-const CATCH_UP = 1.3;
+// la simulation avance par pas d'une seconde : l'affichage couvre l'écart en un pas,
+// un peu plus pour absorber le retard du minuteur, sans s'arrêter entre deux pas
+const STEP_S = 1.1;
 // au-delà, l'employé est replacé d'un coup (chargement, grand pas)
 const SNAP = 6;
 const ICON_Y = 2.05;
@@ -20,6 +20,7 @@ interface Shown {
   icon: THREE.Sprite;
   iconKey: string;
   pos: Point;
+  target: Point;
   dir: Point;
   walkT: number;
   worker: Worker;
@@ -68,6 +69,7 @@ export function createStaff(scene: THREE.Scene) {
       icon,
       iconKey: "",
       pos: w.pos,
+      target: w.pos,
       dir: { x: 0, z: 1 },
       walkT: 0,
       worker: w,
@@ -84,7 +86,10 @@ export function createStaff(scene: THREE.Scene) {
         const s = shown.get(id) ?? add(id, w);
         shown.set(id, s);
         s.worker = w;
-        s.speed = staffSpeed(h.level) * CATCH_UP;
+        if (w.pos.x !== s.target.x || w.pos.z !== s.target.z) {
+          s.target = w.pos;
+          s.speed = Math.hypot(w.pos.x - s.pos.x, w.pos.z - s.pos.z) / STEP_S;
+        }
         const { key, tex } = iconFor(id, w);
         if (key !== s.iconKey) {
           s.iconKey = key;

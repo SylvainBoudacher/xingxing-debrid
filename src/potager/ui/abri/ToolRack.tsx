@@ -23,7 +23,7 @@ export function ToolRack({
       className="relative flex flex-col justify-between border-[3px] border-[#2e1a0c] px-3 pt-3 pb-3 shadow-[0_6px_10px_rgba(0,0,0,0.5)]"
       style={{ background: PLANKS }}
     >
-      <span className="absolute top-1.5 left-3 text-sm italic text-[#f0d8a0]">Râtelier</span>
+      <span className="absolute top-1.5 left-3 text-sm text-[#f0d8a0]">Râtelier</span>
       <div className="mt-6 grid grid-cols-3 justify-items-center">
         {TOOLS.map((id) => {
           const tool = rack.find((t) => t.id === id);

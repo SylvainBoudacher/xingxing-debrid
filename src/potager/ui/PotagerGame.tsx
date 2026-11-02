@@ -13,11 +13,11 @@ import { GardenPanels } from "./GardenPanels";
 import { HerbierPanel } from "./HerbierPanel";
 import { InventoryBar } from "./InventoryBar";
 import { MinigameOverlay } from "./minigames/MinigameOverlay";
-import { loadPotagerFont } from "./potagerFont";
 import { PlantInfoPanel } from "./PlantInfoPanel";
 import { PotagerHud } from "./PotagerHud";
 import { PotagerToaster } from "./PotagerToaster";
 import { SachetOpening } from "./sachets/SachetOpening";
+import { TargetLabel } from "./TargetLabel";
 import { useAvatarControls } from "./useAvatarControls";
 import { useBloomAnnounce } from "./useBloomAnnounce";
 import { useEconomy } from "./useEconomy";
@@ -68,8 +68,6 @@ export function PotagerGame({
     addEventListener("keydown", onKey);
     return () => removeEventListener("keydown", onKey);
   }, [busy]);
-
-  useEffect(loadPotagerFont, []);
 
   const applyMode = useCallback(
     (next: CameraMode) => {
@@ -124,6 +122,7 @@ export function PotagerGame({
         onHerbier={() => setHerbierOpen((o) => !o)}
         herbierDisabled={busy}
         po={save?.po ?? 0}
+        onDevPo={() => host.update((s) => ({ ...s, po: s.po + 100 }))}
         onExit={onExit}
       />
       {save && (
@@ -134,9 +133,15 @@ export function PotagerGame({
         />
       )}
       {garden.game && (
-        <MinigameOverlay active={garden.game} project={project} onDone={garden.finish} />
+        <MinigameOverlay
+          active={garden.game}
+          project={project}
+          onDone={garden.finish}
+          onCancel={garden.cancel}
+        />
       )}
       <PlantInfoPanel scene={scene} host={host} hidden={busy || herbierOpen} />
+      <TargetLabel scene={scene} host={host} hidden={busy || herbierOpen} />
       {garden.bubble && <AvatarBubble text={garden.bubble} where={avatarOnScreen} />}
       {save?.client && !busy && !herbierOpen && (
         <AvatarBubble

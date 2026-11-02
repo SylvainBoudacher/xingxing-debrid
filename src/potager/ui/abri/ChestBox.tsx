@@ -24,7 +24,7 @@ export function ChestBox({
       >
         <span className="absolute inset-y-0 left-8 w-2" style={{ background: IRON }} />
         <span className="absolute inset-y-0 right-8 w-2" style={{ background: IRON }} />
-        <span className="text-sm italic text-[#f0d8a0]">
+        <span className="text-sm text-[#f0d8a0]">
           Coffre · {chest.length} / {capacity}
         </span>
       </div>

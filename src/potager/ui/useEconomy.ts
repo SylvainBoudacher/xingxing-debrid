@@ -80,6 +80,7 @@ export function useEconomy(host: SimHost | null, say: (text: string) => void) {
     },
     buyParcel: (id: ParcelId) => buy((s) => buyParcel(s, id)),
     buyTool: (id: ToolId) => buy((s) => buyTool(s, id)),
+    toggleStall: () => host?.update((s) => ({ ...s, stallOpen: !s.stallOpen })),
     upgradeStall: () => buy(buyStallUpgrade),
     upgradeChest: () => buy(buyChestUpgrade),
   };

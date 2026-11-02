@@ -49,6 +49,7 @@ export function GardenPanels({
         onUnstock={eco.unstock}
         onServe={onServe}
         onUpgrade={eco.upgradeStall}
+        onToggle={eco.toggleStall}
         onClose={closePanel}
       />
     );

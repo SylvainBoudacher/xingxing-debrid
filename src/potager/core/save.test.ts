@@ -194,6 +194,12 @@ describe("sauvegarde du Potager", () => {
       expect(parseSave({ ...base(), po: 12.7 })?.po).toBe(12);
     });
 
+    it("étal ouvert par défaut, fermeture relue", () => {
+      const { stallOpen, ...old } = base();
+      expect(parseSave(old)?.stallOpen).toBe(true);
+      expect(parseSave({ ...base(), stallOpen: false })?.stallOpen).toBe(false);
+    });
+
     it("borne les niveaux", () => {
       expect(parseSave({ ...base(), stallLevel: 5 })?.stallLevel).toBe(2);
       expect(parseSave({ ...base(), chestLevel: -1 })?.chestLevel).toBe(0);

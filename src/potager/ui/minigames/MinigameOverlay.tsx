@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { MinigameResult } from "../../core/minigames/types";
 import type { Grade, Point } from "../../core/types";
 import { PANEL_STYLE } from "../hdPanel";
+import { PanelClose } from "../PanelHeader";
 import { GradeBanner } from "./GradeBanner";
 import { HINTS } from "./minigameHints";
 import { MinigameHint } from "./MinigameHint";
@@ -17,10 +18,12 @@ export function MinigameOverlay({
   active,
   project,
   onDone,
+  onCancel,
 }: {
   active: ActiveGame;
   project: (p: Point) => { x: number; y: number };
   onDone: (r: MinigameResult) => void;
+  onCancel: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -66,6 +69,10 @@ export function MinigameOverlay({
     raf = requestAnimationFrame(loop);
 
     const onKey = (e: KeyboardEvent) => {
+      if (e.code === "Escape") {
+        if (!game.result()) onCancel();
+        return;
+      }
       const input = KEY_INPUT[e.code];
       if (!input || e.metaKey || e.ctrlKey || e.altKey) return;
       e.preventDefault();
@@ -96,7 +103,7 @@ export function MinigameOverlay({
       removeEventListener("pointerdown", onDown);
       removeEventListener("pointerup", onUp);
     };
-  }, [active, project, onDone]);
+  }, [active, project, onDone, onCancel]);
 
   const hint = HINTS[active.gesture];
   return (
@@ -105,8 +112,12 @@ export function MinigameOverlay({
         className="w-[338px] px-1.5 pt-1 pb-2"
         style={{ ...PANEL_STYLE, boxShadow: "0 4px 14px rgba(0,0,0,0.6)" }}
       >
-        <div className="px-1 pb-1 text-xl leading-tight font-bold text-[#f5d27a] italic">
-          {hint.title}
+        <div className="flex items-start justify-between gap-2 px-1 pb-1">
+          <div className="text-xl leading-tight text-[#f5d27a]">{hint.title}</div>
+          {/* le clic ne doit pas compter comme une action du mini-jeu */}
+          <div className="pointer-events-auto" onPointerDown={(e) => e.stopPropagation()}>
+            <PanelClose onClose={() => active.game.result() || onCancel()} />
+          </div>
         </div>
         <div className="relative border border-[#5a4426]">
           <canvas

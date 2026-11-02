@@ -143,6 +143,12 @@ export function useGardenActions(
     [apply],
   );
 
+  // mal lancé : on quitte sans rien appliquer
+  const cancel = useCallback(() => {
+    gameRef.current = null;
+    setGame(null);
+  }, []);
+
   const interceptClick = useCallback(
     (p: Point) => {
       const s = host?.state();
@@ -225,6 +231,7 @@ export function useGardenActions(
   return {
     game,
     finish,
+    cancel,
     bubble: bubble?.text ?? null,
     say,
     play,

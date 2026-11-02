@@ -63,20 +63,18 @@ export function StaffCard({
   return (
     <section className={`border border-[#b8975a]/40 p-3 ${locked ? "opacity-50" : ""}`}>
       <div className="mb-2 flex items-baseline justify-between">
-        <h3 className="text-xl font-bold italic">{STAFF_LABEL[id]}</h3>
-        {h && status && (
-          <span className="text-sm text-[#e8c060] italic">{statusLabel(status)}</span>
-        )}
+        <h3 className="text-xl">{STAFF_LABEL[id]}</h3>
+        {h && status && <span className="text-sm text-[#e8c060]">{statusLabel(status)}</span>}
       </div>
-      {locked && <p className="text-[#c8b890] italic">Embauche d'abord {PREV_LABEL[id]}</p>}
+      {locked && <p className="text-[#ecd3a0]">Embauche d'abord {PREV_LABEL[id]}</p>}
       {!h && !locked && (
         <Price label="Embaucher" price={HIRE_PRICE[id]} po={save.po} onClick={onHire} />
       )}
       {h && (
         <div className="flex flex-col gap-2">
-          <p className="text-[#c8b890]">{levelLine(h.level)}</p>
+          <p className="text-[#ecd3a0]">{levelLine(h.level)}</p>
           {nextLevelLine(h.level) && (
-            <p className="text-sm text-[#a89870] italic">Ensuite : {nextLevelLine(h.level)}</p>
+            <p className="text-sm text-[#d8bd88]">Ensuite : {nextLevelLine(h.level)}</p>
           )}
           {h.level < MAX_LEVEL ? (
             <Price
@@ -86,7 +84,7 @@ export function StaffCard({
               onClick={onLevel}
             />
           ) : (
-            <p className="text-[#c8b890] italic">Niveau max</p>
+            <p className="text-[#ecd3a0]">Niveau max</p>
           )}
           {id !== "fleuriste" && (
             <div className="flex flex-wrap gap-3">

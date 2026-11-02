@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { useEffect, useRef } from "react";
+import { POTAGER_FONT } from "./potagerFont";
 
 // « +14 PO » qui monte et s'efface au-dessus de l'étal.
 export function GainPop({
@@ -26,9 +27,9 @@ export function GainPop({
   return (
     <div ref={ref} className="pointer-events-none fixed top-0 left-0 z-20 -mt-28">
       <motion.p
-        className="text-3xl font-bold text-[#f4d070]"
+        className="text-3xl text-[#f4d070]"
         style={{
-          fontFamily: '"Cormorant Garamond", Georgia, serif',
+          ...POTAGER_FONT,
           textShadow: "0 2px 3px rgba(0,0,0,0.8)",
         }}
         initial={{ y: 0, opacity: 1 }}

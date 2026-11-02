@@ -78,7 +78,7 @@ export function SachetOpening({
                 onRip={(x, y) => burst.current?.fire("paper", x, y)}
                 onTorn={() => go("tear")}
               />
-              <p className="text-lg text-[#c8b890]">
+              <p className="text-lg text-[#ecd3a0]">
                 {phase.kind === "idle"
                   ? "Tirer la bande vers la droite, ou cliquer sur le sachet"
                   : " "}

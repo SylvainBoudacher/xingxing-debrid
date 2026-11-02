@@ -65,8 +65,8 @@ export function PlantInfoPanel({
       style={PANEL_STYLE}
     >
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-lg font-bold">{STAGE_LABEL[info.stage]}</span>
-        <span className="text-sm font-semibold" style={{ color: RARITY_COLOR[info.rarity] }}>
+        <span className="text-lg">{STAGE_LABEL[info.stage]}</span>
+        <span className="text-sm" style={{ color: RARITY_COLOR[info.rarity] }}>
           {RARITY_LABEL[info.rarity]}
         </span>
       </div>
@@ -85,7 +85,7 @@ export function PlantInfoPanel({
         <p>{info.wetMs > 0 ? `Humide : encore ${formatDuration(info.wetMs)}` : "À arroser"}</p>
       )}
       <p>Semis : {SOW_LABEL[info.sowGrade]}</p>
-      <p className="mt-1 text-sm text-[#c8b890] italic">{info.tip}</p>
+      <p className="mt-1 text-sm text-[#ecd3a0]">{info.tip}</p>
     </div>
   );
 }

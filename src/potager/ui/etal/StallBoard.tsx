@@ -1,7 +1,7 @@
 import type { Demand, FlowerStack } from "../../core/types";
 import { ItemTile } from "../abri/ItemTile";
 import { IRON, WOOD } from "../abri/leather";
-import { matchLabel } from "../demandLabel";
+import { matchLabel, priceLabel } from "../demandLabel";
 import { HD_BUTTON } from "../hdButton";
 
 const RED = "#c8453a";
@@ -33,7 +33,7 @@ export function StallBoard({
         className="relative flex h-10 items-center justify-center border-[3px] border-b-0 border-[#2e1a0c]"
         style={{ background: AWNING }}
       >
-        <span className="border-2 border-[#2e1a0c] bg-[#3a2210] px-3 text-sm text-[#f0d8a0] italic">
+        <span className="border-2 border-[#2e1a0c] bg-[#3a2210] px-3 text-sm text-[#f0d8a0]">
           Réserve · {stall.length} / {capacity}
         </span>
       </div>
@@ -60,6 +60,9 @@ export function StallBoard({
                   <>
                     <span className="-mx-2 h-4 text-center text-[11px] leading-4 whitespace-nowrap text-[#e8c060]">
                       {match}
+                    </span>
+                    <span className="h-4 text-center text-[11px] leading-4 whitespace-nowrap text-[#f0d8a0]">
+                      {priceLabel(pile, demand)}
                     </span>
                     {onServe && (
                       <button

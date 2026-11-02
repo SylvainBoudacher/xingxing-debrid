@@ -178,6 +178,8 @@ export interface PotagerSave {
   po: number;
   stall: FlowerStack[];
   stallLevel: number;
+  // fermé : aucun client ne vient
+  stallOpen: boolean;
   chestLevel: number;
   client: Client | null;
   nextClientAt: number;

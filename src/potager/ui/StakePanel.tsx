@@ -25,7 +25,7 @@ export function StakePanel({
       style={PANEL_STYLE}
     >
       <PanelHeader title={`Parcelle ${parcelNumber(parcel)}`} onClose={onClose} />
-      {!hired.length && <p className="text-[#c8b890] italic">Aucun employé à qui la confier</p>}
+      {!hired.length && <p className="text-[#ecd3a0]">Aucun employé à qui la confier</p>}
       <div className="flex flex-col gap-2">
         {hired.map((id) => (
           <label key={id} className="flex cursor-pointer items-center gap-2 text-lg">
