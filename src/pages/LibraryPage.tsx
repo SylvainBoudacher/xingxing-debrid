@@ -18,7 +18,6 @@ import { LibraryReorderablePoster } from "@/components/LibraryReorderablePoster"
 import { LibraryResumeBanner } from "@/components/LibraryResumeBanner";
 import { LibraryTabs, type LibraryTab } from "@/components/LibraryTabs";
 import { LibraryToolbar } from "@/components/LibraryToolbar";
-import { DEFAULT_MANGA_PREFS, getCachedMangaPrefs, type MangaLayout } from "@/lib/mangaPrefs";
 import { hasMangaReadRequest, subscribeMangaRead } from "@/lib/mangaReadRequest";
 import { LibrarySelectionBar } from "@/components/LibrarySelectionBar";
 import { SeriesGroupCard } from "@/components/SeriesGroupCard";
@@ -174,9 +173,6 @@ export function LibraryPage({
   useEffect(() => subscribeMangaRead(() => setTab("manga")), []);
   // Lecteur ou fiche manga ouverts : Escape leur revient, pas au retour accueil.
   const [mangaBusy, setMangaBusy] = useState(false);
-  const [mangaLayout, setMangaLayout] = useState<MangaLayout>(
-    () => (getCachedMangaPrefs() ?? DEFAULT_MANGA_PREFS).layout,
-  );
   const [entries, setEntries] = useState<LibraryEntry[]>(() => getCachedLibrary() ?? []);
   const [filter, setFilter] = useState<Filter>(prefs.filter);
   const [sort, setSort] = useState<Sort>(prefs.sort);
@@ -872,9 +868,7 @@ export function LibraryPage({
 
         <div
           inert={titleSubject !== null}
-          className={`mx-auto w-full flex-1 px-6 pt-6 pb-10 sm:px-8 ${
-            (tab === "manga" ? mangaLayout : layout) === "grid" ? "max-w-5xl" : "max-w-3xl"
-          }`}
+          className="mx-auto w-full max-w-5xl flex-1 px-6 pt-6 pb-10 sm:px-8"
         >
           <LibraryTabs tab={tab} onSwitch={setTab} />
 
@@ -886,7 +880,6 @@ export function LibraryPage({
               onInitialConsumed={() => setPendingMangaId(null)}
               onDiscover={() => onNavigate("manga")}
               onBusyChange={setMangaBusy}
-              onLayoutChange={setMangaLayout}
             />
           )}
 

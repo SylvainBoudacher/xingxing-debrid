@@ -1,11 +1,13 @@
+import { STATUS_RING } from "@/components/radar/statusRing";
 import { Button } from "@/components/ui/button";
 import { expectationLabel, libraryLabel, rowSummary } from "@/lib/radar/labels";
 import type { RadarEntry, ContentKey } from "@/lib/radar/types";
-import { baselineLabel, entryStatus } from "@/lib/radar/view";
+import { baselineLabel, type RadarStatus } from "@/lib/radar/view";
 import { Pencil, Trash2 } from "lucide-react";
 
 interface RadarRowProps {
   entry: RadarEntry;
+  status: RadarStatus;
   owned: { certain: Set<ContentKey>; uncertain: Set<ContentKey> };
   selected: boolean;
   onToggleSelect: () => void;
@@ -14,15 +16,9 @@ interface RadarRowProps {
   onRemove: () => void;
 }
 
-const STATUS_RING = {
-  released: "ring-emerald-500",
-  partial: "ring-amber-500",
-  waiting: "ring-black/10 dark:ring-white/10",
-  finished: "ring-black/10 dark:ring-white/10",
-};
-
 export function RadarRow({
   entry,
+  status,
   owned,
   selected,
   onToggleSelect,
@@ -35,7 +31,7 @@ export function RadarRow({
   const baseline = baselineLabel(entry);
   return (
     <div
-      className={`flex items-center gap-3 rounded-xl bg-white/90 p-2.5 ring-1 dark:bg-zinc-900/80 ${STATUS_RING[entryStatus(entry)]}`}
+      className={`flex items-center gap-3 rounded-xl bg-white/90 p-2.5 ring-1 dark:bg-zinc-900/80 ${STATUS_RING[status]}`}
     >
       <input
         type="checkbox"
@@ -58,7 +54,9 @@ export function RadarRow({
           {item.title}
           {season !== null && `, saison ${season}`}
         </p>
-        <p className="truncate text-xs text-zinc-600 dark:text-zinc-300">{rowSummary(entry)}</p>
+        <p className="truncate text-xs text-zinc-600 dark:text-zinc-300">
+          {rowSummary(entry, status)}
+        </p>
         <p className="truncate text-[11px] text-zinc-500">
           {[expectationLabel(expectation), baseline, library].filter(Boolean).join(" - ")}
         </p>

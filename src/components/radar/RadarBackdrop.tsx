@@ -20,7 +20,7 @@ export function RadarBackdrop() {
     >
       <svg
         viewBox="-720 -720 1440 1440"
-        className="absolute top-[-15%] left-1/2 h-[140vmax] w-[140vmax] -translate-x-1/2 -translate-y-1/2"
+        className="absolute top-[-15%] left-1/2 h-[140vmax] w-[140vmax] -translate-x-1/2 -translate-y-1/2 blur-[1px]"
       >
         <g fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
           {RINGS.map(({ radius, dots, opacity }) => (

@@ -2,6 +2,7 @@ import type { ReleaseTags } from "@/lib/releaseTags";
 import type { TmdbItem } from "@/lib/tmdbItem";
 
 export type RadarMode = "strict" | "soft";
+export type RadarLayout = "list" | "grid";
 export type ExpectedLanguage = "vf" | "vostfr" | "any";
 export type ExpectedResolution = "any" | "720p" | "1080p" | "2160p";
 
@@ -27,6 +28,7 @@ export interface RadarAlert {
   level: "full" | "partial";
   version: KnownVersion;
   detectedAt: number;
+  seen?: boolean;
 }
 
 export interface RadarEntry {

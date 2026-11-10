@@ -63,7 +63,11 @@ export function RadarAddDialog({
 
   if (!item) {
     return (
-      <RadarDialog title="Ajouter au Radar" onClose={onClose}>
+      <RadarDialog
+        title="Ajouter au Radar"
+        subtitle="Soyez alerté dès qu'une release est disponible sur C411."
+        onClose={onClose}
+      >
         <RadarSearch tmdbKey={tmdbKey} onPick={setItem} />
       </RadarDialog>
     );

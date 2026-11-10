@@ -1,6 +1,6 @@
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { mergeUpdates, type EntryUpdate } from "./merge";
-import type { RadarEntry, RadarExpectation } from "./types";
+import type { RadarEntry, RadarExpectation, RadarLayout } from "./types";
 
 export interface RadarState {
   loaded: boolean;
@@ -8,13 +8,17 @@ export interface RadarState {
   lastCheckAt: number | null;
   checking: boolean;
   defaults: RadarExpectation;
+  layout: RadarLayout;
 }
 
 export const DEFAULT_EXPECTATION: RadarExpectation = {
-  language: "vf",
-  resolution: "1080p",
+  language: "any",
+  resolution: "any",
   mode: "soft",
 };
+
+// Ligne de démonstration du mode dev : ni sauvegardée, ni vérifiée sur C411.
+export const SIMULATED_ENTRY_ID = "dev-simulated";
 
 const store = new LazyStore("radar.json", { defaults: {}, autoSave: false });
 
@@ -24,6 +28,7 @@ let state: RadarState = {
   lastCheckAt: null,
   checking: false,
   defaults: DEFAULT_EXPECTATION,
+  layout: "grid",
 };
 const listeners = new Set<() => void>();
 let loading: Promise<void> | null = null;
@@ -34,9 +39,13 @@ function update(patch: Partial<RadarState>): void {
 }
 
 async function persist(): Promise<void> {
-  await store.set("entries", state.entries);
+  await store.set(
+    "entries",
+    state.entries.filter((e) => e.id !== SIMULATED_ENTRY_ID),
+  );
   await store.set("lastCheckAt", state.lastCheckAt);
   await store.set("defaults", state.defaults);
+  await store.set("layout", state.layout);
   await store.save();
 }
 
@@ -59,12 +68,14 @@ export function loadRadar(): Promise<void> {
     store.get<RadarEntry[]>("entries"),
     store.get<number>("lastCheckAt"),
     store.get<RadarExpectation>("defaults"),
-  ]).then(([entries, lastCheckAt, defaults]) => {
+    store.get<RadarLayout>("layout"),
+  ]).then(([entries, lastCheckAt, defaults, layout]) => {
     update({
       loaded: true,
       entries: entries ?? [],
       lastCheckAt: lastCheckAt ?? null,
       defaults: defaults ?? DEFAULT_EXPECTATION,
+      layout: layout ?? "grid",
     });
   });
   return loading;
@@ -87,12 +98,20 @@ export function setRadarExpectation(id: string, expectation: RadarExpectation): 
 }
 
 export function markRadarSeen(id: string): void {
-  if (!state.entries.some((e) => e.id === id && e.alerts.length > 0)) return;
-  commit({ entries: state.entries.map((e) => (e.id === id ? { ...e, alerts: [] } : e)) });
+  if (!state.entries.some((e) => e.id === id && e.alerts.some((a) => !a.seen))) return;
+  commit({
+    entries: state.entries.map((e) =>
+      e.id === id ? { ...e, alerts: e.alerts.map((a) => ({ ...a, seen: true })) } : e,
+    ),
+  });
 }
 
 export function setRadarDefaults(defaults: RadarExpectation): void {
   commit({ defaults });
+}
+
+export function setRadarLayout(layout: RadarLayout): void {
+  commit({ layout });
 }
 
 export function setRadarChecking(checking: boolean): void {
@@ -110,5 +129,5 @@ export function applyCheckResult(
 }
 
 export function unseenAlertCount(radar: RadarState): number {
-  return radar.entries.filter((e) => e.alerts.length > 0).length;
+  return radar.entries.filter((e) => e.alerts.some((a) => !a.seen)).length;
 }

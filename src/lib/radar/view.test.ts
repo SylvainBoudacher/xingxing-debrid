@@ -3,7 +3,7 @@ import { alert, movieEntry, tmdbItem, tvEntry } from "./testFixtures";
 import type { RadarEntry } from "./types";
 import {
   baselineLabel,
-  entryStatus,
+  entryStatuses,
   filterEntries,
   formatEpisodes,
   radarToastContent,
@@ -17,28 +17,54 @@ const vf = [{ language: "vf", resolution: "1080p" } as const];
 const titled = (title: string, patch: Partial<RadarEntry> = {}) =>
   tvEntry({ id: title, item: tmdbItem(1, "tv", title), ...patch });
 
-describe("entryStatus", () => {
-  test("une alerte complète prime sur une mi-alerte", () => {
-    expect(entryStatus(tvEntry({ alerts: [alert("partial"), alert("full")] }))).toBe("released");
-    expect(entryStatus(tvEntry({ alerts: [alert("partial")] }))).toBe("partial");
-    expect(entryStatus(tvEntry())).toBe("waiting");
+describe("entryStatuses", () => {
+  test("une saison incomplète reste ciblée, une alerte complète prime sur une mi-alerte", () => {
+    expect(entryStatuses(tvEntry({ alerts: [alert("partial"), alert("full")] }))).toEqual([
+      "released",
+      "waiting",
+    ]);
+    expect(entryStatuses(tvEntry({ alerts: [alert("partial")] }))).toEqual(["partial", "waiting"]);
+    expect(entryStatuses(tvEntry())).toEqual(["waiting"]);
   });
   test("saison complète terminée, film complet sorti", () => {
-    expect(entryStatus(tvEntry({ episodes: [1], known: { e1: [...vf] } }))).toBe("finished");
-    expect(entryStatus(movieEntry({ known: { movie: [...vf] } }))).toBe("released");
+    expect(entryStatuses(tvEntry({ episodes: [1], known: { e1: [...vf] } }))).toEqual(["finished"]);
+    expect(entryStatuses(movieEntry({ known: { movie: [...vf] } }))).toEqual(["released"]);
+  });
+  test("dernier épisode trouvé : la saison quitte les ciblés", () => {
+    const entry = tvEntry({ episodes: [1], known: { e1: [...vf] }, alerts: [alert("full", "e1")] });
+    expect(entryStatuses(entry)).toEqual(["released"]);
+  });
+  test("un épisode vu reste disponible tant que la saison est incomplète", () => {
+    const seen = { ...alert("full", "e1"), seen: true };
+    expect(entryStatuses(tvEntry({ alerts: [seen] }))).toEqual(["released", "waiting"]);
+  });
+  test("saison complète et tout vu : terminée", () => {
+    const seen = { ...alert("full", "e1"), seen: true };
+    const entry = tvEntry({ episodes: [1], known: { e1: [...vf] }, alerts: [seen] });
+    expect(entryStatuses(entry)).toEqual(["finished"]);
   });
 });
 
 describe("splitBlocks", () => {
-  test("sorti, mi-alerte puis terminé, triés par titre, le reste en attente", () => {
-    const finished = titled("Alpha", { episodes: [1], known: { e1: [...vf] } });
-    const partial = titled("Beta", { alerts: [alert("partial")] });
-    const released2 = titled("Zeta", { alerts: [alert("full")] });
-    const released1 = titled("Écluse", { alerts: [alert("full")] });
-    const waiting = titled("Omega");
-    const blocks = splitBlocks([finished, partial, released2, released1, waiting]);
-    expect(blocks.released.map((e) => e.id)).toEqual(["Écluse", "Zeta", "Beta", "Alpha"]);
-    expect(blocks.waiting.map((e) => e.id)).toEqual(["Omega"]);
+  const finished = titled("Alpha", { episodes: [1], known: { e1: [...vf] } });
+  const partial = titled("Beta", { alerts: [alert("partial")] });
+  const released2 = titled("Zeta", { alerts: [alert("full")] });
+  const released1 = titled("Écluse", { alerts: [alert("full")] });
+  const waiting = titled("Omega");
+  const list = [finished, partial, released2, released1, waiting];
+  const ids = (items: { entry: RadarEntry }[]) => items.map((i) => i.entry.id);
+
+  test("sorti, mi-alerte puis terminé, et toute saison incomplète reste ciblée", () => {
+    const blocks = splitBlocks(list, "all");
+    expect(ids(blocks.released)).toEqual(["Écluse", "Zeta", "Beta", "Alpha"]);
+    expect(ids(blocks.waiting)).toEqual(["Beta", "Écluse", "Omega", "Zeta"]);
+    expect(blocks.waiting.every((i) => i.status === "waiting")).toBe(true);
+  });
+  test("un état choisi ne montre que sa liste", () => {
+    const blocks = splitBlocks(list, "waiting");
+    expect(blocks.released).toEqual([]);
+    expect(blocks.waiting).toHaveLength(4);
+    expect(splitBlocks(list, "released").waiting).toEqual([]);
   });
 });
 

@@ -18,8 +18,8 @@ const TABS: { id: RadarFilters["state"]; label: string; dot: string; underline: 
   { id: "partial", label: "Alternative", dot: "bg-amber-500", underline: "border-amber-500" },
   {
     id: "waiting",
-    label: "En attente",
-    dot: "ring-1 ring-inset ring-zinc-400",
+    label: "🎯 Ciblé",
+    dot: "",
     underline: "border-zinc-400",
   },
   { id: "finished", label: "Terminé", dot: "bg-zinc-400", underline: "border-zinc-400" },

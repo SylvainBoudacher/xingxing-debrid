@@ -51,29 +51,47 @@ describe("formatLastCheck", () => {
 
 describe("rowSummary", () => {
   test("sortie d'épisodes", () => {
-    expect(rowSummary(tvEntry({ alerts: [alert("full", "e6")] }))).toBe("Épisode 6 disponible");
-    expect(rowSummary(tvEntry({ alerts: [alert("full", "e1"), alert("full", "e2")] }))).toBe(
-      "Épisodes 1 à 2 disponibles",
+    expect(rowSummary(tvEntry({ alerts: [alert("full", "e6")] }), "released")).toBe(
+      "Épisode 6 disponible",
     );
+    expect(
+      rowSummary(tvEntry({ alerts: [alert("full", "e1"), alert("full", "e2")] }), "released"),
+    ).toBe("Épisodes 1 à 2 disponibles");
   });
   test("film disponible", () => {
-    expect(rowSummary(movieEntry({ alerts: [alert("full", "movie")] }))).toBe("Film disponible");
+    expect(rowSummary(movieEntry({ alerts: [alert("full", "movie")] }), "released")).toBe(
+      "Film disponible",
+    );
   });
   test("mi-alerte", () => {
     const partial = {
       ...alert("partial"),
       version: { language: "vostfr", resolution: "720p" } as const,
     };
-    expect(rowSummary(tvEntry({ alerts: [partial] }))).toBe("Alternative disponible : VOSTFR 720p");
+    expect(rowSummary(tvEntry({ alerts: [partial] }), "partial")).toBe(
+      "Alternative disponible : VOSTFR 720p",
+    );
   });
   test("saison terminée", () => {
     const vf = [{ language: "vf", resolution: "1080p" } as const];
-    expect(rowSummary(tvEntry({ episodes: [1], known: { e1: [...vf] } }))).toBe("Saison terminée");
+    expect(rowSummary(tvEntry({ episodes: [1], known: { e1: [...vf] } }), "finished")).toBe(
+      "Saison terminée",
+    );
   });
   test("attente", () => {
-    expect(rowSummary(tvEntry({ episodes: [4, 5] }))).toBe("Prochain : épisode 4");
-    expect(rowSummary(tvEntry({ episodes: [] }))).toBe("En attente");
-    expect(rowSummary(movieEntry())).toBe("En attente");
+    expect(rowSummary(tvEntry({ episodes: [4, 5] }), "waiting")).toBe("Prochain : épisode 4");
+    expect(rowSummary(tvEntry({ episodes: [] }), "waiting")).toBe("Ciblé");
+    expect(rowSummary(movieEntry(), "waiting")).toBe("Ciblé");
+  });
+  test("une saison en cours se résume selon sa liste", () => {
+    const vf = [{ language: "vf", resolution: "1080p" } as const];
+    const entry = tvEntry({
+      episodes: [9, 10, 11],
+      known: { e9: [...vf] },
+      alerts: [alert("full", "e9")],
+    });
+    expect(rowSummary(entry, "released")).toBe("Épisode 9 disponible");
+    expect(rowSummary(entry, "waiting")).toBe("Prochain : épisode 10");
   });
 });
 

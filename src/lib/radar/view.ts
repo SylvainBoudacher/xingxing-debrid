@@ -16,11 +16,25 @@ export interface RadarFilters {
 
 export type RadarStatusCounts = Record<RadarFilters["state"], number>;
 
-export function entryStatus(entry: RadarEntry): RadarStatus {
-  if (entry.alerts.some((a) => a.level === "full")) return "released";
-  if (entry.alerts.length > 0) return "partial";
-  if (!isComplete(entry)) return "waiting";
+export interface RadarBlockItem {
+  entry: RadarEntry;
+  status: RadarStatus;
+}
+
+// Les épisodes trouvés restent affichés une fois vus, jusqu'à ce que la ligne soit complète.
+function foundStatus(entry: RadarEntry): RadarStatus | null {
+  const complete = isComplete(entry);
+  const alerts = complete ? entry.alerts.filter((a) => !a.seen) : entry.alerts;
+  if (alerts.some((a) => a.level === "full")) return "released";
+  if (alerts.length > 0) return "partial";
+  if (!complete) return null;
   return entry.season === null ? "released" : "finished";
+}
+
+// Tant qu'elle n'est pas complète, une ligne reste ciblée, même avec des épisodes trouvés.
+export function entryStatuses(entry: RadarEntry): RadarStatus[] {
+  const found = foundStatus(entry);
+  return [...(found ? [found] : []), ...(isComplete(entry) ? [] : ["waiting" as const])];
 }
 
 export function filterEntries(
@@ -34,7 +48,7 @@ export function filterEntries(
     if (filters.type !== "all" && entry.item.mediaType !== filters.type) return false;
     if (filters.mode !== "all" && entry.expectation.mode !== filters.mode) return false;
     if (filters.inLibrary && !inLibrary(entry)) return false;
-    return filters.state === "all" || entryStatus(entry) === filters.state;
+    return filters.state === "all" || entryStatuses(entry).includes(filters.state);
   });
 }
 
@@ -45,21 +59,26 @@ export function statusCounts(
 ): RadarStatusCounts {
   const visible = filterEntries(entries, { ...filters, state: "all" }, inLibrary);
   const counts = { all: visible.length, released: 0, partial: 0, waiting: 0, finished: 0 };
-  for (const entry of visible) counts[entryStatus(entry)]++;
+  for (const entry of visible) for (const status of entryStatuses(entry)) counts[status]++;
   return counts;
 }
 
 const RELEASED_ORDER: RadarStatus[] = ["released", "partial", "finished"];
 
-export function splitBlocks(entries: RadarEntry[]): {
-  released: RadarEntry[];
-  waiting: RadarEntry[];
+export function splitBlocks(
+  entries: RadarEntry[],
+  state: RadarFilters["state"],
+): {
+  released: RadarBlockItem[];
+  waiting: RadarBlockItem[];
 } {
   const sorted = [...entries].sort((a, b) => a.item.title.localeCompare(b.item.title, "fr"));
-  return {
-    released: RELEASED_ORDER.flatMap((s) => sorted.filter((e) => entryStatus(e) === s)),
-    waiting: sorted.filter((e) => entryStatus(e) === "waiting"),
-  };
+  const shown = (status: RadarStatus) => state === "all" || state === status;
+  const itemsOf = (status: RadarStatus): RadarBlockItem[] =>
+    shown(status)
+      ? sorted.filter((e) => entryStatuses(e).includes(status)).map((entry) => ({ entry, status }))
+      : [];
+  return { released: RELEASED_ORDER.flatMap(itemsOf), waiting: itemsOf("waiting") };
 }
 
 const episodeNumber = (content: ContentKey) => Number(content.slice(1));

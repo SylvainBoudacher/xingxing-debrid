@@ -1,4 +1,5 @@
 import { SearchSuggestions } from "@/components/SearchSuggestions";
+import { RadarTrending } from "@/components/radar/RadarTrending";
 import { Input } from "@/components/ui/input";
 import { getCachedLibrary } from "@/lib/library";
 import { ownedTmdbKeys } from "@/lib/recommendations";
@@ -54,6 +55,9 @@ export function RadarSearch({ tmdbKey, onPick }: RadarSearchProps) {
           className="pl-9"
         />
       </div>
+      {query.trim().length < 4 && (
+        <RadarTrending tmdbKey={tmdbKey} ownedKeys={ownedKeys} onPick={onPick} />
+      )}
       <AnimatePresence>
         {query.trim().length >= 4 && suggestions.length > 0 && (
           <SearchSuggestions

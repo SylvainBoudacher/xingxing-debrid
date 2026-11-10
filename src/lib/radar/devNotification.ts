@@ -4,7 +4,7 @@ import { mapTmdb, type MediaType, type TmdbItem } from "@/lib/tmdbItem";
 import { notifyRadar } from "./notify";
 import type { RadarAlert, RadarEntry } from "./types";
 
-const SAMPLE: RadarEntry = {
+export const SAMPLE: RadarEntry = {
   id: "dev",
   item: {
     id: 0,
@@ -29,14 +29,15 @@ const SAMPLE: RadarEntry = {
 
 // N'importe quelle oeuvre déjà en cache (grilles Découverte), pour voir la
 // notification avec une vraie affiche et un vrai titre.
-function randomCachedItem(): TmdbItem | null {
+export function randomCachedItem(only?: MediaType): TmdbItem | null {
   const items = queryClient
     .getQueriesData<TmdbListResponse>({ queryKey: ["tmdb", "feed"] })
     .flatMap(([key, data]) =>
       (data?.results ?? [])
         .filter((r) => r.poster_path)
         .map((r) => mapTmdb(r, key[3] as MediaType)),
-    );
+    )
+    .filter((item) => !only || item.mediaType === only);
   return items[Math.floor(Math.random() * items.length)] ?? null;
 }
 

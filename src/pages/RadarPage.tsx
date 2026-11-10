@@ -7,10 +7,12 @@ import { RadarBackdrop } from "@/components/radar/RadarBackdrop";
 import { RadarEditDialog } from "@/components/radar/RadarEditDialog";
 import { RadarFiltersBar } from "@/components/radar/RadarFiltersBar";
 import { RadarMissingKeys } from "@/components/radar/RadarMissingKeys";
+import { RadarPosterCard } from "@/components/radar/RadarPosterCard";
 import { RadarRow } from "@/components/radar/RadarRow";
 import { RadarSelectionBar } from "@/components/radar/RadarSelectionBar";
 import { RadarToolbar } from "@/components/radar/RadarToolbar";
 import { getApiKey } from "@/lib/apiKeys";
+import { POSTER_GRID } from "@/lib/libraryPosterSize";
 import { getCachedLibrary, loadLibrary, type LibraryEntry } from "@/lib/library";
 import { ownedContents } from "@/lib/radar/ownership";
 import {
@@ -18,11 +20,18 @@ import {
   loadRadar,
   markRadarSeen,
   removeRadarEntries,
+  setRadarLayout,
 } from "@/lib/radar/radarStore";
 import { runRadarCheck } from "@/lib/radar/runRadarCheck";
 import type { RadarEntry } from "@/lib/radar/types";
 import { useRadar } from "@/lib/radar/useRadar";
-import { filterEntries, splitBlocks, statusCounts, type RadarFilters } from "@/lib/radar/view";
+import {
+  filterEntries,
+  splitBlocks,
+  statusCounts,
+  type RadarBlockItem,
+  type RadarFilters,
+} from "@/lib/radar/view";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { useLikes } from "@/lib/useLikes";
 import { useSendToDebrid } from "@/lib/useSendToDebrid";
@@ -104,7 +113,10 @@ export function RadarPage({
     const o = owned.get(e.id);
     return !!o && o.certain.size + o.uncertain.size > 0;
   };
-  const { released, waiting } = splitBlocks(filterEntries(radar.entries, filters, inLibrary));
+  const { released, waiting } = splitBlocks(
+    filterEntries(radar.entries, filters, inLibrary),
+    filters.state,
+  );
 
   async function check() {
     const before = getRadarState().lastCheckAt;
@@ -134,26 +146,32 @@ export function RadarPage({
     ? [!keys.c411 && "la clé C411", !keys.tmdb && "la clé TMDB"].filter((k): k is string => !!k)
     : [];
 
-  const block = (label: string, entries: RadarEntry[]) =>
-    entries.length > 0 && (
+  const block = (label: string, items: RadarBlockItem[]) => {
+    if (items.length === 0) return null;
+    const Card = radar.layout === "grid" ? RadarPosterCard : RadarRow;
+    return (
       <section className="space-y-2">
         <h2 className="text-[11px] font-medium uppercase tracking-wider text-zinc-500">
-          {label} ({entries.length})
+          {label} ({items.length})
         </h2>
-        {entries.map((entry) => (
-          <RadarRow
-            key={entry.id}
-            entry={entry}
-            owned={owned.get(entry.id) ?? { certain: new Set(), uncertain: new Set() }}
-            selected={selection.has(entry.id)}
-            onToggleSelect={() => toggleSelected(entry.id)}
-            onView={() => view(entry)}
-            onEdit={() => setEditing(entry)}
-            onRemove={() => removeRadarEntries([entry.id])}
-          />
-        ))}
+        <div className={radar.layout === "grid" ? `grid gap-3 ${POSTER_GRID.normal}` : "space-y-2"}>
+          {items.map(({ entry, status }) => (
+            <Card
+              key={entry.id}
+              entry={entry}
+              status={status}
+              owned={owned.get(entry.id) ?? { certain: new Set(), uncertain: new Set() }}
+              selected={selection.has(entry.id)}
+              onToggleSelect={() => toggleSelected(entry.id)}
+              onView={() => view(entry)}
+              onEdit={() => setEditing(entry)}
+              onRemove={() => removeRadarEntries([entry.id])}
+            />
+          ))}
+        </div>
       </section>
     );
+  };
 
   return (
     <main className="relative flex min-h-screen flex-col bg-[#f6fbf8] bg-[radial-gradient(ellipse_85%_75%_at_50%_-15%,_#c8ecd9_0%,_#e4f4eb_45%,_#fbfdfc_85%)] dark:bg-black dark:bg-[radial-gradient(ellipse_85%_75%_at_50%_-15%,_#0f4a35_0%,_#06261b_45%,_#000000_85%)]">
@@ -179,6 +197,8 @@ export function RadarPage({
             <RadarToolbar
               lastCheckAt={radar.lastCheckAt}
               checking={radar.checking}
+              layout={radar.layout}
+              onLayoutChange={setRadarLayout}
               onCheck={() => void check()}
               onAdd={() => setAdding(true)}
             />
@@ -200,7 +220,7 @@ export function RadarPage({
               </p>
             )}
             {block("Trouvé sur C411", released)}
-            {block("En attente", waiting)}
+            {block("🎯 Ciblé", waiting)}
           </>
         )}
       </div>

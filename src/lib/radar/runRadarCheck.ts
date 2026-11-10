@@ -5,7 +5,13 @@ import { tmdbKeys, tvSeason } from "@/lib/services/tmdb";
 import { TMDB_STALE_MS } from "@/lib/tmdbCache";
 import { checkEntries, shouldCheck, type RadarCheckDeps } from "./check";
 import { notifyRadar } from "./notify";
-import { applyCheckResult, getRadarState, loadRadar, setRadarChecking } from "./radarStore";
+import {
+  applyCheckResult,
+  getRadarState,
+  loadRadar,
+  setRadarChecking,
+  SIMULATED_ENTRY_ID,
+} from "./radarStore";
 import { fetchRadarReleases } from "./releases";
 
 async function buildDeps(): Promise<RadarCheckDeps | null> {
@@ -36,7 +42,9 @@ async function run({ onOpenRadar, silent }: RadarCheckOptions): Promise<void> {
   try {
     const deps = await buildDeps();
     if (!deps) return;
-    const entries = getRadarState().entries.filter(shouldCheck);
+    const entries = getRadarState().entries.filter(
+      (e) => e.id !== SIMULATED_ENTRY_ID && shouldCheck(e),
+    );
     const { updates, failed, newAlerts } = await checkEntries(entries, deps);
     applyCheckResult(updates, failed.length === 0 ? deps.now : null);
     if (silent) return;
@@ -69,7 +77,7 @@ export function runRadarCheck(options: RadarCheckOptions = {}): Promise<void> {
 // Après un ajout ou une modification : établit l'état de la ligne sans notifier.
 export async function checkRadarEntry(id: string): Promise<void> {
   const entry = getRadarState().entries.find((e) => e.id === id);
-  if (!entry) return;
+  if (!entry || entry.id === SIMULATED_ENTRY_ID) return;
   const deps = await buildDeps();
   if (!deps) return;
   const { updates } = await checkEntries([entry], deps);

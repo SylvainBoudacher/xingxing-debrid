@@ -1,7 +1,7 @@
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { nextMissingEpisode } from "./evaluate";
 import type { ContentKey, RadarEntry, RadarExpectation, RadarMode } from "./types";
-import { entryStatus, formatEpisodes } from "./view";
+import { formatEpisodes, type RadarStatus } from "./view";
 import { versionLabel } from "./versions";
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -15,8 +15,7 @@ export function formatLastCheck(at: number | null, now: Date = new Date()): stri
   return `le ${date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} à ${time}`;
 }
 
-export function rowSummary(entry: RadarEntry): string {
-  const status = entryStatus(entry);
+export function rowSummary(entry: RadarEntry, status: RadarStatus): string {
   if (status === "partial") {
     return `Alternative disponible : ${versionLabel(entry.alerts[entry.alerts.length - 1].version)}`;
   }
@@ -27,7 +26,7 @@ export function rowSummary(entry: RadarEntry): string {
     return `${capitalize(formatEpisodes(numbers))} ${numbers.length > 1 ? "disponibles" : "disponible"}`;
   }
   const next = nextMissingEpisode(entry);
-  return next === null ? "En attente" : `Prochain : ${formatEpisodes([next])}`;
+  return next === null ? "Ciblé" : `Prochain : ${formatEpisodes([next])}`;
 }
 
 const LANGUAGE_LABELS = { vf: "VF", vostfr: "VOSTFR" } as const;
