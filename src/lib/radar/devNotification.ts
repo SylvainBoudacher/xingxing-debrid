@@ -18,6 +18,7 @@ const SAMPLE: RadarEntry = {
   known: {},
   baseline: [],
   alerts: [],
+  packs: {},
   episodes: [],
   aired: [],
   addedAt: 0,

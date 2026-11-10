@@ -72,12 +72,8 @@ export async function checkRadarEntry(id: string): Promise<void> {
   if (!entry) return;
   const deps = await buildDeps();
   if (!deps) return;
-  const { updates, newAlerts } = await checkEntries([entry], deps);
+  const { updates } = await checkEntries([entry], deps);
   const update = updates.get(id);
   if (!update) return;
-  const silenced = new Set(newAlerts.map((n) => n.alert));
-  applyCheckResult(
-    new Map([[id, { ...update, alerts: update.alerts.filter((a) => !silenced.has(a)) }]]),
-    null,
-  );
+  applyCheckResult(new Map([[id, { ...update, newAlerts: [], replaced: [] }]]), null);
 }

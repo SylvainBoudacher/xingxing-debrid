@@ -21,32 +21,40 @@ export interface RadarCheckResult {
 
 const CHECK_CONCURRENCY = 2;
 
+// Une saison terminée reste relue côté TMDB : sa liste d'épisodes peut s'allonger.
 export function shouldCheck(entry: RadarEntry): boolean {
-  return !isComplete(entry);
+  return entry.season !== null || !isComplete(entry);
 }
 
 async function checkEntry(
   entry: RadarEntry,
   deps: RadarCheckDeps,
 ): Promise<{ update: EntryUpdate; newAlerts: RadarAlert[] }> {
-  const [tmdbEpisodes, releases] = await Promise.all([
-    entry.season === null ? Promise.resolve([]) : deps.fetchEpisodes(entry),
-    deps.fetchReleases(entry),
-  ]);
+  const tmdbEpisodes = entry.season === null ? [] : await deps.fetchEpisodes(entry);
   const episodes = tmdbEpisodes.map((e) => e.episode_number);
   const aired = tmdbEpisodes
     .filter((e) => !!e.air_date && e.air_date <= deps.today)
     .map((e) => e.episode_number);
-  const current = { ...entry, episodes, aired };
+  const current = entry.season === null ? entry : { ...entry, episodes, aired };
+  const releases = isComplete(current) ? [] : await deps.fetchReleases(entry);
   const { certain } = ownedContents(current, deps.library);
-  const { known, baseline, alerts, newAlerts } = evaluateReleases(
+  const { known, baseline, newAlerts, replaced, packs } = evaluateReleases(
     current,
     releases,
     certain,
     deps.now,
   );
   return {
-    update: { expectation: entry.expectation, known, baseline, alerts, episodes, aired },
+    update: {
+      expectation: entry.expectation,
+      known,
+      baseline,
+      newAlerts,
+      replaced,
+      packs,
+      episodes,
+      aired,
+    },
     newAlerts,
   };
 }

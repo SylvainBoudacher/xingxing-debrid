@@ -114,6 +114,54 @@ describe("evaluateReleases", () => {
   });
 });
 
+describe("packs de saison", () => {
+  const PACK = rel(["MULTI"], "1080p", { kind: "season", season: 3 }, { infoHash: "pack" });
+
+  test("C1 : un pack vu en cours de saison ne couvre pas les épisodes diffusés ensuite", () => {
+    const start = evaluateReleases(entry({ known: null, aired: [1, 2, 3, 4, 5] }), [PACK], NONE, 1);
+    expect(start.packs).toEqual({ pack: [1, 2, 3, 4, 5] });
+
+    const later = entry({
+      known: start.known,
+      packs: start.packs,
+      aired: [1, 2, 3, 4, 5, 6],
+    });
+    const r = evaluateReleases(later, [PACK], NONE, 2);
+    expect(r.newAlerts).toEqual([]);
+    expect(r.known.e6).toBeUndefined();
+
+    const real = rel(["VFF"], "1080p", ep(3, 6));
+    const s = evaluateReleases({ ...later, known: r.known }, [PACK, real], NONE, 3);
+    expect(s.newAlerts.map((a) => a.content)).toEqual(["e6"]);
+  });
+
+  test("C1 : une saison couverte seulement jusqu'au pack n'est pas terminée", () => {
+    const start = evaluateReleases(entry({ known: null, aired: [1, 2] }), [PACK], NONE, 1);
+    expect(isComplete(entry({ known: start.known, episodes: [1, 2, 3], aired: [1, 2, 3] }))).toBe(
+      false,
+    );
+  });
+});
+
+test("I5 : une version jamais vue hors des dernières publications reste silencieuse", () => {
+  const old = rel(["VFF"], "1080p", ep(3, 2), { recent: false });
+  const r = evaluateReleases(entry(), [old], NONE, 1);
+  expect(r.newAlerts).toEqual([]);
+  expect(r.known.e2).toHaveLength(1);
+});
+
+test("I5 : en souple, une ancienne alternative ne mi-alerte pas", () => {
+  const old = rel(["VOSTFR"], "720p", ep(3, 2), { recent: false });
+  expect(evaluateReleases(entry({ expectation: SOFT }), [old], NONE, 1).newAlerts).toEqual([]);
+});
+
+test("les contenus dont l'alerte est remplacée sont listés", () => {
+  const soft = entry({ expectation: SOFT });
+  const a = evaluateReleases(soft, [VOST720], NONE, 1);
+  const b = evaluateReleases({ ...soft, known: a.known, alerts: a.alerts }, [VF1080], NONE, 2);
+  expect(b.replaced).toEqual(["e6"]);
+});
+
 describe("état d'une ligne", () => {
   const vf: KnownVersion[] = [{ language: "vf", resolution: "1080p" }];
   const vostfr: KnownVersion[] = [{ language: "vostfr", resolution: "1080p" }];

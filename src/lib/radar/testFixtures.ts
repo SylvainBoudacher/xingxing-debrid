@@ -31,6 +31,7 @@ export function tvEntry(patch: Partial<RadarEntry> = {}): RadarEntry {
     known: {},
     baseline: [],
     alerts: [],
+    packs: {},
     episodes: [1, 2, 3, 4, 5, 6, 7, 8],
     aired: [1, 2, 3, 4, 5, 6],
     addedAt: 0,
@@ -58,8 +59,16 @@ export function release(
   languages: string[],
   resolution: string | null,
   scope: ReleaseScope | null,
+  patch: Partial<RadarRelease> = {},
 ): RadarRelease {
-  return { languages, resolution, scope };
+  return {
+    infoHash: JSON.stringify([languages, resolution, scope]),
+    recent: true,
+    languages,
+    resolution,
+    scope,
+    ...patch,
+  };
 }
 
 export function alert(level: RadarAlert["level"], content = "e6"): RadarAlert {

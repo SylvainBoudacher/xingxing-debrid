@@ -19,6 +19,7 @@ export function newRadarEntry(
     known: null,
     baseline: [],
     alerts: [],
+    packs: {},
     episodes: [],
     aired: [],
     addedAt: now,

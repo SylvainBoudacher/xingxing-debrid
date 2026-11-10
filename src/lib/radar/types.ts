@@ -39,9 +39,15 @@ export interface RadarEntry {
   known: KnownVersions | null;
   baseline: ContentKey[];
   alerts: RadarAlert[];
+  // Épisodes couverts par chaque pack (par infoHash), figés à sa première apparition.
+  packs: Record<string, number[]>;
   episodes: number[];
   aired: number[];
   addedAt: number;
 }
 
-export type RadarRelease = Pick<ReleaseTags, "languages" | "resolution" | "scope">;
+export type RadarRelease = Pick<ReleaseTags, "languages" | "resolution" | "scope"> & {
+  infoHash: string;
+  // Présente dans les dernières publications : seule une telle release peut alerter.
+  recent: boolean;
+};

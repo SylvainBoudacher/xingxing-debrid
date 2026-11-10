@@ -112,8 +112,35 @@ describe("checkEntries", () => {
   });
 });
 
-test("une ligne terminée n'est plus vérifiée", () => {
+describe("I4 : saison terminée", () => {
   const vf = [{ language: "vf", resolution: "1080p" } as const];
-  expect(shouldCheck(tvEntry({ episodes: [1], known: { e1: [...vf] } }))).toBe(false);
-  expect(shouldCheck(tvEntry())).toBe(true);
+  const done = () => tvEntry({ id: "a", episodes: [1], aired: [1], known: { e1: [...vf] } });
+
+  test("un film terminé n'est plus vérifié, une saison terminée reste à relire", () => {
+    expect(shouldCheck(movieEntry({ known: { movie: [...vf] } }))).toBe(false);
+    expect(shouldCheck(done())).toBe(true);
+  });
+
+  test("sans nouvel épisode TMDB, C411 n'est pas interrogé", async () => {
+    const r = await checkEntries(
+      [done()],
+      deps({
+        fetchEpisodes: async () => [ep(1)],
+        fetchReleases: () => Promise.reject(new Error("ne doit pas être appelé")),
+      }),
+    );
+    expect(r.failed).toEqual([]);
+  });
+
+  test("si TMDB ajoute un épisode, la vérification reprend", async () => {
+    const r = await checkEntries(
+      [done()],
+      deps({
+        fetchEpisodes: async () => [ep(1), ep(2)],
+        fetchReleases: async () => [VF_E2],
+      }),
+    );
+    expect(r.newAlerts.map((x) => x.alert.content)).toEqual(["e2"]);
+    expect(r.updates.get("a")?.episodes).toEqual([1, 2]);
+  });
 });

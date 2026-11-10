@@ -56,7 +56,15 @@ describe("matchesExpectation", () => {
 });
 
 test("toKnownVersion lit la langue et la résolution", () => {
-  expect(toKnownVersion({ languages: ["VOSTFR"], resolution: "720p", scope: null })).toEqual({
+  expect(
+    toKnownVersion({
+      infoHash: "h",
+      recent: true,
+      languages: ["VOSTFR"],
+      resolution: "720p",
+      scope: null,
+    }),
+  ).toEqual({
     language: "vostfr",
     resolution: "720p",
   });
