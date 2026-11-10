@@ -141,17 +141,17 @@ export function AppMenu({
                   aria-label="Clé TMDB manquante"
                 />
               )}
-              {currentPage !== "radar" && (
-                <DropdownMenuItem onClick={() => onNavigate("radar")}>
-                  <Radar className="mr-2 h-4 w-4" />
-                  Radar
-                  {radarAlerts > 0 && (
-                    <span
-                      className="ml-auto h-2 w-2 rounded-full bg-emerald-500"
-                      aria-label={`${radarAlerts} alertes non vues`}
-                    />
-                  )}
-                </DropdownMenuItem>
+            </DropdownMenuItem>
+          )}
+          {currentPage !== "radar" && (
+            <DropdownMenuItem onClick={() => onNavigate("radar")}>
+              <Radar className="mr-2 h-4 w-4" />
+              Radar
+              {radarAlerts > 0 && (
+                <span
+                  className="ml-auto h-2 w-2 rounded-full bg-emerald-500"
+                  aria-label={`${radarAlerts} alertes non vues`}
+                />
               )}
             </DropdownMenuItem>
           )}
