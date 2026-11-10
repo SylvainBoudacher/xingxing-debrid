@@ -18,7 +18,7 @@ const EPISODE_RE = /\bS(\d{1,2})[ .-]?E(\d{1,3})\b/i;
 
 export type ReleaseScope =
   | { kind: "episode"; season: number; episode: number }
-  | { kind: "season"; season: number }
+  | { kind: "season"; season: number; range?: { from: number; to: number } }
   | { kind: "complete" };
 
 const SCOPE_EPISODE_RE = /\bS(\d{1,2})[ .-]?E(\d{1,3})(?:[ .-]?E?(\d{1,3}))?\b/i;
@@ -32,7 +32,12 @@ export function parseReleaseScope(name: string): ReleaseScope | null {
   const flat = name.replace(/[._]/g, " ");
   const ep = flat.match(SCOPE_EPISODE_RE);
   if (ep) {
-    if (ep[3]) return { kind: "season", season: parseInt(ep[1], 10) };
+    if (ep[3])
+      return {
+        kind: "season",
+        season: parseInt(ep[1], 10),
+        range: { from: parseInt(ep[2], 10), to: parseInt(ep[3], 10) },
+      };
     return { kind: "episode", season: parseInt(ep[1], 10), episode: parseInt(ep[2], 10) };
   }
   const s = flat.match(SCOPE_SEASON_RE);

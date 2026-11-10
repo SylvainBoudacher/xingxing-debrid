@@ -210,7 +210,10 @@ describe("parseReleaseScope", () => {
   });
 
   it("treats an episode range as a season pack", () => {
-    expect(parseReleaseScope("Show.S02E01-E10.1080p.WEB")).toEqual({ kind: "season", season: 2 });
+    expect(parseReleaseScope("Show.S02E01-E10.1080p.WEB")).toMatchObject({
+      kind: "season",
+      season: 2,
+    });
   });
 
   it("detects a complete series without season number", () => {
@@ -219,5 +222,15 @@ describe("parseReleaseScope", () => {
 
   it("returns null for movie names", () => {
     expect(parseReleaseScope("Inception.2010.1080p.BluRay.x264")).toBeNull();
+  });
+});
+
+describe("parseReleaseScope, plages d'épisodes", () => {
+  it("une plage garde ses bornes", () => {
+    expect(parseReleaseScope("Show.S02E01-E03.1080p")).toEqual({
+      kind: "season",
+      season: 2,
+      range: { from: 1, to: 3 },
+    });
   });
 });
