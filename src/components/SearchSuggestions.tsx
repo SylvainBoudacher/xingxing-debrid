@@ -26,7 +26,7 @@ export function SearchSuggestions({
       transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
       className="overflow-hidden border-t border-black/8 dark:border-white/8"
     >
-      <ul className="max-h-80 overflow-y-auto py-1.5">
+      <ul className="max-h-80 space-y-0.5 overflow-y-auto p-1.5">
         {suggestions.map((item, i) => {
           const active = i === highlightedIndex;
           const owned = ownedKeys.has(`${item.mediaType}-${item.id}`);
@@ -38,7 +38,7 @@ export function SearchSuggestions({
                 onMouseDown={(e) => e.preventDefault()}
                 onMouseEnter={() => onHover(i)}
                 onClick={() => onSelect(item)}
-                className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
+                className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors ${
                   active
                     ? "bg-indigo-500/12 dark:bg-indigo-500/20"
                     : "hover:bg-black/5 dark:hover:bg-white/5"
@@ -78,7 +78,7 @@ export function SearchSuggestions({
                 {owned && (
                   <span className="flex shrink-0 items-center gap-1 rounded-md bg-emerald-600/85 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                     <Check className="h-2.5 w-2.5" strokeWidth={3} />
-                    Dans la bibliotheque
+                    Dans la bibliothèque
                   </span>
                 )}
               </button>

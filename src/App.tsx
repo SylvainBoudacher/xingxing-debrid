@@ -32,12 +32,22 @@ import type { DiscoverTab } from "@/lib/useDiscoverFeed";
 import { checkForUpdate, type UpdateInfo } from "@/lib/updater";
 import { useActionShortcuts } from "@/lib/useActionShortcuts";
 import { useAppInit } from "@/lib/useAppInit";
+import { loadRadar } from "@/lib/radar/radarStore";
+import { runRadarCheck } from "@/lib/radar/runRadarCheck";
 import { useNavShortcuts } from "@/lib/useNavShortcuts";
 import { DiscoverPage } from "@/pages/DiscoverPage";
 import { LibraryPage } from "@/pages/LibraryPage";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { AnimatePresence } from "motion/react";
-import { lazy, startTransition, Suspense, useEffect, useEffectEvent, useState } from "react";
+import {
+  lazy,
+  startTransition,
+  Suspense,
+  useEffect,
+  useEffectEvent,
+  useRef,
+  useState,
+} from "react";
 
 const PixelPool = lazy(() =>
   import("@/components/PixelPool").then((m) => ({ default: m.PixelPool })),
@@ -62,6 +72,7 @@ const PreferencesPage = lazy(() =>
 const PatchnotesPage = lazy(() =>
   import("@/pages/PatchnotesPage").then((m) => ({ default: m.PatchnotesPage })),
 );
+const RadarPage = lazy(() => import("@/pages/RadarPage").then((m) => ({ default: m.RadarPage })));
 const HelpPage = lazy(() => import("@/pages/HelpPage").then((m) => ({ default: m.HelpPage })));
 const BoatGamePage = lazy(() =>
   import("@/pages/BoatGamePage").then((m) => ({ default: m.BoatGamePage })),
@@ -241,6 +252,16 @@ function App() {
   // in an effect to avoid cascading renders.
   const effectivePhase: StartPhase =
     startPhase === "splash" && !appInitLoading && page !== null ? "transition" : startPhase;
+
+  // Vérification Radar au lancement, jamais attendue par le démarrage.
+  const radarStarted = useRef(false);
+  useEffect(() => {
+    if (effectivePhase !== "done" || radarStarted.current) return;
+    radarStarted.current = true;
+    loadRadar()
+      .then(() => runRadarCheck({ onOpenRadar: () => setPage("radar") }))
+      .catch(() => {});
+  }, [effectivePhase]);
 
   async function handleSetSummerFps(v: 30 | 60) {
     setSummerFps(v);
@@ -621,6 +642,18 @@ function App() {
               onSearchTracker={launchTrackerSearch}
               onOpenLibraryItem={openLibraryItem}
               onOpenMangaLibrary={openMangaEntry}
+            />
+          </PageView>
+        )}
+        {effectivePhase === "done" && page === "radar" && (
+          <PageView key="radar">
+            <RadarPage
+              onBack={() => setPage("main")}
+              onNavigate={handleNavigate}
+              hasPendingUpdate={availableUpdate !== null}
+              onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+              onSearchTracker={launchTrackerSearch}
+              onOpenLibraryItem={openLibraryItem}
             />
           </PageView>
         )}

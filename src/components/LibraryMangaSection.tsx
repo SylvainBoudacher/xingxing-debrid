@@ -72,8 +72,6 @@ interface LibraryMangaSectionProps {
   onDiscover: () => void;
   /** Lecteur ou modale ouverts : la page hote suspend son raccourci Escape. */
   onBusyChange?: (busy: boolean) => void;
-  /** La page hote elargit son conteneur en vue jaquettes. */
-  onLayoutChange?: (layout: MangaLayout) => void;
 }
 
 interface ReadingSession {
@@ -90,7 +88,6 @@ export function LibraryMangaSection({
   onInitialConsumed,
   onDiscover,
   onBusyChange,
-  onLayoutChange,
 }: LibraryMangaSectionProps) {
   const [entries, setEntries] = useState<MangaEntry[]>(() => getCachedMangaLibrary() ?? []);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -170,10 +167,6 @@ export function LibraryMangaSection({
       setGrouping(p.grouping);
     });
   }, []);
-
-  useEffect(() => {
-    onLayoutChange?.(layout);
-  }, [layout, onLayoutChange]);
 
   const mangaIds = useMemo(() => new Set(entries.map((e) => e.mangaId)), [entries]);
   const categories = useMangaCategories(mangaIds);

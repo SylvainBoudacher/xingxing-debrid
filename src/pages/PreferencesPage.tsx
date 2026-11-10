@@ -8,6 +8,7 @@ import { ApiKeysPanel } from "@/components/settings/panels/ApiKeysPanel";
 import { BackupTransferPanel } from "@/components/settings/panels/BackupTransferPanel";
 import { DisplayPanel } from "@/components/settings/panels/DisplayPanel";
 import { LibraryPanel } from "@/components/settings/panels/LibraryPanel";
+import { RadarPanel } from "@/components/settings/panels/RadarPanel";
 import { DownloadsPanel } from "@/components/settings/panels/DownloadsPanel";
 import { PlaybackPanel } from "@/components/settings/panels/PlaybackPanel";
 import { MagnetsPanel } from "@/components/settings/panels/MagnetsPanel";
@@ -90,6 +91,8 @@ export function PreferencesPage({
         return <DownloadsPanel />;
       case "library":
         return <LibraryPanel />;
+      case "radar":
+        return <RadarPanel />;
       case "nyaa":
         return <NyaaPanel />;
       case "backup-transfer":

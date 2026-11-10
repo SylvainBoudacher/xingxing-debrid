@@ -11,6 +11,7 @@ import {
   Library,
   Magnet,
   Menu,
+  Radar,
   TestTube,
   RefreshCw,
   RotateCcw,
@@ -34,6 +35,9 @@ import { toast } from "sonner";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import { getApiKey } from "@/lib/apiKeys";
 import { DevConfirmDialog, type DevAction } from "@/components/DevConfirmDialog";
+import { notifyRadarTest } from "@/lib/radar/devNotification";
+import { unseenAlertCount } from "@/lib/radar/radarStore";
+import { useRadar } from "@/lib/radar/useRadar";
 
 export type Page =
   | "main"
@@ -43,6 +47,7 @@ export type Page =
   | "patchnotes"
   | "help"
   | "discover"
+  | "radar"
   | "manga"
   | "mangalibrary"
   | "setup"
@@ -76,6 +81,7 @@ export function AppMenu({
   onShowMangaWelcome,
 }: AppMenuProps) {
   const isMain = currentPage === "main";
+  const radarAlerts = unseenAlertCount(useRadar());
   // La page Découverte est inutilisable sans clé TMDB : petit indicateur sur
   // l'entrée du menu pour prévenir avant de naviguer.
   const [tmdbKeyMissing, setTmdbKeyMissing] = useState(false);
@@ -133,6 +139,18 @@ export function AppMenu({
                 <KeyRound
                   className="ml-auto h-3 w-3 text-amber-500"
                   aria-label="Clé TMDB manquante"
+                />
+              )}
+            </DropdownMenuItem>
+          )}
+          {currentPage !== "radar" && (
+            <DropdownMenuItem onClick={() => onNavigate("radar")}>
+              <Radar className="mr-2 h-4 w-4" />
+              Radar
+              {radarAlerts > 0 && (
+                <span
+                  className="ml-auto h-2 w-2 rounded-full bg-emerald-500"
+                  aria-label={`${radarAlerts} alertes non vues`}
                 />
               )}
             </DropdownMenuItem>
@@ -231,6 +249,18 @@ export function AppMenu({
                     >
                       <Bell className="mr-2 h-4 w-4" />
                       Tester les toasts
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => notifyRadarTest("full", () => onNavigate("radar"))}
+                    >
+                      <Radar className="mr-2 h-4 w-4" />
+                      Tester l'alerte Radar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => notifyRadarTest("partial", () => onNavigate("radar"))}
+                    >
+                      <Radar className="mr-2 h-4 w-4" />
+                      Tester la mi-alerte Radar
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setDevConfirm("clear-store")}>
                       <Trash2 className="mr-2 h-4 w-4" />

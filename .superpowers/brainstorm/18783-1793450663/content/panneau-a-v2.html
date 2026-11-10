@@ -1,0 +1,63 @@
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jersey+10&display=swap">
+<style>
+  .stage { background:
+      radial-gradient(circle at 20% 30%, #5d9a3c 0 3px, transparent 4px) 0 0/22px 22px,
+      radial-gradient(circle at 70% 60%, #4c8530 0 3px, transparent 4px) 0 0/30px 30px,
+      #5a9638;
+    padding: 40px 24px; display:flex; gap:40px; justify-content:center; align-items:flex-start; flex-wrap:wrap; }
+  .p { position:relative; padding:18px 22px 22px; color:#fff3d6; font-family:"Jersey 10", monospace; font-size:22px; letter-spacing:.5px;
+       background: repeating-linear-gradient(180deg, #9a6236 0 34px, #7d4b27 34px 37px, #8e5a30 37px 38px);
+       box-shadow: 0 0 0 4px #4a2a14, 0 0 0 8px #2b170a, 6px 10px 0 8px rgba(0,0,0,.35);
+       text-shadow: 2px 2px 0 #3b200d; }
+  .nail { position:absolute; width:6px; height:6px; background:#c9c3b2; box-shadow: 2px 2px 0 #5b5345; }
+  .n1{left:8px;top:8px}.n2{right:8px;top:8px}.n3{left:8px;bottom:8px}.n4{right:8px;bottom:8px}
+  .head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+  h2.t { font-family:"Jersey 10"; font-size:44px; margin:0; color:#ffe39a; font-weight:400; line-height:1; }
+  .esc { font-size:18px; background:#4a2a14; padding:2px 8px; color:#f2d9a6; text-shadow:none; cursor:pointer; }
+  .esc:hover { background:#2b170a; }
+  .label { display:inline-block; font-size:20px; color:#ffe39a; margin:6px 0 6px; }
+  .label::before { content:""; display:inline-block; width:8px; height:8px; background:#ffe39a; margin-right:8px; vertical-align:middle; box-shadow:2px 2px 0 #3b200d; }
+  .muted { color:#e9cf9f; }
+  .row { display:flex; align-items:center; gap:10px; margin:6px 0; }
+  .box { width:18px; height:18px; background:#f7e7c0; box-shadow: inset 0 0 0 2px #4a2a14; }
+  .box.on { background:#f7e7c0 linear-gradient(#5fae3a,#5fae3a) center/10px 10px no-repeat; }
+  /* zone creusée pour le contenu riche */
+  .well { background:#3b2210; box-shadow: inset 0 4px 0 #24130a, 0 0 0 3px #24130a; padding:12px; margin-bottom:12px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; text-align:center; }
+  .sachet { width:44px; height:56px; margin:0 auto 6px; background:#d9b56a; box-shadow: inset 0 0 0 3px #6b4320; }
+  .btn { display:inline-block; font-family:"Jersey 10"; font-size:20px; color:#2b170a; text-shadow:none; padding:2px 10px 4px;
+         background:#f2c35a; box-shadow: inset 0 -4px 0 #b9862c, 0 0 0 3px #2b170a; cursor:pointer; }
+  .btn:hover { background:#ffd677; }
+  .btn.off { background:#8c7a5c; box-shadow: inset 0 -4px 0 #6a5a40, 0 0 0 3px #2b170a; color:#3b2a18; }
+</style>
+
+<h2>Le style A appliqué à deux vraies fenêtres</h2>
+<p class="subtitle">À gauche le piquet (simple), à droite la Cabane (sections, objets, boutons d'achat). Les objets sont des carrés de remplacement.</p>
+
+<div class="mockup"><div class="mockup-body stage">
+  <div class="p" style="width:340px">
+    <span class="nail n1"></span><span class="nail n2"></span><span class="nail n3"></span><span class="nail n4"></span>
+    <div class="head"><h2 class="t">Parcelle 1</h2><span class="esc">Échap</span></div>
+    <div class="row"><span class="box on"></span>Arroseur</div>
+    <div class="row"><span class="box"></span>Jardinier</div>
+    <div class="row"><span class="box on"></span>Cueilleur</div>
+    <p class="muted" style="margin:10px 0 0">Sinon : Aucun employé à qui la confier</p>
+  </div>
+
+  <div class="p" style="width:500px">
+    <span class="nail n1"></span><span class="nail n2"></span><span class="nail n3"></span><span class="nail n4"></span>
+    <div class="head"><h2 class="t">Cabane à graines</h2><span class="esc">Échap</span></div>
+    <span class="label">Sachets de 3 graines</span>
+    <div class="well grid3">
+      <div><div class="sachet"></div>Commun<br><span class="btn">12 po</span></div>
+      <div><div class="sachet" style="background:#8fb4d9"></div>Rare<br><span class="btn">40 po</span></div>
+      <div><div class="sachet" style="background:#c79ad9"></div>Épique<br><span class="btn off">120 po</span></div>
+    </div>
+    <span class="label">Outils améliorés</span>
+    <div class="well grid3">
+      <div><div class="sachet" style="height:44px;background:#9aa"></div>Arrosoir<br><span class="muted" style="font-size:16px">+1 case</span><br><span class="btn">80 po</span></div>
+      <div><div class="sachet" style="height:44px;background:#9aa"></div>Bêche<br><span class="muted" style="font-size:16px">plus rapide</span><br><span class="btn off">Possédé</span></div>
+      <div><div class="sachet" style="height:44px;background:#9aa"></div>Panier<br><span class="muted" style="font-size:16px">+2 places</span><br><span class="btn">80 po</span></div>
+    </div>
+  </div>
+</div></div>

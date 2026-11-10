@@ -1,3 +1,4 @@
+import radarV177Img from "@/assets/patchnote/v1.7.7/radar.webp";
 import newCanardV173Img from "@/assets/patchnote/v1.7.3/newCanard.webp";
 import newPageSerieV170Img from "@/assets/patchnote/v1.7.0/newPageSerie.webp";
 import recoV170Img from "@/assets/patchnote/v1.7.0/reco.webp";
@@ -49,6 +50,36 @@ export interface PatchNote {
 }
 
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: "1.7.7",
+    date: "10 novembre 2026",
+    intro:
+      "La 1.7.7 ajoute le Radar : une nouvelle page pour surveiller les films et séries qui vous intéressent et être prévenu dès qu'une version correspondant à vos critères sort sur C411. Elle embarque aussi plusieurs petites corrections d'interface remontées par des utilisateurs.",
+    introImage: {
+      src: radarV177Img,
+      caption: "La nouvelle page Radar",
+    },
+    sections: [
+      {
+        title: "Radar",
+        items: [
+          "Nouvelle page Radar, accessible depuis le menu : ajoutez un film ou une série (ou une saison) à surveiller.",
+          "Pour chaque œuvre, choisissez la langue (VF, VOSTFR ou indifférent) et la résolution attendues.",
+          "Mode strict ou souple : vous êtes alerté uniquement quand la version exacte sort, ou aussi quand une version partielle apparaît.",
+          "Les vérifications se font automatiquement et une notification vous prévient dès qu'une version attendue est disponible.",
+          "Affichage en liste ou en jaquettes, filtre par statut et suggestions de tendances pour remplir votre Radar en un clic.",
+        ],
+      },
+      {
+        title: "Corrections d'interface",
+        items: [
+          "Les suggestions de recherche sont mieux espacées et leurs éléments survolés ont des coins arrondis.",
+          "La page Bibliothèque garde une largeur constante en passant de la vue liste à la vue jaquettes des mangas.",
+          "Plusieurs ajustements visuels mineurs, signalés par la communauté. Merci à tous les retours !",
+        ],
+      },
+    ],
+  },
   {
     version: "1.7.6",
     date: "14 octobre 2026",

@@ -126,6 +126,7 @@ export function releasesQueryKey(mediaType: MediaType, id: number, season: Seaso
 export async function searchC411(
   item: TmdbItem,
   c411Key: string,
+  sortBy: "seeders" | "publishedAt" = "seeders",
 ): Promise<{ torrents: C411Torrent[]; nTitles: string[] }> {
   const titles = [item.title, item.originalTitle].filter(Boolean);
   const queries = [...new Map(titles.map((t) => [normalize(t), t])).values()];
@@ -135,7 +136,7 @@ export async function searchC411(
         name: q,
         page: 1,
         perPage: 50,
-        sortBy: "seeders",
+        sortBy,
         sortOrder: "desc" as const,
       };
       return queryClient.fetchQuery({

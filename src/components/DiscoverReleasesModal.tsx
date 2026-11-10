@@ -26,13 +26,16 @@ import { loadReleasesView, releasesViewQueryKey } from "@/lib/releasesView";
 import { tmdbKeys, tvDetail as tmdbTvDetail } from "@/lib/services/tmdb";
 import { TMDB_STALE_MS } from "@/lib/tmdbCache";
 import type { TmdbItem } from "@/lib/tmdbItem";
+import { RadarAddDialog } from "@/components/radar/RadarAddDialog";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronDown, Heart, Star, X } from "lucide-react";
-import { motion } from "motion/react";
+import { Check, ChevronDown, Heart, Radar, Star, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
 
 interface DiscoverReleasesModalProps {
   item: TmdbItem;
+  /** Saison ouverte d'emblée (fiche ouverte depuis Radar) */
+  initialSeason?: SeasonSelection;
   tmdbKey: string;
   getC411Key: () => string;
   liked: boolean;
@@ -50,6 +53,7 @@ interface DiscoverReleasesModalProps {
 // et liste complète des releases C411 (tri, filtres) repliée pour les initiés.
 export function DiscoverReleasesModal({
   item,
+  initialSeason,
   tmdbKey,
   getC411Key,
   liked,
@@ -61,7 +65,10 @@ export function DiscoverReleasesModal({
   onSend,
   onSearchTracker,
 }: DiscoverReleasesModalProps) {
-  const [selectedSeason, setSelectedSeason] = useState<SeasonSelection | null>(null);
+  const [selectedSeason, setSelectedSeason] = useState<SeasonSelection | null>(
+    initialSeason ?? null,
+  );
+  const [radarOpen, setRadarOpen] = useState(false);
   const [releaseSort, setReleaseSort] = useState<ReleaseSort>(
     item.mediaType === "tv" ? "episode" : "seeders",
   );
@@ -277,6 +284,14 @@ export function DiscoverReleasesModal({
             />
           </div>
           <button
+            onClick={() => setRadarOpen(true)}
+            aria-label="Ajouter au Radar"
+            title="Ajouter au Radar"
+            className="shrink-0 mt-0.5 flex h-6 w-6 cursor-pointer items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800"
+          >
+            <Radar className="h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400" />
+          </button>
+          <button
             onClick={() => onToggleLike(item)}
             className="shrink-0 mt-0.5 flex h-6 w-6 items-center justify-center rounded-md bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-colors"
           >
@@ -396,6 +411,16 @@ export function DiscoverReleasesModal({
           )}
         </div>
       </motion.div>
+      <AnimatePresence>
+        {radarOpen && (
+          <RadarAddDialog
+            item={item}
+            season={typeof activeSeason === "number" ? activeSeason : undefined}
+            tmdbKey={tmdbKey}
+            onClose={() => setRadarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
