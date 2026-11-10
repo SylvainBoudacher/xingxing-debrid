@@ -29,7 +29,7 @@ import type { TmdbItem } from "@/lib/tmdbItem";
 import { RadarAddDialog } from "@/components/radar/RadarAddDialog";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronDown, Heart, Radar, Star, X } from "lucide-react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
 
 interface DiscoverReleasesModalProps {
@@ -411,14 +411,16 @@ export function DiscoverReleasesModal({
           )}
         </div>
       </motion.div>
-      {radarOpen && (
-        <RadarAddDialog
-          item={item}
-          season={typeof activeSeason === "number" ? activeSeason : undefined}
-          tmdbKey={tmdbKey}
-          onClose={() => setRadarOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {radarOpen && (
+          <RadarAddDialog
+            item={item}
+            season={typeof activeSeason === "number" ? activeSeason : undefined}
+            tmdbKey={tmdbKey}
+            onClose={() => setRadarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

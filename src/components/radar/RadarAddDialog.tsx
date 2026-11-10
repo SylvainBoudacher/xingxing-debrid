@@ -38,6 +38,8 @@ export function RadarAddDialog({
   const [seasons, setSeasons] = useState<number[] | null>(null);
   const [selectedSeason, setSelectedSeason] = useState<number | null>(season ?? null);
   const [expectation, setExpectation] = useState(radar.defaults);
+  // Le titre rejoint la liste pendant le fondu de fermeture : évite le libellé "Déjà dans Radar".
+  const [added, setAdded] = useState(false);
 
   const isSeries = item?.mediaType === "tv";
 
@@ -69,9 +71,11 @@ export function RadarAddDialog({
 
   const targetSeason = isSeries ? selectedSeason : null;
   const ready = !isSeries || targetSeason !== null;
-  const duplicate = ready && radar.entries.some((e) => e.id === radarEntryId(item, targetSeason));
+  const duplicate =
+    !added && ready && radar.entries.some((e) => e.id === radarEntryId(item, targetSeason));
 
   function add() {
+    setAdded(true);
     const entry = newRadarEntry(item!, targetSeason, expectation, Date.now());
     addRadarEntry(entry);
     checkRadarEntry(entry.id).catch(() => {});

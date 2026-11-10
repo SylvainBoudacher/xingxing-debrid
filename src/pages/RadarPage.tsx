@@ -3,6 +3,7 @@ import { DebridFilesModal } from "@/components/DebridFilesModal";
 import { DiscoverReleasesModal } from "@/components/DiscoverReleasesModal";
 import { PageHeader } from "@/components/PageHeader";
 import { RadarAddDialog } from "@/components/radar/RadarAddDialog";
+import { RadarBackdrop } from "@/components/radar/RadarBackdrop";
 import { RadarEditDialog } from "@/components/radar/RadarEditDialog";
 import { RadarFiltersBar } from "@/components/radar/RadarFiltersBar";
 import { RadarMissingKeys } from "@/components/radar/RadarMissingKeys";
@@ -155,7 +156,8 @@ export function RadarPage({
     );
 
   return (
-    <main className="relative flex min-h-screen flex-col bg-[#f4f6fc] bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#d7e0fb_0%,_#edf1fa_45%,_#fafbfe_75%)] dark:bg-black dark:bg-[radial-gradient(ellipse_70%_45%_at_50%_20%,_#0c1d56_0%,_#04091a_45%,_#000000_75%)]">
+    <main className="relative flex min-h-screen flex-col bg-[#f6fbf8] bg-[radial-gradient(ellipse_85%_75%_at_50%_-15%,_#c8ecd9_0%,_#e4f4eb_45%,_#fbfdfc_85%)] dark:bg-black dark:bg-[radial-gradient(ellipse_85%_75%_at_50%_-15%,_#0f4a35_0%,_#06261b_45%,_#000000_85%)]">
+      <RadarBackdrop />
       <PageHeader
         title="Radar"
         onBack={onBack}
@@ -169,7 +171,7 @@ export function RadarPage({
           />
         }
       />
-      <div className="mx-auto w-full max-w-5xl space-y-4 px-6 pt-6 pb-24 sm:px-8">
+      <div className="relative mx-auto w-full max-w-5xl space-y-4 px-6 pt-6 pb-24 sm:px-8">
         {missing.length > 0 ? (
           <RadarMissingKeys missing={missing} onOpenPreferences={() => onNavigate("preferences")} />
         ) : (
@@ -242,8 +244,12 @@ export function RadarPage({
           />
         )}
       </AnimatePresence>
-      {adding && keys && <RadarAddDialog tmdbKey={keys.tmdb} onClose={() => setAdding(false)} />}
-      {editing && <RadarEditDialog entry={editing} onClose={() => setEditing(null)} />}
+      <AnimatePresence>
+        {adding && keys && <RadarAddDialog tmdbKey={keys.tmdb} onClose={() => setAdding(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {editing && <RadarEditDialog entry={editing} onClose={() => setEditing(null)} />}
+      </AnimatePresence>
     </main>
   );
 }
