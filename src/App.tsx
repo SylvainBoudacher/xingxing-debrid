@@ -652,6 +652,8 @@ function App() {
               onNavigate={handleNavigate}
               hasPendingUpdate={availableUpdate !== null}
               onShowPendingUpdate={() => setPendingUpdate(availableUpdate)}
+              onSearchTracker={launchTrackerSearch}
+              onOpenLibraryItem={openLibraryItem}
             />
           </PageView>
         )}

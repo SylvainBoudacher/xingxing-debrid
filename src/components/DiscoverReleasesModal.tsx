@@ -33,6 +33,8 @@ import { useMemo, useState } from "react";
 
 interface DiscoverReleasesModalProps {
   item: TmdbItem;
+  /** Saison ouverte d'emblée (fiche ouverte depuis Radar) */
+  initialSeason?: SeasonSelection;
   tmdbKey: string;
   getC411Key: () => string;
   liked: boolean;
@@ -50,6 +52,7 @@ interface DiscoverReleasesModalProps {
 // et liste complète des releases C411 (tri, filtres) repliée pour les initiés.
 export function DiscoverReleasesModal({
   item,
+  initialSeason,
   tmdbKey,
   getC411Key,
   liked,
@@ -61,7 +64,9 @@ export function DiscoverReleasesModal({
   onSend,
   onSearchTracker,
 }: DiscoverReleasesModalProps) {
-  const [selectedSeason, setSelectedSeason] = useState<SeasonSelection | null>(null);
+  const [selectedSeason, setSelectedSeason] = useState<SeasonSelection | null>(
+    initialSeason ?? null,
+  );
   const [releaseSort, setReleaseSort] = useState<ReleaseSort>(
     item.mediaType === "tv" ? "episode" : "seeders",
   );
