@@ -24,3 +24,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Superpowers brainstorm session data
+.superpowers/
