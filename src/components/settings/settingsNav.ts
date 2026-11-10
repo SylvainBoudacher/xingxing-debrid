@@ -9,6 +9,7 @@ import {
   Magnet,
   Monitor,
   MonitorPlay,
+  Radar,
   Sparkles,
   Sun,
   ZoomIn,
@@ -25,6 +26,7 @@ export type PanelId =
   | "playback"
   | "downloads"
   | "library"
+  | "radar"
   | "nyaa"
   | "backup-transfer"
   | "updates"
@@ -122,6 +124,12 @@ const ALL_SETTINGS_GROUPS: SettingsNavGroup[] = [
         label: "Bibliothèque",
         subtitle: "Marquage automatique des contenus vus.",
         icon: Library,
+      },
+      {
+        id: "radar",
+        label: "Radar",
+        subtitle: "Version attendue par défaut pour les alertes.",
+        icon: Radar,
       },
     ],
   },

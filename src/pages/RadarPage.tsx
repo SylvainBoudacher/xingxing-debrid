@@ -2,6 +2,8 @@ import { AppMenu, type Page } from "@/components/AppMenu";
 import { DebridFilesModal } from "@/components/DebridFilesModal";
 import { DiscoverReleasesModal } from "@/components/DiscoverReleasesModal";
 import { PageHeader } from "@/components/PageHeader";
+import { RadarAddDialog } from "@/components/radar/RadarAddDialog";
+import { RadarEditDialog } from "@/components/radar/RadarEditDialog";
 import { RadarFiltersBar } from "@/components/radar/RadarFiltersBar";
 import { RadarMissingKeys } from "@/components/radar/RadarMissingKeys";
 import { RadarRow } from "@/components/radar/RadarRow";
@@ -53,6 +55,8 @@ export function RadarPage({
   const [filters, setFilters] = useState(NO_FILTERS);
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [viewing, setViewing] = useState<RadarEntry | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<RadarEntry | null>(null);
 
   useEffect(() => {
     void loadRadar();
@@ -125,7 +129,7 @@ export function RadarPage({
             selected={selection.has(entry.id)}
             onToggleSelect={() => toggleSelected(entry.id)}
             onView={() => view(entry)}
-            onEdit={() => {}}
+            onEdit={() => setEditing(entry)}
             onRemove={() => removeRadarEntries([entry.id])}
           />
         ))}
@@ -156,7 +160,7 @@ export function RadarPage({
               lastCheckAt={radar.lastCheckAt}
               checking={radar.checking}
               onCheck={() => void check()}
-              onAdd={() => {}}
+              onAdd={() => setAdding(true)}
             />
             {radar.entries.length > 0 && (
               <RadarFiltersBar filters={filters} onChange={setFilters} />
@@ -216,6 +220,8 @@ export function RadarPage({
           />
         )}
       </AnimatePresence>
+      {adding && keys && <RadarAddDialog tmdbKey={keys.tmdb} onClose={() => setAdding(false)} />}
+      {editing && <RadarEditDialog entry={editing} onClose={() => setEditing(null)} />}
     </main>
   );
 }
