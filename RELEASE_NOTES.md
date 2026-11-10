@@ -1,2 +1,2 @@
-- Nouveau réglage Thème : Clair, Sombre ou Système (Paramètres > Apparence et fenêtre)
-- En mode Système, l'interface suit automatiquement le jour/nuit de l'ordinateur
+- Nouvelle page Radar : surveillez films et séries, alerte dès qu'une version attendue sort sur C411
+- Corrections d'interface remontées par les utilisateurs
