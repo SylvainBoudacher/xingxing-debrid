@@ -21,7 +21,7 @@ import {
 import { runRadarCheck } from "@/lib/radar/runRadarCheck";
 import type { RadarEntry } from "@/lib/radar/types";
 import { useRadar } from "@/lib/radar/useRadar";
-import { filterEntries, splitBlocks, type RadarFilters } from "@/lib/radar/view";
+import { filterEntries, splitBlocks, statusCounts, type RadarFilters } from "@/lib/radar/view";
 import type { TmdbItem } from "@/lib/tmdbItem";
 import { useLikes } from "@/lib/useLikes";
 import { useSendToDebrid } from "@/lib/useSendToDebrid";
@@ -38,7 +38,13 @@ interface RadarPageProps {
   onOpenLibraryItem: (item: TmdbItem, infoHash: string) => void;
 }
 
-const NO_FILTERS: RadarFilters = { query: "", type: "all", state: "all", mode: "all" };
+const NO_FILTERS: RadarFilters = {
+  query: "",
+  type: "all",
+  state: "all",
+  mode: "all",
+  inLibrary: false,
+};
 
 export function RadarPage({
   onBack,
@@ -76,6 +82,18 @@ export function RadarPage({
     onOpenLibrary: onOpenLibraryItem,
     onLibraryChange: () => setLibrary(getCachedLibrary() ?? []),
   });
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (debridModal) setDebridModal(null);
+      else if (viewing) setViewing(null);
+      else onBack();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debridModal, viewing, onBack]);
 
   const owned = useMemo(
     () => new Map(radar.entries.map((e) => [e.id, ownedContents(e, library)])),
@@ -151,7 +169,7 @@ export function RadarPage({
           />
         }
       />
-      <div className="mx-auto w-full max-w-3xl space-y-4 px-6 pt-6 pb-24 sm:px-10">
+      <div className="mx-auto w-full max-w-5xl space-y-4 px-6 pt-6 pb-24 sm:px-8">
         {missing.length > 0 ? (
           <RadarMissingKeys missing={missing} onOpenPreferences={() => onNavigate("preferences")} />
         ) : (
@@ -163,7 +181,11 @@ export function RadarPage({
               onAdd={() => setAdding(true)}
             />
             {radar.entries.length > 0 && (
-              <RadarFiltersBar filters={filters} onChange={setFilters} />
+              <RadarFiltersBar
+                filters={filters}
+                counts={statusCounts(radar.entries, filters, inLibrary)}
+                onChange={setFilters}
+              />
             )}
             {radar.loaded && radar.entries.length === 0 && (
               <p className="py-16 text-center text-sm text-zinc-500">
@@ -175,7 +197,7 @@ export function RadarPage({
                 Aucun titre ne correspond aux filtres.
               </p>
             )}
-            {block("Sorti", released)}
+            {block("Trouvé sur C411", released)}
             {block("En attente", waiting)}
           </>
         )}

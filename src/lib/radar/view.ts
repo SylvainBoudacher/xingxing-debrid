@@ -2,15 +2,19 @@ import { normalize } from "@/lib/normalizeTitle";
 import type { MediaType } from "@/lib/tmdbItem";
 import { isComplete } from "./evaluate";
 import type { ContentKey, RadarAlert, RadarEntry, RadarMode } from "./types";
+import { versionLabel } from "./versions";
 
 export type RadarStatus = "released" | "partial" | "waiting" | "finished";
 
 export interface RadarFilters {
   query: string;
   type: "all" | MediaType;
-  state: "all" | RadarStatus | "in-library";
+  state: "all" | RadarStatus;
   mode: "all" | RadarMode;
+  inLibrary: boolean;
 }
+
+export type RadarStatusCounts = Record<RadarFilters["state"], number>;
 
 export function entryStatus(entry: RadarEntry): RadarStatus {
   if (entry.alerts.some((a) => a.level === "full")) return "released";
@@ -29,9 +33,20 @@ export function filterEntries(
     if (query && !normalize(entry.item.title).includes(query)) return false;
     if (filters.type !== "all" && entry.item.mediaType !== filters.type) return false;
     if (filters.mode !== "all" && entry.expectation.mode !== filters.mode) return false;
-    if (filters.state === "in-library") return inLibrary(entry);
+    if (filters.inLibrary && !inLibrary(entry)) return false;
     return filters.state === "all" || entryStatus(entry) === filters.state;
   });
+}
+
+export function statusCounts(
+  entries: RadarEntry[],
+  filters: RadarFilters,
+  inLibrary: (entry: RadarEntry) => boolean,
+): RadarStatusCounts {
+  const visible = filterEntries(entries, { ...filters, state: "all" }, inLibrary);
+  const counts = { all: visible.length, released: 0, partial: 0, waiting: 0, finished: 0 };
+  for (const entry of visible) counts[entryStatus(entry)]++;
+  return counts;
 }
 
 const RELEASED_ORDER: RadarStatus[] = ["released", "partial", "finished"];
@@ -66,24 +81,53 @@ export function baselineLabel(entry: RadarEntry): string | null {
 
 type NotifiedAlert = { entry: RadarEntry; alert: RadarAlert };
 
-function singleText({ entry, alert }: NotifiedAlert, level: RadarAlert["level"]): string {
-  const title = entry.item.title;
-  if (entry.season === null) {
-    return level === "full" ? `${title} est sorti` : `${title} : alternative disponible`;
-  }
-  const number = episodeNumber(alert.content);
-  return level === "full"
-    ? `${title} : épisode ${number} est sorti`
-    : `${title} : alternative disponible pour l'épisode ${number}`;
+export interface RadarToastContent {
+  level: RadarAlert["level"];
+  label: string;
+  title: string;
+  detail: string;
+  version: string | null;
+  posters: (string | null)[];
 }
 
-export function summarizeAlerts(
-  items: NotifiedAlert[],
-): { level: RadarAlert["level"]; text: string } | null {
+const MAX_TOAST_POSTERS = 3;
+
+function singleToast(
+  { entry, alert }: NotifiedAlert,
+  level: RadarAlert["level"],
+): Omit<RadarToastContent, "level" | "posters"> {
+  const { item, season } = entry;
+  const version = versionLabel(alert.version);
+  const isFull = level === "full";
+  if (season === null) {
+    return {
+      label: isFull ? "Film disponible" : "Alternative disponible",
+      title: item.title,
+      detail: item.year,
+      version,
+    };
+  }
+  return {
+    label: isFull ? "Nouvel épisode" : "Alternative disponible",
+    title: item.title,
+    detail: `Saison ${season}, épisode ${episodeNumber(alert.content)}`,
+    version,
+  };
+}
+
+export function radarToastContent(items: NotifiedAlert[]): RadarToastContent | null {
   if (items.length === 0) return null;
   const level = items.some((i) => i.alert.level === "full") ? "full" : "partial";
+  const entries = [...new Map(items.map((i) => [i.entry.id, i.entry])).values()];
+  const posters = entries.slice(0, MAX_TOAST_POSTERS).map((e) => e.item.posterPath);
   const contents = new Set(items.map((i) => `${i.entry.id}:${i.alert.content}`));
-  if (contents.size === 1) return { level, text: singleText(items[0], level) };
-  const noun = level === "full" ? "nouveautés" : "alternatives";
-  return { level, text: `${contents.size} ${noun} sur Radar` };
+  if (contents.size === 1) return { level, posters, ...singleToast(items[0], level) };
+  return {
+    level,
+    label: "Radar",
+    title: `${contents.size} ${level === "full" ? "nouveautés" : "alternatives"}`,
+    detail: entries.map((e) => e.item.title).join(", "),
+    version: null,
+    posters,
+  };
 }

@@ -1,67 +1,70 @@
+import { SearchSuggestions } from "@/components/SearchSuggestions";
 import { Input } from "@/components/ui/input";
-import { networkErrorMessage } from "@/lib/networkError";
-import { searchMulti } from "@/lib/services/tmdb";
-import { mapTmdb, type TmdbItem } from "@/lib/tmdbItem";
-import { useState, type FormEvent } from "react";
+import { getCachedLibrary } from "@/lib/library";
+import { ownedTmdbKeys } from "@/lib/recommendations";
+import type { TmdbItem } from "@/lib/tmdbItem";
+import { useTmdbSuggestions } from "@/lib/useTmdbSuggestions";
+import { Loader2, Search } from "lucide-react";
+import { AnimatePresence } from "motion/react";
+import { useMemo, useState, type KeyboardEvent } from "react";
 
 interface RadarSearchProps {
   tmdbKey: string;
   onPick: (item: TmdbItem) => void;
 }
 
+// Mêmes suggestions TMDB que la barre de la page principale.
 export function RadarSearch({ tmdbKey, onPick }: RadarSearchProps) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<TmdbItem[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
+  const { suggestions, loading } = useTmdbSuggestions(query, true, tmdbKey);
+  const ownedKeys = useMemo(() => ownedTmdbKeys(getCachedLibrary() ?? []), []);
 
-  async function search(e: FormEvent) {
-    e.preventDefault();
-    if (!query.trim()) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await searchMulti(query.trim(), 1, tmdbKey);
-      setResults(
-        response.results.flatMap((r) =>
-          r.media_type === "person" ? [] : [mapTmdb(r, r.media_type)],
-        ),
-      );
-    } catch (err) {
-      setError(networkErrorMessage(err));
-    } finally {
-      setLoading(false);
+  function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlighted((h) => (h + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlighted((h) => (h <= 0 ? suggestions.length - 1 : h - 1));
+    } else if (e.key === "Enter" && highlighted >= 0) {
+      e.preventDefault();
+      onPick(suggestions[highlighted]);
     }
   }
 
+  const Icon = loading ? Loader2 : Search;
+
   return (
-    <div className="space-y-3">
-      <form onSubmit={(e) => void search(e)}>
+    <div>
+      <div className="relative">
+        <Icon
+          className={`absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-zinc-400 ${loading ? "animate-spin" : ""}`}
+        />
         <Input
           autoFocus
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Rechercher un film ou une série, puis Entrée"
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setHighlighted(-1);
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder="Rechercher un film, une série..."
+          className="pl-9"
         />
-      </form>
-      {loading && <p className="text-sm text-zinc-500">Recherche en cours...</p>}
-      {error && <p className="text-sm text-red-500">{error}</p>}
-      {results?.length === 0 && <p className="text-sm text-zinc-500">Aucun résultat.</p>}
-      <div className="space-y-1">
-        {results?.map((item) => (
-          <button
-            key={`${item.mediaType}-${item.id}`}
-            onClick={() => onPick(item)}
-            className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg p-2 text-left text-sm text-zinc-800 transition-colors hover:bg-black/5 dark:text-zinc-100 dark:hover:bg-white/10"
-          >
-            <span className="truncate">{item.title}</span>
-            <span className="shrink-0 text-xs text-zinc-500">
-              {item.mediaType === "movie" ? "Film" : "Série"}
-              {item.year && `, ${item.year}`}
-            </span>
-          </button>
-        ))}
       </div>
+      <AnimatePresence>
+        {query.trim().length >= 4 && suggestions.length > 0 && (
+          <SearchSuggestions
+            suggestions={suggestions}
+            ownedKeys={ownedKeys}
+            highlightedIndex={highlighted}
+            onSelect={onPick}
+            onHover={setHighlighted}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

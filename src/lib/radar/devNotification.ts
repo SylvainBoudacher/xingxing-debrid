@@ -1,3 +1,6 @@
+import { queryClient } from "@/lib/queryClient";
+import type { TmdbListResponse } from "@/lib/services/tmdb";
+import { mapTmdb, type MediaType, type TmdbItem } from "@/lib/tmdbItem";
 import { notifyRadar } from "./notify";
 import type { RadarAlert, RadarEntry } from "./types";
 
@@ -24,12 +27,30 @@ const SAMPLE: RadarEntry = {
   addedAt: 0,
 };
 
+// N'importe quelle oeuvre déjà en cache (grilles Découverte), pour voir la
+// notification avec une vraie affiche et un vrai titre.
+function randomCachedItem(): TmdbItem | null {
+  const items = queryClient
+    .getQueriesData<TmdbListResponse>({ queryKey: ["tmdb", "feed"] })
+    .flatMap(([key, data]) =>
+      (data?.results ?? [])
+        .filter((r) => r.poster_path)
+        .map((r) => mapTmdb(r, key[3] as MediaType)),
+    );
+  return items[Math.floor(Math.random() * items.length)] ?? null;
+}
+
 export function notifyRadarTest(level: RadarAlert["level"], onOpen: () => void): void {
+  const item = randomCachedItem() ?? SAMPLE.item;
+  const isMovie = item.mediaType === "movie";
   const alert: RadarAlert = {
-    content: "e6",
+    content: isMovie ? "movie" : "e6",
     level,
-    version: { language: "vostfr", resolution: "720p" },
+    version:
+      level === "full"
+        ? { language: "vf", resolution: "1080p" }
+        : { language: "vostfr", resolution: "720p" },
     detectedAt: 0,
   };
-  notifyRadar([{ entry: SAMPLE, alert }], onOpen);
+  notifyRadar([{ entry: { ...SAMPLE, item, season: isMovie ? null : 1 }, alert }], onOpen);
 }

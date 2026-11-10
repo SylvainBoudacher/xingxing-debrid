@@ -78,7 +78,7 @@ export function SearchSuggestions({
                 {owned && (
                   <span className="flex shrink-0 items-center gap-1 rounded-md bg-emerald-600/85 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                     <Check className="h-2.5 w-2.5" strokeWidth={3} />
-                    Dans la bibliotheque
+                    Dans la bibliothèque
                   </span>
                 )}
               </button>

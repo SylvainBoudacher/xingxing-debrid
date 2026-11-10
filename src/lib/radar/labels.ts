@@ -1,5 +1,6 @@
+import type { TmdbItem } from "@/lib/tmdbItem";
 import { nextMissingEpisode } from "./evaluate";
-import type { ContentKey, RadarEntry, RadarExpectation } from "./types";
+import type { ContentKey, RadarEntry, RadarExpectation, RadarMode } from "./types";
 import { entryStatus, formatEpisodes } from "./view";
 import { versionLabel } from "./versions";
 
@@ -32,12 +33,32 @@ export function rowSummary(entry: RadarEntry): string {
 const LANGUAGE_LABELS = { vf: "VF", vostfr: "VOSTFR" } as const;
 const MODE_LABELS = { strict: "strict", soft: "souple" } as const;
 
+export const MODE_HINTS: Record<RadarMode, string> = {
+  soft: "Une autre version du même contenu est signalée comme alternative.",
+  strict: "Seule la version attendue déclenche une alerte.",
+};
+
 export function expectationLabel(e: RadarExpectation): string {
   const parts = [
     e.language === "any" ? "" : LANGUAGE_LABELS[e.language],
     e.resolution === "any" ? "" : e.resolution,
   ].filter(Boolean);
   return `${parts.join(" ") || "Toutes versions"}, ${MODE_LABELS[e.mode]}`;
+}
+
+export function expectationSummary({ language, resolution, mode }: RadarExpectation): string {
+  const quality =
+    resolution === "any" ? "" : resolution === "2160p" ? "en 2160p" : `en ${resolution} ou mieux`;
+  const version = [language === "any" ? "" : LANGUAGE_LABELS[language], quality]
+    .filter(Boolean)
+    .join(" ");
+  const alert = `Alerte dès qu'une version ${version ? `${version} ` : ""}sort sur C411.`;
+  if (!version) return alert;
+  return `${alert} ${mode === "soft" ? "Les autres versions sont signalées comme alternatives." : "Les autres versions sont ignorées."}`;
+}
+
+export function mediaSubtitle(item: Pick<TmdbItem, "mediaType" | "year">): string {
+  return [item.mediaType === "movie" ? "Film" : "Série", item.year].filter(Boolean).join(", ");
 }
 
 export function libraryLabel(

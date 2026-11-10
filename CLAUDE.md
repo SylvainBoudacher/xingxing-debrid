@@ -51,6 +51,8 @@ The app follows standard Tauri 2 architecture:
 
 **Sensitive keys (API keys, session cookies)**: stored in the OS keyring via the `keyring` crate. Use the `get_api_key` / `set_api_key` Tauri commands from the frontend - never write secrets to the store.
 
+**Page layout (width and spacing)**: every page keeps `PageHeader` (full-width bar, `h-14 px-10`) and puts its content in a centered container with the standard horizontal spacing `mx-auto w-full max-w-3xl px-6 sm:px-8` (list/text pages, e.g. `MagnetsPage`, `LibraryPage` list view). Grid-heavy pages use `max-w-5xl` (`DiscoverPage`, `LibraryPage` grid), settings-style pages `max-w-4xl`/`max-w-5xl` (`PreferencesPage`, `HelpPage`). Always keep `px-6 sm:px-8`: never `sm:px-10` or other values. Copy the container from the closest existing page when adding a page, and compare it in the browser preview against another page.
+
 **Navigation**: no router library. Page state is a `Page` union type held in `App.tsx`; pass a `setPage` callback down to pages that need to navigate.
 
 **UI components**: shadcn/ui components live in `src/components/ui/`. Page-level components are in `src/pages/`. Page transitions use `motion/react` (`AnimatePresence` + `motion.div`).
