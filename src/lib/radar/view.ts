@@ -71,10 +71,10 @@ function singleText({ entry, alert }: NotifiedAlert, level: RadarAlert["level"])
   if (entry.season === null) {
     return level === "full" ? `${title} est sorti` : `${title} : alternative disponible`;
   }
-  const episode = episodeNumber(alert.content);
+  const number = episodeNumber(alert.content);
   return level === "full"
-    ? `${title} : épisode ${episode} est sorti`
-    : `${title} : alternative disponible pour l'épisode ${episode}`;
+    ? `${title} : épisode ${number} est sorti`
+    : `${title} : alternative disponible pour l'épisode ${number}`;
 }
 
 export function summarizeAlerts(
